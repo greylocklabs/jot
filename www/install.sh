@@ -8,6 +8,8 @@
 # the systems Jot ships packages for: Fedora 44 or later, Debian 13 (trixie) or
 # later, and Ubuntu 26.04 or later, on x86_64. Anything else stops before changing anything.
 # Run again, it updates Jot, or says it is up to date without downloading.
+# It also adds the Greylock Labs dnf or apt repository, so later updates come
+# with the system's.
 set -eu
 
 repo="greylocklabs/jot"
@@ -20,6 +22,9 @@ release_file="${JOT_INSTALL_RELEASE_JSON:-}"
 # Set, even empty, it stands in for the installed version.
 installed_override="${JOT_INSTALL_INSTALLED-}"
 installed_overridden="${JOT_INSTALL_INSTALLED+yes}"
+# Prefixed to the system's repository files.
+root="${JOT_INSTALL_ROOT:-}"
+packages="https://packages.greylocklabs.org"
 
 say() { printf 'jot: %s\n' "$*"; }
 fail() {
@@ -45,7 +50,8 @@ while [ $# -gt 0 ]; do
     --version=*) version="${1#--version=}" ;;
     -h | --help)
         printf '%s\n' "usage: install.sh [--dry-run] [--force] [--version X.Y.Z]" \
-            "Installs or updates Jot from its GitHub release with dnf or apt." \
+            "Installs or updates Jot from its GitHub release with dnf or apt, and" \
+            "adds the Greylock Labs repository so later updates come with the system's." \
             "--version installs that release, older ones included; --force installs" \
             "it again when it is the one installed."
         exit 0
@@ -165,6 +171,58 @@ else
     installed="${installed%%-*}"
 fi
 
+# The Greylock Labs repository, added once; failing to add it leaves Jot
+# installed. It replaces the Callie-only repository older installers added.
+case "$kind" in
+rpm)
+    repo_files="/etc/yum.repos.d/greylocklabs.repo"
+    old_files="/etc/yum.repos.d/callie.repo"
+    ;;
+deb)
+    repo_files="/usr/share/keyrings/greylocklabs.asc /etc/apt/sources.list.d/greylocklabs.sources"
+    old_files="/usr/share/keyrings/callie.asc /etc/apt/sources.list.d/callie.sources"
+    ;;
+esac
+# Ubuntu's section of the apt repository holds the debs built for it.
+sources=greylocklabs.sources
+[ "$ID" != ubuntu ] || sources=greylocklabs-ubuntu.sources
+add_repo() {
+    present=1
+    for file in $repo_files; do
+        [ -e "$root$file" ] || present=0
+    done
+    [ "$present" -eq 0 ] || return 0
+    old=""
+    for file in $old_files; do
+        [ ! -e "$root$file" ] || old="$old $root$file"
+    done
+    if [ "$dry_run" -eq 1 ]; then
+        from="$packages/rpm/greylocklabs.repo"
+        [ "$kind" = rpm ] || from="$packages/greylocklabs.asc and $packages/deb/$sources"
+        say "would add the Greylock Labs repository: $repo_files, from $from"
+        [ -z "$old" ] || say "and remove the old Callie repository:$old"
+        return 0
+    fi
+    if [ "$needs_root" -eq 1 ]; then
+        say "The Greylock Labs repository was not added: that needs root."
+        return 0
+    fi
+    get="$sudo curl --proto =https --tlsv1.2 -fsSL"
+    case "$kind" in
+    rpm) $get -o "$root/etc/yum.repos.d/greylocklabs.repo" "$packages/rpm/greylocklabs.repo" ;;
+    deb)
+        $get -o "$root/usr/share/keyrings/greylocklabs.asc" "$packages/greylocklabs.asc" &&
+            $get -o "$root/etc/apt/sources.list.d/greylocklabs.sources" "$packages/deb/$sources"
+        ;;
+    esac || {
+        say "The Greylock Labs repository could not be added; jot upgrade still updates Jot."
+        return 0
+    }
+    # shellcheck disable=SC2086 # a list of paths without spaces
+    [ -z "$old" ] || $sudo rm -f $old
+    say "Added the Greylock Labs repository; updates now come with the system's."
+}
+
 # Whether version $1 comes before version $2.
 older() { [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n 1)" = "$1" ]; }
 
@@ -173,6 +231,7 @@ if [ -n "$installed" ]; then
     if [ "$installed" = "$target" ]; then
         if [ "$force" -eq 0 ]; then
             say "Jot $target is installed and up to date."
+            add_repo
             exit 0
         fi
         action=reinstall
@@ -180,6 +239,7 @@ if [ -n "$installed" ]; then
         # Only on request: the latest release can trail a build from source.
         if [ -z "$version" ]; then
             say "Jot $installed is installed, newer than the latest release, $target."
+            add_repo
             exit 0
         fi
         action=downgrade
@@ -220,6 +280,7 @@ if [ "$dry_run" -eq 1 ]; then
     say "would check it against sha256 $digest"
     [ -z "$refresh" ] || say "then run: $refresh"
     say "then run: $install ./$package"
+    add_repo
     exit 0
 fi
 
@@ -243,3 +304,4 @@ fi
 (cd "$dir" && $install "./$package") </dev/null || fail "The package manager could not install $package."
 
 say "Jot $target is installed. Open it from your app menu, or run jot-gui."
+add_repo

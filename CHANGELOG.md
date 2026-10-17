@@ -3,6 +3,13 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## Unreleased
+
+### Added
+
+- The installer adds the Greylock Labs repository at <https://packages.greylocklabs.org>, so Jot's
+  updates come with `dnf upgrade` or `apt upgrade`.
+
 ## 0.0.6 - 2026-10-17
 
 ### Changed

@@ -19,11 +19,11 @@ installs_on() {
     if [ "${installed:-}" = ask ]; then
         # shellcheck disable=SC2086
         output="$(PATH="$tmp/bin:$PATH" JOT_INSTALL_OS_RELEASE="$tmp/os-release" \
-            JOT_INSTALL_RELEASE_JSON="${json:-$release}" \
+            JOT_INSTALL_ROOT="$tmp/root" JOT_INSTALL_RELEASE_JSON="${json:-$release}" \
             sh "$script" --dry-run ${options:-} 2>&1)"
     else
         # shellcheck disable=SC2086
-        output="$(JOT_INSTALL_OS_RELEASE="$tmp/os-release" \
+        output="$(JOT_INSTALL_OS_RELEASE="$tmp/os-release" JOT_INSTALL_ROOT="$tmp/root" \
             JOT_INSTALL_RELEASE_JSON="${json:-$release}" JOT_INSTALL_INSTALLED="${installed:-}" \
             sh "$script" --dry-run ${options:-} 2>&1)"
     fi
@@ -72,6 +72,7 @@ expect_status fedora 0
 expect fedora "/v0.2.1/jot-0.2.1-1.fc44.x86_64.rpm"
 expect fedora "sha256 350e52621a778c23e0946ffef28b7e718442db280b9ea2888fc22d4892f8c345"
 expect fedora "dnf install -y ./jot-0.2.1-1.fc44.x86_64.rpm"
+expect fedora "would add the Greylock Labs repository: /etc/yum.repos.d/greylocklabs.repo"
 
 # Debian gets the deb, not the debug symbols, after refreshing apt's lists.
 installs_on ID=debian VERSION_ID=13 'PRETTY_NAME="Debian GNU/Linux 13 (trixie)"'
@@ -79,6 +80,8 @@ expect_status debian 0
 expect debian "/v0.2.1/jot_0.2.1-1_amd64.deb"
 expect debian "apt-get update"
 expect debian "apt-get install -y ./jot_0.2.1-1_amd64.deb"
+expect debian "would add the Greylock Labs repository: /usr/share/keyrings/greylocklabs.asc /etc/apt/sources.list.d/greylocklabs.sources"
+expect debian "https://packages.greylocklabs.org/deb/greylocklabs.sources"
 
 # Testing and unstable carry no version; they are newer than trixie.
 installs_on ID=debian 'PRETTY_NAME="Debian GNU/Linux forky/sid"'
@@ -98,6 +101,8 @@ expect ubuntu "Jot needs Qt 6.8"
 
 installs_on ID=ubuntu VERSION_ID=26.04 'PRETTY_NAME="Ubuntu 26.04 LTS"'
 expect_status "ubuntu 26.04" 0
+# Ubuntu's part of the repository, which carries Jot's Debian build too.
+expect "ubuntu 26.04" "https://packages.greylocklabs.org/deb/greylocklabs-ubuntu.sources"
 expect "ubuntu 26.04" "jot_0.2.1-1_amd64.deb"
 refuse "ubuntu 26.04" "dbgsym"
 installs_on ID=arch 'PRETTY_NAME="Arch Linux"'
@@ -128,6 +133,8 @@ installs_on ID=debian VERSION_ID=13 "$debian"
 expect_status current 0
 expect current "Jot 0.2.1 is installed and up to date."
 refuse current "package:"
+# One installed before the repository existed gets it on running this again.
+expect current "would add the Greylock Labs repository"
 options=--force
 installs_on ID=debian VERSION_ID=13 "$debian"
 expect "forced" "installing Jot 0.2.1 again"
@@ -149,6 +156,22 @@ expect "downgrade" "apt-get install -y --allow-downgrades ./jot_0.2.1-1_amd64.de
 installs_on ID=fedora VERSION_ID=44 "$fedora"
 expect "downgrade rpm" "dnf downgrade -y ./jot-0.2.1-1.fc44.x86_64.rpm"
 unset options installed
+
+# The repository is added once: not again when its files are all there.
+mkdir -p "$tmp/root/etc/yum.repos.d" "$tmp/root/usr/share/keyrings"
+touch "$tmp/root/etc/yum.repos.d/greylocklabs.repo" "$tmp/root/usr/share/keyrings/greylocklabs.asc"
+installs_on ID=fedora VERSION_ID=44 "$fedora"
+refuse "rpm repo added" "would add the Greylock Labs repository"
+installs_on ID=debian VERSION_ID=13 "$debian"
+expect "deb repo half added" "would add the Greylock Labs repository"
+rm -rf "$tmp/root"
+
+# It replaces the Callie-only repository older Callie installers added.
+mkdir -p "$tmp/root/etc/yum.repos.d"
+touch "$tmp/root/etc/yum.repos.d/callie.repo"
+installs_on ID=fedora VERSION_ID=44 "$fedora"
+expect "old callie repo" "and remove the old Callie repository: $tmp/root/etc/yum.repos.d/callie.repo"
+rm -rf "$tmp/root"
 
 # The installed version comes from rpm or dpkg-query, without the packaging's
 # revision; a removed deb that left its configuration is not installed.
