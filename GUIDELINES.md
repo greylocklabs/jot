@@ -2,7 +2,7 @@
 
 Plain-file Markdown notes for Linux. Qt6 + QML for the UI, C++ for the core. MIT licensed. App ID
 `org.callieapp.Jot`, homepage `jotwriter.org`. Jot shares its design and tooling with
-[Callie](https://github.com/callieapp/callie); [docs/SUITE.md](docs/SUITE.md) says how.
+[Callie](https://github.com/greylocklabs/callie); [docs/SUITE.md](docs/SUITE.md) says how.
 
 ## Layout
 
