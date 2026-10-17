@@ -1,6 +1,6 @@
 # Sharing with Callie
 
-Jot copies its tooling and much of its code from [Callie](https://github.com/callieapp/callie)
+Jot copies its tooling and much of its code from [Callie](https://github.com/greylocklabs/callie)
 rather than sharing it. When a third app arrives, the shared parts will move into one place that
 all the apps use. These rules keep that move mechanical.
 
