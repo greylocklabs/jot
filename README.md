@@ -28,8 +28,10 @@ It finds the latest [GitHub release](https://github.com/greylocklabs/jot/release
 package against the checksum GitHub records for it, and installs it with `dnf` or `apt`. On any
 other system it stops before changing anything. Run again, it updates Jot, or says it is up to
 date. `sh -s -- --dry-run` shows what it would do, `--version 0.0.1` installs that version, and
-`--force` installs it again. The packages can also be downloaded from the release and installed by
-hand.
+`--force` installs it again. It also adds the
+[Greylock Labs repository](https://packages.greylocklabs.org), which carries Jot and Callie, so
+later updates come with `dnf upgrade` or `apt upgrade`; that page shows how to add it by hand. The
+packages can also be downloaded from the release and installed by hand.
 
 This installs the `Jot` desktop app and the `jot` command. `jot upgrade` installs the latest release,
 `jot downgrade` goes back one, and `jot logs` and `jot doctor` help with bug reports. A development

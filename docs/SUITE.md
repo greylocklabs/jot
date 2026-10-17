@@ -35,7 +35,7 @@ all the apps use. These rules keep that move mechanical.
 | `.github/workflows/release.yml`                                               | Callie's, without the OAuth secrets, and with an Ubuntu install check                                  |
 | `.github/workflows/code-review.yml`                                           | Identical                                                                                              |
 | `www/style.css`, `www/theme.js`, `www/carousel.js`, `www/fonts/`              | Identical                                                                                              |
-| `www/install.sh`                                                              | Renamed, without the step that adds Callie's own dnf or apt repository                                 |
+| `www/install.sh`                                                              | Renamed                                                                                                |
 | `.github/review-bot/REPO_NOTES.md`                                            | Same structure, Jot's stack and risks                                                                  |
 
 Shared code:
