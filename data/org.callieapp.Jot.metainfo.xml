@@ -35,6 +35,14 @@
   </categories>
 
   <releases>
+    <release version="0.0.6" date="2026-10-17">
+      <description>
+        <ul>
+          <li>Jot has its own website, jotwriter.org, and its installer moved there: curl -fsSL https://jotwriter.org/install.sh | sh. The old addresses on callieapp.org keep working.</li>
+          <li>Jot's code, issues and releases moved to github.com/greylocklabs/jot. The About dialog, problem reports and jot upgrade use the new addresses.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.0.5" date="2026-10-16">
       <description>
         <ul>
