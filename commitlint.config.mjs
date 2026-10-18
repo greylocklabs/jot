@@ -13,6 +13,7 @@ const scopes = [
   "site", // jotwriter.org
   "ci",
   "deps",
+  "deps-dev", // Dependabot's updates to development dependencies
 ];
 
 /** @type {import('@commitlint/types').UserConfig} */
