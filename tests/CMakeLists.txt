@@ -68,6 +68,7 @@ jot_add_test(tst_upgrade)
 target_link_libraries(tst_upgrade PRIVATE jotcli Qt6::Network)
 jot_add_test(tst_updatecheck)
 target_link_libraries(tst_updatecheck PRIVATE jotcli Qt6::Network)
+jot_add_test(tst_problemreport)
 jot_add_test(tst_diagnostics)
 
 # The bash completion script, against the built jot.

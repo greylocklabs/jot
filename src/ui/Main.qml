@@ -228,8 +228,8 @@ ApplicationWindow {
                         onTriggered: Support.openLogs()
                     }
                     MenuEntry {
-                        text: qsTr("Report a bug...")
-                        onTriggered: Support.reportBug()
+                        text: qsTr("Report a problem...")
+                        onTriggered: reportDialog.open()
                     }
                     MenuSeparator {
                         contentItem: Rectangle {
@@ -407,6 +407,10 @@ ApplicationWindow {
     LazyPopup {
         id: updateDialog
         sourceComponent: UpdateDialog {}
+    }
+    LazyPopup {
+        id: reportDialog
+        sourceComponent: ReportDialog {}
     }
 
     // After an update, says what changed, once the window has settled.

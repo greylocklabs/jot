@@ -31,7 +31,8 @@
   else about you. Your notes are files in a folder you choose, and they go nowhere unless you
   send them. On its own, Jot reaches the internet for one thing, which you can turn off: a
   daily check with GitHub for a newer release. Installed with its installer, your system's
-  package manager also checks Jot's package repository for updates.
+  package manager also checks Jot's package repository for updates. A problem report goes
+  out only when you send one.
 </p>
 
 <h2>Your notes</h2>
@@ -67,7 +68,8 @@
 <h2>Things you start</h2>
 <ul>
   <li>Following a web link in a note opens it in your browser, which then talks to that site.</li>
-  <li>"Report a bug" in the ? menu, and <code>jot doctor --report</code>, open a new GitHub issue in your browser with details about your system and the end of Jot's logs filled in, with email addresses masked. Nothing is sent until you submit the issue yourself, and you can read and change it first.</li>
+  <li>"Report a problem" in the ? menu sends what you write, and the details about your system and the end of Jot's logs if you leave them included, to the Greylock Labs report service, which files it as a public issue in <a href="https://github.com/greylocklabs/jot/issues">Jot's GitHub repository</a>, where anyone can read it. Nothing is sent until you press Send, and "Show what is sent" shows the details first: email addresses are masked, and the logs can name your notes folder and notes but never say what the notes hold. The service runs on Cloudflare, which receives the request and, like any website, your IP address; the service stores no copy beyond the issue it files, Cloudflare keeps its usual short-lived request logs, and it allows a few reports a minute from one address.</li>
+  <li><code>jot doctor --report</code>, or "Open on GitHub instead" when sending fails, opens a new GitHub issue in your browser with the same details filled in. Nothing is sent until you submit the issue yourself, and you can read and change it first.</li>
   <li>"Copy debug info" puts the same details on your clipboard, and goes no further.</li>
 </ul>
 

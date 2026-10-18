@@ -48,6 +48,8 @@ add_library(jotcore STATIC
     UpdateCheck.cpp
     jot/Diagnostics.h
     Diagnostics.cpp
+    jot/ProblemReport.h
+    ProblemReport.cpp
 )
 
 # Built-in themes are compiled in, so the app works uninstalled and a broken
