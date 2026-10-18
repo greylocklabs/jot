@@ -191,36 +191,49 @@ add_repo() {
     for file in $repo_files; do
         [ -e "$root$file" ] || present=0
     done
-    [ "$present" -eq 0 ] || return 0
     old=""
     for file in $old_files; do
         [ ! -e "$root$file" ] || old="$old $root$file"
     done
+    [ "$present" -eq 0 ] || [ -n "$old" ] || return 0
     if [ "$dry_run" -eq 1 ]; then
         from="$packages/rpm/greylocklabs.repo"
         [ "$kind" = rpm ] || from="$packages/greylocklabs.asc and $packages/deb/$sources"
-        say "would add the Greylock Labs repository: $repo_files, from $from"
+        [ "$present" -eq 1 ] || say "would add the Greylock Labs repository: $repo_files, from $from"
         [ -z "$old" ] || say "and remove the old Callie repository:$old"
         return 0
     fi
     if [ "$needs_root" -eq 1 ]; then
-        say "The Greylock Labs repository was not added: that needs root."
+        say "The Greylock Labs repository was not set up: that needs root."
         return 0
     fi
-    get="$sudo curl --proto =https --tlsv1.2 -fsSL"
-    case "$kind" in
-    rpm) $get -o "$root/etc/yum.repos.d/greylocklabs.repo" "$packages/rpm/greylocklabs.repo" ;;
-    deb)
-        $get -o "$root/usr/share/keyrings/greylocklabs.asc" "$packages/greylocklabs.asc" &&
-            $get -o "$root/etc/apt/sources.list.d/greylocklabs.sources" "$packages/deb/$sources"
-        ;;
-    esac || {
-        say "The Greylock Labs repository could not be added; jot upgrade still updates Jot."
-        return 0
-    }
+    if [ "$present" -eq 0 ]; then
+        case "$kind" in
+        rpm) fetch /etc/yum.repos.d/greylocklabs.repo "$packages/rpm/greylocklabs.repo" ;;
+        deb)
+            fetch /usr/share/keyrings/greylocklabs.asc "$packages/greylocklabs.asc" &&
+                fetch /etc/apt/sources.list.d/greylocklabs.sources "$packages/deb/$sources"
+            ;;
+        esac || {
+            say "The Greylock Labs repository could not be added; jot upgrade still updates Jot."
+            return 0
+        }
+    fi
     # shellcheck disable=SC2086 # a list of paths without spaces
     [ -z "$old" ] || $sudo rm -f $old
-    say "Added the Greylock Labs repository; updates now come with the system's."
+    [ "$present" -eq 1 ] || say "Added the Greylock Labs repository; updates now come with the system's."
+    [ -z "$old" ] || say "Removed the old Callie repository, which the Greylock Labs one replaces."
+}
+
+# Downloads $2 to the system file $1 through a temporary file, so an
+# interrupted download never leaves a truncated one behind.
+fetch() {
+    if $sudo curl --proto =https --tlsv1.2 -fsSL -o "$root$1.part" "$2" &&
+        $sudo mv -f "$root$1.part" "$root$1"; then
+        return 0
+    fi
+    $sudo rm -f "$root$1.part"
+    return 1
 }
 
 # Whether version $1 comes before version $2.
