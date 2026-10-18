@@ -156,12 +156,20 @@ void TestProblemReport::issueUrlFillsInTheForm()
 
 void TestProblemReport::issueUrlFitsLongDiagnostics()
 {
-    const QString diagnostics = u"first line\n"_s + QString(20000, u' ') + u"\nthe failure"_s;
+    const QString diagnostics = u"the version\n"_s + QString(20000, u' ') + u"\nthe end"_s;
     const QUrl url = problemreport::issueUrl({false, u"s"_s, u"n"_s, diagnostics});
     QVERIFY(url.toString(QUrl::FullyEncoded).size() <= 8000);
-    const QString kept = QUrlQuery(url).queryItemValue(u"diagnostics"_s, QUrl::FullyDecoded);
-    QVERIFY(kept.startsWith(u"[earlier lines left out]"_s));
-    QVERIFY(kept.endsWith(u"the failure"_s));
+    const QUrlQuery query(url);
+    QCOMPARE(query.queryItemValue(u"what"_s), u"n"_s);
+    const QString kept = query.queryItemValue(u"diagnostics"_s, QUrl::FullyDecoded);
+    QVERIFY(kept.startsWith(u"the version"_s));
+    QVERIFY(kept.endsWith(u"for the rest]"_s));
+
+    // Newlines take three characters each once encoded.
+    const QUrl note = problemreport::issueUrl(
+        {false, u"s"_s, u"a"_s + QString(3998, u'\n') + u"z"_s, diagnostics});
+    QVERIFY(note.toString(QUrl::FullyEncoded).size() <= 8000);
+    QVERIFY2(!QUrlQuery(note).hasQueryItem(u"diagnostics"_s), "the diagnostics go first");
 }
 
 void TestProblemReport::theServiceCanBeOverridden()
