@@ -35,6 +35,13 @@
   </categories>
 
   <releases>
+    <release version="0.0.7" date="2026-10-17">
+      <description>
+        <ul>
+          <li>The installer adds the Greylock Labs repository at &lt;https://packages.greylocklabs.org&gt;, so Jot's updates come with dnf upgrade or apt upgrade.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.0.6" date="2026-10-17">
       <description>
         <ul>

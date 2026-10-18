@@ -1,5 +1,5 @@
 Name:           jot
-Version:        0.0.6
+Version:        0.0.7
 Release:        1%{?dist}
 Summary:        Plain-file notes for Linux
 
@@ -64,6 +64,9 @@ appstream-util validate-relax --nonet \
 %{_datadir}/jot/
 
 %changelog
+* Sat Oct 17 2026 Lara Kelley <larakelley@higharc.ai> - 0.0.7-1
+- Update to 0.0.7
+
 * Sat Oct 17 2026 Lara Kelley <larakelley@higharc.ai> - 0.0.6-1
 - Update to 0.0.6
 
