@@ -9,6 +9,7 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 - "Report a problem" in the ? menu files a bug or an idea as a public GitHub issue without a GitHub
   account, and shows the details it includes before you send them.
+- `jot donate` opens Jot's Ko-fi page, and `--print` prints its link instead.
 
 ## 0.0.7 - 2026-10-17
 

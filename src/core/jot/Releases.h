@@ -33,6 +33,8 @@ namespace releases {
 
 /// GitHub's API for Jot's repository.
 [[nodiscard]] QUrl defaultApi();
+/// Where people can support Jot's development.
+[[nodiscard]] QUrl supportPage();
 /// A release from GitHub's JSON, or nothing for a draft, a pre-release or a
 /// tag that is not a version.
 [[nodiscard]] std::optional<Release> parse(const QJsonObject &release);

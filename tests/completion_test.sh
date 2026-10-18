@@ -38,6 +38,8 @@ expect "jot logs --fo" "--follow"
 expect "jot completions " "zsh"
 # After = or :, bash puts only what follows it in place.
 expect "jot --verbose up" "upgrade"
+expect "jot don" "donate"
+expect "jot donate --pr" "--print"
 
 # Escaped and quoted spaces, against a stand-in jot offering one name, as note names will be.
 jot() { printf '%s\n' "$candidate"; }

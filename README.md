@@ -34,9 +34,9 @@ later updates come with `dnf upgrade` or `apt upgrade`; that page shows how to a
 packages can also be downloaded from the release and installed by hand.
 
 This installs the `Jot` desktop app and the `jot` command. `jot upgrade` installs the latest release,
-`jot downgrade` goes back one, and `jot logs` and `jot doctor` help with bug reports. A development
-build from `make run` is called Jot Devel and keeps its own settings and folders, so it runs beside
-an installed Jot.
+`jot downgrade` goes back one, `jot logs` and `jot doctor` help with bug reports, and `jot donate`
+opens Jot's Ko-fi page. A development build from `make run` is called Jot Devel and keeps its own
+settings and folders, so it runs beside an installed Jot.
 
 ## The command line
 

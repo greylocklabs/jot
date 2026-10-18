@@ -15,6 +15,11 @@ QUrl defaultApi()
     return QUrl(u"https://api.github.com/repos/greylocklabs/jot"_s);
 }
 
+QUrl supportPage()
+{
+    return QUrl(u"https://ko-fi.com/sayonara_lara"_s);
+}
+
 std::optional<Release> parse(const QJsonObject &release)
 {
     if (release[u"draft"].toBool() || release[u"prerelease"].toBool())
