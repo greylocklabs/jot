@@ -190,6 +190,64 @@ installs_on ID=debian VERSION_ID=13 "$debian"
 expect "deb removed" "installing Jot 0.2.1 on"
 unset installed
 
+# Setting the repository up for real, with Jot already up to date so nothing
+# is downloaded but the repository files. curl and sudo stand in on $PATH; the
+# stand-in curl writes the URL it was given, or a partial file and fails when
+# CURL_FAILS is set.
+mkdir -p "$tmp/fake"
+printf '#!/bin/sh
+exec "$@"
+' >"$tmp/fake/sudo"
+cat >"$tmp/fake/curl" <<'CURL'
+#!/bin/sh
+while [ $# -gt 1 ]; do
+    [ "$1" = -o ] && out="$2"
+    shift
+done
+if [ -n "${CURL_FAILS:-}" ]; then
+    printf 'partial' >"$out"
+    exit 18
+fi
+printf '%s\n' "$1" >"$out"
+CURL
+chmod +x "$tmp/fake/sudo" "$tmp/fake/curl"
+sets_up_on() {
+    printf '%s\n' "$@" >"$tmp/os-release"
+    output="$(PATH="$tmp/fake:$PATH" JOT_INSTALL_OS_RELEASE="$tmp/os-release" \
+        JOT_INSTALL_ROOT="$tmp/root" JOT_INSTALL_RELEASE_JSON="$release" \
+        JOT_INSTALL_INSTALLED=0.2.1 sh "$script" 2>&1)"
+    status=$?
+}
+repo="$tmp/root/etc/yum.repos.d"
+
+mkdir -p "$repo"
+sets_up_on ID=fedora VERSION_ID=44 "$fedora"
+expect "real add" "Added the Greylock Labs repository"
+grep -qx 'https://packages.greylocklabs.org/rpm/greylocklabs.repo' "$repo/greylocklabs.repo" ||
+    { echo "FAIL real add: greylocklabs.repo is not the downloaded file"; failures=$((failures + 1)); }
+rm -rf "$tmp/root"
+
+# A machine with both repositories, say from adding the new one by hand, loses the old one.
+mkdir -p "$repo"
+touch "$repo/greylocklabs.repo" "$repo/callie.repo"
+sets_up_on ID=fedora VERSION_ID=44 "$fedora"
+expect "real both" "Removed the old Callie repository"
+refuse "real both" "Added the Greylock Labs repository"
+[ ! -e "$repo/callie.repo" ] && [ -e "$repo/greylocklabs.repo" ] ||
+    { echo "FAIL real both: the wrong repository file was removed"; failures=$((failures + 1)); }
+rm -rf "$tmp/root"
+
+# An interrupted download leaves neither a truncated file nor its partial copy.
+mkdir -p "$repo"
+touch "$repo/callie.repo"
+CURL_FAILS=1 sets_up_on ID=fedora VERSION_ID=44 "$fedora"
+expect "real fails" "could not be added"
+[ ! -e "$repo/greylocklabs.repo" ] && [ ! -e "$repo/greylocklabs.repo.part" ] ||
+    { echo "FAIL real fails: a partial repository file was left behind"; failures=$((failures + 1)); }
+[ -e "$repo/callie.repo" ] ||
+    { echo "FAIL real fails: the old repository was removed without a new one"; failures=$((failures + 1)); }
+rm -rf "$tmp/root"
+
 if [ "$failures" -gt 0 ]; then
     printf '%s check(s) failed\n' "$failures"
     exit 1
