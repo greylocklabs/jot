@@ -1,5 +1,7 @@
 #include "jot/ProblemReport.h"
 
+#include "jot/Diagnostics.h"
+
 #include <QCoreApplication>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -7,8 +9,6 @@
 #include <QNetworkRequest>
 #include <QSysInfo>
 #include <QUrlQuery>
-
-#include <algorithm>
 
 using namespace Qt::StringLiterals;
 
@@ -20,8 +20,6 @@ namespace {
 constexpr qsizetype kSummary = 100;
 constexpr qsizetype kNote = 4000;
 constexpr qsizetype kLogs = 16000;
-// GitHub refuses longer new-issue addresses.
-constexpr qsizetype kMaxUrlLength = 8000;
 
 const QString kIssues = u"https://github.com/greylocklabs/jot/issues"_s;
 
@@ -69,8 +67,7 @@ QByteArray payload(const Report &report, const QString &appVersion, const QStrin
 QUrl issueUrl(const Report &report)
 {
     const QString summary = report.summary.trimmed().left(kSummary);
-    const QString note = report.note.trimmed().left(kNote);
-    const auto build = [&](const QString &diagnostics) {
+    const auto build = [&](const QString &note, const QString &diagnostics) {
         QUrlQuery query;
         query.addQueryItem(u"title"_s, summary);
         if (report.idea) {
@@ -89,18 +86,13 @@ QUrl issueUrl(const Report &report)
         return url;
     };
 
-    // The limit is on the encoded address, where a space or newline takes
-    // three characters, so the diagnostics shrink until it fits.
-    const QString diagnostics = report.diagnostics.trimmed();
-    qsizetype keep = diagnostics.size();
-    QUrl url = build(diagnostics);
-    while (url.toString(QUrl::FullyEncoded).size() > kMaxUrlLength && keep > 0) {
-        const qsizetype over = url.toString(QUrl::FullyEncoded).size() - kMaxUrlLength;
-        keep -= std::max<qsizetype>(over / 3, 64);
-        if (keep < 64)
-            keep = 0;
-        url = build(keep > 0 ? lastPart(diagnostics, keep) : QString());
-    }
+    const QString note = report.note.trimmed().left(kNote);
+    QUrl url = diagnostics::fitIssueUrl([&](const QString &text) { return build(note, text); },
+                                        report.diagnostics.trimmed(), diagnostics::shortenedMark());
+    // A long note can be too long on its own, once the diagnostics are cut away.
+    if (url.toString(QUrl::FullyEncoded).size() > diagnostics::kMaxIssueUrlLength)
+        url = diagnostics::fitIssueUrl([&](const QString &text) { return build(text, {}); }, note,
+                                       u" [shortened]"_s);
     return url;
 }
 

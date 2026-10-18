@@ -30,8 +30,8 @@ struct Report
                                  const QString &platform);
 
 /// The report as a new issue on GitHub, for when the service cannot take it.
-/// A bug fills in the bug report form; diagnostics too long for the address
-/// keep their end.
+/// A bug fills in the bug report form. Diagnostics too long for the address
+/// are cut from their end, as `doctor --report` cuts them, then the note.
 [[nodiscard]] QUrl issueUrl(const Report &report);
 
 /// Sends the report, then calls `done` with the new issue's address, or with
