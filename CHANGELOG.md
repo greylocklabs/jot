@@ -3,6 +3,13 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## Unreleased
+
+### Added
+
+- "Report a problem" in the ? menu files a bug or an idea as a public GitHub issue without a GitHub
+  account, and shows the details it includes before you send them.
+
 ## 0.0.7 - 2026-10-17
 
 ### Added

@@ -64,6 +64,7 @@ void TestDialogs::opensCleanly_data()
     QTest::newRow("what's new") << u"WhatsNewDialog {}"_s;
     QTest::newRow("update") << u"UpdateDialog {}"_s;
     QTest::newRow("theme colors") << u"ThemeEditor {}"_s;
+    QTest::newRow("report a problem") << u"ReportDialog {}"_s;
 }
 
 void TestDialogs::opensCleanly()

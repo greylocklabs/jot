@@ -4,6 +4,7 @@
 
 #include "jot/Diagnostics.h"
 #include "jot/LogFile.h"
+#include "jot/ProblemReport.h"
 #include "jot/Settings.h"
 #include "jot/UpdateCheck.h"
 
@@ -11,6 +12,7 @@
 #include <QDesktopServices>
 #include <QFileInfo>
 #include <QGuiApplication>
+#include <QPointer>
 #include <QUrl>
 
 using namespace Qt::StringLiterals;
@@ -52,9 +54,29 @@ void SupportActions::copyText(const QString &text)
     Q_EMIT copied();
 }
 
-void SupportActions::reportBug()
+void SupportActions::reportOnGitHub(bool idea, const QString &summary, const QString &note,
+                                    const QString &diagnostics)
 {
-    QDesktopServices::openUrl(diagnostics::issueUrl(collect()));
+    QDesktopServices::openUrl(problemreport::issueUrl({idea, summary, note, diagnostics}));
+}
+
+void SupportActions::gatherDiagnostics()
+{
+    Q_EMIT diagnosticsReady(collect());
+}
+
+void SupportActions::sendReport(bool idea, const QString &summary, const QString &note,
+                                const QString &diagnostics)
+{
+    problemreport::send(m_network, problemreport::serviceUrl(), {idea, summary, note, diagnostics},
+                        [self = QPointer(this)](const QUrl &issue, const QString &error) {
+                            if (!self)
+                                return;
+                            if (error.isEmpty())
+                                Q_EMIT self->reportSent(issue);
+                            else
+                                Q_EMIT self->reportFailed(error);
+                        });
 }
 
 } // namespace jot

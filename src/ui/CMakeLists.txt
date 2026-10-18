@@ -87,6 +87,7 @@ qt_add_qml_module(jotui
         WhichKey.qml
         Tip.qml
         TaskDetails.qml
+        ReportDialog.qml
         TrashConfirm.qml
         TaskList.qml
         Toggle.qml
