@@ -233,8 +233,10 @@ touch "$repo/greylocklabs.repo" "$repo/callie.repo"
 sets_up_on ID=fedora VERSION_ID=44 "$fedora"
 expect "real both" "Removed the old Callie repository"
 refuse "real both" "Added the Greylock Labs repository"
-[ ! -e "$repo/callie.repo" ] && [ -e "$repo/greylocklabs.repo" ] ||
-    { echo "FAIL real both: the wrong repository file was removed"; failures=$((failures + 1)); }
+if [ -e "$repo/callie.repo" ] || [ ! -e "$repo/greylocklabs.repo" ]; then
+    echo "FAIL real both: the wrong repository file was removed"
+    failures=$((failures + 1))
+fi
 rm -rf "$tmp/root"
 
 # An interrupted download leaves neither a truncated file nor its partial copy.
@@ -242,8 +244,10 @@ mkdir -p "$repo"
 touch "$repo/callie.repo"
 CURL_FAILS=1 sets_up_on ID=fedora VERSION_ID=44 "$fedora"
 expect "real fails" "could not be added"
-[ ! -e "$repo/greylocklabs.repo" ] && [ ! -e "$repo/greylocklabs.repo.part" ] ||
-    { echo "FAIL real fails: a partial repository file was left behind"; failures=$((failures + 1)); }
+if [ -e "$repo/greylocklabs.repo" ] || [ -e "$repo/greylocklabs.repo.part" ]; then
+    echo "FAIL real fails: a partial repository file was left behind"
+    failures=$((failures + 1))
+fi
 [ -e "$repo/callie.repo" ] ||
     { echo "FAIL real fails: the old repository was removed without a new one"; failures=$((failures + 1)); }
 rm -rf "$tmp/root"
