@@ -22,7 +22,7 @@
 </header>
 
 <h1>Privacy Policy</h1>
-<p class="meta">Last updated: 16 October 2026</p>
+<p class="meta">Last updated: 17 October 2026</p>
 
 <h2>Summary</h2>
 <p>
@@ -30,7 +30,8 @@
   accounts, and no analytics. It does not collect, transmit, or sell your notes or anything
   else about you. Your notes are files in a folder you choose, and they go nowhere unless you
   send them. On its own, Jot reaches the internet for one thing, which you can turn off: a
-  daily check with GitHub for a newer release.
+  daily check with GitHub for a newer release. Installed with its installer, your system's
+  package manager also checks Jot's package repository for updates.
 </p>
 
 <h2>Your notes</h2>
@@ -50,6 +51,17 @@
   out", or by setting <code>JOT_NO_UPDATE_CHECK</code> in the environment.
   <code>jot upgrade</code>, <code>jot downgrade</code> and the installer download a release from
   GitHub only when you run them.
+</p>
+
+<h2>Package updates</h2>
+<p>
+  If you install Jot with its installer, it adds the Greylock Labs package repository to
+  your system, so your package manager, dnf or apt, then checks
+  <code>packages.greylocklabs.org</code> for updates on its own schedule, as it does every
+  repository it knows. That site is static files on GitHub Pages: it receives your package
+  manager's requests and, like any website, your IP address, and nothing from Jot itself.
+  Removing the repository's file from <code>/etc/yum.repos.d</code> or
+  <code>/etc/apt/sources.list.d</code> stops it.
 </p>
 
 <h2>Things you start</h2>
