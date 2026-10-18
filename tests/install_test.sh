@@ -166,13 +166,6 @@ installs_on ID=debian VERSION_ID=13 "$debian"
 expect "deb repo half added" "would add the Greylock Labs repository"
 rm -rf "$tmp/root"
 
-# It replaces the Callie-only repository older Callie installers added.
-mkdir -p "$tmp/root/etc/yum.repos.d"
-touch "$tmp/root/etc/yum.repos.d/callie.repo"
-installs_on ID=fedora VERSION_ID=44 "$fedora"
-expect "old callie repo" "and remove the old Callie repository: $tmp/root/etc/yum.repos.d/callie.repo"
-rm -rf "$tmp/root"
-
 # The installed version comes from rpm or dpkg-query, without the packaging's
 # revision; a removed deb that left its configuration is not installed.
 installed=ask
@@ -227,29 +220,23 @@ grep -qx 'https://packages.greylocklabs.org/rpm/greylocklabs.repo' "$repo/greylo
     { echo "FAIL real add: greylocklabs.repo is not the downloaded file"; failures=$((failures + 1)); }
 rm -rf "$tmp/root"
 
-# A machine with both repositories, say from adding the new one by hand, loses the old one.
+# A machine that already has the repository is left as it is.
 mkdir -p "$repo"
-touch "$repo/greylocklabs.repo" "$repo/callie.repo"
+echo kept >"$repo/greylocklabs.repo"
 sets_up_on ID=fedora VERSION_ID=44 "$fedora"
-expect "real both" "Removed the old Callie repository"
-refuse "real both" "Added the Greylock Labs repository"
-if [ -e "$repo/callie.repo" ] || [ ! -e "$repo/greylocklabs.repo" ]; then
-    echo "FAIL real both: the wrong repository file was removed"
-    failures=$((failures + 1))
-fi
+refuse "real present" "Added the Greylock Labs repository"
+grep -qx kept "$repo/greylocklabs.repo" ||
+    { echo "FAIL real present: greylocklabs.repo was replaced"; failures=$((failures + 1)); }
 rm -rf "$tmp/root"
 
 # An interrupted download leaves neither a truncated file nor its partial copy.
 mkdir -p "$repo"
-touch "$repo/callie.repo"
 CURL_FAILS=1 sets_up_on ID=fedora VERSION_ID=44 "$fedora"
 expect "real fails" "could not be added"
 if [ -e "$repo/greylocklabs.repo" ] || [ -e "$repo/greylocklabs.repo.part" ]; then
     echo "FAIL real fails: a partial repository file was left behind"
     failures=$((failures + 1))
 fi
-[ -e "$repo/callie.repo" ] ||
-    { echo "FAIL real fails: the old repository was removed without a new one"; failures=$((failures + 1)); }
 rm -rf "$tmp/root"
 
 if [ "$failures" -gt 0 ]; then
