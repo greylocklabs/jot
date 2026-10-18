@@ -29,8 +29,9 @@ all the apps use. These rules keep that move mechanical.
 | `Makefile`                                                                    | Shared targets, app block at the top. No `logs` target until the CLI has `logs`                        |
 | `CMakePresets.json`                                                           | Same presets, `JOT_` cache variables                                                                   |
 | `.github/workflows/ci.yml`                                                    | Same jobs, Jot's dependencies, Ubuntu added                                                            |
-| `.github/FUNDING.yml`, `.github/ISSUE_TEMPLATE/config.yml`                    | Identical                                                                                              |
-| `.github/ISSUE_TEMPLATE/bug_report.yml`, `SECURITY.md`                        | Same text, Jot's names and scope                                                                       |
+| `.github/FUNDING.yml`                                                         | Identical                                                                                              |
+| `SECURITY.md`                                                                 | Same text, Jot's names and scope                                                                       |
+| `.github/ISSUE_TEMPLATE/`                                                     | Neither app has one; both use the bug form in greylocklabs/.github                                     |
 | `scripts/check-version.sh`, `scripts/release.sh`, `scripts/release-notes.sh`  | App-agnostic: they read the app's name and id from `CMakeLists.txt`, so they can be shared as they are |
 | `.github/workflows/release.yml`                                               | Callie's, without the OAuth secrets, and with an Ubuntu install check                                  |
 | `.github/workflows/code-review.yml`                                           | Identical                                                                                              |
