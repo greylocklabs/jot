@@ -8,6 +8,7 @@
 #include "jot/Diagnostics.h"
 #include "jot/Identity.h"
 #include "jot/LogFile.h"
+#include "jot/Releases.h"
 #include "jot/Settings.h"
 #include "jot/UpdateCheck.h"
 
@@ -54,6 +55,7 @@ const QList<std::pair<QString, QString>> kCommands = {
     {u"tasks"_s, u"Task notes and unticked boxes"_s},
     {u"logs"_s, u"Show, follow (-f) or open (--open) the log files"_s},
     {u"doctor"_s, u"Details for a bug report; --report opens a new issue"_s},
+    {u"donate"_s, u"Support Jot on Ko-fi: opens the page, or --print prints its link"_s},
     {u"upgrade"_s, u"Install the latest release, or the one given: jot upgrade 0.1.0"_s},
     {u"downgrade"_s, u"Go back to the release before this one, or the one given"_s},
     {u"completions"_s, u"Print the shell completion script: bash, zsh or fish"_s},
@@ -107,6 +109,20 @@ int runDoctor(bool report)
             err << QObject::tr("Could not open a browser. To report the bug, visit:") << "\n";
         err << url << "\n";
     }
+    return 0;
+}
+
+/// Prints where to support Jot, and opens it unless `print`.
+int runDonate(bool print)
+{
+    const QString url = releases::supportPage().toString();
+    // Over SSH or without a desktop nothing opens, so the link is always shown.
+    if (!print)
+        err << (QProcess::startDetached(u"xdg-open"_s, {url})
+                    ? QObject::tr("Opening Ko-fi in your browser. Thank you!")
+                    : QObject::tr("Could not open a browser. To support Jot, visit:"))
+            << "\n";
+    out << url << "\n";
     return 0;
 }
 
@@ -229,6 +245,9 @@ int main(int argc, char *argv[])
     addOption(verboseOption);
     const QCommandLineOption reportOption(u"report"_s, u"With doctor: open a new GitHub issue."_s);
     addOption(reportOption);
+    const QCommandLineOption printOption(u"print"_s,
+                                         u"With donate: print the link, without opening it."_s);
+    addOption(printOption);
     const QCommandLineOption forceOption(
         u"force"_s, u"With upgrade: install the release even when it is the one installed."_s);
     addOption(forceOption);
@@ -385,6 +404,8 @@ int main(int argc, char *argv[])
     }
     if (command == u"doctor" && args.size() == 1)
         return runDoctor(parser.isSet(reportOption));
+    if (command == u"donate" && args.size() == 1)
+        return runDonate(parser.isSet(printOption));
     if (command == u"logs" && args.size() == 1)
         return runLogs(parser.isSet(followOption), parser.isSet(openOption));
     if ((command == u"upgrade" || command == u"downgrade") && args.size() <= 2) {

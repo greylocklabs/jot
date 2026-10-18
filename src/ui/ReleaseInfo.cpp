@@ -5,6 +5,7 @@
 #include "SettingsForeign.h"
 
 #include "jot/ReleaseNotes.h"
+#include "jot/Releases.h"
 #include "jot/Settings.h"
 #include "jot/UpdateCheck.h"
 
@@ -88,7 +89,7 @@ QUrl ReleaseInfo::source() const
 
 QUrl ReleaseInfo::support() const
 {
-    return QUrl(u"https://ko-fi.com/sayonara_lara"_s);
+    return releases::supportPage();
 }
 
 QUrl ReleaseInfo::history() const
