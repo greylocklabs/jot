@@ -17,7 +17,8 @@ Types: `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `rever
 `style`, `test`.
 
 Scopes: `core`, `gui`, `qml`, `editor`, `theme`, `cli`, `sync`, `import`, `packaging`, `data`,
-`site`, `ci`, `deps`. Omit the scope for genuinely cross-cutting changes.
+`site`, `ci`, `deps`, and `deps-dev` for Dependabot's updates to development dependencies. Omit
+the scope for genuinely cross-cutting changes.
 
 Rules the linter enforces:
 
