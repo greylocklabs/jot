@@ -1,5 +1,5 @@
-# Weekly, grouped update PRs for the npm tooling and GitHub Actions. Commit messages read
-# "build(deps): ..." and "ci(deps): ..." to satisfy commitlint.
+# Weekly, grouped update PRs for the npm tooling and GitHub Actions, and a PR whenever core
+# releases. Commit messages read "build(deps): ..." and "ci(deps): ..." to satisfy commitlint.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -23,3 +23,12 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+
+  # core's submodule tracks its release branch, which moves only when core tags a release.
+  - package-ecosystem: gitsubmodule
+    directory: /
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: build
+      include: scope

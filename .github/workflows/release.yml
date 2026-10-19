@@ -10,8 +10,8 @@ on:
   pull_request:
     paths:
       - packaging/**
-      - scripts/check-version.sh
-      - scripts/release-notes.sh
+      - core
+      - .gitmodules
       - tests/package_smoke.sh
       - CHANGELOG.md
       - .github/workflows/release.yml
@@ -27,6 +27,8 @@ jobs:
       version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          submodules: true
 
       - name: Work out the version
         id: version
@@ -39,16 +41,16 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Check every file names that version
-        run: scripts/check-version.sh "${{ steps.version.outputs.version }}"
+        run: core/tooling/check-version.sh "${{ steps.version.outputs.version }}"
 
       - name: Write the notes and the source tarball
         run: |
           version="${{ steps.version.outputs.version }}"
           # A tag must have its notes; a test build before the first release has none.
           if [ "$GITHUB_REF_TYPE" = tag ]; then
-            scripts/release-notes.sh "$version" > notes.md
+            core/tooling/release-notes.sh "$version" > notes.md
           else
-            scripts/release-notes.sh "$version" > notes.md 2>/dev/null || echo "Test build." > notes.md
+            core/tooling/release-notes.sh "$version" > notes.md 2>/dev/null || echo "Test build." > notes.md
           fi
           git archive --prefix="jot-$version/" HEAD | xz -9 > "jot-$version.tar.xz"
 

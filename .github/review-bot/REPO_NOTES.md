@@ -49,7 +49,7 @@ Judge the code that is there. An absent subsystem is on the roadmap, not a defec
 
 ## What CI already covers, so never mention it
 
-On every PR: `clang-format` and `qmlformat` via `scripts/format.sh check`, `qmllint` over the whole
+On every PR: `clang-format` and `qmlformat` via `core/tooling/format.sh check`, `qmllint` over the whole
 QML module, Fedora, Debian and Ubuntu builds with `-Wall -Wextra -Wpedantic -Werror`, `ctest`,
 `markdownlint`, `prettier --check`, and `commitlint`. Formatting, compiler warnings, lint rules and
 commit message shape are not your findings.

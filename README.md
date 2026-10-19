@@ -56,11 +56,11 @@ jot tasks                        # task notes and unticked boxes
 
 ## Development
 
-On Fedora 44+, Debian 13+ or Ubuntu 26.04+:
+On Fedora 44+, Debian 13+ or Ubuntu 26.04+, in a clone made with `git clone --recurse-submodules`:
 
 ```sh
 make deps    # build dependencies, via dnf or apt
-make setup   # dev tooling, git hooks, configure
+make setup   # core, dev tooling, git hooks, configure
 make run     # build and open the app
 make check   # what CI runs
 ```

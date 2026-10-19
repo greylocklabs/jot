@@ -1,16 +1,19 @@
 # Sharing with Callie
 
-Jot copies its tooling and much of its code from [Callie](https://github.com/greylocklabs/callie)
-rather than sharing it. When a third app arrives, the shared parts will move into one place that
-all the apps use. These rules keep that move mechanical.
+Jot copies much of its code from [Callie](https://github.com/greylocklabs/callie) rather than
+sharing it. The shared parts are moving into [greylocklabs/core](https://github.com/greylocklabs/core),
+a submodule at `core/`; these rules keep that move mechanical.
+
+The tooling has moved already: the release, version check, notes and format scripts, the commit
+rules and hook, and the format and lint configs come from `core/tooling/`. The configs and the
+hook are symlinks into it, and `commitlint.config.mjs` passes Jot's scopes to core's rules.
 
 ## Rules
 
 - A shared file stays identical to Callie's copy. When one changes, make the same change in the
   other, in the same pull request series, or note why the two differ in the table below.
 - App-specific values live in one marked place per file: the block above the "Shared by every app
-  in the suite" line in the Makefile, and the `scopes` list at the top of
-  `commitlint.config.mjs`.
+  in the suite" line in the Makefile, and the scopes in `commitlint.config.mjs`.
 - Shared code names nothing app-specific in comments or messages. Say "the app", not "Jot".
 - Copied C++ keeps its structure and changes only the namespace (`callie` to `jot`), the
   include prefix (`callie/` to `jot/`) and the CMake prefix (`CALLIE_` to `JOT_`), so a diff
@@ -18,26 +21,20 @@ all the apps use. These rules keep that move mechanical.
 
 ## Shared files
 
-| File                                                                          | State                                                                           |
-| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `.clang-format`, `.qmlformat.ini`, `.qmllint.ini`, `.editorconfig`, `.clangd` | Identical                                                                       |
-| `.prettierrc`, `.prettierignore`, `.markdownlint-cli2.yaml`                   | Identical                                                                       |
-| `.githooks/commit-msg`, `scripts/format.sh`                                   | Identical                                                                       |
-| `cliff.toml`                                                                  | Identical apart from "the app" in one comment                                   |
-| `package.json`, `package-lock.json`                                           | Identical apart from the name and description                                   |
-| `commitlint.config.mjs`                                                       | Shared rules, app scopes at the top                                             |
-| `Makefile`                                                                    | Shared targets, app block at the top. No `logs` target until the CLI has `logs` |
-| `CMakePresets.json`                                                           | Same presets, `JOT_` cache variables                                            |
-| `.github/workflows/ci.yml`                                                    | Same jobs, Jot's dependencies, Ubuntu added                                     |
-| `.github/FUNDING.yml`                                                         | Identical                                                                       |
-| `SECURITY.md`                                                                 | Same text, Jot's names and scope                                                |
-| `.github/ISSUE_TEMPLATE/`                                                     | Neither app has one; both use the bug form in greylocklabs/.github              |
-| `scripts/check-version.sh`, `scripts/release.sh`, `scripts/release-notes.sh`  | Identical: they read the app's name and id from `CMakeLists.txt`                |
-| `.github/workflows/release.yml`                                               | Callie's, without the OAuth secrets, and with an Ubuntu install check           |
-| `.github/workflows/code-review.yml`                                           | Identical                                                                       |
-| `www/style.css`, `www/theme.js`, `www/carousel.js`, `www/fonts/`              | Identical                                                                       |
-| `www/install.sh`                                                              | Renamed                                                                         |
-| `.github/review-bot/REPO_NOTES.md`                                            | Same structure, Jot's stack and risks                                           |
+| File                                                             | State                                                                           |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `package.json`, `package-lock.json`                              | Identical apart from the name and description                                   |
+| `Makefile`                                                       | Shared targets, app block at the top. No `logs` target until the CLI has `logs` |
+| `CMakePresets.json`                                              | Same presets, `JOT_` cache variables                                            |
+| `.github/workflows/ci.yml`                                       | Same jobs, Jot's dependencies, Ubuntu added                                     |
+| `.github/FUNDING.yml`                                            | Identical                                                                       |
+| `SECURITY.md`                                                    | Same text, Jot's names and scope                                                |
+| `.github/ISSUE_TEMPLATE/`                                        | Neither app has one; both use the bug form in greylocklabs/.github              |
+| `.github/workflows/release.yml`                                  | Callie's, without the OAuth secrets, and with an Ubuntu install check           |
+| `.github/workflows/code-review.yml`                              | Identical                                                                       |
+| `www/style.css`, `www/theme.js`, `www/carousel.js`, `www/fonts/` | Identical                                                                       |
+| `www/install.sh`                                                 | Renamed                                                                         |
+| `.github/review-bot/REPO_NOTES.md`                               | Same structure, Jot's stack and risks                                           |
 
 Shared code:
 
@@ -58,12 +55,11 @@ Shared code:
 | `KeyHelp`, `SettingsDialog`                                                                                       | Callie's layout and sections, with Jot's shortcuts and settings                                                                                                                                                                                |
 | `MonthModel`, `DatePicker`                                                                                        | `MonthModel` keeps its own week helpers instead of Callie's `ViewRange`; `DatePicker` takes the first day of the week from the locale and shows a placeholder for no date                                                                      |
 
-`.markdownlint-cli2.yaml` and `.prettierignore` also skip `tests/data/`, which holds sample notes
-here; Callie should take the same lines. The Makefile's `screenshots` recipe now reads
+The Makefile's `screenshots` recipe now reads
 `SHOT_PREPARE` and `SHOT_APP` from the app block, which Callie's needs to adopt to stay shared.
 
-Callie's `commitlint.config.mjs`, `Makefile` and `cliff.toml` still use the older layout. Moving
-them to this one is the first step of extraction.
+Callie's `Makefile` still uses the older layout; moving it to this one comes before a shared
+`common.mk` in core.
 
 Repository settings match Callie's too: rebase merges only, auto-merge, branches deleted on
 merge, the "Protect main branch" ruleset (with `build (ubuntu)` added to its required checks),
