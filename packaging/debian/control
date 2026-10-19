@@ -1,7 +1,7 @@
 Source: jot
 Section: editors
 Priority: optional
-Maintainer: Lara Kelley <larakelley@higharc.ai>
+Maintainer: Lara Kelley <hello@greylocklabs.org>
 Build-Depends: debhelper-compat (= 13),
                cmake (>= 3.28),
                ninja-build,
