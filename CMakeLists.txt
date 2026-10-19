@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.28)
 
 project(jot
-    VERSION 0.0.7
+    VERSION 0.0.8
     DESCRIPTION "Plain-file notes for Linux"
     HOMEPAGE_URL "https://jotwriter.org"
     LANGUAGES CXX

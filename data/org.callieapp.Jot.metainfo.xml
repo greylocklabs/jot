@@ -35,6 +35,14 @@
   </categories>
 
   <releases>
+    <release version="0.0.8" date="2026-10-19">
+      <description>
+        <ul>
+          <li>"Report a problem" in the ? menu files a bug or an idea as a public GitHub issue without a GitHub account, and shows the details it includes before you send them.</li>
+          <li>jot donate opens Jot's Ko-fi page, and --print prints its link instead.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.0.7" date="2026-10-17">
       <description>
         <ul>
