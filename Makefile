@@ -64,7 +64,8 @@ deps: ## Install build and development dependencies (uses sudo)
 	elif command -v apt-get >/dev/null; then sudo apt-get update && sudo apt-get install -y $(DEBIAN_DEPS); \
 	else echo "make deps: unsupported distro, see README.md for packages" >&2; exit 1; fi
 
-setup: ## Install dev tooling, enable git hooks, and configure
+setup: ## Fetch core, install dev tooling, enable git hooks, and configure
+	@git submodule update --init
 	@npm ci
 	@git config core.hooksPath .githooks
 	@cmake --preset $(PRESET)
@@ -121,12 +122,12 @@ lint: build ## Lint QML and Markdown
 	@npx markdownlint-cli2
 
 format: ## Format C++, QML, Markdown, JSON and YAML in place
-	@scripts/format.sh fix
+	@core/tooling/format.sh fix
 	@npm run --silent format:md
 
 check: ## Run everything CI checks: format, lint, a -Werror build, and tests
-	@scripts/format.sh check
-	@scripts/check-version.sh
+	@core/tooling/format.sh check
+	@core/tooling/check-version.sh
 	@npx markdownlint-cli2
 	@npm run --silent format:md:check
 	@cmake --workflow --preset ci
@@ -135,10 +136,10 @@ check: ## Run everything CI checks: format, lint, a -Werror build, and tests
 LEVEL := $(or $(VERSION),$(firstword $(filter major minor patch,$(MAKECMDGOALS))))
 
 release: ## Release from main: make release patch|minor|major, or VERSION=1.2.3
-	@scripts/release.sh $(LEVEL)
+	@core/tooling/release.sh $(LEVEL)
 
 release-dry: ## Show what make release would do, changing nothing
-	@scripts/release.sh $(LEVEL) --dry-run
+	@core/tooling/release.sh $(LEVEL) --dry-run
 
 major minor patch:
 	@:

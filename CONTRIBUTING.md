@@ -102,8 +102,8 @@ Bad:
 two so that CMake, CI and a local run agree:
 
 ```sh
-scripts/format.sh fix      # rewrite
-scripts/format.sh check    # verify, as CI does
+core/tooling/format.sh fix      # rewrite
+core/tooling/format.sh check    # verify, as CI does
 ```
 
 Markdown, JSON and YAML are formatted by prettier and linted by markdownlint:

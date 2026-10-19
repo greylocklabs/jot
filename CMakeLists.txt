@@ -55,17 +55,17 @@ if(JOT_BUILD_TESTS)
 endif()
 
 # Formatting is driven by one script so that CMake, CI and a local run agree.
-# The script is development tooling and is left out of release tarballs.
-if(EXISTS "${CMAKE_SOURCE_DIR}/scripts/format.sh")
+# The script comes from the core submodule, which release tarballs leave out.
+if(EXISTS "${CMAKE_SOURCE_DIR}/core/tooling/format.sh")
     add_custom_target(format
-        COMMAND "${CMAKE_SOURCE_DIR}/scripts/format.sh" fix
+        COMMAND "${CMAKE_SOURCE_DIR}/core/tooling/format.sh" fix
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
         COMMENT "Formatting C++ and QML sources"
         VERBATIM
     )
 
     add_custom_target(format-check
-        COMMAND "${CMAKE_SOURCE_DIR}/scripts/format.sh" check
+        COMMAND "${CMAKE_SOURCE_DIR}/core/tooling/format.sh" check
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
         COMMENT "Checking C++ and QML formatting"
         VERBATIM

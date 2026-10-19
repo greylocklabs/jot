@@ -12,7 +12,7 @@ make release minor       # or patch or major; VERSION=1.2.3 names one
 notes, or has `git cliff` draft them and opens `$EDITOR` to write them up when there are none. Then
 it sets the version in `CMakeLists.txt`, `packaging/rpm/jot.spec`, `packaging/debian/changelog`
 and the metainfo, whose release lists the notes' first-level points, runs `make check` and
-`scripts/check-version.sh`, and asks before it commits `chore: release X.Y.Z`, tags `vX.Y.Z` and
+`core/tooling/check-version.sh`, and asks before it commits `chore: release X.Y.Z`, tags `vX.Y.Z` and
 pushes both. When `make check` fails, it puts the version back and leaves the notes under
 `## Unreleased`; notes it drafted are then uncommitted, to commit and push before releasing again.
 The push goes straight to `main`, which repository admins may do.
