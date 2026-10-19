@@ -17,6 +17,8 @@ permissions:
 jobs:
   commitlint:
     uses: greylocklabs/.github/.github/workflows/commitlint.yml@v1
+    with:
+      submodules: true
 
   docs:
     runs-on: ubuntu-latest
