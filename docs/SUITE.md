@@ -18,26 +18,26 @@ all the apps use. These rules keep that move mechanical.
 
 ## Shared files
 
-| File                                                                          | State                                                                                                  |
-| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `.clang-format`, `.qmlformat.ini`, `.qmllint.ini`, `.editorconfig`, `.clangd` | Identical                                                                                              |
-| `.prettierrc`, `.prettierignore`, `.markdownlint-cli2.yaml`                   | Identical                                                                                              |
-| `.githooks/commit-msg`, `scripts/format.sh`                                   | Identical                                                                                              |
-| `cliff.toml`                                                                  | Identical apart from "the app" in one comment                                                          |
-| `package.json`, `package-lock.json`                                           | Identical apart from the name and description                                                          |
-| `commitlint.config.mjs`                                                       | Shared rules, app scopes at the top                                                                    |
-| `Makefile`                                                                    | Shared targets, app block at the top. No `logs` target until the CLI has `logs`                        |
-| `CMakePresets.json`                                                           | Same presets, `JOT_` cache variables                                                                   |
-| `.github/workflows/ci.yml`                                                    | Same jobs, Jot's dependencies, Ubuntu added                                                            |
-| `.github/FUNDING.yml`                                                         | Identical                                                                                              |
-| `SECURITY.md`                                                                 | Same text, Jot's names and scope                                                                       |
-| `.github/ISSUE_TEMPLATE/`                                                     | Neither app has one; both use the bug form in greylocklabs/.github                                     |
-| `scripts/check-version.sh`, `scripts/release.sh`, `scripts/release-notes.sh`  | App-agnostic: they read the app's name and id from `CMakeLists.txt`, so they can be shared as they are |
-| `.github/workflows/release.yml`                                               | Callie's, without the OAuth secrets, and with an Ubuntu install check                                  |
-| `.github/workflows/code-review.yml`                                           | Identical                                                                                              |
-| `www/style.css`, `www/theme.js`, `www/carousel.js`, `www/fonts/`              | Identical                                                                                              |
-| `www/install.sh`                                                              | Renamed                                                                                                |
-| `.github/review-bot/REPO_NOTES.md`                                            | Same structure, Jot's stack and risks                                                                  |
+| File                                                                          | State                                                                           |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `.clang-format`, `.qmlformat.ini`, `.qmllint.ini`, `.editorconfig`, `.clangd` | Identical                                                                       |
+| `.prettierrc`, `.prettierignore`, `.markdownlint-cli2.yaml`                   | Identical                                                                       |
+| `.githooks/commit-msg`, `scripts/format.sh`                                   | Identical                                                                       |
+| `cliff.toml`                                                                  | Identical apart from "the app" in one comment                                   |
+| `package.json`, `package-lock.json`                                           | Identical apart from the name and description                                   |
+| `commitlint.config.mjs`                                                       | Shared rules, app scopes at the top                                             |
+| `Makefile`                                                                    | Shared targets, app block at the top. No `logs` target until the CLI has `logs` |
+| `CMakePresets.json`                                                           | Same presets, `JOT_` cache variables                                            |
+| `.github/workflows/ci.yml`                                                    | Same jobs, Jot's dependencies, Ubuntu added                                     |
+| `.github/FUNDING.yml`                                                         | Identical                                                                       |
+| `SECURITY.md`                                                                 | Same text, Jot's names and scope                                                |
+| `.github/ISSUE_TEMPLATE/`                                                     | Neither app has one; both use the bug form in greylocklabs/.github              |
+| `scripts/check-version.sh`, `scripts/release.sh`, `scripts/release-notes.sh`  | Identical: they read the app's name and id from `CMakeLists.txt`                |
+| `.github/workflows/release.yml`                                               | Callie's, without the OAuth secrets, and with an Ubuntu install check           |
+| `.github/workflows/code-review.yml`                                           | Identical                                                                       |
+| `www/style.css`, `www/theme.js`, `www/carousel.js`, `www/fonts/`              | Identical                                                                       |
+| `www/install.sh`                                                              | Renamed                                                                         |
+| `.github/review-bot/REPO_NOTES.md`                                            | Same structure, Jot's stack and risks                                           |
 
 Shared code:
 
@@ -62,7 +62,7 @@ Shared code:
 here; Callie should take the same lines. The Makefile's `screenshots` recipe now reads
 `SHOT_PREPARE` and `SHOT_APP` from the app block, which Callie's needs to adopt to stay shared.
 
-Callie's `commitlint.config.mjs`, `Makefile`, `cliff.toml` and release scripts still use the older layout. Moving
+Callie's `commitlint.config.mjs`, `Makefile` and `cliff.toml` still use the older layout. Moving
 them to this one is the first step of extraction.
 
 Repository settings match Callie's too: rebase merges only, auto-merge, branches deleted on
