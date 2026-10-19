@@ -127,7 +127,7 @@ New logic in `src/core/` needs a test. Anything asserting on wall-clock values m
 Beyond formatting:
 
 - Every visual value in QML reads from the `Theme` singleton, whose values come from the theme
-  files in `themes/`. Do not hard-code colors, spacing, radii, or durations. Callie's
+  files in `core/themes/`. Do not hard-code colors, spacing, radii, or durations. Callie's
   [DESIGN.md](https://github.com/greylocklabs/callie/blob/main/DESIGN.md) explains what each token is
   for until Jot has its own.
 - To work on a theme, run `make gallery THEME=path/to/theme.toml`. It shows every token and

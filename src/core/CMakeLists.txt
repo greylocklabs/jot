@@ -54,18 +54,25 @@ add_library(jotcore STATIC
 
 # Built-in themes are compiled in, so the app works uninstalled and a broken
 # install can never leave it without its default look. They are the suite's
-# themes, shared with Callie, so a theme file works in either app.
+# themes, from core, so a theme file works in any app; they keep their
+# :/jot/themes/ paths.
 qt_add_resources(jotcore "jot_themes"
+    PREFIX "/jot"
+    BASE "${PROJECT_SOURCE_DIR}/core"
+    FILES
+        "${PROJECT_SOURCE_DIR}/core/themes/callie.toml"
+        "${PROJECT_SOURCE_DIR}/core/themes/callie-light.toml"
+        "${PROJECT_SOURCE_DIR}/core/themes/minimal.toml"
+        "${PROJECT_SOURCE_DIR}/core/themes/minimal-dark.toml"
+        "${PROJECT_SOURCE_DIR}/core/themes/paper.toml"
+        "${PROJECT_SOURCE_DIR}/core/themes/tomorrow.toml"
+        "${PROJECT_SOURCE_DIR}/core/themes/tomorrow-night.toml"
+)
+
+qt_add_resources(jotcore "jot_changelog"
     PREFIX "/jot"
     BASE "${PROJECT_SOURCE_DIR}"
     FILES
-        "${PROJECT_SOURCE_DIR}/themes/callie.toml"
-        "${PROJECT_SOURCE_DIR}/themes/callie-light.toml"
-        "${PROJECT_SOURCE_DIR}/themes/minimal.toml"
-        "${PROJECT_SOURCE_DIR}/themes/minimal-dark.toml"
-        "${PROJECT_SOURCE_DIR}/themes/paper.toml"
-        "${PROJECT_SOURCE_DIR}/themes/tomorrow.toml"
-        "${PROJECT_SOURCE_DIR}/themes/tomorrow-night.toml"
         "${PROJECT_SOURCE_DIR}/CHANGELOG.md"
 )
 

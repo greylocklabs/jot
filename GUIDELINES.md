@@ -6,20 +6,19 @@ Plain-file Markdown notes for Linux. Qt6 + QML for the UI, C++ for the core. MIT
 
 ## Layout
 
-| Path           | What                                                                              |
-| -------------- | --------------------------------------------------------------------------------- |
-| `src/core/`    | `libjotcore`: vault, index, search and sync. No UI and no QML types.              |
-| `src/ui/`      | The QML module `Jot.Ui`: views, components, and the `Theme` singleton.            |
-| `src/gui/`     | `jot-gui` entry point. `main.cpp` only.                                           |
-| `src/cli/`     | `jot`, the command-line interface over the same core.                             |
-| `src/gallery/` | `jot-gallery`, a development tool that renders a theme's tokens and components.   |
-| `tests/`       | Qt Test cases run by ctest.                                                       |
-| `core/`        | Submodule: release and format scripts and lint configs from greylocklabs/core.    |
-| `data/`        | Desktop entry, AppStream metainfo and bundled fonts.                              |
-| `assets/`      | Logo, also installed as the application icon, with hand-drawn 16 and 32 px sizes. |
-| `packaging/`   | Hand-written `rpm/jot.spec` and `debian/`, at distro-review quality.              |
-| `docs/`        | The roadmap, the suite rules and background research.                             |
-| `themes/`      | Built-in themes, shared with Callie. `callie.toml` is the default.                |
+| Path           | What                                                                                                 |
+| -------------- | ---------------------------------------------------------------------------------------------------- |
+| `src/core/`    | `libjotcore`: vault, index, search and sync. No UI and no QML types.                                 |
+| `src/ui/`      | The QML module `Jot.Ui`: views, components, and the `Theme` singleton.                               |
+| `src/gui/`     | `jot-gui` entry point. `main.cpp` only.                                                              |
+| `src/cli/`     | `jot`, the command-line interface over the same core.                                                |
+| `src/gallery/` | `jot-gallery`, a development tool that renders a theme's tokens and components.                      |
+| `tests/`       | Qt Test cases run by ctest.                                                                          |
+| `core/`        | Submodule from greylocklabs/core: the built-in themes, release and format scripts, and lint configs. |
+| `data/`        | Desktop entry, AppStream metainfo and bundled fonts.                                                 |
+| `assets/`      | Logo, also installed as the application icon, with hand-drawn 16 and 32 px sizes.                    |
+| `packaging/`   | Hand-written `rpm/jot.spec` and `debian/`, at distro-review quality.                                 |
+| `docs/`        | The roadmap, the suite rules and background research.                                                |
 
 ## Conventions
 

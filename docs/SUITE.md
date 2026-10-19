@@ -4,9 +4,13 @@ Jot copies much of its code from [Callie](https://github.com/greylocklabs/callie
 sharing it. The shared parts are moving into [greylocklabs/core](https://github.com/greylocklabs/core),
 a submodule at `core/`; these rules keep that move mechanical.
 
-The tooling has moved already: the release, version check, notes and format scripts, the commit
-rules and hook, and the format and lint configs come from `core/tooling/`. The configs and the
-hook are symlinks into it, and `commitlint.config.mjs` passes Jot's scopes to core's rules.
+Two parts have moved already:
+
+- The tooling, in `core/tooling/`: the release, version check, notes, tarball and format scripts, the
+  commit rules and hook, and the format and lint configs. The configs and the hook are symlinks into
+  `core/tooling/`, and `commitlint.config.mjs` passes Jot's scopes to core's rules.
+- The built-in themes, in `core/themes/`. Their names and ids stay Callie's, so one theme file works
+  in every app.
 
 ## Rules
 
@@ -40,7 +44,6 @@ Shared code:
 
 | Files                                                                                                             | State                                                                                                                                                                                                                                          |
 | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `themes/*.toml`                                                                                                   | Identical. The theme names and ids stay Callie's, so one theme file works in every app                                                                                                                                                         |
 | `Color`, `Base16`, `ThemeLibrary`, `Identity`, `Logging`, `LogFile`                                               | Renamed only, apart from comments that name what the app shows                                                                                                                                                                                 |
 | `ThemeSpec`, `ThemeLoader`                                                                                        | Renamed, plus an optional `[editor]` section: the font notes are written in and code colors. Callie should take it so a theme file with one loads there without warnings                                                                       |
 | `Paint`, `Palette`, `UpdateHint`, `UpdateCheck`, `FakeHttpServer`                                                 | Renamed only                                                                                                                                                                                                                                   |
