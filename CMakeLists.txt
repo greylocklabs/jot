@@ -34,6 +34,12 @@ endif()
 find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Network Qml Quick QuickControls2 Sql)
 qt_standard_project_setup(REQUIRES 6.8)
 
+# The built-in themes come from the core submodule, which a clone made without
+# --recurse-submodules leaves empty.
+if(NOT EXISTS "${PROJECT_SOURCE_DIR}/core/themes/callie.toml")
+    message(FATAL_ERROR "core/ is not checked out; run git submodule update --init")
+endif()
+
 if(JOT_BUILD_TESTS)
     enable_testing()
 endif()
@@ -47,7 +53,7 @@ add_subdirectory(data)
 
 # Built-in themes are compiled in; installed copies are a starting point for
 # people writing their own.
-install(DIRECTORY themes/ DESTINATION ${CMAKE_INSTALL_DATADIR}/jot/themes
+install(DIRECTORY core/themes/ DESTINATION ${CMAKE_INSTALL_DATADIR}/jot/themes
     FILES_MATCHING PATTERN "*.toml")
 
 if(JOT_BUILD_TESTS)

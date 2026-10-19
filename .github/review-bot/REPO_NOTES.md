@@ -82,7 +82,7 @@ Also yours: the C++ and QML boundary, model correctness, and credential handling
   belong in `src/ui/`.
 - **The `Theme` singleton is the only source of visual values.** A literal colour, spacing number,
   radius or animation duration in a `.qml` file is a finding. Theme-driven values come from
-  `themes/*.toml`; spacing, type sizes and metrics are constants in `ThemeController`.
+  `core/themes/*.toml`; spacing, type sizes and metrics are constants in `ThemeController`.
 - **Themes are data.** Theme files must never be able to run code or load QML.
 - **Text arithmetic belongs in C++.** Parsing, offsets and layout maths inside a `.qml` file is a
   finding; the model should expose it instead.
