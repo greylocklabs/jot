@@ -64,29 +64,29 @@ appstream-util validate-relax --nonet \
 %{_datadir}/jot/
 
 %changelog
-* Mon Oct 19 2026 Lara Kelley <larakelley@higharc.ai> - 0.0.8-1
+* Mon Oct 19 2026 Lara Kelley <hello@greylocklabs.org> - 0.0.8-1
 - Update to 0.0.8
 
-* Sat Oct 17 2026 Lara Kelley <larakelley@higharc.ai> - 0.0.7-1
+* Sat Oct 17 2026 Lara Kelley <hello@greylocklabs.org> - 0.0.7-1
 - Update to 0.0.7
 
-* Sat Oct 17 2026 Lara Kelley <larakelley@higharc.ai> - 0.0.6-1
+* Sat Oct 17 2026 Lara Kelley <hello@greylocklabs.org> - 0.0.6-1
 - Update to 0.0.6
 
-* Fri Oct 16 2026 Lara Kelley <larakelley@higharc.ai> - 0.0.5-1
+* Fri Oct 16 2026 Lara Kelley <hello@greylocklabs.org> - 0.0.5-1
 - Update to 0.0.5
 
-* Thu Oct 15 2026 Lara Kelley <larakelley@higharc.ai> - 0.0.4-1
+* Thu Oct 15 2026 Lara Kelley <hello@greylocklabs.org> - 0.0.4-1
 - Update to 0.0.4
 
-* Thu Oct 15 2026 Lara Kelley <larakelley@higharc.ai> - 0.0.3-1
+* Thu Oct 15 2026 Lara Kelley <hello@greylocklabs.org> - 0.0.3-1
 - Update to 0.0.3
 
-* Wed Oct 14 2026 Lara Kelley <larakelley@higharc.ai> - 0.0.2-1
+* Wed Oct 14 2026 Lara Kelley <hello@greylocklabs.org> - 0.0.2-1
 - Update to 0.0.2
 
-* Wed Oct 14 2026 Lara Kelley <larakelley@higharc.ai> - 0.0.1-1
+* Wed Oct 14 2026 Lara Kelley <hello@greylocklabs.org> - 0.0.1-1
 - Update to 0.0.1
 
-* Wed Oct 14 2026 Lara Kelley <larakelley@higharc.ai> - 0.0.0-1
+* Wed Oct 14 2026 Lara Kelley <hello@greylocklabs.org> - 0.0.0-1
 - Initial package
