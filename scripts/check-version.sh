@@ -2,8 +2,8 @@
 # Checks that every place naming the version agrees: CMake, the RPM spec, the
 # Debian changelog, the AppStream metainfo and CHANGELOG.md, whose release
 # date the metainfo must also carry. With an argument, such as a tag's
-# version, they must also match it. Before the first release, when CHANGELOG.md
-# has no dated section yet, only CMake and the packaging are compared.
+# version, they must also match it. Before the first release, when neither
+# CHANGELOG.md nor the metainfo has one yet, only CMake and the packaging are compared.
 #
 #   scripts/check-version.sh          # agree with each other
 #   scripts/check-version.sh 0.1.0    # and with 0.1.0
@@ -24,7 +24,8 @@ appstream_date="$(sed -n 's/.*<release version="[^"]*" date="\([^"]*\)".*/\1/p' 
 want="${1:-$cmake}"
 status=0
 pairs=("CMakeLists.txt:$cmake" "$app.spec:$spec" "debian/changelog:$debian")
-[ -z "$changelog" ] || pairs+=("metainfo.xml:$appstream" "CHANGELOG.md:$changelog")
+# Only an app with no release yet has neither a dated section nor a metainfo release.
+[ -z "$changelog$appstream" ] || pairs+=("metainfo.xml:$appstream" "CHANGELOG.md:$changelog")
 for pair in "${pairs[@]}"; do
     if [ "${pair#*:}" != "$want" ]; then
         echo "check-version.sh: ${pair%%:*} says ${pair#*:}, expected $want" >&2
