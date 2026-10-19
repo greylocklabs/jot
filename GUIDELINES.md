@@ -14,7 +14,7 @@ Plain-file Markdown notes for Linux. Qt6 + QML for the UI, C++ for the core. MIT
 | `src/cli/`     | `jot`, the command-line interface over the same core.                             |
 | `src/gallery/` | `jot-gallery`, a development tool that renders a theme's tokens and components.   |
 | `tests/`       | Qt Test cases run by ctest.                                                       |
-| `scripts/`     | `format.sh`, the single formatter entry point used by CMake and CI.               |
+| `core/`        | Submodule: release and format scripts and lint configs from greylocklabs/core.    |
 | `data/`        | Desktop entry, AppStream metainfo and bundled fonts.                              |
 | `assets/`      | Logo, also installed as the application icon, with hand-drawn 16 and 32 px sizes. |
 | `packaging/`   | Hand-written `rpm/jot.spec` and `debian/`, at distro-review quality.              |
@@ -44,7 +44,8 @@ Do not re-litigate these without being asked. [docs/ROADMAP.md](docs/ROADMAP.md)
 - No AI features, no telemetry, no Jot account or server.
 - The editor edits Markdown text directly; it never round-trips through `QTextDocument`'s
   Markdown import and export.
-- Shared tooling stays identical to Callie's until it moves to a shared kit.
+- Shared tooling comes from greylocklabs/core, a submodule at `core/` that tracks core's `release`
+  branch; the configs at the root are symlinks into `core/tooling/`.
 
 ## Build
 
