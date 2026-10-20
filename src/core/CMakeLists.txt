@@ -1,6 +1,5 @@
 # Deliberately not a QML module. The CLI links this, and pulling QtQml in would
 # cost it startup time for no benefit. QML exposure happens in src/ui.
-find_package(tomlplusplus REQUIRED)
 
 add_library(jotcore STATIC
     jot/FrontMatter.h
@@ -70,8 +69,6 @@ target_link_libraries(jotcore
         greylock::core
         Qt6::Network
         Qt6::Sql
-    PRIVATE
-        tomlplusplus::tomlplusplus
 )
 
 target_compile_definitions(jotcore PRIVATE
