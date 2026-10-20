@@ -1,7 +1,7 @@
 #include "ThemeController.h"
 
-#include "jot/Color.h"
-#include "jot/ThemeLoader.h"
+#include "greylock/Color.h"
+#include "greylock/ThemeLoader.h"
 
 #include <QDir>
 #include <QFile>
@@ -42,7 +42,7 @@ private Q_SLOTS:
 
 void TestThemeController::startsWithDefaultTheme()
 {
-    QCOMPARE(ThemeController::instance()->name(), ThemeLoader::defaultTheme().name);
+    QCOMPARE(ThemeController::instance()->name(), greylock::ThemeLoader::defaultTheme().name);
 }
 
 void TestThemeController::loadsAFileAndReloadsOnEdit()
@@ -101,13 +101,14 @@ void TestThemeController::builtInIdIgnoresSameNamedFile()
 void TestThemeController::everyBuiltInThemeReads()
 {
     ThemeController *theme = ThemeController::instance();
-    for (const QString &id : ThemeLoader::builtInIds()) {
+    for (const QString &id : greylock::ThemeLoader::builtInIds()) {
         QVERIFY2(theme->load(id).isEmpty(), qPrintable(id));
         // Text, accents and sticker ink all meet the contrast Jot asks of any theme.
         QVERIFY2(theme->warnings().isEmpty(),
                  qPrintable(id + u": "_s + theme->warnings().join(u"; "_s)));
         // A filled red button's label reads as body text does.
-        QVERIFY2(color::contrastRatio(theme->dangerText(), theme->danger()) >= 4.5, qPrintable(id));
+        QVERIFY2(greylock::color::contrastRatio(theme->dangerText(), theme->danger()) >= 4.5,
+                 qPrintable(id));
         QCOMPARE(theme->dangerText() == theme->text() || theme->dangerText() == theme->bg(), true);
     }
     QVERIFY(theme->load(QStringLiteral("callie")).isEmpty());

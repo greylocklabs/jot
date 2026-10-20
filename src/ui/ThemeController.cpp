@@ -1,8 +1,8 @@
 #include "ThemeController.h"
 
-#include "jot/Color.h"
+#include "greylock/Color.h"
+#include "greylock/ThemeLoader.h"
 #include "jot/Logging.h"
-#include "jot/ThemeLoader.h"
 
 #include <QCoreApplication>
 #include <QFileInfo>
@@ -13,7 +13,8 @@
 namespace jot {
 
 ThemeController::ThemeController(QObject *parent)
-    : QObject(parent), m_spec(ThemeLoader::defaultTheme()), m_watcher(new QFileSystemWatcher(this))
+    : QObject(parent), m_spec(greylock::ThemeLoader::defaultTheme()),
+      m_watcher(new QFileSystemWatcher(this))
 {
     // Bundled so the default theme looks the same everywhere; a theme may still
     // name any installed family.
@@ -44,14 +45,14 @@ ThemeController *ThemeController::create(QQmlEngine *, QJSEngine *)
 
 QStringList ThemeController::load(const QString &idOrPath)
 {
-    const ThemeLoadResult result = ThemeLoader::load(idOrPath);
+    const greylock::ThemeLoadResult result = greylock::ThemeLoader::load(idOrPath);
     if (!result.ok())
         return result.errors;
 
     if (!m_watchedPath.isEmpty())
         m_watcher->removePath(m_watchedPath);
-    m_watchedPath =
-        ThemeLoader::isPath(idOrPath) ? QFileInfo(idOrPath).absoluteFilePath() : QString();
+    m_watchedPath = greylock::ThemeLoader::isPath(idOrPath) ? QFileInfo(idOrPath).absoluteFilePath()
+                                                            : QString();
     if (!m_watchedPath.isEmpty())
         m_watcher->addPath(m_watchedPath);
 
@@ -71,8 +72,8 @@ void ThemeController::reloadWatchedFile()
     if (!m_watcher->files().contains(m_watchedPath) && QFileInfo::exists(m_watchedPath))
         m_watcher->addPath(m_watchedPath);
 
-    const ThemeLoadResult result =
-        ThemeLoader::loadFile(m_watchedPath, ThemeLoader::defaultTheme());
+    const greylock::ThemeLoadResult result =
+        greylock::ThemeLoader::loadFile(m_watchedPath, greylock::ThemeLoader::defaultTheme());
     if (!result.ok()) {
         // A half-typed edit should not wipe the look; keep the last good theme.
         for (const QString &error : result.errors)
@@ -102,7 +103,9 @@ QColor ThemeController::dangerText() const
     // Whichever of the theme's own text and background reads better on the red.
     const QColor &red = m_spec.colors.danger;
     const QColor &text = m_spec.colors.text, &ground = m_spec.colors.background;
-    return color::contrastRatio(text, red) >= color::contrastRatio(ground, red) ? text : ground;
+    return greylock::color::contrastRatio(text, red) >= greylock::color::contrastRatio(ground, red)
+               ? text
+               : ground;
 }
 
 QColor ThemeController::shadowColor() const
@@ -114,12 +117,12 @@ QColor ThemeController::shadowColor() const
 
 double ThemeController::contrast(const QColor &a, const QColor &b) const
 {
-    return color::contrastRatio(a, b);
+    return greylock::color::contrastRatio(a, b);
 }
 
 QVariantList ThemeController::swatches() const
 {
-    const ThemeSpec::Colors &c = m_spec.colors;
+    const greylock::ThemeSpec::Colors &c = m_spec.colors;
     const std::pair<const char *, QColor> tokens[] = {
         {"background", c.background},  {"surface", c.surface},      {"surface-alt", c.surfaceAlt},
         {"hairline", c.hairline},      {"border", c.border},        {"text", c.text},

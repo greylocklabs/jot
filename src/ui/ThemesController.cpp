@@ -3,9 +3,9 @@
 #include "SettingsForeign.h"
 #include "ThemeController.h"
 
+#include "greylock/ThemeLoader.h"
 #include "jot/Logging.h"
 #include "jot/Settings.h"
-#include "jot/ThemeLoader.h"
 
 #include <QCoreApplication>
 #include <QFileInfo>
@@ -18,22 +18,22 @@ namespace {
 
 const QString kDefaultTheme = u"callie"_s;
 
-QColor colorFor(const ThemeSpec::Colors &c, const QString &key)
+QColor colorFor(const greylock::ThemeSpec::Colors &c, const QString &key)
 {
-    static const QHash<QString, QColor ThemeSpec::Colors::*> members{
-        {u"background"_s, &ThemeSpec::Colors::background},
-        {u"surface"_s, &ThemeSpec::Colors::surface},
-        {u"surface-alt"_s, &ThemeSpec::Colors::surfaceAlt},
-        {u"hairline"_s, &ThemeSpec::Colors::hairline},
-        {u"border"_s, &ThemeSpec::Colors::border},
-        {u"text"_s, &ThemeSpec::Colors::text},
-        {u"text-muted"_s, &ThemeSpec::Colors::textMuted},
-        {u"text-faint"_s, &ThemeSpec::Colors::textFaint},
-        {u"accent"_s, &ThemeSpec::Colors::accent},
-        {u"accent-text"_s, &ThemeSpec::Colors::accentText},
-        {u"accent-edge"_s, &ThemeSpec::Colors::accentEdge},
-        {u"edge"_s, &ThemeSpec::Colors::edge},
-        {u"danger"_s, &ThemeSpec::Colors::danger},
+    static const QHash<QString, QColor greylock::ThemeSpec::Colors::*> members{
+        {u"background"_s, &greylock::ThemeSpec::Colors::background},
+        {u"surface"_s, &greylock::ThemeSpec::Colors::surface},
+        {u"surface-alt"_s, &greylock::ThemeSpec::Colors::surfaceAlt},
+        {u"hairline"_s, &greylock::ThemeSpec::Colors::hairline},
+        {u"border"_s, &greylock::ThemeSpec::Colors::border},
+        {u"text"_s, &greylock::ThemeSpec::Colors::text},
+        {u"text-muted"_s, &greylock::ThemeSpec::Colors::textMuted},
+        {u"text-faint"_s, &greylock::ThemeSpec::Colors::textFaint},
+        {u"accent"_s, &greylock::ThemeSpec::Colors::accent},
+        {u"accent-text"_s, &greylock::ThemeSpec::Colors::accentText},
+        {u"accent-edge"_s, &greylock::ThemeSpec::Colors::accentEdge},
+        {u"edge"_s, &greylock::ThemeSpec::Colors::edge},
+        {u"danger"_s, &greylock::ThemeSpec::Colors::danger},
     };
     const auto member = members.value(key);
     return member ? c.*member : QColor();
@@ -92,7 +92,7 @@ QStringList ThemesController::applyForThisRun(const QString &idOrPath)
 QVariantList ThemesController::available() const
 {
     QVariantList themes;
-    for (const QString &id : ThemeLoader::builtInIds())
+    for (const QString &id : greylock::ThemeLoader::builtInIds())
         themes << QVariantMap{
             {u"id"_s, id}, {u"name"_s, ThemeLibrary::displayName(id)}, {u"editable"_s, false}};
     for (const QString &path : m_library.themes())
@@ -116,7 +116,7 @@ bool ThemesController::editable() const
 
 QVariantMap ThemesController::colors() const
 {
-    const ThemeSpec::Colors &c = ThemeController::instance()->spec().colors;
+    const greylock::ThemeSpec::Colors &c = ThemeController::instance()->spec().colors;
     QVariantMap map;
     for (const QString &key : ThemeLibrary::colorKeys())
         map.insert(key, colorFor(c, key));

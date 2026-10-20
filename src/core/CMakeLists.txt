@@ -29,15 +29,8 @@ add_library(jotcore STATIC
     Logging.cpp
     jot/LogFile.h
     LogFile.cpp
-    jot/Color.h
-    Color.cpp
     jot/CodeColors.h
     CodeColors.cpp
-    jot/Base16.h
-    Base16.cpp
-    jot/ThemeSpec.h
-    jot/ThemeLoader.h
-    ThemeLoader.cpp
     jot/ThemeLibrary.h
     ThemeLibrary.cpp
     jot/Releases.h
@@ -52,22 +45,6 @@ add_library(jotcore STATIC
     ProblemReport.cpp
 )
 
-# Built-in themes are compiled in, so the app works uninstalled and a broken
-# install can never leave it without its default look. They are the suite's
-# themes, from core, so a theme file works in any app; they keep their
-# :/jot/themes/ paths.
-qt_add_resources(jotcore "jot_themes"
-    PREFIX "/jot"
-    BASE "${PROJECT_SOURCE_DIR}/core"
-    FILES
-        "${PROJECT_SOURCE_DIR}/core/themes/callie.toml"
-        "${PROJECT_SOURCE_DIR}/core/themes/callie-light.toml"
-        "${PROJECT_SOURCE_DIR}/core/themes/minimal.toml"
-        "${PROJECT_SOURCE_DIR}/core/themes/minimal-dark.toml"
-        "${PROJECT_SOURCE_DIR}/core/themes/paper.toml"
-        "${PROJECT_SOURCE_DIR}/core/themes/tomorrow.toml"
-        "${PROJECT_SOURCE_DIR}/core/themes/tomorrow-night.toml"
-)
 
 qt_add_resources(jotcore "jot_changelog"
     PREFIX "/jot"
@@ -90,6 +67,7 @@ target_link_libraries(jotcore
     PUBLIC
         Qt6::Core
         Qt6::Gui
+        greylock::core
         Qt6::Network
         Qt6::Sql
     PRIVATE

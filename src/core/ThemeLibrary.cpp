@@ -1,8 +1,8 @@
 #include "jot/ThemeLibrary.h"
-#include "jot/Base16.h"
+#include "greylock/Base16.h"
 #include "jot/Identity.h"
 
-#include "jot/ThemeLoader.h"
+#include "greylock/ThemeLoader.h"
 
 #include <QDir>
 #include <QFile>
@@ -19,16 +19,18 @@ namespace {
 
 QString sourceFile(const QString &idOrPath)
 {
-    return ThemeLoader::isPath(idOrPath) ? idOrPath : u":/jot/themes/"_s + idOrPath + u".toml"_s;
+    return greylock::ThemeLoader::isPath(idOrPath)
+               ? idOrPath
+               : u":/greylock/themes/"_s + idOrPath + u".toml"_s;
 }
 
 /// The [theme] name a file sets itself, or empty, unlike a load over the
 /// default theme, which fills a missing name in with the default's.
 QString ownName(const QByteArray &toml)
 {
-    ThemeSpec unnamed = ThemeLoader::defaultTheme();
+    greylock::ThemeSpec unnamed = greylock::ThemeLoader::defaultTheme();
     unnamed.name.clear();
-    return ThemeLoader::parse(toml, unnamed).theme.name;
+    return greylock::ThemeLoader::parse(toml, unnamed).theme.name;
 }
 
 QByteArray read(const QString &path, QString *error)
@@ -149,8 +151,8 @@ QString ThemeLibrary::copy(const QString &idOrPath, const QString &name)
     }
     const QString renamed = setKey(QString::fromUtf8(data), u"theme"_s, u"name"_s, quoted(name));
     // Check before writing, so a copy that would not load never joins the library.
-    const ThemeLoadResult result =
-        ThemeLoader::parse(renamed.toUtf8(), ThemeLoader::defaultTheme());
+    const greylock::ThemeLoadResult result =
+        greylock::ThemeLoader::parse(renamed.toUtf8(), greylock::ThemeLoader::defaultTheme());
     if (!result.ok()) {
         fail(result.errors.join(u"; "_s));
         return {};
@@ -177,8 +179,8 @@ bool ThemeLibrary::setColor(const QString &path, const QString &key, const QColo
         return fail(problem);
     const QString updated = setKey(QString::fromUtf8(data), u"colors"_s, key, quoted(color.name()));
     // Check before writing, so a bad key never reaches the file being watched.
-    const ThemeLoadResult result =
-        ThemeLoader::parse(updated.toUtf8(), ThemeLoader::defaultTheme());
+    const greylock::ThemeLoadResult result =
+        greylock::ThemeLoader::parse(updated.toUtf8(), greylock::ThemeLoader::defaultTheme());
     if (!result.ok())
         return fail(result.errors.join(u"; "_s));
     return write(path, updated.toUtf8(), &problem) || fail(problem);
@@ -192,15 +194,16 @@ QString ThemeLibrary::importTheme(const QString &source)
         fail(problem);
         return {};
     }
-    if (base16::isScheme(source)) {
-        const std::optional<QByteArray> theme = base16::toTheme(data, &problem);
+    if (greylock::base16::isScheme(source)) {
+        const std::optional<QByteArray> theme = greylock::base16::toTheme(data, &problem);
         if (!theme) {
             fail(problem);
             return {};
         }
         data = *theme;
     }
-    const ThemeLoadResult result = ThemeLoader::parse(data, ThemeLoader::defaultTheme());
+    const greylock::ThemeLoadResult result =
+        greylock::ThemeLoader::parse(data, greylock::ThemeLoader::defaultTheme());
     if (!result.ok()) {
         fail(result.errors.join(u"; "_s));
         return {};

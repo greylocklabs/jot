@@ -4,7 +4,7 @@ Jot copies much of its code from [Callie](https://github.com/greylocklabs/callie
 sharing it. The shared parts are moving into [greylocklabs/core](https://github.com/greylocklabs/core),
 a submodule at `core/`; these rules keep that move mechanical.
 
-Two parts have moved already:
+Three parts have moved already:
 
 - The tooling, in `core/tooling/`: the release, version check, notes, tarball and format scripts, the
   commit rules and hook, the format and lint configs, and the make targets in `common.mk`. The configs
@@ -12,6 +12,9 @@ Two parts have moved already:
   rules, and the Makefile sets Jot's values before it includes `common.mk`.
 - The built-in themes, in `core/themes/`. Their names and ids stay Callie's, so one theme file works
   in every app.
+- The theme engine, in core's `greylock::core` library: `greylock::color`, `greylock::base16`,
+  `greylock::ThemeSpec` and `greylock::ThemeLoader`, with the built-in themes compiled in at
+  `:/greylock/themes/`.
 
 ## Rules
 
@@ -44,8 +47,7 @@ Shared code:
 
 | Files                                                                                                             | State                                                                                                                                                                                                                                          |
 | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Color`, `Base16`, `ThemeLibrary`, `Identity`, `Logging`, `LogFile`                                               | Renamed only, apart from comments that name what the app shows                                                                                                                                                                                 |
-| `ThemeSpec`, `ThemeLoader`                                                                                        | Renamed, plus an optional `[editor]` section: the font notes are written in and code colors. Callie should take it so a theme file with one loads there without warnings                                                                       |
+| `ThemeLibrary`, `Identity`, `Logging`, `LogFile`                                                                  | Renamed only, apart from comments that name what the app shows                                                                                                                                                                                 |
 | `Paint`, `Palette`, `UpdateHint`, `UpdateCheck`, `FakeHttpServer`                                                 | Renamed only                                                                                                                                                                                                                                   |
 | `Upgrade`                                                                                                         | Renamed, apart from the installer address it gives, which is Jot's at `jotwriter.org`                                                                                                                                                          |
 | `Releases`                                                                                                        | Accepts Ubuntu 26.04 and later, which Callie does not yet                                                                                                                                                                                      |

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "jot/ThemeSpec.h"
+#include "greylock/ThemeSpec.h"
 
 #include <QColor>
 #include <QEasingCurve>
@@ -142,7 +142,7 @@ public:
     /// file for edits. On failure the current theme stays and errors are returned.
     QStringList load(const QString &idOrPath);
 
-    [[nodiscard]] const ThemeSpec &spec() const { return m_spec; }
+    [[nodiscard]] const greylock::ThemeSpec &spec() const { return m_spec; }
 
     Q_INVOKABLE QColor tint(const QColor &color, qreal alpha) const;
     /// The font notes are written in for a Settings choice: "mono" is the theme's mono
@@ -246,7 +246,7 @@ private:
     explicit ThemeController(QObject *parent = nullptr);
     void reloadWatchedFile();
 
-    ThemeSpec m_spec;
+    greylock::ThemeSpec m_spec;
     QStringList m_warnings;
     QString m_watchedPath;
     QFileSystemWatcher *m_watcher;
