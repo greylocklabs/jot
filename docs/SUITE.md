@@ -7,8 +7,9 @@ a submodule at `core/`; these rules keep that move mechanical.
 Two parts have moved already:
 
 - The tooling, in `core/tooling/`: the release, version check, notes, tarball and format scripts, the
-  commit rules and hook, and the format and lint configs. The configs and the hook are symlinks into
-  `core/tooling/`, and `commitlint.config.mjs` passes Jot's scopes to core's rules.
+  commit rules and hook, the format and lint configs, and the make targets in `common.mk`. The configs
+  and the hook are symlinks into `core/tooling/`, `commitlint.config.mjs` passes Jot's scopes to core's
+  rules, and the Makefile sets Jot's values before it includes `common.mk`.
 - The built-in themes, in `core/themes/`. Their names and ids stay Callie's, so one theme file works
   in every app.
 
@@ -16,8 +17,8 @@ Two parts have moved already:
 
 - A shared file stays identical to Callie's copy. When one changes, make the same change in the
   other, in the same pull request series, or note why the two differ in the table below.
-- App-specific values live in one marked place per file: the block above the "Shared by every app
-  in the suite" line in the Makefile, and the scopes in `commitlint.config.mjs`.
+- App-specific values live in one place per file: the values above the `include` in the Makefile,
+  and the scopes in `commitlint.config.mjs`.
 - Shared code names nothing app-specific in comments or messages. Say "the app", not "Jot".
 - Copied C++ keeps its structure and changes only the namespace (`callie` to `jot`), the
   include prefix (`callie/` to `jot/`) and the CMake prefix (`CALLIE_` to `JOT_`), so a diff
@@ -25,20 +26,19 @@ Two parts have moved already:
 
 ## Shared files
 
-| File                                                             | State                                                                           |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `package.json`, `package-lock.json`                              | Identical apart from the name and description                                   |
-| `Makefile`                                                       | Shared targets, app block at the top. No `logs` target until the CLI has `logs` |
-| `CMakePresets.json`                                              | Same presets, `JOT_` cache variables                                            |
-| `.github/workflows/ci.yml`                                       | Same jobs, Jot's dependencies, Ubuntu added                                     |
-| `.github/FUNDING.yml`                                            | Identical                                                                       |
-| `SECURITY.md`                                                    | Same text, Jot's names and scope                                                |
-| `.github/ISSUE_TEMPLATE/`                                        | Neither app has one; both use the bug form in greylocklabs/.github              |
-| `.github/workflows/release.yml`                                  | Callie's, without the OAuth secrets, and with an Ubuntu install check           |
-| `.github/workflows/code-review.yml`                              | Identical                                                                       |
-| `www/style.css`, `www/theme.js`, `www/carousel.js`, `www/fonts/` | Identical                                                                       |
-| `www/install.sh`                                                 | Renamed                                                                         |
-| `.github/review-bot/REPO_NOTES.md`                               | Same structure, Jot's stack and risks                                           |
+| File                                                             | State                                                                 |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `package.json`, `package-lock.json`                              | Identical apart from the name and description                         |
+| `CMakePresets.json`                                              | Same presets, `JOT_` cache variables                                  |
+| `.github/workflows/ci.yml`                                       | Same jobs, Jot's dependencies, Ubuntu added                           |
+| `.github/FUNDING.yml`                                            | Identical                                                             |
+| `SECURITY.md`                                                    | Same text, Jot's names and scope                                      |
+| `.github/ISSUE_TEMPLATE/`                                        | Neither app has one; both use the bug form in greylocklabs/.github    |
+| `.github/workflows/release.yml`                                  | Callie's, without the OAuth secrets, and with an Ubuntu install check |
+| `.github/workflows/code-review.yml`                              | Identical                                                             |
+| `www/style.css`, `www/theme.js`, `www/carousel.js`, `www/fonts/` | Identical                                                             |
+| `www/install.sh`                                                 | Renamed                                                               |
+| `.github/review-bot/REPO_NOTES.md`                               | Same structure, Jot's stack and risks                                 |
 
 Shared code:
 
@@ -57,12 +57,6 @@ Shared code:
 | `SettingsForeign`                                                                                                 | Callie keeps this in `EventModelForeign.h` beside its calendar types                                                                                                                                                                           |
 | `KeyHelp`, `SettingsDialog`                                                                                       | Callie's layout and sections, with Jot's shortcuts and settings                                                                                                                                                                                |
 | `MonthModel`, `DatePicker`                                                                                        | `MonthModel` keeps its own week helpers instead of Callie's `ViewRange`; `DatePicker` takes the first day of the week from the locale and shows a placeholder for no date                                                                      |
-
-The Makefile's `screenshots` recipe now reads
-`SHOT_PREPARE` and `SHOT_APP` from the app block, which Callie's needs to adopt to stay shared.
-
-Callie's `Makefile` still uses the older layout; moving it to this one comes before a shared
-`common.mk` in core.
 
 Repository settings match Callie's too: rebase merges only, auto-merge, branches deleted on
 merge, the "Protect main branch" ruleset (with `build (ubuntu)` added to its required checks),
