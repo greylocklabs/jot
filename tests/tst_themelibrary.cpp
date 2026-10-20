@@ -1,5 +1,5 @@
+#include "greylock/ThemeLoader.h"
 #include "jot/ThemeLibrary.h"
-#include "jot/ThemeLoader.h"
 
 #include <QDir>
 #include <QFile>
@@ -58,10 +58,10 @@ void TestThemeLibrary::copyStartsFromABuiltIn()
     QVERIFY(path.endsWith(u"/peach-fuzz.toml"_s));
     QCOMPARE(m_library->themes(), QStringList{path});
 
-    const ThemeLoadResult loaded = ThemeLoader::load(path);
+    const greylock::ThemeLoadResult loaded = greylock::ThemeLoader::load(path);
     QVERIFY(loaded.ok());
     QCOMPARE(loaded.theme.name, u"Peach Fuzz"_s);
-    QCOMPARE(loaded.theme.colors.accent, ThemeLoader::defaultTheme().colors.accent);
+    QCOMPARE(loaded.theme.colors.accent, greylock::ThemeLoader::defaultTheme().colors.accent);
     QCOMPARE(ThemeLibrary::displayName(path), u"Peach Fuzz"_s);
     // Comments in the original survive the copy.
     QVERIFY(read(path).contains(u"# Callie, the default theme."_s));
@@ -80,7 +80,7 @@ void TestThemeLibrary::copyNamesWithAwkwardCharactersLoad()
     const QString path = m_library->copy(u"callie"_s, u"Say \"hi\" \\ to\nme\t"_s);
     QVERIFY2(!path.isEmpty(), qPrintable(m_library->error()));
 
-    const ThemeLoadResult loaded = ThemeLoader::load(path);
+    const greylock::ThemeLoadResult loaded = greylock::ThemeLoader::load(path);
     QVERIFY2(loaded.ok(), qPrintable(loaded.errors.join(u"; "_s)));
     QCOMPARE(loaded.theme.name, u"Say \"hi\" \\ tome"_s);
 }
@@ -92,9 +92,9 @@ void TestThemeLibrary::setColorKeepsTheRest()
     QVERIFY2(m_library->setColor(path, u"accent"_s, QColor(u"#ffaa00"_s)),
              qPrintable(m_library->error()));
 
-    const ThemeLoadResult loaded = ThemeLoader::load(path);
+    const greylock::ThemeLoadResult loaded = greylock::ThemeLoader::load(path);
     QCOMPARE(loaded.theme.colors.accent, QColor(u"#ffaa00"_s));
-    QCOMPARE(loaded.theme.colors.surface, ThemeLoader::defaultTheme().colors.surface);
+    QCOMPARE(loaded.theme.colors.surface, greylock::ThemeLoader::defaultTheme().colors.surface);
     // One line changed, nothing else.
     QCOMPARE(read(path).split(u'\n').size(), before.split(u'\n').size());
 }
@@ -110,7 +110,7 @@ void TestThemeLibrary::setColorAddsMissingKeys()
 
     QVERIFY(m_library->setColor(path, u"accent"_s, QColor(u"#00aa88"_s)));
     QVERIFY(m_library->setColor(path, u"danger"_s, QColor(u"#aa0000"_s)));
-    const ThemeLoadResult loaded = ThemeLoader::load(path);
+    const greylock::ThemeLoadResult loaded = greylock::ThemeLoader::load(path);
     QVERIFY(loaded.ok());
     QCOMPARE(loaded.theme.colors.accent, QColor(u"#00aa88"_s));
     QCOMPARE(loaded.theme.colors.danger, QColor(u"#aa0000"_s));
@@ -118,14 +118,14 @@ void TestThemeLibrary::setColorAddsMissingKeys()
     // Every key the editor offers is one the loader knows.
     for (const QString &key : ThemeLibrary::colorKeys())
         QVERIFY2(m_library->setColor(path, key, QColor(u"#336699"_s)), qPrintable(key));
-    const ThemeLoadResult all = ThemeLoader::load(path);
+    const greylock::ThemeLoadResult all = greylock::ThemeLoader::load(path);
     QVERIFY2(!all.warnings.join(u' ').contains(u"unknown"_s, Qt::CaseInsensitive),
              qPrintable(all.warnings.join(u"; "_s)));
     QCOMPARE(all.theme.colors.edge, QColor(u"#336699"_s));
     QVERIFY(m_library->setColor(path, u"accent"_s, QColor(u"#00aa88"_s)));
 
     QVERIFY(!m_library->setColor(path, u"no-such-color"_s, QColor(u"#000000"_s)));
-    QCOMPARE(ThemeLoader::load(path).theme.colors.accent, QColor(u"#00aa88"_s));
+    QCOMPARE(greylock::ThemeLoader::load(path).theme.colors.accent, QColor(u"#00aa88"_s));
 }
 
 void TestThemeLibrary::setColorRefusesOtherFiles()
@@ -180,13 +180,14 @@ base0F: "a3685a"
 )yaml");
     const QString nightPath = m_library->importTheme(night);
     QVERIFY2(!nightPath.isEmpty(), qPrintable(m_library->error()));
-    const ThemeLoadResult dark = ThemeLoader::loadFile(nightPath, ThemeLoader::defaultTheme());
+    const greylock::ThemeLoadResult dark =
+        greylock::ThemeLoader::loadFile(nightPath, greylock::ThemeLoader::defaultTheme());
     QVERIFY(dark.ok());
     QCOMPARE(dark.theme.name, u"Tomorrow Night"_s);
     QVERIFY(dark.theme.dark);
     QCOMPARE(dark.theme.colors.background, QColor(u"#1d1f21"_s));
     QCOMPARE(dark.theme.colors.accent, QColor(u"#b294bb"_s));
-    QCOMPARE(ThemeLoader::contrastWarnings(dark.theme), QStringList());
+    QCOMPARE(greylock::ThemeLoader::contrastWarnings(dark.theme), QStringList());
     QVERIFY(read(nightPath).contains(u"by Chris Kempson"_s));
 
     // tinted-theming's layout, light, whose faint text is darkened to read.
@@ -214,11 +215,12 @@ palette:
 )yaml");
     const QString lightPath = m_library->importTheme(solarized);
     QVERIFY2(!lightPath.isEmpty(), qPrintable(m_library->error()));
-    const ThemeLoadResult light = ThemeLoader::loadFile(lightPath, ThemeLoader::defaultTheme());
+    const greylock::ThemeLoadResult light =
+        greylock::ThemeLoader::loadFile(lightPath, greylock::ThemeLoader::defaultTheme());
     QVERIFY(light.ok());
     QCOMPARE(light.theme.name, u"Solarized \"Light\""_s);
     QVERIFY(!light.theme.dark);
-    QCOMPARE(ThemeLoader::contrastWarnings(light.theme), QStringList());
+    QCOMPARE(greylock::ThemeLoader::contrastWarnings(light.theme), QStringList());
     QVERIFY(light.theme.colors.textFaint != QColor(u"#839496"_s));
 
     const QString partial =
@@ -239,7 +241,7 @@ void TestThemeLibrary::exportWritesABuiltIn()
     const QString destination = m_dir->filePath(u"out/callie.toml"_s);
     QDir().mkpath(m_dir->filePath(u"out"_s));
     QVERIFY2(m_library->exportTheme(u"callie"_s, destination), qPrintable(m_library->error()));
-    QVERIFY(ThemeLoader::load(destination).ok());
+    QVERIFY(greylock::ThemeLoader::load(destination).ok());
 }
 
 void TestThemeLibrary::removeOnlyOwnThemes()

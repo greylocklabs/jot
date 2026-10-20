@@ -44,6 +44,8 @@ if(JOT_BUILD_TESTS)
     enable_testing()
 endif()
 
+# Shared code and the built-in themes, from greylocklabs/core.
+add_subdirectory(core)
 add_subdirectory(src/core)
 add_subdirectory(src/ui)
 add_subdirectory(src/gui)

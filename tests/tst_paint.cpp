@@ -1,7 +1,7 @@
 #include "Paint.h"
 
-#include "jot/Color.h"
-#include "jot/ThemeLoader.h"
+#include "greylock/Color.h"
+#include "greylock/ThemeLoader.h"
 
 #include <QTest>
 
@@ -80,17 +80,17 @@ void TestPaint::terminalsSayHowManyColors()
 void TestPaint::calendarsLookAsInTheApp()
 {
     // Fitted to the theme: the fill and the ink keep the calendar's hue.
-    ThemeSpec fitted = ThemeLoader::defaultTheme();
+    greylock::ThemeSpec fitted = greylock::ThemeLoader::defaultTheme();
     fitted.calendar.harmonize = true;
     const Palette themed(fitted);
     const QColor red(213, 0, 0);
     QCOMPARE(themed.fill(red),
-             color::harmonize(red, fitted.calendar.lightness, fitted.calendar.chroma));
-    QCOMPARE(themed.ink(red),
-             color::harmonize(red, fitted.calendar.inkLightness, fitted.calendar.inkChroma));
+             greylock::color::harmonize(red, fitted.calendar.lightness, fitted.calendar.chroma));
+    QCOMPARE(themed.ink(red), greylock::color::harmonize(red, fitted.calendar.inkLightness,
+                                                         fitted.calendar.inkChroma));
 
     // A theme that shows calendars as they are: black or white ink, whichever reads.
-    ThemeSpec plain = ThemeLoader::defaultTheme();
+    greylock::ThemeSpec plain = greylock::ThemeLoader::defaultTheme();
     plain.calendar.harmonize = false;
     const Palette raw(plain);
     QCOMPARE(raw.fill(red), red);
@@ -105,19 +105,19 @@ void TestPaint::calendarTextReadsOnEveryPage()
                                       u"#33b679"_s, u"#039be5"_s, u"#3f51b5"_s, u"#7986cb"_s,
                                       u"#8e24aa"_s, u"#e67c73"_s, u"#616161"_s};
     // Every built-in theme, and light and dark ones showing calendars as they are.
-    QList<std::pair<QString, ThemeSpec>> themes;
-    for (const QString &id : ThemeLoader::builtInIds())
-        themes.append({id, ThemeLoader::loadBuiltIn(id).theme});
+    QList<std::pair<QString, greylock::ThemeSpec>> themes;
+    for (const QString &id : greylock::ThemeLoader::builtInIds())
+        themes.append({id, greylock::ThemeLoader::loadBuiltIn(id).theme});
     for (const QString &id : {u"jot"_s, u"jot-light"_s}) {
-        ThemeSpec raw = ThemeLoader::loadBuiltIn(id).theme;
+        greylock::ThemeSpec raw = greylock::ThemeLoader::loadBuiltIn(id).theme;
         raw.calendar.harmonize = false;
         themes.append({id + u" unfitted"_s, raw});
     }
     for (const auto &[id, theme] : themes) {
         const Palette palette(theme);
         for (const QString &google : googleColors) {
-            const double ratio =
-                color::contrastRatio(palette.onPage(QColor(google)), palette.colors().background);
+            const double ratio = greylock::color::contrastRatio(palette.onPage(QColor(google)),
+                                                                palette.colors().background);
             QVERIFY2(ratio >= 4.5, qPrintable(u"%1 %2: %3"_s.arg(id, google).arg(ratio)));
         }
     }

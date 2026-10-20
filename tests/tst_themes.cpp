@@ -2,9 +2,9 @@
 #include "ThemeController.h"
 #include "ThemesController.h"
 
+#include "greylock/ThemeLoader.h"
 #include "jot/Identity.h"
 #include "jot/Settings.h"
-#include "jot/ThemeLoader.h"
 
 #include <QFile>
 #include <QTemporaryDir>
@@ -66,7 +66,7 @@ void TestThemes::builtInsCannotBeEdited()
     QVERIFY(!themes()->setColor(u"accent"_s, QColor(u"#000000"_s)));
     QVERIFY(!themes()->error().isEmpty());
     QCOMPARE(ThemeController::instance()->spec().colors.accent,
-             ThemeLoader::defaultTheme().colors.accent);
+             greylock::ThemeLoader::defaultTheme().colors.accent);
 }
 
 void TestThemes::removeCurrentGoesBackToDefault()
@@ -87,7 +87,7 @@ void TestThemes::restoreForgetsAThemeThatNoLongerLoads()
     m_settings->setTheme(m_dir.filePath(u"gone.toml"_s));
     themes()->restore();
     QVERIFY(m_settings->theme().isEmpty());
-    QCOMPARE(ThemeController::instance()->spec().name, ThemeLoader::defaultTheme().name);
+    QCOMPARE(ThemeController::instance()->spec().name, greylock::ThemeLoader::defaultTheme().name);
 }
 
 void TestThemes::overrideShowsWithoutBeingRemembered()

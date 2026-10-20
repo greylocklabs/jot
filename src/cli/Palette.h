@@ -1,6 +1,6 @@
 #pragma once
 
-#include "jot/ThemeSpec.h"
+#include "greylock/ThemeSpec.h"
 
 #include <QColor>
 #include <QString>
@@ -12,13 +12,13 @@ namespace jot::cli {
 class Palette
 {
 public:
-    explicit Palette(const ThemeSpec &theme) : m_theme(theme) {}
+    explicit Palette(const greylock::ThemeSpec &theme) : m_theme(theme) {}
 
     /// The theme saved in settings, `idOrPath`, or the default when it is
     /// empty or does not load.
     [[nodiscard]] static Palette forTheme(const QString &idOrPath);
 
-    [[nodiscard]] const ThemeSpec::Colors &colors() const { return m_theme.colors; }
+    [[nodiscard]] const greylock::ThemeSpec::Colors &colors() const { return m_theme.colors; }
     /// A calendar's color as the app shows it with this theme.
     [[nodiscard]] QColor fill(const QColor &calendar) const;
     /// The text color that reads on that fill, for an event drawn as a sticker.
@@ -29,7 +29,7 @@ public:
     [[nodiscard]] QColor onPage(const QColor &calendar) const;
 
 private:
-    ThemeSpec m_theme;
+    greylock::ThemeSpec m_theme;
 };
 
 } // namespace jot::cli
