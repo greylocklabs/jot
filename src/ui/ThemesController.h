@@ -1,6 +1,6 @@
 #pragma once
 
-#include "jot/ThemeLibrary.h"
+#include "greylock/ThemeLibrary.h"
 
 #include <QObject>
 #include <QQmlEngine>
@@ -48,7 +48,7 @@ public:
     [[nodiscard]] QVariantList available() const;
     [[nodiscard]] QString current() const;
     [[nodiscard]] bool editable() const;
-    [[nodiscard]] QStringList colorKeys() const { return ThemeLibrary::colorKeys(); }
+    [[nodiscard]] QStringList colorKeys() const { return greylock::ThemeLibrary::colorKeys(); }
     [[nodiscard]] QVariantMap colors() const;
     [[nodiscard]] QString error() const { return m_error; }
 
@@ -72,7 +72,7 @@ private:
     bool fail(const QString &message);
     void clearError();
 
-    ThemeLibrary m_library;
+    greylock::ThemeLibrary m_library;
     /// The theme on screen when it is not the remembered one.
     QString m_override;
     QString m_error;

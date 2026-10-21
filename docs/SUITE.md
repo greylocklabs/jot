@@ -13,8 +13,9 @@ Three parts have moved already:
 - The built-in themes, in `core/themes/`. Their names and ids stay Callie's, so one theme file works
   in every app.
 - The theme engine, in core's `greylock::core` library: `greylock::color`, `greylock::base16`,
-  `greylock::ThemeSpec` and `greylock::ThemeLoader`, with the built-in themes compiled in at
-  `:/greylock/themes/`.
+  `greylock::ThemeSpec`, `greylock::ThemeLoader` and `greylock::ThemeLibrary`, with the built-in
+  themes compiled in at `:/greylock/themes/`. `greylock::identity` gives Jot its id, folders and
+  name from the values the top-level `CMakeLists.txt` sets before `add_subdirectory(core)`.
 
 ## Rules
 
@@ -47,7 +48,7 @@ Shared code:
 
 | Files                                                                                                             | State                                                                                                                                                                                                                                          |
 | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ThemeLibrary`, `Identity`, `Logging`, `LogFile`                                                                  | Renamed only, apart from comments that name what the app shows                                                                                                                                                                                 |
+| `Logging`, `LogFile`                                                                                              | Renamed only, apart from comments that name what the app shows                                                                                                                                                                                 |
 | `Paint`, `Palette`, `UpdateHint`, `UpdateCheck`, `FakeHttpServer`                                                 | Renamed only                                                                                                                                                                                                                                   |
 | `Upgrade`                                                                                                         | Renamed, apart from the installer address it gives, which is Jot's at `jotwriter.org`                                                                                                                                                          |
 | `Releases`                                                                                                        | Accepts Ubuntu 26.04 and later, which Callie does not yet                                                                                                                                                                                      |

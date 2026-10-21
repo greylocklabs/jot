@@ -1,6 +1,6 @@
 #include "ReleaseInfo.h"
 
-#include "jot/Identity.h"
+#include "greylock/Identity.h"
 
 #include "SettingsForeign.h"
 
@@ -107,7 +107,7 @@ bool ReleaseInfo::takeUpdateNotice()
 
 bool ReleaseInfo::devel() const
 {
-    return identity::isDevel();
+    return greylock::identity::isDevel();
 }
 
 } // namespace jot

@@ -1,7 +1,7 @@
 #include "jot/VaultIndex.h"
 
+#include "greylock/Identity.h"
 #include "jot/FrontMatter.h"
-#include "jot/Identity.h"
 #include "jot/Logging.h"
 #include "jot/NoteScan.h"
 
@@ -126,7 +126,7 @@ QString VaultIndex::defaultPath(const Vault &vault)
                                 .toHex()
                                 .left(16);
     return QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) + u'/' +
-           identity::dirName() + u"/index/"_s + QString::fromLatin1(hash) + u".sqlite"_s;
+           greylock::identity::dirName() + u"/index/"_s + QString::fromLatin1(hash) + u".sqlite"_s;
 }
 
 bool VaultIndex::open(QString *error)
