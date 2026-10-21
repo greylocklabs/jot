@@ -5,8 +5,8 @@
 #include "Upgrade.h"
 #include "VaultCommands.h"
 
+#include "greylock/Identity.h"
 #include "jot/Diagnostics.h"
-#include "jot/Identity.h"
 #include "jot/LogFile.h"
 #include "jot/Releases.h"
 #include "jot/Settings.h"
@@ -219,7 +219,7 @@ int runCompletions(const QString &shell)
 int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
-    app.setApplicationName(identity::dirName());
+    app.setApplicationName(greylock::identity::dirName());
     app.setApplicationVersion(QStringLiteral(JOT_VERSION));
 
     QCommandLineParser parser;

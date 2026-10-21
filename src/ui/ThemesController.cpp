@@ -42,7 +42,7 @@ QColor colorFor(const greylock::ThemeSpec::Colors &c, const QString &key)
 } // namespace
 
 ThemesController::ThemesController(QObject *parent)
-    : QObject(parent), m_library(ThemeLibrary::defaultFolder())
+    : QObject(parent), m_library(greylock::ThemeLibrary::defaultFolder())
 {
     connect(ThemeController::instance(), &ThemeController::changed, this,
             &ThemesController::changed);
@@ -93,11 +93,13 @@ QVariantList ThemesController::available() const
 {
     QVariantList themes;
     for (const QString &id : greylock::ThemeLoader::builtInIds())
-        themes << QVariantMap{
-            {u"id"_s, id}, {u"name"_s, ThemeLibrary::displayName(id)}, {u"editable"_s, false}};
+        themes << QVariantMap{{u"id"_s, id},
+                              {u"name"_s, greylock::ThemeLibrary::displayName(id)},
+                              {u"editable"_s, false}};
     for (const QString &path : m_library.themes())
-        themes << QVariantMap{
-            {u"id"_s, path}, {u"name"_s, ThemeLibrary::displayName(path)}, {u"editable"_s, true}};
+        themes << QVariantMap{{u"id"_s, path},
+                              {u"name"_s, greylock::ThemeLibrary::displayName(path)},
+                              {u"editable"_s, true}};
     return themes;
 }
 
@@ -118,7 +120,7 @@ QVariantMap ThemesController::colors() const
 {
     const greylock::ThemeSpec::Colors &c = ThemeController::instance()->spec().colors;
     QVariantMap map;
-    for (const QString &key : ThemeLibrary::colorKeys())
+    for (const QString &key : greylock::ThemeLibrary::colorKeys())
         map.insert(key, colorFor(c, key));
     return map;
 }
@@ -139,7 +141,7 @@ bool ThemesController::customize()
 {
     if (editable())
         return true;
-    const QString name = tr("My %1").arg(ThemeLibrary::displayName(current()));
+    const QString name = tr("My %1").arg(greylock::ThemeLibrary::displayName(current()));
     const QString path = m_library.copy(current(), name);
     if (path.isEmpty())
         return fail(m_library.error());

@@ -1,6 +1,6 @@
 #include "jot/UpdateCheck.h"
 
-#include "jot/Identity.h"
+#include "greylock/Identity.h"
 #include "jot/Logging.h"
 
 #include <QDir>
@@ -16,13 +16,13 @@ namespace jot {
 
 UpdateCheck::UpdateCheck(QString path, QObject *parent)
     : QObject(parent), m_path(std::move(path)), m_api(releases::defaultApi()),
-      m_now([] { return QDateTime::currentDateTimeUtc(); }), m_devel(identity::isDevel())
+      m_now([] { return QDateTime::currentDateTimeUtc(); }), m_devel(greylock::identity::isDevel())
 {}
 
 QString UpdateCheck::defaultPath()
 {
     return QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) + u'/' +
-           identity::dirName() + u"/latest-release.json"_s;
+           greylock::identity::dirName() + u"/latest-release.json"_s;
 }
 
 bool UpdateCheck::wanted(bool setting) const

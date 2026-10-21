@@ -1,6 +1,6 @@
 #include "jot/Settings.h"
 
-#include "jot/Identity.h"
+#include "greylock/Identity.h"
 
 #include <QStandardPaths>
 
@@ -68,7 +68,7 @@ Settings::Settings(const QString &path, QObject *parent)
 QString Settings::defaultPath()
 {
     return QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) + u'/' +
-           identity::dirName() + u"/settings.ini"_s;
+           greylock::identity::dirName() + u"/settings.ini"_s;
 }
 
 QStringList Settings::noteSorts()

@@ -22,16 +22,12 @@ add_library(jotcore STATIC
     VaultWatcher.cpp
     jot/VaultIndex.h
     VaultIndex.cpp
-    jot/Identity.h
-    Identity.cpp
     jot/Logging.h
     Logging.cpp
     jot/LogFile.h
     LogFile.cpp
     jot/CodeColors.h
     CodeColors.cpp
-    jot/ThemeLibrary.h
-    ThemeLibrary.cpp
     jot/Releases.h
     Releases.cpp
     jot/ReleaseNotes.h
@@ -71,10 +67,6 @@ target_link_libraries(jotcore
         Qt6::Sql
 )
 
-target_compile_definitions(jotcore PRIVATE
-    JOT_APP_ID="${JOT_APP_ID}"
-    JOT_DEVEL_BUILD=$<BOOL:${JOT_DEVEL}>
-)
 
 # The QML module in src/ui exposes Settings as a foreign type. Its registrar
 # can only describe the type if this target publishes its metatypes.

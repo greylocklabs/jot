@@ -1,5 +1,5 @@
 #include "jot/LogFile.h"
-#include "jot/Identity.h"
+#include "greylock/Identity.h"
 
 #include <QCoreApplication>
 #include <QDateTime>
@@ -108,7 +108,7 @@ void handle(QtMsgType type, const QMessageLogContext &context, const QString &me
 QString defaultDirectory()
 {
     return QStandardPaths::writableLocation(QStandardPaths::GenericStateLocation) + u'/' +
-           identity::dirName() + QStringLiteral("/logs");
+           greylock::identity::dirName() + QStringLiteral("/logs");
 }
 
 bool install(const QString &name, const QString &directory, qint64 maxBytes)

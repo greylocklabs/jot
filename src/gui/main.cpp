@@ -5,7 +5,7 @@
 #include "ThemesController.h"
 #include "VaultController.h"
 
-#include "jot/Identity.h"
+#include "greylock/Identity.h"
 #include "jot/LogFile.h"
 #include "jot/Settings.h"
 #include "jot/UpdateCheck.h"
@@ -26,11 +26,11 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
     // The identity's folder name keeps Qt's own config and data folders apart for a
     // development build, and matches the CLI's.
-    app.setApplicationName(jot::identity::dirName());
-    app.setApplicationDisplayName(jot::identity::displayName());
+    app.setApplicationName(greylock::identity::dirName());
+    app.setApplicationDisplayName(greylock::identity::displayName());
     app.setApplicationVersion(QStringLiteral(JOT_VERSION));
     // Lets Wayland associate the window with the .desktop entry.
-    app.setDesktopFileName(jot::identity::appId());
+    app.setDesktopFileName(greylock::identity::appId());
 
     QCommandLineParser parser;
     parser.addHelpOption();
@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
     jot::UpdateCheck updates;
     QQmlApplicationEngine engine;
     // "Jot Devel" for a development build, so the two windows are told apart.
-    engine.setInitialProperties({{u"title"_s, jot::identity::displayName()}});
+    engine.setInitialProperties({{u"title"_s, greylock::identity::displayName()}});
     bool live = false;
 #ifdef JOT_LIVE_QML
     // A QML mistake while editing should wait for the fix, not end the session.

@@ -44,7 +44,12 @@ if(JOT_BUILD_TESTS)
     enable_testing()
 endif()
 
-# Shared code and the built-in themes, from greylocklabs/core.
+# Shared code and the built-in themes, from greylocklabs/core, built for Jot.
+set(GREYLOCK_APP_ID "${JOT_APP_ID}")
+set(GREYLOCK_APP_NAME "Jot")
+set(GREYLOCK_APP_DIR "jot")
+set(GREYLOCK_APP_ENV "JOT")
+set(GREYLOCK_APP_DEVEL ${JOT_DEVEL})
 add_subdirectory(core)
 add_subdirectory(src/core)
 add_subdirectory(src/ui)

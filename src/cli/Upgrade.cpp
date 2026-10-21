@@ -1,6 +1,6 @@
 #include "Upgrade.h"
 
-#include "jot/Identity.h"
+#include "greylock/Identity.h"
 
 #include <QCoreApplication>
 #include <QCryptographicHash>
@@ -41,7 +41,8 @@ QString releaseOf(const QString &packageVersion)
 
 Upgrade::Upgrade(QTextStream &out, QTextStream &err, QObject *parent)
     : QObject(parent), m_out(out), m_err(err), m_api(releases::defaultApi()),
-      m_system(PackageSystem::detect()), m_runner(runWithTerminal), m_devel(identity::isDevel())
+      m_system(PackageSystem::detect()), m_runner(runWithTerminal),
+      m_devel(greylock::identity::isDevel())
 {}
 
 void Upgrade::run(const Options &options, Done done)
