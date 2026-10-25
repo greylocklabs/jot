@@ -104,8 +104,7 @@ void TestMonthModel::markingsReachNeighbouringMonths()
 
 void TestMonthModel::stepsAMonthAtATime()
 {
-    // The date picker's arrows, which once did this in QML on a QDate that west of UTC
-    // reads as the evening before, so Next stuck and Previous skipped a month.
+    // Steps go from the first of the month, so the day shown never moves them.
     MonthModel model;
     model.setMonth(QDate(2026, 10, 15));
     QSignalSpy changed(&model, &MonthModel::monthChanged);
