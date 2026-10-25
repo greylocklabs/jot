@@ -37,6 +37,16 @@ void MonthModel::setMonth(QDate day)
     Q_EMIT monthChanged();
 }
 
+void MonthModel::previous()
+{
+    setMonth(m_first.addMonths(-1));
+}
+
+void MonthModel::next()
+{
+    setMonth(m_first.addMonths(1));
+}
+
 void MonthModel::setFirstDay(int day)
 {
     day = std::clamp(day, int(Qt::Monday), int(Qt::Sunday));

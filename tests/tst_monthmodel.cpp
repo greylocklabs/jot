@@ -24,6 +24,7 @@ private Q_SLOTS:
     void weekAndTodayAreMarked();
     void markingsReachNeighbouringMonths();
     void gridFollowsTheFirstDay();
+    void stepsAMonthAtATime();
 };
 
 void TestMonthModel::gridStartsOnMonday()
@@ -99,6 +100,27 @@ void TestMonthModel::markingsReachNeighbouringMonths()
     QVERIFY(cell(model, last, MonthModel::InWeekRole).toBool());
     QVERIFY(cell(model, last - 3, MonthModel::IsTodayRole).toBool());
     QCOMPARE(cell(model, last - 3, MonthModel::DayRole).toInt(), 1);
+}
+
+void TestMonthModel::stepsAMonthAtATime()
+{
+    // The date picker's arrows, which once did this in QML on a QDate that west of UTC
+    // reads as the evening before, so Next stuck and Previous skipped a month.
+    MonthModel model;
+    model.setMonth(QDate(2026, 10, 15));
+    QSignalSpy changed(&model, &MonthModel::monthChanged);
+    model.next();
+    QCOMPARE(model.month(), QDate(2026, 11, 1));
+    model.previous();
+    model.previous();
+    QCOMPARE(model.month(), QDate(2026, 9, 1));
+    QCOMPARE(changed.size(), 3);
+
+    model.setMonth(QDate(2026, 12, 31));
+    model.next();
+    QCOMPARE(model.month(), QDate(2027, 1, 1));
+    model.previous();
+    QCOMPARE(model.month(), QDate(2026, 12, 1));
 }
 
 QTEST_GUILESS_MAIN(TestMonthModel)
