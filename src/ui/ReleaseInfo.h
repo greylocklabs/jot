@@ -7,10 +7,13 @@
 #include <QTimer>
 #include <QUrl>
 
+namespace greylock {
+class UpdateCheck;
+}
+
 namespace jot {
 
 class Settings;
-class UpdateCheck;
 
 /// What the About and "What's new?" popups say: this build's version, the
 /// newest notes in the bundled CHANGELOG.md, and where to read more.
@@ -59,7 +62,7 @@ public:
 
     /// Says when a newer release is out, asking `check` once a day while the
     /// user's settings allow it.
-    void watchForUpdates(Settings *settings, UpdateCheck *check);
+    void watchForUpdates(Settings *settings, greylock::UpdateCheck *check);
 
     /// True once, the first time a version starts after another one ran;
     /// a first run and later starts say no. Records this version either way.
@@ -73,7 +76,7 @@ private:
     void checkIfDue();
 
     QPointer<Settings> m_settings;
-    QPointer<UpdateCheck> m_check;
+    QPointer<greylock::UpdateCheck> m_check;
     QTimer m_checkTimer;
     QString m_update;
     QUrl m_updatePage;

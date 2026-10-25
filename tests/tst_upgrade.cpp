@@ -28,8 +28,6 @@ private Q_SLOTS:
     void dryRunChangesNothing();
     void refusesWhatItCannotDo();
     void hintsOnlyWhereWanted();
-    void systemsWithoutPackagesSayWhy_data();
-    void systemsWithoutPackagesSayWhy();
     void failuresStopBeforeInstalling();
 
 private:
@@ -126,7 +124,7 @@ int TestUpgrade::run(const Upgrade::Options &options, const QString &installed,
     Upgrade upgrade(out, err);
     upgrade.setDevel(m_devel);
     upgrade.setApi(m_github->url(QString()));
-    upgrade.setSystem(PackageSystem::detect(osRelease.fileName(), u"x86_64"_s));
+    upgrade.setSystem(greylock::PackageSystem::detect(osRelease.fileName(), u"x86_64"_s));
     upgrade.setInstalled(installed);
     upgrade.setRunner([this](const QStringList &command) {
         // The package is there to install, and is the one that was checked.
@@ -257,7 +255,7 @@ void TestUpgrade::refusesWhatItCannotDo()
 void TestUpgrade::hintsOnlyWhereWanted()
 {
     // 0.2.3 is known to be out, and GitHub was asked just now.
-    UpdateCheck check(m_dir->filePath(u"latest-release.json"_s));
+    greylock::UpdateCheck check(m_dir->filePath(u"latest-release.json"_s));
     check.setDevel(false);
     {
         QFile file(m_dir->filePath(u"latest-release.json"_s));
@@ -291,60 +289,6 @@ void TestUpgrade::hintsOnlyWhereWanted()
                 .line.isEmpty());
     check.setNow([] { return QDateTime::currentDateTimeUtc().addDays(2); });
     QVERIFY(hint(u"agenda"_s, false, true, true).ask);
-}
-
-void TestUpgrade::systemsWithoutPackagesSayWhy_data()
-{
-    QTest::addColumn<QByteArray>("osRelease");
-    QTest::addColumn<QString>("architecture");
-    QTest::addColumn<int>("kind");
-    QTest::addColumn<QString>("why");
-
-    const auto rpm = int(PackageSystem::Kind::Rpm);
-    const auto deb = int(PackageSystem::Kind::Deb);
-    const auto none = int(PackageSystem::Kind::Unsupported);
-    QTest::newRow("fedora 44") << QByteArray("ID=fedora\nVERSION_ID=44\n") << u"x86_64"_s << rpm
-                               << QString();
-    QTest::newRow("fedora 45") << QByteArray("ID=fedora\nVERSION_ID=45\n") << u"x86_64"_s << rpm
-                               << QString();
-    QTest::newRow("fedora 43") << QByteArray("ID=fedora\nVERSION_ID=43\nPRETTY_NAME='Fedora 43'\n")
-                               << u"x86_64"_s << none << u"Fedora 43 is older than Fedora 44"_s;
-    QTest::newRow("fedora rawhide") << QByteArray("ID=fedora\nVERSION_ID=rawhide\n") << u"x86_64"_s
-                                    << none << u"cannot read the Fedora version"_s;
-    QTest::newRow("debian 13") << QByteArray("ID=debian\nVERSION_ID=\"13\"\n") << u"x86_64"_s << deb
-                               << QString();
-    QTest::newRow("debian testing") << QByteArray("ID=debian\nPRETTY_NAME=\"Debian forky/sid\"\n")
-                                    << u"x86_64"_s << deb << QString();
-    QTest::newRow("debian 12") << QByteArray("ID=debian\nVERSION_ID=12\nPRETTY_NAME=Debian 12\n")
-                               << u"x86_64"_s << none << u"older than Debian 13"_s;
-    QTest::newRow("ubuntu 26.04") << QByteArray("ID=ubuntu\nVERSION_ID=\"26.04\"\n") << u"x86_64"_s
-                                  << deb << QString();
-    QTest::newRow("ubuntu 24.04") << QByteArray("ID=ubuntu\nVERSION_ID=24.04\n") << u"x86_64"_s
-                                  << none << u"Jot needs Qt 6.8"_s;
-    QTest::newRow("arch") << QByteArray("ID=arch\nPRETTY_NAME=\"Arch Linux\"\n") << u"x86_64"_s
-                          << none << u"Arch Linux is not one Jot ships packages for"_s;
-    QTest::newRow("arm") << QByteArray("ID=fedora\nVERSION_ID=44\n") << u"arm64"_s << none
-                         << u"no packages for arm64"_s;
-    QTest::newRow("unknown") << QByteArray() << u"x86_64"_s << none << u"is missing"_s;
-}
-
-void TestUpgrade::systemsWithoutPackagesSayWhy()
-{
-    QFETCH(QByteArray, osRelease);
-    QFETCH(QString, architecture);
-    QFETCH(int, kind);
-    QFETCH(QString, why);
-    QString path = m_dir->filePath(u"missing"_s);
-    if (!osRelease.isEmpty()) {
-        QFile file(m_dir->filePath(u"os-release"_s));
-        QVERIFY(file.open(QIODevice::WriteOnly));
-        file.write(osRelease);
-        path = file.fileName();
-    }
-    const PackageSystem system = PackageSystem::detect(path, architecture);
-    QCOMPARE(int(system.kind), kind);
-    QVERIFY2(why.isEmpty() ? system.why.isEmpty() : system.why.contains(why),
-             qPrintable(system.why));
 }
 
 void TestUpgrade::failuresStopBeforeInstalling()

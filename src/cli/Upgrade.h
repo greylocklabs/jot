@@ -1,6 +1,6 @@
 #pragma once
 
-#include "jot/Releases.h"
+#include "greylock/Releases.h"
 
 #include <QNetworkAccessManager>
 #include <QObject>
@@ -42,7 +42,7 @@ public:
     Upgrade(QTextStream &out, QTextStream &err, QObject *parent = nullptr);
 
     void setApi(const QUrl &api) { m_api = api; }
-    void setSystem(const PackageSystem &system) { m_system = system; }
+    void setSystem(const greylock::PackageSystem &system) { m_system = system; }
     /// The installed package's version, empty when Jot is not installed
     /// from a package. Asks rpm or dpkg unless set.
     void setInstalled(const QString &version) { m_installed = version; }
@@ -53,8 +53,8 @@ public:
     void run(const Options &options, Done done);
 
 private:
-    void chooseFrom(const QList<Release> &releases);
-    void install(const Release &release);
+    void chooseFrom(const QList<greylock::Release> &releases);
+    void install(const greylock::Release &release);
     void finish(int code);
     [[nodiscard]] QString installedVersion();
     /// GETs `url` and hands the body on, or says why it could not.
@@ -64,7 +64,7 @@ private:
     QTextStream &m_err;
     QNetworkAccessManager m_network;
     QUrl m_api;
-    PackageSystem m_system;
+    greylock::PackageSystem m_system;
     std::optional<QString> m_installed;
     Runner m_runner;
     bool m_devel;

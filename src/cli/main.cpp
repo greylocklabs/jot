@@ -6,11 +6,11 @@
 #include "VaultCommands.h"
 
 #include "greylock/Identity.h"
+#include "greylock/Releases.h"
+#include "greylock/UpdateCheck.h"
 #include "jot/Diagnostics.h"
 #include "jot/LogFile.h"
-#include "jot/Releases.h"
 #include "jot/Settings.h"
-#include "jot/UpdateCheck.h"
 
 #include <QCommandLineParser>
 #include <QCoreApplication>
@@ -74,7 +74,7 @@ public:
 
     ~HintAfterwards()
     {
-        UpdateCheck check;
+        greylock::UpdateCheck check;
         const cli::UpdateHint hint = cli::UpdateHint::after(
             m_command, false, ::isatty(STDERR_FILENO), true, check,
             QVersionNumber::fromString(QCoreApplication::applicationVersion()));
@@ -115,7 +115,7 @@ int runDoctor(bool report)
 /// Prints where to support Jot, and opens it unless `print`.
 int runDonate(bool print)
 {
-    const QString url = releases::supportPage().toString();
+    const QString url = greylock::releases::supportPage().toString();
     // Over SSH or without a desktop nothing opens, so the link is always shown.
     if (!print)
         err << (QProcess::startDetached(u"xdg-open"_s, {url})
@@ -355,10 +355,10 @@ int main(int argc, char *argv[])
 
     // Run by HintAfterwards, on its own, to learn the latest release.
     if (command == u"update-check" && args.size() == 1) {
-        UpdateCheck check;
+        greylock::UpdateCheck check;
         if (!check.wanted(true))
             return 0;
-        QObject::connect(&check, &UpdateCheck::checked, &app, &QCoreApplication::quit);
+        QObject::connect(&check, &greylock::UpdateCheck::checked, &app, &QCoreApplication::quit);
         check.check();
         return app.exec();
     }
