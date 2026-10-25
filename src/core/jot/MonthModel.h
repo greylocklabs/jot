@@ -27,6 +27,10 @@ public:
     /// Any day of the month to show.
     [[nodiscard]] QDate month() const { return m_first; }
     void setMonth(QDate day);
+    /// The month before or after the one shown. QML takes a QDate as midnight UTC, which
+    /// west of UTC is the day before, so month arithmetic happens here.
+    Q_INVOKABLE void previous();
+    Q_INVOKABLE void next();
     /// The first day of the week the main view shows, which is highlighted.
     [[nodiscard]] QDate weekStart() const { return m_weekStart; }
     void setWeekStart(QDate first);

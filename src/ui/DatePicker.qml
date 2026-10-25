@@ -77,10 +77,7 @@ AbstractButton {
                 StickerButton {
                     glyph: "chevron-left"
                     Accessible.name: qsTr("Previous month")
-                    onClicked: {
-                        const d = month.month
-                        month.month = new Date(d.getFullYear(), d.getMonth() - 1, 1)
-                    }
+                    onClicked: month.previous()
                 }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
@@ -95,10 +92,7 @@ AbstractButton {
                 StickerButton {
                     glyph: "chevron-right"
                     Accessible.name: qsTr("Next month")
-                    onClicked: {
-                        const d = month.month
-                        month.month = new Date(d.getFullYear(), d.getMonth() + 1, 1)
-                    }
+                    onClicked: month.next()
                 }
             }
 
