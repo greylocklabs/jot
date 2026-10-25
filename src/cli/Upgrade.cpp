@@ -40,8 +40,8 @@ QString releaseOf(const QString &packageVersion)
 } // namespace
 
 Upgrade::Upgrade(QTextStream &out, QTextStream &err, QObject *parent)
-    : QObject(parent), m_out(out), m_err(err), m_api(releases::defaultApi()),
-      m_system(PackageSystem::detect()), m_runner(runWithTerminal),
+    : QObject(parent), m_out(out), m_err(err), m_api(greylock::releases::defaultApi()),
+      m_system(greylock::PackageSystem::detect()), m_runner(runWithTerminal),
       m_devel(greylock::identity::isDevel())
 {}
 
@@ -53,7 +53,7 @@ void Upgrade::run(const Options &options, Done done)
         m_err << tr("jot: this is a development build; update it with git pull and make") << "\n";
         return finish(1);
     }
-    if (m_system.kind == PackageSystem::Kind::Unsupported) {
+    if (m_system.kind == greylock::PackageSystem::Kind::Unsupported) {
         m_err << tr("jot: %1, so there is no package to install.").arg(m_system.why) << "\n";
         return finish(1);
     }
@@ -69,31 +69,32 @@ void Upgrade::run(const Options &options, Done done)
         const QString tag = u'v' + (m_options.version->startsWith(u'v') ? m_options.version->mid(1)
                                                                         : *m_options.version);
         fetch(QUrl(m_api.toString() + u"/releases/tags/"_s + tag), tag, [this](QByteArray body) {
-            const std::optional<Release> release =
-                releases::parse(QJsonDocument::fromJson(body).object());
-            chooseFrom(release ? QList<Release>{*release} : QList<Release>{});
+            const std::optional<greylock::Release> release =
+                greylock::releases::parse(QJsonDocument::fromJson(body).object());
+            chooseFrom(release ? QList<greylock::Release>{*release} : QList<greylock::Release>{});
         });
     } else if (m_options.downgrade) {
         fetch(QUrl(m_api.toString() + u"/releases?per_page=100"_s), tr("the releases"),
               [this](QByteArray body) {
-                  chooseFrom(releases::parseList(QJsonDocument::fromJson(body).array()));
+                  chooseFrom(greylock::releases::parseList(QJsonDocument::fromJson(body).array()));
               });
     } else {
         fetch(QUrl(m_api.toString() + u"/releases/latest"_s), tr("the latest release"),
               [this](QByteArray body) {
-                  const std::optional<Release> release =
-                      releases::parse(QJsonDocument::fromJson(body).object());
-                  chooseFrom(release ? QList<Release>{*release} : QList<Release>{});
+                  const std::optional<greylock::Release> release =
+                      greylock::releases::parse(QJsonDocument::fromJson(body).object());
+                  chooseFrom(release ? QList<greylock::Release>{*release}
+                                     : QList<greylock::Release>{});
               });
     }
 }
 
-void Upgrade::chooseFrom(const QList<Release> &found)
+void Upgrade::chooseFrom(const QList<greylock::Release> &found)
 {
     const QString current = m_current.toString();
-    std::optional<Release> target;
+    std::optional<greylock::Release> target;
     if (m_options.downgrade && !m_options.version) {
-        for (const Release &release : found) {
+        for (const greylock::Release &release : found) {
             if (release.version < m_current) {
                 target = release;
                 break;
@@ -135,9 +136,9 @@ void Upgrade::chooseFrom(const QList<Release> &found)
     install(*target);
 }
 
-void Upgrade::install(const Release &release)
+void Upgrade::install(const greylock::Release &release)
 {
-    const std::optional<ReleaseAsset> package = m_system.packageIn(release);
+    const std::optional<greylock::ReleaseAsset> package = m_system.packageIn(release);
     if (!package) {
         m_err << tr("jot: release %1 has no package for %2.").arg(release.tag, m_system.name)
               << "\n";
@@ -152,7 +153,7 @@ void Upgrade::install(const Release &release)
 
     const QString version = release.version.toString();
     const QString current = m_current.toString();
-    const bool rpm = m_system.kind == PackageSystem::Kind::Rpm;
+    const bool rpm = m_system.kind == greylock::PackageSystem::Kind::Rpm;
     if (release.version == m_current)
         m_out << tr("Installing Jot %1 again.").arg(version) << "\n";
     else if (release.version < m_current)
@@ -223,7 +224,7 @@ QString Upgrade::installedVersion()
     if (m_installed)
         return releaseOf(*m_installed);
     QProcess query;
-    if (m_system.kind == PackageSystem::Kind::Rpm)
+    if (m_system.kind == greylock::PackageSystem::Kind::Rpm)
         query.start(u"rpm"_s, {u"-q"_s, u"--qf"_s, u"%{VERSION}"_s, u"jot"_s});
     else
         query.start(u"dpkg-query"_s, {u"-W"_s, u"-f=${Status}|${Version}"_s, u"jot"_s});
@@ -231,7 +232,7 @@ QString Upgrade::installedVersion()
         query.exitCode() != 0)
         return {};
     const QString output = QString::fromUtf8(query.readAllStandardOutput());
-    if (m_system.kind == PackageSystem::Kind::Rpm)
+    if (m_system.kind == greylock::PackageSystem::Kind::Rpm)
         return releaseOf(output);
     return output.startsWith(u"install ok installed|") ? releaseOf(output.section(u'|', 1))
                                                        : QString();

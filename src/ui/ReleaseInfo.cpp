@@ -4,10 +4,10 @@
 
 #include "SettingsForeign.h"
 
-#include "jot/ReleaseNotes.h"
-#include "jot/Releases.h"
+#include "greylock/ReleaseNotes.h"
+#include "greylock/Releases.h"
+#include "greylock/UpdateCheck.h"
 #include "jot/Settings.h"
-#include "jot/UpdateCheck.h"
 
 #include <QCoreApplication>
 
@@ -17,18 +17,19 @@ namespace jot {
 
 ReleaseInfo::ReleaseInfo(QObject *parent) : QObject(parent)
 {
-    if (const auto notes = ReleaseNotes::latest(ReleaseNotes::bundledChangelog())) {
+    if (const auto notes =
+            greylock::ReleaseNotes::latest(greylock::ReleaseNotes::bundledChangelog())) {
         m_notesVersion = notes->version;
         m_notesDate = notes->date.startOfDay();
         m_notes = notes->body;
     }
 }
 
-void ReleaseInfo::watchForUpdates(Settings *settings, UpdateCheck *check)
+void ReleaseInfo::watchForUpdates(Settings *settings, greylock::UpdateCheck *check)
 {
     m_settings = settings;
     m_check = check;
-    connect(m_check, &UpdateCheck::checked, this, &ReleaseInfo::showUpdate);
+    connect(m_check, &greylock::UpdateCheck::checked, this, &ReleaseInfo::showUpdate);
     connect(m_settings, &Settings::checkForUpdatesChanged, this, [this] {
         showUpdate();
         checkIfDue();
@@ -50,7 +51,7 @@ void ReleaseInfo::checkIfDue()
 
 void ReleaseInfo::showUpdate()
 {
-    std::optional<Release> newer;
+    std::optional<greylock::Release> newer;
     if (m_check && m_settings && m_check->wanted(m_settings->checkForUpdates()))
         newer = m_check->newerThan(QVersionNumber::fromString(version()));
     const QString update = newer ? newer->version.toString() : QString();
@@ -89,7 +90,7 @@ QUrl ReleaseInfo::source() const
 
 QUrl ReleaseInfo::support() const
 {
-    return releases::supportPage();
+    return greylock::releases::supportPage();
 }
 
 QUrl ReleaseInfo::history() const

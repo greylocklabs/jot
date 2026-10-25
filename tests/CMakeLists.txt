@@ -5,7 +5,8 @@ function(jot_add_test name)
     qt_add_executable(${name} ${name}.cpp)
     target_link_libraries(${name} PRIVATE Qt6::Test jotcore)
     add_test(NAME ${name} COMMAND ${name})
-    set_tests_properties(${name} PROPERTIES ENVIRONMENT "TZ=UTC;QT_QPA_PLATFORM=offscreen")
+    # The same on the host and inside a Flatpak build; tests that want a Flatpak say so.
+    set_tests_properties(${name} PROPERTIES ENVIRONMENT "TZ=UTC;QT_QPA_PLATFORM=offscreen;JOT_FLATPAK=0")
 endfunction()
 
 jot_add_test(tst_frontmatter)
@@ -63,8 +64,6 @@ jot_add_test(tst_completion)
 target_link_libraries(tst_completion PRIVATE jotcli)
 jot_add_test(tst_upgrade)
 target_link_libraries(tst_upgrade PRIVATE jotcli Qt6::Network)
-jot_add_test(tst_updatecheck)
-target_link_libraries(tst_updatecheck PRIVATE jotcli Qt6::Network)
 jot_add_test(tst_problemreport)
 jot_add_test(tst_diagnostics)
 

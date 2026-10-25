@@ -2,11 +2,11 @@
 
 #include "VaultController.h"
 
+#include "greylock/UpdateCheck.h"
 #include "jot/Diagnostics.h"
 #include "jot/LogFile.h"
 #include "jot/ProblemReport.h"
 #include "jot/Settings.h"
-#include "jot/UpdateCheck.h"
 
 #include <QClipboard>
 #include <QDesktopServices>
@@ -44,7 +44,7 @@ void SupportActions::openFolder(const QString &which)
         return;
     }
     const QString file =
-        which == u"config"_s ? Settings::defaultPath() : UpdateCheck::defaultPath();
+        which == u"config"_s ? Settings::defaultPath() : greylock::UpdateCheck::defaultPath();
     QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(file).absolutePath()));
 }
 

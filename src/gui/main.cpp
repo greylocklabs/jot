@@ -6,9 +6,9 @@
 #include "VaultController.h"
 
 #include "greylock/Identity.h"
+#include "greylock/UpdateCheck.h"
 #include "jot/LogFile.h"
 #include "jot/Settings.h"
-#include "jot/UpdateCheck.h"
 
 #include <QCommandLineParser>
 #include <QGuiApplication>
@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
 
     // Basic style: everything visual comes from the theme, not a platform style.
     QQuickStyle::setStyle(u"Basic"_s);
-    jot::UpdateCheck updates;
+    greylock::UpdateCheck updates;
     QQmlApplicationEngine engine;
     // "Jot Devel" for a development build, so the two windows are told apart.
     engine.setInitialProperties({{u"title"_s, greylock::identity::displayName()}});

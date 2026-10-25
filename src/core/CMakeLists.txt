@@ -28,12 +28,6 @@ add_library(jotcore STATIC
     LogFile.cpp
     jot/CodeColors.h
     CodeColors.cpp
-    jot/Releases.h
-    Releases.cpp
-    jot/ReleaseNotes.h
-    ReleaseNotes.cpp
-    jot/UpdateCheck.h
-    UpdateCheck.cpp
     jot/Diagnostics.h
     Diagnostics.cpp
     jot/ProblemReport.h

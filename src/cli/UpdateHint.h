@@ -1,6 +1,6 @@
 #pragma once
 
-#include "jot/UpdateCheck.h"
+#include "greylock/UpdateCheck.h"
 
 #include <QString>
 #include <QVersionNumber>
@@ -18,7 +18,7 @@ struct UpdateHint
     /// For `command`, run on a terminal or not, with the user's setting as it
     /// stands once the command has run, so turning it off is heeded at once.
     [[nodiscard]] static UpdateHint after(const QString &command, bool json, bool terminal,
-                                          bool setting, const UpdateCheck &check,
+                                          bool setting, const greylock::UpdateCheck &check,
                                           const QVersionNumber &running);
 };
 
