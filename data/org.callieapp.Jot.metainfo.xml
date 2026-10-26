@@ -35,6 +35,13 @@
   </categories>
 
   <releases>
+    <release version="0.0.9" date="2026-10-25">
+      <description>
+        <ul>
+          <li>The date picker's month arrows go to the next and previous month again; west of UTC, Next stayed put and Previous skipped a month.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.0.8" date="2026-10-19">
       <description>
         <ul>
