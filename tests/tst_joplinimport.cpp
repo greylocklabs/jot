@@ -367,14 +367,14 @@ void TestJoplinImport::notebooksKeepTheirEmojiUnlessChangedInJot()
     QVERIFY(!QFileInfo::exists(m_vault->absolute(Layout::kPath)));
 
     QVERIFY2(importJoplin(*m_vault, stories(), {}, false, &error), qPrintable(error));
-    Layout layout = Layout::read(*m_vault);
+    Layout layout = Layout::read(*m_vault).value();
     QCOMPARE(layout.emojis(), (QHash<QString, QString>{{u"Stories"_s, u"🦊"_s}}));
 
     // One chosen in Jot since stays.
     layout.setEmoji(u"Stories"_s, u"📚"_s);
     QVERIFY(layout.write(*m_vault, &error));
     QVERIFY2(importJoplin(*m_vault, stories(), {}, false, &error), qPrintable(error));
-    QCOMPARE(Layout::read(*m_vault).emoji(u"Stories"_s), u"📚"_s);
+    QCOMPARE(Layout::read(*m_vault).value().emoji(u"Stories"_s), u"📚"_s);
 }
 
 QTEST_GUILESS_MAIN(TestJoplinImport)

@@ -527,7 +527,12 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
     }
     // A notebook keeps its emoji, unless one was chosen for it in Jot.
     if (!dryRun && !emojiOf.isEmpty()) {
-        Layout layout = Layout::read(vault);
+        std::optional<Layout> read = Layout::read(vault, &why);
+        if (!read) {
+            *error = why;
+            return std::nullopt;
+        }
+        Layout &layout = *read;
         for (auto it = emojiOf.cbegin(); it != emojiOf.cend(); ++it) {
             if (layout.emoji(it.key()).isEmpty())
                 layout.setEmoji(it.key(), it.value());

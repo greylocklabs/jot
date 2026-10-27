@@ -400,6 +400,16 @@ void TestVaultController::givesNotebooksAnEmoji()
     again.setIndexPath(m_dir->filePath(u"index2.sqlite"_s));
     QVERIFY(again.openPath(m_root));
     QCOMPARE(again.notebookEmoji(), (QVariantMap{{u"Ashfall"_s, u"🔥"_s}}));
+
+    // A layout file it cannot read is not written over, and the trouble is shown.
+    QFile file(m_root + u"/.jot/layout.yaml"_s);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write("folders:\n  Ashfall:\n    emoji: \xff\n");
+    file.close();
+    QVERIFY(!m_vault->setNotebookEmoji(u"Inbox"_s, u"📥"_s));
+    QVERIFY(m_vault->problem().contains(u"layout.yaml"_s));
+    QVERIFY(file.open(QIODevice::ReadOnly));
+    QCOMPARE(file.readAll(), QByteArray("folders:\n  Ashfall:\n    emoji: \xff\n"));
 }
 
 void TestVaultController::movesANoteToAnotherNotebook()

@@ -1,6 +1,7 @@
 #include "jot/Layout.h"
 
 #include <QDir>
+#include <QFile>
 #include <QTemporaryDir>
 #include <QTest>
 
@@ -20,6 +21,8 @@ private Q_SLOTS:
     void leavesOutWhatIsGone();
     void quotesNamesThatNeedIt();
     void followsAMovedNotebook();
+    void keepsWhatItDoesNotUse();
+    void leavesAnUnreadableFileAlone();
 
 private:
     void write(const QString &path, const QString &text);
@@ -65,7 +68,7 @@ void TestLayout::readsTheFormatsExample()
                          "    emoji: \"\U0001F4DA\"\n"
                          "  Inbox:\n"
                          "    emoji: \U0001F4E5 # a comment\n"_s);
-    const Layout layout = Layout::read(*m_vault);
+    const Layout layout = Layout::read(*m_vault).value();
     QCOMPARE(layout.emoji(u"Ashfall"_s), u"\U0001F4DA"_s);
     QCOMPARE(layout.emoji(u"Inbox"_s), u"\U0001F4E5"_s);
     QCOMPARE(layout.emoji(u"Ashfall/Chapters"_s), QString());
@@ -87,7 +90,7 @@ void TestLayout::writesWhatItReads()
                                   "    emoji: \U0001F525\n"
                                   "  Inbox:\n"
                                   "    emoji: \U0001F4E5\n"_s);
-    QCOMPARE(Layout::read(*m_vault).emojis(), layout.emojis());
+    QCOMPARE(Layout::read(*m_vault).value().emojis(), layout.emojis());
 
     // Taking the last emoji away leaves nothing about the folder.
     layout.setEmoji(u"Inbox"_s, {});
@@ -119,7 +122,7 @@ void TestLayout::leavesOutWhatIsGone()
                          "  Inbox:\n"
                          "    emoji: y\n"_s);
     QString error;
-    QVERIFY(Layout::read(*m_vault).write(*m_vault, &error));
+    QVERIFY(Layout::read(*m_vault).value().write(*m_vault, &error));
     QCOMPARE(read(Layout::kPath), u"order:\n"
                                   "  Ashfall/Chapters:\n"
                                   "    - Prologue.md\n"
@@ -137,7 +140,7 @@ void TestLayout::quotesNamesThatNeedIt()
     QString error;
     QVERIFY(layout.write(*m_vault, &error));
     QVERIFY(read(Layout::kPath).contains(u"  \"#1: \\\"Firsts\\\"\":\n"_s));
-    QCOMPARE(Layout::read(*m_vault).emoji(odd), u"\U0001F947"_s);
+    QCOMPARE(Layout::read(*m_vault).value().emoji(odd), u"\U0001F947"_s);
 }
 
 void TestLayout::followsAMovedNotebook()
@@ -151,11 +154,67 @@ void TestLayout::followsAMovedNotebook()
 
     QVERIFY(m_vault->moveFolder(u"Ashfall"_s, u"Inbox/Ashfall"_s, &error));
     QVERIFY2(Layout::follow(*m_vault, u"Ashfall"_s, u"Inbox/Ashfall"_s, &error), qPrintable(error));
-    const Layout moved = Layout::read(*m_vault);
+    const Layout moved = Layout::read(*m_vault).value();
     QCOMPARE(moved.emoji(u"Inbox/Ashfall"_s), u"a"_s);
     QCOMPARE(moved.emoji(u"Inbox/Ashfall/Chapters"_s), u"b"_s);
     QCOMPARE(moved.emoji(u"Inbox"_s), u"c"_s);
     QCOMPARE(moved.emoji(u"Ashfall"_s), QString());
+}
+
+void TestLayout::keepsWhatItDoesNotUse()
+{
+    write(Layout::kPath, u"# Shared with the team.\n"
+                         "folders:\n"
+                         "  Inbox:\n"
+                         "    color: pink\n"
+                         "    badges: [new, hot]\n"
+                         "    sort:\n"
+                         "      by: title\n"
+                         "      reverse: true\n"
+                         "views:\n"
+                         "  # Kanban, later.\n"
+                         "  board:\n"
+                         "    - Inbox\n"_s);
+    Layout layout = Layout::read(*m_vault).value();
+    layout.setEmoji(u"Inbox"_s, u"\U0001F4E5"_s);
+    QString error;
+    QVERIFY(layout.write(*m_vault, &error));
+    QCOMPARE(read(Layout::kPath), u"# Shared with the team.\n"
+                                  "folders:\n"
+                                  "  Inbox:\n"
+                                  "    color: pink\n"
+                                  "    emoji: \U0001F4E5\n"
+                                  "    badges: [new, hot]\n"
+                                  "    sort:\n"
+                                  "      by: title\n"
+                                  "      reverse: true\n"
+                                  "views:\n"
+                                  "  # Kanban, later.\n"
+                                  "  board:\n"
+                                  "    - Inbox\n"_s);
+
+    // A notebook moved takes what Jot keeps for it as written, too.
+    QVERIFY(m_vault->moveFolder(u"Inbox"_s, u"Later"_s, &error));
+    QVERIFY(Layout::follow(*m_vault, u"Inbox"_s, u"Later"_s, &error));
+    QVERIFY(read(Layout::kPath).contains(u"  Later:\n    color: pink\n"_s));
+    QVERIFY(read(Layout::kPath).contains(u"      reverse: true\n"_s));
+}
+
+void TestLayout::leavesAnUnreadableFileAlone()
+{
+    const QByteArray bytes("folders:\n  Inbox:\n    emoji: \xff\xfe\n");
+    QFile file(m_vault->absolute(Layout::kPath));
+    QVERIFY(QDir().mkpath(QFileInfo(file).path()));
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write(bytes);
+    file.close();
+
+    QString error;
+    QVERIFY(!Layout::read(*m_vault, &error));
+    QVERIFY(error.contains(Layout::kPath));
+    QVERIFY(!Layout::follow(*m_vault, u"Inbox"_s, u"Later"_s, &error));
+    QVERIFY(file.open(QIODevice::ReadOnly));
+    QCOMPARE(file.readAll(), bytes);
 }
 
 QTEST_GUILESS_MAIN(TestLayout)
