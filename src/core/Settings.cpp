@@ -73,7 +73,7 @@ QString Settings::defaultPath()
 
 QStringList Settings::noteSorts()
 {
-    return {u"updated"_s, u"title"_s};
+    return {u"updated"_s, u"created"_s, u"title"_s};
 }
 
 void Settings::setVaultPath(const QString &path)

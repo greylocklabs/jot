@@ -12,7 +12,7 @@ Status: draft, version 1. Nothing here is final until Jot 0.1 ships.
 My Notes/                    the vault: any folder
   .jot/                      vault settings, synced with the notes
     vault.yaml
-    layout.yaml              manual order, notebook emoji, icons and colors
+    layout.yaml              manual order, notebook emoji, icons, colors and pins
     types/                   note types (later)
     views/                   saved views (later)
     templates/
@@ -155,7 +155,7 @@ There are two kinds, and the task view shows both:
 - **Task notes**: a note with `task: open` or `task: done` in its front matter, and optionally
   `due` and `done`. Completing one sets `task: done` and `done:` to the current time.
 
-## Order and notebook appearance
+## Order, pins and notebook appearance
 
 Notes and folders sort alphabetically, with natural number order (`Ch 2` before `Ch 10`), unless
 the user reorders a folder by hand. Manual order and folder appearance live in
@@ -172,11 +172,14 @@ folders:
     emoji: 📚
     icon: book
     color: pink
+pinned:
+  - Inbox/Pancakes.md
 ```
 
 - Paths are relative to the vault root and use `/`.
-- `emoji` is shown before the notebook's name. Renaming or moving a notebook in Jot takes its
-  entries with it.
+- `emoji` is shown before the notebook's name.
+- `pinned` notes stay at the top of the note list, in whatever order it is in.
+- Renaming or moving a note or notebook in Jot takes its entries with it.
 - Entries that no longer exist are ignored and pruned on the next write. Files missing from a
   list sort after the listed ones, alphabetically.
 - Jot keeps what it does not use as written: other sections, and values nested under a

@@ -24,6 +24,7 @@ Rectangle {
         noteMenu.folder = Vault.notebookOf(path)
         noteMenu.notebooks = [""].concat(Vault.notebookPaths())
         noteMenu.task = Vault.isTask(path)
+        noteMenu.pinned = Vault.isPinned(path)
         noteMenu.popup(item, x, y)
     }
 
@@ -120,6 +121,10 @@ Rectangle {
                         "name": qsTr("Recently changed")
                     },
                     {
+                        "id": "created",
+                        "name": qsTr("Recently made")
+                    },
+                    {
                         "id": "title",
                         "name": qsTr("By title")
                     }
@@ -174,6 +179,7 @@ Rectangle {
             required property string notebook
             required property date modified
             required property string snippet
+            required property bool pinned
             readonly property bool selected: Vault.current === path
 
             width: ListView.view.width
@@ -237,14 +243,31 @@ Rectangle {
                 bottomPadding: Theme.space3
                 spacing: Theme.space1
 
-                Text {
-                    width: note.width - card.leftPadding - card.rightPadding
-                    text: note.title
-                    elide: Text.ElideRight
-                    color: Theme.text
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.textBase
-                    font.weight: note.selected ? Theme.weightBold : Theme.weightStrong
+                Row {
+                    spacing: Theme.space2
+
+                    Glyph {
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: note.pinned
+                        width: Theme.smallGlyphSize
+                        height: Theme.smallGlyphSize
+                        name: "pin"
+                        color: Theme.accent
+                        stroke: Theme.smallGlyphStroke
+                        Accessible.name: qsTr("Pinned")
+                    }
+                    Text {
+                        width: note.width - card.leftPadding - card.rightPadding - (note.pinned
+                                                                                    ? Theme.smallGlyphSize
+                                                                                      + parent.spacing :
+                                                                                      0)
+                        text: note.title
+                        elide: Text.ElideRight
+                        color: Theme.text
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.textBase
+                        font.weight: note.selected ? Theme.weightBold : Theme.weightStrong
+                    }
                 }
                 Text {
                     width: note.width - card.leftPadding - card.rightPadding
@@ -300,6 +323,7 @@ Rectangle {
         property string path
         property var notebooks: []
         property bool task: false
+        property bool pinned: false
         property string folder
 
         MenuEntry {
@@ -333,6 +357,11 @@ Rectangle {
                 onObjectAdded: (index, object) => moveMenu.insertItem(index, object)
                 onObjectRemoved: (index, object) => moveMenu.removeItem(object)
             }
+        }
+        MenuEntry {
+            text: noteMenu.pinned ? qsTr("Unpin") : qsTr("Pin to the top")
+            enabled: Vault.writable
+            onTriggered: Vault.setPinned(noteMenu.path, !noteMenu.pinned)
         }
         MenuEntry {
             text: qsTr("Copy link")

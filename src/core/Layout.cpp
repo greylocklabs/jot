@@ -81,7 +81,7 @@ std::optional<Layout> Layout::read(const Vault &vault, QString *error)
                 layout.m_header.append(raw.trimmed());
             continue;
         }
-        if (section != u"order"_s && section != u"folders"_s) {
+        if (section != u"order"_s && section != u"folders"_s && section != u"pinned"_s) {
             layout.m_other.append(raw);
             continue;
         }
@@ -95,8 +95,11 @@ std::optional<Layout> Layout::read(const Vault &vault, QString *error)
             continue;
         nestedIndent = -1;
         if (line == u"-"_s || line.startsWith(u"- "_s)) {
+            const QString item = readYamlScalar(QStringView(line).sliced(1));
             if (section == u"order"_s && !entry.isEmpty())
-                layout.m_order[entry].append(readYamlScalar(QStringView(line).sliced(1)));
+                layout.m_order[entry].append(item);
+            else if (section == u"pinned"_s && !layout.m_pinned.contains(item))
+                layout.m_pinned.append(item);
             continue;
         }
         const auto key = splitKey(line);
@@ -158,6 +161,11 @@ QString Layout::text() const
                 out += u"    "_s + line + u'\n';
         }
     }
+    if (!m_pinned.isEmpty()) {
+        out += u"pinned:\n"_s;
+        for (const QString &path : m_pinned)
+            out += u"  - %1\n"_s.arg(yamlScalar(path));
+    }
     for (const QString &line : m_other)
         out += line + u'\n';
     return out;
@@ -190,6 +198,10 @@ bool Layout::write(const Vault &vault, QString *error) const
     }
     kept.m_header = m_header;
     kept.m_other = m_other;
+    for (const QString &note : m_pinned) {
+        if (QFileInfo(vault.absolute(note)).isFile())
+            kept.m_pinned.append(note);
+    }
 
     const QString path = vault.absolute(kPath);
     QString ignored;
@@ -232,6 +244,18 @@ void Layout::move(const QString &from, const QString &to)
         if (under(key, from))
             m_folderLines.insert(moved(key), m_folderLines.take(key));
     }
+    for (QString &note : m_pinned) {
+        if (under(note, from))
+            note = moved(note);
+    }
+}
+
+void Layout::setPinned(const QString &path, bool pinned)
+{
+    if (!pinned)
+        m_pinned.removeAll(path);
+    else if (!m_pinned.contains(path))
+        m_pinned.append(path);
 }
 
 QString Layout::emoji(const QString &folder) const

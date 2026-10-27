@@ -12,8 +12,8 @@
 namespace jot {
 
 /// How the vault's notes and notebooks are shown, as `.jot/layout.yaml` keeps it beside them,
-/// so it syncs with the notes: each folder's manual order, and each notebook's emoji, icon
-/// and color. docs/FORMAT.md describes the file.
+/// so it syncs with the notes: each folder's manual order, each notebook's emoji, icon and
+/// color, and the notes pinned to the top of the list. docs/FORMAT.md describes the file.
 class Layout
 {
 public:
@@ -40,6 +40,11 @@ public:
     /// Every notebook's emoji, by its path.
     [[nodiscard]] QHash<QString, QString> emojis() const;
 
+    /// The notes pinned to the top of the note list, by vault path, in the order pinned.
+    [[nodiscard]] QStringList pinned() const { return m_pinned; }
+    /// Pins the note at `path` to the top of the note list, or unpins it.
+    void setPinned(const QString &path, bool pinned);
+
     /// The same move as follow(), on this layout alone.
     void move(const QString &from, const QString &to);
     /// The file's text.
@@ -57,6 +62,7 @@ private:
     QStringList m_header;
     /// Sections Jot does not know, kept as written.
     QStringList m_other;
+    QStringList m_pinned;
 };
 
 } // namespace jot

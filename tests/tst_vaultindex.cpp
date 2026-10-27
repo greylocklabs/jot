@@ -34,6 +34,7 @@ private Q_SLOTS:
     void nestedTagsCountForTheirParents();
     void listsOpenTasksAndTaskNotes();
     void rebuildsAnIndexFromAnotherSchema();
+    void sortsNotesWithThePinnedFirst();
 
 private:
     void write(const QString &path, const QString &text);
@@ -313,6 +314,41 @@ void TestVaultIndex::rebuildsAnIndexFromAnotherSchema()
     QSqlDatabase::removeDatabase(u"old"_s);
     open();
     QCOMPARE(m_index->noteCount(), 1);
+}
+
+void TestVaultIndex::sortsNotesWithThePinnedFirst()
+{
+    const qint64 day = 24LL * 3600 * 1000 * 1000000;
+    const qint64 oct1 = 1790812800000LL * 1000000; // 2026-10-01
+    const auto info = [](const QString &path, const QString &title, const QString &created,
+                         qint64 modified) {
+        NoteInfo note;
+        note.path = path;
+        note.title = title;
+        note.created = created;
+        note.modified = modified;
+        return note;
+    };
+    QList<NoteInfo> notes = {
+        info(u"b.md"_s, u"Ch 10"_s, u"2026-09-01"_s, oct1),
+        info(u"a.md"_s, u"Ch 2"_s, u"2026-10-05T08:00:00Z"_s, oct1 - day),
+        // Without a creation time, when it last changed stands in.
+        info(u"c.md"_s, u"Alpha"_s, {}, oct1 + day),
+    };
+    const auto paths = [&] {
+        QStringList found;
+        for (const NoteInfo &note : std::as_const(notes))
+            found << note.path;
+        return found;
+    };
+    sortNotes(notes, u"updated"_s);
+    QCOMPARE(paths(), (QStringList{u"c.md"_s, u"b.md"_s, u"a.md"_s}));
+    sortNotes(notes, u"created"_s);
+    QCOMPARE(paths(), (QStringList{u"a.md"_s, u"c.md"_s, u"b.md"_s}));
+    sortNotes(notes, u"title"_s);
+    QCOMPARE(paths(), (QStringList{u"c.md"_s, u"a.md"_s, u"b.md"_s}));
+    sortNotes(notes, u"title"_s, {u"b.md"_s, u"a.md"_s});
+    QCOMPARE(paths(), (QStringList{u"a.md"_s, u"b.md"_s, u"c.md"_s}));
 }
 
 QTEST_GUILESS_MAIN(TestVaultIndex)

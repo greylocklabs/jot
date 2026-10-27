@@ -462,6 +462,7 @@ ApplicationWindow {
             return note
         case "rename":
         case "toggleTask":
+        case "togglePin":
             return note && Vault.writable
         case "trash":
             // Not while the tasks are shown, which hide the note it would ask about.
@@ -532,6 +533,9 @@ ApplicationWindow {
             break
         case "toggleTask":
             Vault.setTask(Vault.current, !Vault.isTask(Vault.current))
+            break
+        case "togglePin":
+            Vault.setPinned(Vault.current, !Vault.isPinned(Vault.current))
             break
         case "importJoplin":
             joplinImport.start("")

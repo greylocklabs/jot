@@ -260,8 +260,8 @@ int main(int argc, char *argv[])
         u"notebook"_s, u"With new: the notebook to put it in; with import, to import into."_s,
         u"name"_s);
     addOption(notebookOption);
-    const QCommandLineOption orderOption(u"order"_s, u"With ls: updated (the default) or title."_s,
-                                         u"order"_s);
+    const QCommandLineOption orderOption(
+        u"order"_s, u"With ls: updated (the default), created or title."_s, u"order"_s);
     addOption(orderOption);
     const QCommandLineOption jsonOption(
         u"json"_s,
@@ -340,7 +340,7 @@ int main(int argc, char *argv[])
             if (option == u"notebook")
                 return notebooks();
             if (option == u"order")
-                return cli::Completion::plain({u"updated"_s, u"title"_s});
+                return cli::Completion::plain(Settings::noteSorts());
             return QList<cli::Candidate>();
         };
         const cli::Completion completion(commands, named, sources);

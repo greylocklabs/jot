@@ -1,6 +1,7 @@
 #include "VaultCommands.h"
 
 #include "JexBuilder.h"
+#include "jot/Layout.h"
 
 #include <QDir>
 #include <QDirIterator>
@@ -23,6 +24,7 @@ private Q_SLOTS:
 
     void statusSaysWhatTheVaultHolds();
     void listsNotesNewestOrByTitle();
+    void listsPinnedNotesFirst();
     void searchesWithFilters();
     void makesNotesWithAPipedBody();
     void showsANoteByTitleAliasOrPath();
@@ -107,7 +109,21 @@ void TestVaultCommands::listsNotesNewestOrByTitle()
     QCOMPARE(run([](auto &c) { return c.list(u"Nowhere"_s, {}, false); }), 1);
     QVERIFY(m_err.contains(u"no notebook called Nowhere"_s));
     QCOMPARE(run([](auto &c) { return c.list({}, u"titel"_s, false); }), 2);
+    QCOMPARE(run([](auto &c) { return c.list({}, u"created"_s, false); }), 0);
     QCOMPARE(run([](auto &c) { return c.list(u"../.."_s, {}, false); }), 2);
+}
+
+void TestVaultCommands::listsPinnedNotesFirst()
+{
+    Layout layout;
+    layout.setPinned(u"Recipes/Sourdough.md"_s, true);
+    QString error;
+    QVERIFY(layout.write(*m_vault, &error));
+    QCOMPARE(run([](auto &c) { return c.list(u"Recipes"_s, u"title"_s, true); }), 0);
+    const QJsonArray notes = json().array();
+    QCOMPARE(notes.at(0).toObject().value(u"title"_s).toString(), u"Sourdough"_s);
+    QVERIFY(notes.at(0).toObject().value(u"pinned"_s).toBool());
+    QVERIFY(!notes.at(1).toObject().value(u"pinned"_s).toBool());
 }
 
 void TestVaultCommands::searchesWithFilters()
