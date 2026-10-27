@@ -75,6 +75,7 @@ private Q_SLOTS:
     void aNotebookThatIsItsOwnAncestorStopsAtTheTop();
     void aFailedWriteKeepsTrackOfWhatWasWritten();
     void aNotebookKnownFromBeforeKeepsItsName();
+    void aRemovedNoteIsNotFoundInAnotherWithTheSameText();
 
 private:
     QString read(const QString &path) const;
@@ -332,6 +333,29 @@ void TestJoplinImport::aNotebookKnownFromBeforeKeepsItsName()
     QVERIFY(importJoplin(*m_vault, places, {}, false, &error));
     QVERIFY(QFileInfo::exists(m_vault->absolute(u"Stories/Places/The harbour.md"_s)));
     QVERIFY(!QFileInfo::exists(m_vault->absolute(u"Untitled"_s)));
+}
+
+void TestJoplinImport::aRemovedNoteIsNotFoundInAnotherWithTheSameText()
+{
+    // Two notes with the same text; one is deleted in Jot, then changed in Joplin.
+    JoplinExport ex;
+    ex.notes = {note(u"n1"_s, {}, u"First"_s, u"same"_s),
+                note(u"n2"_s, {}, u"Second"_s, u"same"_s)};
+    for (auto &n : ex.notes)
+        n.created = {};
+    QString error;
+    QVERIFY(importJoplin(*m_vault, ex, {}, false, &error));
+    const QString second = read(u"Second.md"_s);
+    QCOMPARE(read(u"First.md"_s), second);
+    QVERIFY(QFile::remove(m_vault->absolute(u"First.md"_s)));
+
+    ex.notes[0].body = u"changed in Joplin"_s;
+    ex.notes[0].updated = at(6);
+    const auto again = importJoplin(*m_vault, ex, {}, false, &error);
+    QVERIFY(again);
+    QCOMPARE(again->notes[0].outcome, JoplinImport::Outcome::Removed);
+    QCOMPARE(read(u"Second.md"_s), second);
+    QVERIFY(!QFileInfo::exists(m_vault->absolute(u"First.md"_s)));
 }
 
 QTEST_GUILESS_MAIN(TestJoplinImport)

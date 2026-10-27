@@ -299,15 +299,25 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
         }
         return textAt[path];
     };
-    QHash<QString, QString> pathBySha;
+    QMultiHash<QString, QString> pathsBySha;
     bool scanned = false;
-    const auto findMoved = [&](const QString &wanted) -> QString {
+    // The one file with the text `wanted` that no other imported note is recorded at. Two such
+    // files, as two empty notes would be, give none rather than a guess that could overwrite one.
+    const auto findMoved = [&](const QString &id, const QString &wanted) -> QString {
         if (!scanned) {
             for (const QString &path : vault.notes())
-                pathBySha.insert(sha(textOf(path)), path);
+                pathsBySha.insert(sha(textOf(path)), path);
             scanned = true;
         }
-        return pathBySha.value(wanted);
+        QStringList candidates;
+        for (const QString &path : pathsBySha.values(wanted)) {
+            const bool claimed = std::any_of(ledger.notes.cbegin(), ledger.notes.cend(),
+                                             [&](const auto &n) { return n.path == path; }) &&
+                                 ledger.notes.value(id).path != path;
+            if (!claimed)
+                candidates.append(path);
+        }
+        return candidates.size() == 1 ? candidates.first() : QString();
     };
 
     struct Planned
@@ -331,8 +341,9 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
         JoplinImport::Note line{note.id, title, {}, JoplinImport::Outcome::Created};
         if (ledger.notes.contains(note.id)) {
             const auto &before = ledger.notes[note.id];
-            QString path = QFileInfo::exists(vault.absolute(before.path)) ? before.path
-                                                                          : findMoved(before.sha);
+            QString path = QFileInfo::exists(vault.absolute(before.path))
+                               ? before.path
+                               : findMoved(note.id, before.sha);
             line.path = path.isEmpty() ? before.path : path;
             if (path.isEmpty())
                 line.outcome = JoplinImport::Outcome::Removed;
