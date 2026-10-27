@@ -5,6 +5,7 @@
 #include "ThemesController.h"
 #include "VaultController.h"
 
+#include "greylock/Desktop.h"
 #include "greylock/Identity.h"
 #include "greylock/UpdateCheck.h"
 #include "jot/LogFile.h"
@@ -23,6 +24,7 @@ using namespace Qt::StringLiterals;
 
 int main(int argc, char *argv[])
 {
+    greylock::desktop::useDesktopFileDialogs();
     QGuiApplication app(argc, argv);
     // The identity's folder name keeps Qt's own config and data folders apart for a
     // development build, and matches the CLI's.
