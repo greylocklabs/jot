@@ -35,6 +35,16 @@
   </categories>
 
   <releases>
+    <release version="0.0.12" date="2026-10-27">
+      <description>
+        <ul>
+          <li>Notebooks can have an emoji, shown before their name in the sidebar and wherever notebooks are listed. Choose one from a notebook's menu, by typing words of its name. It is kept in the notes folder's .jot/layout.yaml, so it syncs with the notes, and notebooks imported from Joplin keep theirs.</li>
+          <li>The note list can be ordered by when notes were made, as well as by when they changed or by title, and jot ls --order created does the same.</li>
+          <li>Pin a note from its menu, or from the command palette, to keep it at the top of the list. Pins are kept in .jot/layout.yaml too, and jot ls lists pinned notes first.</li>
+          <li>Nested tags, such as #novel/ch1, show as a tree in the sidebar that folds like the notebooks, each with how many notes it covers. A tag that others are nested in shows even when no note has it itself, and so does jot tags.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.0.11" date="2026-10-27">
       <description>
         <ul>
