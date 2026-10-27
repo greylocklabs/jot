@@ -21,6 +21,9 @@ class Settings : public QObject
     /// Notebooks folded shut in the sidebar, by vault path.
     Q_PROPERTY(QStringList collapsedNotebooks READ collapsedNotebooks WRITE setCollapsedNotebooks
                    NOTIFY collapsedNotebooksChanged)
+    /// Tags folded shut in the sidebar, as written.
+    Q_PROPERTY(QStringList collapsedTags READ collapsedTags WRITE setCollapsedTags NOTIFY
+                   collapsedTagsChanged)
     /// Looks for newer releases once a day.
     Q_PROPERTY(bool checkForUpdates READ checkForUpdates WRITE setCheckForUpdates NOTIFY
                    checkForUpdatesChanged)
@@ -57,6 +60,8 @@ public:
     void setNoteSort(const QString &sort);
     [[nodiscard]] QStringList collapsedNotebooks() const { return m_collapsedNotebooks; }
     void setCollapsedNotebooks(const QStringList &paths);
+    [[nodiscard]] QStringList collapsedTags() const { return m_collapsedTags; }
+    void setCollapsedTags(const QStringList &tags);
     [[nodiscard]] bool checkForUpdates() const { return m_checkForUpdates; }
     void setCheckForUpdates(bool check);
     [[nodiscard]] int sidebarWidth() const { return m_sidebarWidth; }
@@ -95,6 +100,7 @@ Q_SIGNALS:
     void themeChanged();
     void noteSortChanged();
     void collapsedNotebooksChanged();
+    void collapsedTagsChanged();
     void checkForUpdatesChanged();
     void noteFontChanged();
     void sidebarWidthChanged();
@@ -109,6 +115,7 @@ private:
     QString m_theme;
     QString m_noteSort;
     QStringList m_collapsedNotebooks;
+    QStringList m_collapsedTags;
     bool m_checkForUpdates = true;
     QString m_noteFont;
     int m_sidebarWidth = 0;

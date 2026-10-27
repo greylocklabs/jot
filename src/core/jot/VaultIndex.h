@@ -54,6 +54,15 @@ struct NoteTask
     bool operator==(const NoteTask &) const = default;
 };
 
+/// A tag, and how many notes have it or a tag nested in it.
+struct TagCount
+{
+    QString tag;
+    int notes = 0;
+
+    bool operator==(const TagCount &) const = default;
+};
+
 struct SearchHit
 {
     QString path;
@@ -122,6 +131,9 @@ public:
 
     /// Every tag in use, nested ones as written, sorted.
     [[nodiscard]] QStringList tags() const;
+    /// Every tag in use with its count, and each tag that others are nested in although no note
+    /// has it itself. Parents come before the tags nested in them, otherwise alphabetically.
+    [[nodiscard]] QList<TagCount> tagCounts() const;
     /// Notes with `tag` or a tag nested in it.
     [[nodiscard]] QStringList tagged(const QString &tag) const;
     /// Unticked checkboxes across the vault, note by note.

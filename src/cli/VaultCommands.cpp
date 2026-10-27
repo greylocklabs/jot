@@ -293,18 +293,16 @@ int VaultCommands::open(const QString &name, const QString &program, const Launc
 
 int VaultCommands::listTags(bool json)
 {
-    const QStringList tags = m_index.tags();
+    const QList<TagCount> tags = m_index.tagCounts();
     if (json) {
         QJsonArray array;
-        for (const QString &tag : tags)
-            array.append(
-                QJsonObject{{u"tag"_s, tag}, {u"notes"_s, int(m_index.tagged(tag).size())}});
+        for (const TagCount &each : tags)
+            array.append(QJsonObject{{u"tag"_s, each.tag}, {u"notes"_s, each.notes}});
         print(m_out, array);
         return 0;
     }
-    for (const QString &tag : tags)
-        m_out << m_paint.bold(tag) << "  "
-              << m_paint.dim(QString::number(m_index.tagged(tag).size())) << "\n";
+    for (const TagCount &each : tags)
+        m_out << m_paint.bold(each.tag) << "  " << m_paint.dim(QString::number(each.notes)) << "\n";
     return 0;
 }
 

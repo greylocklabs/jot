@@ -15,6 +15,9 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   title, and `jot ls --order created` does the same.
 - Pin a note from its menu, or from the command palette, to keep it at the top of the list. Pins
   are kept in `.jot/layout.yaml` too, and `jot ls` lists pinned notes first.
+- Nested tags, such as `#novel/ch1`, show as a tree in the sidebar that folds like the notebooks,
+  each with how many notes it covers. A tag that others are nested in shows even when no note
+  has it itself, and so does `jot tags`.
 
 ## 0.0.11 - 2026-10-27
 

@@ -4,6 +4,7 @@
 #include "NoteListModel.h"
 #include "NotebookModel.h"
 #include "SwitcherModel.h"
+#include "TagModel.h"
 #include "TaskModel.h"
 
 #include "jot/Vault.h"
@@ -46,6 +47,8 @@ class VaultController : public QObject
     /// Each notebook's emoji, by its path, for those that have one.
     Q_PROPERTY(QVariantMap notebookEmoji READ notebookEmoji NOTIFY notesChanged)
     Q_PROPERTY(jot::NotebookModel *notebooks READ notebooks CONSTANT)
+    /// The tags, nested ones as a tree that folds.
+    Q_PROPERTY(jot::TagModel *tagTree READ tagTree CONSTANT)
     Q_PROPERTY(jot::NoteListModel *notes READ notes CONSTANT)
     Q_PROPERTY(jot::SwitcherModel *switcher READ switcher CONSTANT)
     /// The notes offered while typing a wikilink.
@@ -184,6 +187,7 @@ public:
     [[nodiscard]] QStringList tags() const;
     [[nodiscard]] QVariantMap notebookEmoji() const { return m_notebookEmoji; }
     [[nodiscard]] NotebookModel *notebooks() { return &m_notebooks; }
+    [[nodiscard]] TagModel *tagTree() { return &m_tagTree; }
     [[nodiscard]] NoteListModel *notes() { return &m_notes; }
     [[nodiscard]] SwitcherModel *switcher() { return &m_switcher; }
     [[nodiscard]] SwitcherModel *linkSuggestions() { return &m_linkSuggestions; }
@@ -245,6 +249,7 @@ private:
     std::unique_ptr<VaultIndex> m_index;
     std::unique_ptr<VaultWatcher> m_watcher;
     NotebookModel m_notebooks;
+    TagModel m_tagTree;
     NoteListModel m_notes;
     SwitcherModel m_switcher;
     SwitcherModel m_linkSuggestions;

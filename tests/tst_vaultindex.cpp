@@ -32,6 +32,7 @@ private Q_SLOTS:
     void backlinksFollowRenames();
     void listsUnresolvedLinks();
     void nestedTagsCountForTheirParents();
+    void countsTagsWithTheParentsOfNestedOnes();
     void listsOpenTasksAndTaskNotes();
     void rebuildsAnIndexFromAnotherSchema();
     void sortsNotesWithThePinnedFirst();
@@ -280,6 +281,22 @@ void TestVaultIndex::nestedTagsCountForTheirParents()
     QCOMPARE(m_index->tags(), (QStringList{u"novel"_s, u"novel/ch1"_s, u"novelette"_s}));
     QCOMPARE(m_index->tagged(u"novel"_s), (QStringList{u"A.md"_s, u"B.md"_s}));
     QCOMPARE(m_index->tagged(u"NOVEL/ch1"_s), QStringList{u"A.md"_s});
+}
+
+void TestVaultIndex::countsTagsWithTheParentsOfNestedOnes()
+{
+    write(u"A.md"_s, u"#novel/ch10 #novel/ch2\n"_s);
+    write(u"B.md"_s, u"---\ntags: [Novel/ch2, draft/old/rejected]\n---\n"_s);
+    write(u"C.md"_s, u"#novelette\n"_s);
+    open();
+    // Parents first, numbers in order, case aside; draft and draft/old are no note's own tags.
+    QCOMPARE(m_index->tagCounts(), (QList<TagCount>{{u"draft"_s, 1},
+                                                    {u"draft/old"_s, 1},
+                                                    {u"draft/old/rejected"_s, 1},
+                                                    {u"novel"_s, 2},
+                                                    {u"novel/ch2"_s, 2},
+                                                    {u"novel/ch10"_s, 1},
+                                                    {u"novelette"_s, 1}}));
 }
 
 void TestVaultIndex::listsOpenTasksAndTaskNotes()

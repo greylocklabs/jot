@@ -3,7 +3,7 @@ import Jot.Ui
 import QtQuick
 import QtQuick.Controls
 
-/// The notebooks, as a tree that folds, and the tags below them. Choosing either fills
+/// The notebooks and the tags below them, each as a tree that folds. Choosing either fills
 /// the note list. Notes and notebooks dropped on a notebook move into it; a notebook is
 /// renamed by double-clicking it.
 Rectangle {
@@ -355,36 +355,84 @@ Rectangle {
             }
 
             Heading {
-                visible: Vault.tags.length > 0
+                visible: Vault.tagTree.count > 0
                 text: qsTr("Tags")
             }
 
+            // Nested tags fold as notebooks do.
             Repeater {
-                model: Vault.tags
+                model: Vault.tagTree
 
                 Entry {
                     id: tagRow
 
-                    required property string modelData
+                    required property string tag
+                    required property string name
+                    required property int depth
+                    required property bool hasChildren
+                    required property bool expanded
+                    required property int count
 
                     width: root.width
-                    label: "#" + modelData
-                    selected: !Vault.showingTasks && Vault.notes.tag === modelData
+                    label: "#" + tag
+                    selected: !Vault.showingTasks && Vault.notes.tag === tag
                     onClicked: {
                         Vault.showingTasks = false
-                        Vault.notes.tag = modelData
+                        Vault.notes.tag = tag
                     }
 
-                    contentItem: Text {
-                        leftPadding: Theme.space5 + tagRow.modelData.split("/").length
-                                     * Theme.space1
-                        verticalAlignment: Text.AlignVCenter
-                        text: tagRow.label
-                        elide: Text.ElideRight
-                        color: tagRow.selected ? Theme.text : Theme.textMuted
-                        font.family: Theme.fontFamily
-                        font.pixelSize: Theme.textMd
-                        font.weight: tagRow.selected ? Theme.weightBold : Theme.weightStrong
+                    contentItem: Item {
+                        AbstractButton {
+                            id: tagFold
+
+                            x: Theme.space4 + tagRow.depth * Theme.treeIndent
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: Theme.smallGlyphSize + Theme.space3
+                            height: parent.height
+                            visible: tagRow.hasChildren
+                            Accessible.name: tagRow.expanded ? qsTr("Fold #%1").arg(tagRow.tag) :
+                                                               qsTr("Open #%1").arg(tagRow.tag)
+                            onClicked: Vault.tagTree.toggle(tagRow.tag)
+
+                            contentItem: Glyph {
+                                name: tagRow.expanded ? "chevron-down" : "chevron-right"
+                                color: Theme.textFaint
+                                stroke: Theme.smallGlyphStroke
+                                implicitWidth: Theme.smallGlyphSize
+                                implicitHeight: Theme.smallGlyphSize
+                            }
+                        }
+                        Text {
+                            anchors {
+                                left: tagFold.right
+                                right: tagCount.left
+                                rightMargin: Theme.space3
+                                verticalCenter: parent.verticalCenter
+                            }
+                            // A nested tag shows its last part, under the tag it is in.
+                            text: "#" + tagRow.name
+                            elide: Text.ElideRight
+                            color: tagRow.selected ? Theme.text : Theme.textMuted
+                            font.family: Theme.fontFamily
+                            font.pixelSize: Theme.textMd
+                            font.weight: tagRow.selected ? Theme.weightBold : Theme.weightStrong
+                        }
+                        Text {
+                            id: tagCount
+
+                            anchors {
+                                right: parent.right
+                                rightMargin: Theme.space5
+                                verticalCenter: parent.verticalCenter
+                            }
+                            text: tagRow.count
+                            color: Theme.textFaint
+                            font.family: Theme.fontFamily
+                            font.pixelSize: Theme.textXs
+                            font.features: {
+                                "tnum": 1
+                            }
+                        }
                     }
                 }
             }

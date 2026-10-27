@@ -18,6 +18,7 @@ const QString kVaultPath = u"vault/path"_s;
 const QString kTheme = u"appearance/theme"_s;
 const QString kNoteSort = u"notes/sort"_s;
 const QString kCollapsedNotebooks = u"notes/collapsedNotebooks"_s;
+const QString kCollapsedTags = u"notes/collapsedTags"_s;
 const QString kCheckForUpdates = u"updates/check"_s;
 const QString kLastSeenVersion = u"app/lastSeenVersion"_s;
 const QString kSourceMode = u"editor/sourceMode"_s;
@@ -49,6 +50,7 @@ Settings::Settings(const QString &path, QObject *parent)
     if (!noteSorts().contains(m_noteSort))
         m_noteSort = noteSorts().first();
     m_collapsedNotebooks = m_store.value(kCollapsedNotebooks).toStringList();
+    m_collapsedTags = m_store.value(kCollapsedTags).toStringList();
     m_checkForUpdates = m_store.value(kCheckForUpdates, true).toBool();
     m_lastSeenVersion = m_store.value(kLastSeenVersion).toString();
     m_sourceMode = m_store.value(kSourceMode, false).toBool();
@@ -101,6 +103,15 @@ void Settings::setNoteSort(const QString &sort)
     m_noteSort = sort;
     m_store.setValue(kNoteSort, sort);
     Q_EMIT noteSortChanged();
+}
+
+void Settings::setCollapsedTags(const QStringList &tags)
+{
+    if (m_collapsedTags == tags)
+        return;
+    m_collapsedTags = tags;
+    m_store.setValue(kCollapsedTags, tags);
+    Q_EMIT collapsedTagsChanged();
 }
 
 void Settings::setCollapsedNotebooks(const QStringList &paths)
