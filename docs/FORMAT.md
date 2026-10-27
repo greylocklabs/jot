@@ -195,15 +195,30 @@ Jot refuses to write to a vault whose `format` is newer than it understands, and
 
 A JEX export or Joplin's database maps onto this format as follows:
 
-| Joplin                              | Jot                                                             |
-| ----------------------------------- | --------------------------------------------------------------- |
-| Notebook                            | Folder                                                          |
-| Note title                          | File name, with `title:` when it had unsafe characters          |
-| Tags                                | `tags:`                                                         |
-| `created_time`, `updated_time`      | `created:`, and the file's modification time                    |
-| To-do, `todo_completed`, `todo_due` | `task:`, `done:`, `due:`                                        |
-| Resource used by notes              | File in the `.assets` folder of the first note that uses it     |
-| `:/id` links                        | Relative Markdown links                                         |
-| HTML notes                          | Converted to Markdown where possible, otherwise kept as `.html` |
-| `source_url`, `author`              | Kept as front matter keys                                       |
-| `latitude`, `longitude`, `altitude` | Left out: Jot does not keep where a note was written            |
+| Joplin                              | Jot                                                          |
+| ----------------------------------- | ------------------------------------------------------------ |
+| Notebook                            | Folder, merged with one of the same name                     |
+| Note title                          | File name, with `title:` when it had unsafe characters       |
+| Tags                                | `tags:`                                                      |
+| `created_time`, `updated_time`      | `created:`, and the file's modification time                 |
+| To-do, `todo_completed`, `todo_due` | `task:`, `done:`, `due:`                                     |
+| Resource used by notes              | File in the `.assets` folder of the first note that uses it  |
+| `:/id` links                        | Relative Markdown links                                      |
+| HTML notes                          | Kept as HTML inside the `.md` file, with its links rewritten |
+| `source_url`, `author`              | Kept as front matter keys                                    |
+| `latitude`, `longitude`, `altitude` | Left out: Jot does not keep where a note was written         |
+| Conflict copies                     | A note called `<title> (conflict)` beside the original       |
+| Notes and notebooks in the trash    | Left out                                                     |
+| Encrypted items, revisions          | Left out, and counted in the import's summary                |
+
+Importing again is safe, so a Joplin account can come across one notebook at a time.
+`.jot/joplin.yaml` records which file each Joplin note and notebook became, and what each note
+held when imported. A later import of the same or an overlapping export then:
+
+- leaves alone notes that Joplin has not changed;
+- brings up to date notes changed in Joplin but not in Jot;
+- leaves as they are notes edited in Jot since, and says so;
+- does not bring back notes removed in Jot, and finds ones moved without edits;
+- moves a notebook imported without its parent under that parent, once the parent is imported.
+
+Deleting `.jot/joplin.yaml` only makes the next import treat everything as new.
