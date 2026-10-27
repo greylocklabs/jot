@@ -206,3 +206,4 @@ A JEX export or Joplin's database maps onto this format as follows:
 | `:/id` links                        | Relative Markdown links                                         |
 | HTML notes                          | Converted to Markdown where possible, otherwise kept as `.html` |
 | `source_url`, `author`              | Kept as front matter keys                                       |
+| `latitude`, `longitude`, `altitude` | Left out: Jot does not keep where a note was written            |
