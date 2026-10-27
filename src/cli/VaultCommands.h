@@ -12,7 +12,7 @@
 
 namespace jot::cli {
 
-/// The commands that work on a vault: status, ls, search, new, show and tasks. Each
+/// The commands that work on a vault: status, ls, search, new, show, tasks, tags and import. Each
 /// writes what it found to `out` and problems to `err`, and gives an exit code: 0 for
 /// success, 1 for a failure, 2 for a mistake in how it was asked.
 class VaultCommands
@@ -34,6 +34,10 @@ public:
     /// Prints the note `name` names: a path, a title or an alias.
     int show(const QString &name);
     int listTasks(bool json);
+    /// Every tag, with how many notes have it or a tag nested in it.
+    int listTags(bool json);
+    /// Imports the Joplin JEX export at `file` under `notebook`, or says what it would do.
+    int importJoplin(const QString &file, const QString &notebook, bool dryRun, bool json);
     /// Starts `program`, as the app, with these arguments; says whether it started.
     using Launcher = std::function<bool(const QString &program, const QStringList &arguments)>;
     /// Opens the note `name` names in the app at `program`, through `launch`.

@@ -1,6 +1,8 @@
 #include "VaultCommands.h"
 
 #include "jot/Fuzzy.h"
+#include "jot/JoplinExport.h"
+#include "jot/JoplinImport.h"
 
 #include <QDateTime>
 #include <QDir>
@@ -283,6 +285,109 @@ int VaultCommands::open(const QString &name, const QString &program, const Launc
         m_err << tr("jot: could not start %1").arg(program) << "\n";
         return 1;
     }
+    return 0;
+}
+
+int VaultCommands::listTags(bool json)
+{
+    const QStringList tags = m_index.tags();
+    if (json) {
+        QJsonArray array;
+        for (const QString &tag : tags)
+            array.append(
+                QJsonObject{{u"tag"_s, tag}, {u"notes"_s, int(m_index.tagged(tag).size())}});
+        print(m_out, array);
+        return 0;
+    }
+    for (const QString &tag : tags)
+        m_out << m_paint.bold(tag) << "  "
+              << m_paint.dim(QString::number(m_index.tagged(tag).size())) << "\n";
+    return 0;
+}
+
+int VaultCommands::importJoplin(const QString &file, const QString &notebook, bool dryRun,
+                                bool json)
+{
+    if (file.isEmpty()) {
+        m_err << tr("usage: jot import joplin <export.jex> [--notebook name] [--dry-run]") << "\n";
+        return 2;
+    }
+    if (!insideVault(notebook)) {
+        m_err << tr("jot: %1 is not a notebook in this vault").arg(notebook) << "\n";
+        return 2;
+    }
+    QString error;
+    const std::optional<JoplinExport> from = readJoplinExport(file, &error);
+    if (!from) {
+        m_err << tr("jot: could not read %1: %2").arg(file, error) << "\n";
+        return 1;
+    }
+    const std::optional<JoplinImport> done = jot::importJoplin(
+        m_vault, *from, notebook.isEmpty() ? QString() : QDir::cleanPath(notebook), dryRun, &error);
+    if (!done) {
+        m_err << tr("jot: %1").arg(error) << "\n";
+        return 1;
+    }
+    if (!dryRun)
+        m_index.refresh();
+
+    using Outcome = JoplinImport::Outcome;
+    const auto name = [](Outcome outcome) {
+        switch (outcome) {
+        case Outcome::Created: return u"created"_s;
+        case Outcome::Updated: return u"updated"_s;
+        case Outcome::Unchanged: return u"unchanged"_s;
+        case Outcome::ChangedInJot: return u"changedInJot"_s;
+        case Outcome::Removed: return u"removed"_s;
+        }
+        return QString();
+    };
+    if (json) {
+        QJsonArray notes;
+        for (const auto &note : done->notes)
+            notes.append(QJsonObject{{u"path"_s, note.path},
+                                     {u"title"_s, note.title},
+                                     {u"outcome"_s, name(note.outcome)}});
+        print(m_out, QJsonObject{{u"dryRun"_s, dryRun},
+                                 {u"notes"_s, notes},
+                                 {u"notebooks"_s, QJsonArray::fromStringList(done->notebooks)},
+                                 {u"attachments"_s, done->attachments},
+                                 {u"skipped"_s, QJsonArray::fromStringList(done->skipped)}});
+        return 0;
+    }
+
+    const auto plural = [](int n, const QString &one, const QString &many) {
+        return n == 1 ? one : many.arg(n);
+    };
+    const int created = done->count(Outcome::Created);
+    const int updated = done->count(Outcome::Updated);
+    m_out << m_paint.bold(dryRun ? tr("Would import from %1").arg(QFileInfo(file).fileName())
+                                 : tr("Imported from %1").arg(QFileInfo(file).fileName()))
+          << "\n";
+    m_out << "  " << plural(created, tr("1 new note"), tr("%1 new notes")) << ", "
+          << plural(updated, tr("1 updated"), tr("%1 updated")) << ", "
+          << plural(int(done->notebooks.size()), tr("1 new notebook"), tr("%1 new notebooks"))
+          << ", " << plural(done->attachments, tr("1 attachment"), tr("%1 attachments")) << "\n";
+    if (const int same = done->count(Outcome::Unchanged))
+        m_out << "  "
+              << plural(same, tr("1 note unchanged since the last import"),
+                        tr("%1 notes unchanged since the last import"))
+              << "\n";
+    // What was left alone is worth naming, so nothing seems lost.
+    for (const auto &note : done->notes) {
+        if (note.outcome == Outcome::ChangedInJot)
+            m_out << "  " << tr("Kept your edits to %1").arg(m_paint.bold(note.path)) << "\n";
+        else if (note.outcome == Outcome::Removed)
+            m_out
+                << "  "
+                << tr("Not brought back, as it was removed or moved and edited: %1").arg(note.path)
+                << "\n";
+    }
+    for (const QString &why : done->skipped)
+        m_out << "  " << m_paint.dim(tr("Left out: %1").arg(why)) << "\n";
+    if (dryRun)
+        m_out << m_paint.dim(tr("Nothing was written; run it again without --dry-run to import."))
+              << "\n";
     return 0;
 }
 

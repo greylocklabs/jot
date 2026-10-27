@@ -3,6 +3,16 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## Unreleased
+
+### Added
+
+- `jot import joplin <export.jex>` brings in a Joplin export: notebooks become folders, and tags,
+  to-dos, links and attachments come across. `--dry-run` shows what it would do first, and importing
+  again only brings what changed in Joplin, never over your edits in Jot. Where Joplin recorded a
+  note being written is left out.
+- `jot tags` lists every tag, with how many notes have it.
+
 ## 0.0.9 - 2026-10-25
 
 ### Fixed
