@@ -229,6 +229,14 @@ void TestVaultCommands::listsTagsWithTheirNotes()
 
     QCOMPARE(run([](auto &c) { return c.listTags(false); }), 0);
     QVERIFY2(m_out.contains(u"food  2"_s), qPrintable(m_out));
+
+    // A tag only others are nested in is listed too.
+    QString error;
+    QVERIFY(notefile::write(m_vault->absolute(u"Idea.md"_s), u"#draft/old\n"_s, &error));
+    m_index->refresh();
+    QCOMPARE(run([](auto &c) { return c.listTags(false); }), 0);
+    QVERIFY2(m_out.contains(u"draft  1\n"_s), qPrintable(m_out));
+    QVERIFY2(m_out.contains(u"draft/old  1\n"_s), qPrintable(m_out));
 }
 
 void TestVaultCommands::importsAJoplinExportAfterADryRun()

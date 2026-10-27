@@ -30,7 +30,7 @@ VaultController *s_instance = nullptr;
 } // namespace
 
 VaultController::VaultController(Settings &settings, QObject *parent)
-    : QObject(parent), m_settings(settings), m_notebooks(settings)
+    : QObject(parent), m_settings(settings), m_notebooks(settings), m_tagTree(settings)
 {
     m_saveTimer.setSingleShot(true);
     m_saveTimer.setInterval(m_saveDelay);
@@ -874,12 +874,14 @@ void VaultController::reloadModels()
     }
     if (m_index) {
         m_notebooks.reload(m_vault.get(), m_index->noteCounts(), m_index->noteCount());
+        m_tagTree.reload(m_index->tagCounts());
         m_notes.reload(m_index.get(), m_pinned);
         m_switcher.reload(m_index.get());
         m_linkSuggestions.reload(m_index.get());
         m_tasks.reload(m_index.get());
     } else {
         m_notebooks.reload(nullptr, {}, 0);
+        m_tagTree.reload({});
         m_notes.reload(nullptr);
         m_switcher.reload(nullptr);
         m_linkSuggestions.reload(nullptr);

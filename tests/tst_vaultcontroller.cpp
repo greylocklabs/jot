@@ -35,6 +35,7 @@ private Q_SLOTS:
     void switchesToAnotherFolder();
     void staysWhenTheNoteShownCannotBeSaved();
     void listsNotebooksThatFold();
+    void listsTagsThatFold();
     void listsNotesByNotebookTagAndSearch();
     void ordersNotesAsAsked();
     void followsTheOrderInSettings();
@@ -222,6 +223,29 @@ void TestVaultController::listsNotebooksThatFold()
     QCOMPARE(m_settings->collapsedNotebooks(), QStringList{u"Ashfall"_s});
     notebooks.toggle(u"Ashfall"_s);
     QCOMPARE(notebooks.rowCount(), 6);
+}
+
+void TestVaultController::listsTagsThatFold()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    TagModel &tags = *m_vault->tagTree();
+    QCOMPARE(column(tags, "tag"), (QStringList{u"ashfall"_s, u"baking"_s, u"cast"_s, u"cast/lead"_s,
+                                               u"ferry"_s, u"food"_s}));
+    const int cast = int(column(tags, "tag").indexOf(u"cast"_s));
+    QCOMPARE(column(tags, "hasChildren").at(cast), u"true"_s);
+    QCOMPARE(column(tags, "name").at(cast + 1), u"lead"_s);
+    QCOMPARE(column(tags, "depth").at(cast + 1), u"1"_s);
+
+    tags.toggle(u"cast"_s);
+    QVERIFY(!column(tags, "tag").contains(u"cast/lead"_s));
+    QCOMPARE(column(tags, "expanded").at(cast), u"false"_s);
+    QCOMPARE(m_settings->collapsedTags(), QStringList{u"cast"_s});
+    tags.toggle(u"cast"_s);
+    QVERIFY(column(tags, "tag").contains(u"cast/lead"_s));
+
+    // A parent tag lists the notes nested in it too.
+    m_vault->notes()->setTag(u"cast"_s);
+    QVERIFY(column(*m_vault->notes(), "path").contains(u"Ashfall/Characters/Mara Vey.md"_s));
 }
 
 void TestVaultController::listsNotesByNotebookTagAndSearch()

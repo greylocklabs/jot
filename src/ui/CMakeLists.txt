@@ -32,6 +32,8 @@ qt_add_qml_module(jotui
         NoteListModel.cpp
         SwitcherModel.h
         SwitcherModel.cpp
+        TagModel.h
+        TagModel.cpp
         TaskModel.h
         TaskModel.cpp
         VaultController.h

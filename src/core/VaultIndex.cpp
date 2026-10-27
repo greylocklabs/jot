@@ -717,6 +717,40 @@ QStringList VaultIndex::tags() const
     return tags;
 }
 
+QList<TagCount> VaultIndex::tagCounts() const
+{
+    // Case aside, as tags match: each tag and every tag above it, with the notes under it.
+    QHash<QString, QString> spelled;
+    QHash<QString, QSet<QString>> notes;
+    QSqlQuery query(u"SELECT path, tag FROM tags ORDER BY rowid"_s,
+                    QSqlDatabase::database(m_connection));
+    while (query.next()) {
+        const QString path = query.value(0).toString();
+        const QString tag = query.value(1).toString();
+        for (qsizetype slash = 0; slash >= 0;) {
+            slash = tag.indexOf(u'/', slash + 1);
+            const QString prefix = slash < 0 ? tag : tag.first(slash);
+            const QString key = prefix.toCaseFolded();
+            if (!spelled.contains(key))
+                spelled.insert(key, prefix);
+            notes[key].insert(path);
+        }
+    }
+    QList<TagCount> counts;
+    for (auto it = spelled.cbegin(); it != spelled.cend(); ++it)
+        counts.append({it.value(), int(notes.value(it.key()).size())});
+    std::ranges::sort(counts, [](const TagCount &a, const TagCount &b) {
+        const QStringList left = a.tag.split(u'/');
+        const QStringList right = b.tag.split(u'/');
+        for (qsizetype i = 0; i < std::min(left.size(), right.size()); ++i) {
+            if (const int order = naturalCompare(left.at(i), right.at(i)); order != 0)
+                return order < 0;
+        }
+        return left.size() < right.size();
+    });
+    return counts;
+}
+
 QStringList VaultIndex::tagged(const QString &tag) const
 {
     QSqlQuery query(QSqlDatabase::database(m_connection));
