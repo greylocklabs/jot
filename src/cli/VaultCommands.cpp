@@ -322,8 +322,10 @@ int VaultCommands::importJoplin(const QString &file, const QString &notebook, bo
         m_err << tr("jot: could not read %1: %2").arg(file, error) << "\n";
         return 1;
     }
-    const std::optional<JoplinImport> done = jot::importJoplin(
-        m_vault, *from, notebook.isEmpty() ? QString() : QDir::cleanPath(notebook), dryRun, &error);
+    // "." and "a/.." are the top of the vault, which the importer calls "".
+    const QString folder = QDir::cleanPath(notebook);
+    const std::optional<JoplinImport> done =
+        jot::importJoplin(m_vault, *from, folder == u"." ? QString() : folder, dryRun, &error);
     if (!done) {
         m_err << tr("jot: %1").arg(error) << "\n";
         return 1;

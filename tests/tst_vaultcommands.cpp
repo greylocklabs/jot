@@ -259,6 +259,19 @@ void TestVaultCommands::importsAJoplinExportAfterADryRun()
     QCOMPARE(run([](auto &c) { return c.importJoplin({}, {}, false, false); }), 2);
     QCOMPARE(run([](auto &c) { return c.importJoplin(u"/no/such.jex"_s, {}, false, false); }), 1);
     QCOMPARE(run([&](auto &c) { return c.importJoplin(jex, u"../outside"_s, false, false); }), 2);
+
+    // "." is the top of the vault, so its paths match an import without --notebook.
+    const QString other = m_dir->filePath(u"other.jex"_s);
+    QFile otherFile(other);
+    QVERIFY(otherFile.open(QIODevice::WriteOnly));
+    otherFile.write(tar(
+        {{u"n2.md"_s, item(u"Loose note"_s, u"x"_s,
+                           u"id: 00112233445566778899aabbccddeeff\n"_s + times + u"type_: 1"_s)}}));
+    otherFile.close();
+    QCOMPARE(run([&](auto &c) { return c.importJoplin(other, u"From Joplin/.."_s, true, true); }),
+             0);
+    QCOMPARE(json().object()[u"notes"_s].toArray().first()[u"path"_s].toString(),
+             u"Loose note.md"_s);
 }
 
 QTEST_GUILESS_MAIN(TestVaultCommands)
