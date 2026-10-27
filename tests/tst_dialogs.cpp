@@ -65,6 +65,10 @@ void TestDialogs::opensCleanly_data()
     QTest::newRow("update") << u"UpdateDialog {}"_s;
     QTest::newRow("theme colors") << u"ThemeEditor {}"_s;
     QTest::newRow("report a problem") << u"ReportDialog {}"_s;
+    QTest::newRow("import from joplin")
+        << uR"(JoplinImport { summary: ({ ok: true, created: 3, updated: 1, unchanged: 2, notebooks: 1,
+              attachments: 1, keptEdits: ["Stories/Mara.md"], notBroughtBack: ["Old.md"],
+              skipped: ["1 note in Joplin's trash"] }) })"_s;
 }
 
 void TestDialogs::opensCleanly()
@@ -96,9 +100,10 @@ void TestDialogs::opensCleanly()
 void TestDialogs::everyModalHasAClose_data()
 {
     QTest::addColumn<QString>("dialog");
-    for (const QString &dialog : {u"SettingsDialog {}"_s, u"KeyHelp { actions: [] }"_s,
-                                  u"AboutDialog {}"_s, u"WhatsNewDialog {}"_s, u"UpdateDialog {}"_s,
-                                  u"ThemeEditor {}"_s, u"TrashConfirm {}"_s, u"QuickSwitcher {}"_s})
+    for (const QString &dialog :
+         {u"SettingsDialog {}"_s, u"KeyHelp { actions: [] }"_s, u"AboutDialog {}"_s,
+          u"WhatsNewDialog {}"_s, u"UpdateDialog {}"_s, u"ThemeEditor {}"_s, u"TrashConfirm {}"_s,
+          u"QuickSwitcher {}"_s, u"JoplinImport {}"_s})
         QTest::newRow(qPrintable(dialog)) << dialog;
 }
 

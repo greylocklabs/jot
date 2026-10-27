@@ -146,6 +146,11 @@ public:
     Q_INVOKABLE bool completeTask(const QString &path);
     /// Shows the note at `path` with the cursor on `line`.
     Q_INVOKABLE void openAt(const QString &path, int line);
+    /// Imports the Joplin export at `file` into the notebook `folder`, or with `dryRun` says
+    /// what it would do. The map has `ok` and `error`, the counts `created`, `updated`,
+    /// `unchanged`, `notebooks` and `attachments`, and the lists `keptEdits` (notes left as
+    /// edited in Jot), `notBroughtBack` and `skipped`.
+    Q_INVOKABLE QVariantMap importJoplin(const QUrl &file, const QString &folder, bool dryRun);
     /// How long typing must pause before edits are written, in ms.
     void setSaveDelay(int ms)
     {

@@ -7,10 +7,13 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ### Added
 
-- `jot import joplin <export.jex>` brings in a Joplin export: notebooks become folders, and tags,
-  to-dos, links and attachments come across. `--dry-run` shows what it would do first, and importing
-  again only brings what changed in Joplin, never over your edits in Jot. Where Joplin recorded a
-  note being written is left out.
+- Import from Joplin: choose a Joplin export (.jex) from Settings › Notes folder, or from a
+  notebook's menu to import into it. Jot says what it will bring across before it does. Notebooks
+  become folders, and tags, to-dos, links and attachments come across. Importing again only brings
+  what changed in Joplin, never over your edits in Jot. Where Joplin recorded a note being written
+  is left out.
+- `jot import joplin <export.jex>` does the same from the command line, with `--dry-run` to see
+  what it would do first.
 - `jot tags` lists every tag, with how many notes have it.
 
 ## 0.0.9 - 2026-10-25

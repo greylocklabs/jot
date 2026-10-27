@@ -301,6 +301,7 @@ ApplicationWindow {
                 id: sidebar
 
                 onNoteMade: editor.editTitle()
+                onJoplinImportRequested: folder => joplinImport.start(folder)
                 visible: Vault.isOpen
                 anchors {
                     left: parent.left
@@ -373,12 +374,20 @@ ApplicationWindow {
         id: switcher
     }
 
+    JoplinImport {
+        id: joplinImport
+    }
+
     LazyPopup {
         id: settingsDialog
         sourceComponent: SettingsDialog {
             onEditColorsRequested: {
                 close()
                 themeEditor.open()
+            }
+            onJoplinImportRequested: {
+                close()
+                joplinImport.start("")
             }
         }
     }
