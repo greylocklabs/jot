@@ -11,6 +11,7 @@
 #include <QGuiApplication>
 #include <QImage>
 #include <QRegularExpression>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
@@ -62,6 +63,7 @@ private Q_SLOTS:
     void listsAndTicksWhatIsLeftToDo();
     void importsFromJoplinAfterSayingWhatItWouldDo();
     void anImportShowsWhatItWroteToTheNoteOpen();
+    void anImportThatFailsPartwayStillShowsWhatItWrote();
 
 private:
     QStringList column(const QAbstractItemModel &model, const QByteArray &role) const;
@@ -851,6 +853,47 @@ void TestVaultController::anImportShowsWhatItWroteToTheNoteOpen()
     QCOMPARE(kept.value(u"keptEdits"_s).toStringList(), QStringList{path});
     QVERIFY(readFile(m_root + u'/' + path).contains(u"Still typing."_s));
     QVERIFY(m_vault->currentText().contains(u"Still typing."_s));
+}
+
+void TestVaultController::anImportThatFailsPartwayStillShowsWhatItWrote()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    const QString jex = m_dir->filePath(u"export.jex"_s);
+    const QString times = u"user_created_time: 2026-10-01T09:00:00.000Z\nencryption_applied: 0\n"_s;
+    const QString locked = u"0123456789abcdef0123456789abcdef"_s;
+    // A loose note, then one in a notebook the import will find it cannot write in.
+    const auto write = [&](const QString &body, const QString &updated) {
+        QFile file(jex);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write(tar({
+            {u"n1.md"_s, item(u"From Joplin"_s, body,
+                              u"id: fedcba9876543210fedcba9876543210\n"_s + times +
+                                  u"user_updated_time: "_s + updated + u"\ntype_: 1"_s)},
+            {u"b1.md"_s,
+             item(u"Locked"_s, {}, u"id: "_s + locked + u"\n"_s + times + u"type_: 2"_s)},
+            {u"n2.md"_s,
+             item(u"Inside"_s, u"y"_s,
+                  u"id: 00112233445566778899aabbccddeeff\nparent_id: "_s + locked + u"\n"_s +
+                      times + u"user_updated_time: "_s + updated + u"\ntype_: 1"_s)},
+        }));
+    };
+    write(u"First."_s, u"2026-10-02T10:00:00.000Z"_s);
+    QVERIFY(m_vault->importJoplin(QUrl::fromLocalFile(jex), {}, false).value(u"ok"_s).toBool());
+    m_vault->setCurrent(u"From Joplin.md"_s);
+
+    QFile folder(m_root + u"/Locked"_s);
+    QVERIFY(folder.setPermissions(QFile::ReadOwner | QFile::ExeOwner));
+    const auto unlock = qScopeGuard(
+        [&] { folder.setPermissions(QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner); });
+    QFile probe(m_root + u"/Locked/probe"_s);
+    if (probe.open(QIODevice::WriteOnly))
+        QSKIP("permissions are not enforced here, as when tests run as root");
+
+    write(u"Second."_s, u"2026-10-03T10:00:00.000Z"_s);
+    QVERIFY(!m_vault->importJoplin(QUrl::fromLocalFile(jex), {}, false).value(u"ok"_s).toBool());
+    // The open note was rewritten before the failure, and the editor shows it.
+    QVERIFY(readFile(m_root + u"/From Joplin.md"_s).contains(u"Second."_s));
+    QVERIFY(m_vault->currentText().contains(u"Second."_s));
 }
 
 QTEST_MAIN(TestVaultController)

@@ -786,20 +786,18 @@ QVariantMap VaultController::importJoplin(const QUrl &file, const QString &folde
             m_watcher->start();
         reloadModels();
     }
+    // The watcher was restarted, so it will not report what the import wrote, even one that
+    // failed partway: the note shown is read again if its file changed, or the next keystroke
+    // would save over the import. What was typed was saved before, so nothing is lost.
+    if (!dryRun && !m_current.isEmpty()) {
+        QString ignored;
+        if (notefile::read(m_vault->absolute(m_current), &ignored).value_or(m_currentText) !=
+            m_currentText)
+            readCurrent();
+    }
     if (!done) {
         qCWarning(lcVault) << "could not import" << file.toLocalFile() << error;
         return failed(error);
-    }
-    // The watcher was restarted, so it will not report what the import wrote: the note shown
-    // is read again if the import changed it, or the next keystroke would save over it.
-    if (!dryRun && !m_current.isEmpty()) {
-        for (const auto &note : done->notes) {
-            if (note.path == m_current && (note.outcome == JoplinImport::Outcome::Created ||
-                                           note.outcome == JoplinImport::Outcome::Updated)) {
-                readCurrent();
-                break;
-            }
-        }
     }
     QStringList keptEdits;
     QStringList notBroughtBack;
