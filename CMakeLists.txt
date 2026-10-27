@@ -32,6 +32,9 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 
 find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Network Qml Quick QuickControls2 Sql)
+# Colors fenced code by language; found here, where every target that links the UI sees it.
+# 6.13 is what Debian trixie ships.
+find_package(KF6SyntaxHighlighting 6.13 REQUIRED)
 qt_standard_project_setup(REQUIRES 6.8)
 
 # The built-in themes come from the core submodule, which a clone made without

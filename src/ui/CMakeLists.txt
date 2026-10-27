@@ -1,6 +1,3 @@
-# Colors fenced code by language. 6.13 is what Debian trixie ships.
-find_package(KF6SyntaxHighlighting 6.13 REQUIRED)
-
 # The QML files sit at this module's root, which is what Qt expects. Keeping
 # them in a subdirectory would require a hand-written qmldir (policy QTP0004).
 qt_add_qml_module(jotui
