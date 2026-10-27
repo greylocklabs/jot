@@ -3,6 +3,13 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## Unreleased
+
+### Changed
+
+- Choosing a file or folder opens your desktop's own file chooser, with its places and
+  bookmarks, rather than a plain one of its own.
+
 ## 0.0.10 - 2026-10-27
 
 ### Added
