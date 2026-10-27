@@ -61,6 +61,7 @@ private Q_SLOTS:
     void previewsWhatALinkLeadsTo();
     void listsAndTicksWhatIsLeftToDo();
     void importsFromJoplinAfterSayingWhatItWouldDo();
+    void anImportShowsWhatItWroteToTheNoteOpen();
 
 private:
     QStringList column(const QAbstractItemModel &model, const QByteArray &role) const;
@@ -813,6 +814,43 @@ void TestVaultController::importsFromJoplinAfterSayingWhatItWouldDo()
         m_vault->importJoplin(QUrl::fromLocalFile(m_dir->filePath(u"missing.jex"_s)), {}, true);
     QVERIFY(!bad.value(u"ok"_s).toBool());
     QVERIFY(!bad.value(u"error"_s).toString().isEmpty());
+}
+
+void TestVaultController::anImportShowsWhatItWroteToTheNoteOpen()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    const QString jex = m_dir->filePath(u"export.jex"_s);
+    const auto write = [&](const QString &body, const QString &updated) {
+        QFile file(jex);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write(tar({{u"n1.md"_s, item(u"From Joplin"_s, body,
+                                          u"id: fedcba9876543210fedcba9876543210\n"
+                                          u"user_created_time: 2026-10-01T09:00:00.000Z\n"
+                                          u"user_updated_time: "_s +
+                                              updated + u"\nencryption_applied: 0\ntype_: 1"_s)}}));
+    };
+    write(u"First."_s, u"2026-10-02T10:00:00.000Z"_s);
+    QVERIFY(m_vault->importJoplin(QUrl::fromLocalFile(jex), {}, false).value(u"ok"_s).toBool());
+    const QString path = u"From Joplin.md"_s;
+    m_vault->setCurrent(path);
+
+    // Changed in Joplin only: the editor shows the new text, and typing builds on it.
+    write(u"Second."_s, u"2026-10-03T10:00:00.000Z"_s);
+    QCOMPARE(m_vault->importJoplin(QUrl::fromLocalFile(jex), {}, false).value(u"updated"_s).toInt(),
+             1);
+    QVERIFY(m_vault->currentText().contains(u"Second."_s));
+    m_vault->edit(m_vault->currentText() + u"Typed in Jot.\n"_s);
+    m_vault->saveNow();
+    const QString saved = readFile(m_root + u'/' + path);
+    QVERIFY(saved.contains(u"Second."_s) && saved.contains(u"Typed in Jot."_s));
+
+    // Typing not yet saved is saved before the import, which then keeps it.
+    m_vault->edit(m_vault->currentText() + u"Still typing.\n"_s);
+    write(u"Third."_s, u"2026-10-04T10:00:00.000Z"_s);
+    const QVariantMap kept = m_vault->importJoplin(QUrl::fromLocalFile(jex), {}, false);
+    QCOMPARE(kept.value(u"keptEdits"_s).toStringList(), QStringList{path});
+    QVERIFY(readFile(m_root + u'/' + path).contains(u"Still typing."_s));
+    QVERIFY(m_vault->currentText().contains(u"Still typing."_s));
 }
 
 QTEST_MAIN(TestVaultController)
