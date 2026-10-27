@@ -374,6 +374,12 @@ ApplicationWindow {
         id: switcher
     }
 
+    CommandPalette {
+        id: palette
+        router: keys
+        onChosen: id => window.run(id)
+    }
+
     JoplinImport {
         id: joplinImport
     }
@@ -433,29 +439,66 @@ ApplicationWindow {
     }
 
     // ---- Keyboard ----------------------------------------------------------------
-    /// Does what the keyboard asked for, by KeyRouter's action id.
-    function run(id) {
+    /// Whether the command with this KeyRouter action id can run now.
+    function can(id) {
         const note = Vault.current !== ""
         switch (id) {
         case "newNote":
-            if (Vault.isOpen && Vault.writable && Vault.newNote() !== "")
+        case "importJoplin":
+            return Vault.isOpen && Vault.writable
+        case "goTo":
+        case "search":
+        case "save":
+        case "tasks":
+            return Vault.isOpen
+        case "nextNote":
+        case "previousNote":
+        case "firstNote":
+        case "lastNote":
+            return Vault.isOpen && !Vault.showingTasks
+        case "editNote":
+        case "copyLink":
+        case "showInFiles":
+            return note
+        case "rename":
+        case "toggleTask":
+            return note && Vault.writable
+        case "trash":
+            // Not while the tasks are shown, which hide the note it would ask about.
+            return note && Vault.writable && !Vault.showingTasks
+        case "update":
+            return Release.update !== ""
+        case "whatsNew":
+            return Release.notes !== ""
+        }
+        return true
+    }
+
+    /// Does what the keyboard or the command palette asked for, by KeyRouter's action id.
+    function run(id) {
+        if (!can(id))
+            return
+        switch (id) {
+        case "newNote":
+            if (Vault.newNote() !== "")
                 editor.editTitle()
             break
         case "goTo":
-            if (Vault.isOpen)
-                switcher.open()
+            switcher.open()
+            break
+        case "commands":
+            palette.unavailable = keys.actions.filter(a => a.scope === "window" && !can(a.id)).map(a
+                                                                                                   => a.id)
+            palette.open()
             break
         case "search":
-            if (Vault.isOpen)
-                noteList.focusSearch()
+            noteList.focusSearch()
             break
         case "save":
-            if (Vault.isOpen)
-                Vault.saveNow()
+            Vault.saveNow()
             break
         case "tasks":
-            if (Vault.isOpen)
-                Vault.showingTasks = !Vault.showingTasks
+            Vault.showingTasks = !Vault.showingTasks
             break
         case "settings":
             settingsDialog.open()
@@ -467,24 +510,58 @@ ApplicationWindow {
         case "previousNote":
         case "firstNote":
         case "lastNote":
-            if (Vault.isOpen && !Vault.showingTasks)
-                noteList.step(id)
+            noteList.step(id)
             break
         case "editNote":
-            if (note)
-                editor.write()
+            editor.write()
             break
         case "rename":
-            if (note && Vault.writable)
-                editor.editTitle()
+            editor.editTitle()
             break
         case "trash":
-            // Not while the tasks are shown, which hide the note it would ask about.
-            if (note && Vault.writable && !Vault.showingTasks)
-                noteList.askToTrash(Vault.current)
+            noteList.askToTrash(Vault.current)
             break
         case "sourceMode":
             Settings.sourceMode = !Settings.sourceMode
+            break
+        case "copyLink":
+            Support.copyText(Vault.linkTo(Vault.current))
+            break
+        case "showInFiles":
+            Vault.showInFiles(Vault.current)
+            break
+        case "toggleTask":
+            Vault.setTask(Vault.current, !Vault.isTask(Vault.current))
+            break
+        case "importJoplin":
+            joplinImport.start("")
+            break
+        case "viMode":
+            Settings.viMode = !Settings.viMode
+            break
+        case "editColors":
+            themeEditor.open()
+            break
+        case "update":
+            updateDialog.open()
+            break
+        case "whatsNew":
+            whatsNew.open()
+            break
+        case "copyDebugInfo":
+            Support.copyDebugInfo()
+            break
+        case "openLogs":
+            Support.openLogs()
+            break
+        case "report":
+            reportDialog.open()
+            break
+        case "about":
+            about.open()
+            break
+        case "support":
+            Qt.openUrlExternally(Release.support)
             break
         }
     }

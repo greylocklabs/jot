@@ -5,6 +5,12 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ## Unreleased
 
+### Added
+
+- A command palette: press Ctrl+Shift+P, or the leader then c in vi mode, and type a few letters of
+  any command to run it, including those only in menus. Commands that cannot run at the moment
+  are left out.
+
 ### Changed
 
 - Choosing a file or folder opens your desktop's own file chooser, with its places and

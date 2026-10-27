@@ -22,6 +22,7 @@ private Q_SLOTS:
     void offLetsKeysThrough();
     void everyKeyMeansOneThing();
     void listsShortcutsAsThePlatformWritesThem();
+    void paletteFindsCommandsByName();
 
 private:
     std::unique_ptr<KeyRouter> m_router;
@@ -160,6 +161,32 @@ void TestKeyRouter::listsShortcutsAsThePlatformWritesThem()
     QCOMPARE(keys.value(u"wikilink"_s), QStringList{u"[["_s});
     QCOMPARE(keys.value(u"follow"_s), QStringList{u"Ctrl+Click"_s});
     QCOMPARE(keys.value(u"left"_s), QStringList());
+}
+
+void TestKeyRouter::paletteFindsCommandsByName()
+{
+    const auto ids = [](const QVariantList &commands) {
+        QStringList found;
+        for (const QVariant &command : commands)
+            found << command.toMap().value(u"id"_s).toString();
+        return found;
+    };
+    // With nothing typed, every window command in the table's order, but not the palette.
+    const QStringList all = ids(KeyRouter::commands({}, {}));
+    QCOMPARE(all.first(), u"newNote"_s);
+    QVERIFY(all.contains(u"about"_s));
+    QVERIFY(!all.contains(u"commands"_s));
+    // Neither the note's keys, which belong to the editor.
+    QVERIFY(!all.contains(u"bold"_s));
+
+    const QStringList joplin = ids(KeyRouter::commands(u"joplin"_s, {}));
+    QCOMPARE(joplin, QStringList{u"importJoplin"_s});
+    // A command that cannot run now is left out.
+    QVERIFY(ids(KeyRouter::commands(u"joplin"_s, {u"importJoplin"_s})).isEmpty());
+    // The best match comes first, and the keys come along.
+    const QVariantList newNote = KeyRouter::commands(u"new note"_s, {});
+    QCOMPARE(newNote.first().toMap().value(u"id"_s), u"newNote"_s);
+    QVERIFY(newNote.first().toMap().value(u"keys"_s).toStringList().contains(u"Ctrl+N"_s));
 }
 
 // Standard shortcuts are the platform theme's, so this needs a GUI application.
