@@ -774,9 +774,13 @@ QVariantMap VaultController::importJoplin(const QUrl &file, const QString &folde
     const std::optional<JoplinExport> from = readJoplinExport(file.toLocalFile(), &error);
     if (!from)
         return failed(error);
-    // What is typed so far is saved first, so the import cannot pass it by.
-    if (!dryRun)
+    // What is typed so far is saved first, so the import cannot pass it by; if it cannot be
+    // saved, nothing is imported, as reading the note again afterwards would lose it.
+    if (!dryRun) {
         saveNow();
+        if (m_unsaved)
+            return failed(tr("Could not save the note being edited, so nothing was imported."));
+    }
     const std::optional<JoplinImport> done =
         jot::importJoplin(*m_vault, *from, folder, dryRun, &error);
     if (!dryRun) {
@@ -788,7 +792,7 @@ QVariantMap VaultController::importJoplin(const QUrl &file, const QString &folde
     }
     // The watcher was restarted, so it will not report what the import wrote, even one that
     // failed partway: the note shown is read again if its file changed, or the next keystroke
-    // would save over the import. What was typed was saved before, so nothing is lost.
+    // would save over the import. What was typed was saved first, so nothing is lost.
     if (!dryRun && !m_current.isEmpty()) {
         QString ignored;
         if (notefile::read(m_vault->absolute(m_current), &ignored).value_or(m_currentText) !=

@@ -64,6 +64,7 @@ private Q_SLOTS:
     void importsFromJoplinAfterSayingWhatItWouldDo();
     void anImportShowsWhatItWroteToTheNoteOpen();
     void anImportThatFailsPartwayStillShowsWhatItWrote();
+    void nothingIsImportedOverTypingThatCannotBeSaved();
 
 private:
     QStringList column(const QAbstractItemModel &model, const QByteArray &role) const;
@@ -894,6 +895,38 @@ void TestVaultController::anImportThatFailsPartwayStillShowsWhatItWrote()
     // The open note was rewritten before the failure, and the editor shows it.
     QVERIFY(readFile(m_root + u"/From Joplin.md"_s).contains(u"Second."_s));
     QVERIFY(m_vault->currentText().contains(u"Second."_s));
+}
+
+void TestVaultController::nothingIsImportedOverTypingThatCannotBeSaved()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    const QString jex = m_dir->filePath(u"export.jex"_s);
+    QFile file(jex);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write(tar({{u"n1.md"_s, item(u"From Joplin"_s, u"x"_s,
+                                      u"id: fedcba9876543210fedcba9876543210\n"
+                                      u"user_created_time: 2026-10-01T09:00:00.000Z\n"
+                                      u"user_updated_time: 2026-10-02T10:00:00.000Z\n"
+                                      u"encryption_applied: 0\ntype_: 1"_s)}}));
+    file.close();
+
+    // The note being edited is in a folder it cannot be saved in.
+    const QString path = u"Inbox/Groceries.md"_s;
+    m_vault->setCurrent(path);
+    QFile folder(m_root + u"/Inbox"_s);
+    QVERIFY(folder.setPermissions(QFile::ReadOwner | QFile::ExeOwner));
+    const auto unlock = qScopeGuard(
+        [&] { folder.setPermissions(QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner); });
+    QFile probe(m_root + u"/Inbox/probe"_s);
+    if (probe.open(QIODevice::WriteOnly))
+        QSKIP("permissions are not enforced here, as when tests run as root");
+
+    m_vault->edit(m_vault->currentText() + u"- [ ] typed in Jot\n"_s);
+    const QVariantMap result = m_vault->importJoplin(QUrl::fromLocalFile(jex), {}, false);
+    QVERIFY(!result.value(u"ok"_s).toBool());
+    QVERIFY(m_vault->currentText().contains(u"typed in Jot"_s));
+    QVERIFY(m_vault->unsaved());
+    QVERIFY(!QFileInfo::exists(m_root + u"/From Joplin.md"_s));
 }
 
 QTEST_MAIN(TestVaultController)
