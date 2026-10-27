@@ -1,5 +1,7 @@
 #include "KeyRouter.h"
 
+#include "jot/Fuzzy.h"
+
 #include <QKeyEvent>
 #include <QQuickItem>
 #include <QQuickWindow>
@@ -52,6 +54,7 @@ QList<KeyAction> KeyRouter::actions()
     return {
         act(u"newNote"_s, tr("New note"), window, {int(K::New)}, {}, u"n"_s),
         act(u"goTo"_s, tr("Go to a note"), window, {u"Ctrl+P"_s}, {}, u"p"_s),
+        act(u"commands"_s, tr("Commands"), window, {u"Ctrl+Shift+P"_s}, {}, u"c"_s),
         act(u"search"_s, tr("Search notes"), window, {int(K::Find)}, u"/"_s),
         act(u"save"_s, tr("Save now"), window, {int(K::Save)}),
         act(u"tasks"_s, tr("Tasks, or back to the notes"), window, {}, {}, u"t"_s),
@@ -63,6 +66,20 @@ QList<KeyAction> KeyRouter::actions()
         act(u"lastNote"_s, tr("Last note in the list"), window, {}, u"G"_s),
         act(u"editNote"_s, tr("Write in the note"), window, {}, u"i"_s),
         act(u"rename"_s, tr("Rename the note"), window, {}, {}, u"r"_s),
+        // Commands with no keys, for the palette.
+        act(u"copyLink"_s, tr("Copy a link to the note"), window, {}),
+        act(u"showInFiles"_s, tr("Show the note in Files"), window, {}),
+        act(u"toggleTask"_s, tr("Make the note a task, or not"), window, {}),
+        act(u"importJoplin"_s, tr("Import from Joplin..."), window, {}),
+        act(u"viMode"_s, tr("Vi mode on or off"), window, {}),
+        act(u"editColors"_s, tr("Edit the theme's colors"), window, {}),
+        act(u"update"_s, tr("Update Jot..."), window, {}),
+        act(u"whatsNew"_s, tr("What's new"), window, {}),
+        act(u"copyDebugInfo"_s, tr("Copy debug info"), window, {}),
+        act(u"openLogs"_s, tr("Open logs folder"), window, {}),
+        act(u"report"_s, tr("Report a problem..."), window, {}),
+        act(u"about"_s, tr("About Jot"), window, {}),
+        act(u"support"_s, tr("Support Jot on Ko-fi"), window, {}),
         act(u"trash"_s, tr("Move the selected note or notebook to the trash"), list, {u"Delete"_s},
             {}, u"d"_s),
         act(u"menu"_s, tr("The selected note's or notebook's menu"), list,
@@ -120,8 +137,40 @@ QList<KeyAction> KeyRouter::actions()
 
 QVariantList KeyRouter::actionList()
 {
-    QVariantList list;
+    return toList(actions());
+}
+
+QVariantList KeyRouter::commands(const QString &query, const QStringList &unavailable)
+{
+    struct Scored
+    {
+        int score;
+        KeyAction action;
+    };
+    QList<Scored> scored;
+    const QString pattern = query.simplified().remove(u' ');
     for (const KeyAction &action : actions()) {
+        if (action.scope != u"window" || action.id == u"commands" ||
+            unavailable.contains(action.id))
+            continue;
+        if (pattern.isEmpty()) {
+            scored.append({0, action});
+        } else if (const std::optional<int> score = fuzzyScore(pattern, action.label)) {
+            scored.append({*score, action});
+        }
+    }
+    std::ranges::stable_sort(scored,
+                             [](const Scored &a, const Scored &b) { return a.score > b.score; });
+    QList<KeyAction> found;
+    for (const Scored &each : std::as_const(scored))
+        found << each.action;
+    return toList(found);
+}
+
+QVariantList KeyRouter::toList(const QList<KeyAction> &actions)
+{
+    QVariantList list;
+    for (const KeyAction &action : actions) {
         QStringList keys;
         for (const QVariant &key : action.standard) {
             if (key.typeId() == QMetaType::Int) {

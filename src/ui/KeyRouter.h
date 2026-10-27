@@ -49,6 +49,9 @@ public:
     /// actions() for QML: maps with the fields of KeyAction, plus `keys`, the standard
     /// shortcuts as the platform writes them.
     [[nodiscard]] static QVariantList actionList();
+    /// The window's actions for the command palette, as actionList() gives them, best match
+    /// for `query` first, leaving out those in `unavailable` and the palette itself.
+    Q_INVOKABLE static QVariantList commands(const QString &query, const QStringList &unavailable);
     /// The action in `scope` whose vi keys are `keys`, or empty. `partial` says whether
     /// `keys` begins a longer one.
     [[nodiscard]] static QString viAction(const QString &scope, const QString &keys,
@@ -75,6 +78,7 @@ protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
+    [[nodiscard]] static QVariantList toList(const QList<KeyAction> &actions);
     void setPending(const QString &pending);
 
     QPointer<QQuickWindow> m_window;

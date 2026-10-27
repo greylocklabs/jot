@@ -81,61 +81,17 @@ Popup {
             model: Vault.switcher
             currentIndex: 0
 
-            delegate: AbstractButton {
-                id: result
-
+            delegate: SwitcherRow {
                 required property int index
                 required property string title
                 required property string notebook
                 required property string alias
 
                 width: ListView.view.width
-                height: Theme.listRowHeight + Theme.space2
-                hoverEnabled: true
-                Accessible.name: title
+                current: ListView.isCurrentItem
+                text: alias !== "" ? qsTr("%1 (%2)").arg(title).arg(alias) : title
+                detail: notebook
                 onClicked: root.choose(index)
-
-                background: Rectangle {
-                    radius: Theme.radiusSm
-                    color: result.ListView.isCurrentItem ? Theme.tint(Theme.accent, 0.18) :
-                                                           result.hovered ? Theme.surfaceAlt :
-                                                                            Theme.surface
-                }
-
-                contentItem: Item {
-                    Text {
-                        id: name
-
-                        anchors {
-                            left: parent.left
-                            leftMargin: Theme.space4
-                            verticalCenter: parent.verticalCenter
-                        }
-                        width: Math.min(implicitWidth, parent.width * 0.6)
-                        text: result.alias !== "" ? qsTr("%1 (%2)").arg(result.title).arg(
-                                                        result.alias) : result.title
-                        elide: Text.ElideRight
-                        color: Theme.text
-                        font.family: Theme.fontFamily
-                        font.pixelSize: Theme.textBase
-                        font.weight: Theme.weightStrong
-                    }
-                    Text {
-                        anchors {
-                            left: name.right
-                            leftMargin: Theme.space4
-                            right: parent.right
-                            rightMargin: Theme.space4
-                            verticalCenter: parent.verticalCenter
-                        }
-                        horizontalAlignment: Text.AlignRight
-                        text: result.notebook
-                        elide: Text.ElideLeft
-                        color: Theme.textFaint
-                        font.family: Theme.fontFamily
-                        font.pixelSize: Theme.textSm
-                    }
-                }
             }
         }
 

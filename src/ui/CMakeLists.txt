@@ -53,6 +53,7 @@ qt_add_qml_module(jotui
         CheckBox.qml
         CloseButton.qml
         ColumnSplitter.qml
+        CommandPalette.qml
         DangerButton.qml
         Dropdown.qml
         DatePicker.qml
@@ -80,6 +81,7 @@ qt_add_qml_module(jotui
         SoftShadow.qml
         StickerButton.qml
         SuggestionPopup.qml
+        SwitcherRow.qml
         ThemeEditor.qml
         WhichKey.qml
         Tip.qml
