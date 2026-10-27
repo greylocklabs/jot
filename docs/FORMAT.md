@@ -12,7 +12,7 @@ Status: draft, version 1. Nothing here is final until Jot 0.1 ships.
 My Notes/                    the vault: any folder
   .jot/                      vault settings, synced with the notes
     vault.yaml
-    layout.yaml              manual order, folder icons and colors
+    layout.yaml              manual order, notebook emoji, icons and colors
     types/                   note types (later)
     views/                   saved views (later)
     templates/
@@ -155,7 +155,7 @@ There are two kinds, and the task view shows both:
 - **Task notes**: a note with `task: open` or `task: done` in its front matter, and optionally
   `due` and `done`. Completing one sets `task: done` and `done:` to the current time.
 
-## Order and folder appearance
+## Order and notebook appearance
 
 Notes and folders sort alphabetically, with natural number order (`Ch 2` before `Ch 10`), unless
 the user reorders a folder by hand. Manual order and folder appearance live in
@@ -169,11 +169,14 @@ order:
     - Ch 2.md
 folders:
   Ashfall:
+    emoji: 📚
     icon: book
     color: pink
 ```
 
 - Paths are relative to the vault root and use `/`.
+- `emoji` is shown before the notebook's name. Renaming or moving a notebook in Jot takes its
+  entries with it.
 - Entries that no longer exist are ignored and pruned on the next write. Files missing from a
   list sort after the listed ones, alphabetically.
 - When sync finds this file changed on both sides, Jot merges it key by key.
@@ -198,6 +201,7 @@ A JEX export or Joplin's database maps onto this format as follows:
 | Joplin                              | Jot                                                          |
 | ----------------------------------- | ------------------------------------------------------------ |
 | Notebook                            | Folder, merged with one of the same name                     |
+| Notebook icon                       | Its emoji, in `.jot/layout.yaml`, unless one is set in Jot   |
 | Note title                          | File name, with `title:` when it had unsafe characters       |
 | Tags                                | `tags:`                                                      |
 | `created_time`, `updated_time`      | `created:`, and the file's modification time                 |

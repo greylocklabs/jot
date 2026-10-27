@@ -14,6 +14,8 @@ add_library(jotcore STATIC
     JoplinExport.cpp
     jot/JoplinImport.h
     JoplinImport.cpp
+    jot/Layout.h
+    Layout.cpp
     jot/NoteScan.h
     NoteScan.cpp
     jot/Rename.h

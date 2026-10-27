@@ -1,6 +1,8 @@
 #include "jot/Rename.h"
 
 #include "jot/FrontMatter.h"
+#include "jot/Layout.h"
+#include "jot/Logging.h"
 #include "jot/NoteScan.h"
 
 #include <QDir>
@@ -20,6 +22,15 @@ QString folderOf(const QString &path)
 {
     const qsizetype slash = path.lastIndexOf(u'/');
     return slash < 0 ? QString() : path.left(slash);
+}
+
+/// What the layout says about it goes with it. The move stands even when that cannot be
+/// written, as the layout is only how things are shown.
+void followInLayout(const Vault &vault, const QString &from, const QString &to)
+{
+    QString why;
+    if (!Layout::follow(vault, from, to, &why))
+        qCWarning(lcVault) << "could not update" << Layout::kPath << "after moving" << from << why;
 }
 
 } // namespace
@@ -92,6 +103,7 @@ std::optional<QStringList> renameNote(const Vault &vault, VaultIndex &index, con
 
     if (!vault.moveNote(from, to, error))
         return std::nullopt;
+    followInLayout(vault, from, to);
     if (ownText != *own) {
         if (beforeWrite)
             beforeWrite(to, ownText);
@@ -162,6 +174,7 @@ std::optional<QStringList> moveNotebook(const Vault &vault, VaultIndex &index, c
 
     if (!vault.moveFolder(from, to, error))
         return std::nullopt;
+    followInLayout(vault, from, to);
     QStringList written;
     for (const auto &[path, text] : std::as_const(rewrites)) {
         if (beforeWrite)

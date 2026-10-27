@@ -1,5 +1,7 @@
 #include "jot/Rename.h"
 
+#include "jot/Layout.h"
+
 #include <QDir>
 #include <QTemporaryDir>
 #include <QTest>
@@ -24,6 +26,7 @@ private Q_SLOTS:
     void parenthesesStayInsideTheLink();
     void movesANotebookAndKeepsItsLinksWorking();
     void refusesToMoveANotebookIntoItself();
+    void aMovedNotebookKeepsItsEmoji();
 
 private:
     void write(const QString &path, const QString &text);
@@ -234,6 +237,23 @@ void TestRename::refusesToMoveANotebookIntoItself()
     // Names are cleaned as note file names are, so none comes out hidden.
     QCOMPARE(*m_vault->createFolder({}, u".hidden"_s, &error), u"hidden"_s);
     QVERIFY(!m_vault->moveFolder(u"Cast"_s, u"Cast 2"_s, &error));
+}
+
+void TestRename::aMovedNotebookKeepsItsEmoji()
+{
+    write(u"Cast/Minor/Tam.md"_s, u"tam\n"_s);
+    Layout layout;
+    layout.setEmoji(u"Cast"_s, u"a"_s);
+    layout.setEmoji(u"Cast/Minor"_s, u"b"_s);
+    QString error;
+    QVERIFY(layout.write(*m_vault, &error));
+    open();
+
+    QVERIFY2(moveNotebook(*m_vault, *m_index, u"Cast"_s, u"Story/People"_s, &error),
+             qPrintable(error));
+    QCOMPARE(
+        Layout::read(*m_vault).emojis(),
+        (QHash<QString, QString>{{u"Story/People"_s, u"a"_s}, {u"Story/People/Minor"_s, u"b"_s}}));
 }
 
 QTEST_GUILESS_MAIN(TestRename)

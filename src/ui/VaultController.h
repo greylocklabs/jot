@@ -43,6 +43,8 @@ class VaultController : public QObject
     Q_PROPERTY(QString error READ error NOTIFY errorChanged)
     Q_PROPERTY(int noteCount READ noteCount NOTIFY notesChanged)
     Q_PROPERTY(QStringList tags READ tags NOTIFY notesChanged)
+    /// Each notebook's emoji, by its path, for those that have one.
+    Q_PROPERTY(QVariantMap notebookEmoji READ notebookEmoji NOTIFY notesChanged)
     Q_PROPERTY(jot::NotebookModel *notebooks READ notebooks CONSTANT)
     Q_PROPERTY(jot::NoteListModel *notes READ notes CONSTANT)
     Q_PROPERTY(jot::SwitcherModel *switcher READ switcher CONSTANT)
@@ -110,6 +112,8 @@ public:
     Q_INVOKABLE QString titleOf(const QString &path) const;
     /// The notebook the note at `path` is in; empty for the top of the vault.
     Q_INVOKABLE QString notebookOf(const QString &path) const { return Vault::notebookOf(path); }
+    /// Shows `emoji` before the notebook's name, or no emoji when it is empty.
+    Q_INVOKABLE bool setNotebookEmoji(const QString &path, const QString &emoji);
     /// Makes a notebook in `parent`, or at the top for none, and gives its path.
     Q_INVOKABLE QString newNotebook(const QString &parent = {});
     /// Renames the notebook at `path`, rewriting links to the notes in it.
@@ -175,6 +179,7 @@ public:
     [[nodiscard]] QString error() const { return m_error; }
     [[nodiscard]] int noteCount() const;
     [[nodiscard]] QStringList tags() const;
+    [[nodiscard]] QVariantMap notebookEmoji() const { return m_notebookEmoji; }
     [[nodiscard]] NotebookModel *notebooks() { return &m_notebooks; }
     [[nodiscard]] NoteListModel *notes() { return &m_notes; }
     [[nodiscard]] SwitcherModel *switcher() { return &m_switcher; }
@@ -243,6 +248,7 @@ private:
     BacklinksModel m_backlinks;
     TaskModel m_tasks;
     bool m_showingTasks = false;
+    QVariantMap m_notebookEmoji;
     QString m_indexPath;
     bool m_systemTrash = true;
     QString m_error;

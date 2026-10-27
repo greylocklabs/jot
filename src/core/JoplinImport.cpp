@@ -1,6 +1,7 @@
 #include "jot/JoplinImport.h"
 
 #include "jot/FrontMatter.h"
+#include "jot/Layout.h"
 #include "jot/NoteScan.h"
 #include "jot/Vault.h"
 
@@ -212,6 +213,8 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
     for (const auto &notebook : from.notebooks)
         notebooks.insert(notebook.id, &notebook);
     QHash<QString, QString> folderOf;
+    // Each notebook's emoji, by the folder it became.
+    QHash<QString, QString> emojiOf;
     QSet<QString> dropped;
     // Being placed, so a notebook that is its own ancestor, as a broken export may say, stops
     // at the top instead of recursing for ever.
@@ -277,8 +280,11 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
         ledger.notebooks[id] = {path, parentId, !parentId.isEmpty() && !parentKnown};
         return folderOf[id] = path;
     };
-    for (const auto &notebook : from.notebooks)
-        placeNotebook(notebook.id);
+    for (const auto &notebook : from.notebooks) {
+        const QString path = placeNotebook(notebook.id);
+        if (!notebook.emoji.isEmpty() && !dropped.contains(notebook.id) && path != folder)
+            emojiOf.insert(path, notebook.emoji);
+    }
     // Notebooks imported before without their parent, whose parent this import brings.
     for (const QString &id : ledger.notebooks.keys()) {
         const auto &entry = ledger.notebooks[id];
@@ -518,6 +524,18 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
     if (!saveLedger(&why)) {
         *error = QObject::tr("could not write %1: %2").arg(kLedger, why);
         return std::nullopt;
+    }
+    // A notebook keeps its emoji, unless one was chosen for it in Jot.
+    if (!dryRun && !emojiOf.isEmpty()) {
+        Layout layout = Layout::read(vault);
+        for (auto it = emojiOf.cbegin(); it != emojiOf.cend(); ++it) {
+            if (layout.emoji(it.key()).isEmpty())
+                layout.setEmoji(it.key(), it.value());
+        }
+        if (!layout.write(vault, &why)) {
+            *error = QObject::tr("could not write %1: %2").arg(Layout::kPath, why);
+            return std::nullopt;
+        }
     }
     return result;
 }

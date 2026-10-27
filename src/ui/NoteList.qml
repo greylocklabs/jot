@@ -13,6 +13,12 @@ Rectangle {
 
     /// Opens the menu of what can be done with the note at `path`, at `x`, `y` in `item`.
     /// The point is given rather than read from the cursor, which Wayland does not share.
+    /// The notebook at `path` as the list names it, after its emoji if it has one.
+    function notebookLabel(path) {
+        const emoji = Vault.notebookEmoji[path] ?? ""
+        return emoji !== "" ? emoji + " " + path : path
+    }
+
     function showMenu(path, item, x, y) {
         noteMenu.path = path
         noteMenu.folder = Vault.notebookOf(path)
@@ -255,8 +261,8 @@ Rectangle {
                 Text {
                     width: note.width - card.leftPadding - card.rightPadding
                     text: (note.notebook !== "" && note.notebook !== Vault.notes.notebook
-                           ? note.notebook + ", " : "") + note.modified.toLocaleDateString(Qt.locale(
-                                                                                               ), Locale.ShortFormat)
+                           ? root.notebookLabel(note.notebook) + ", " : "")
+                          + note.modified.toLocaleDateString(Qt.locale(), Locale.ShortFormat)
                     elide: Text.ElideRight
                     color: Theme.textFaint
                     font.family: Theme.fontFamily
@@ -319,7 +325,8 @@ Rectangle {
 
                 MenuEntry {
                     required property string modelData
-                    text: modelData === "" ? qsTr("Top of the vault") : modelData
+                    text: modelData === "" ? qsTr("Top of the vault") : root.notebookLabel(
+                                                 modelData)
                     enabled: modelData !== noteMenu.folder
                     onTriggered: Vault.moveNoteTo(noteMenu.path, modelData)
                 }

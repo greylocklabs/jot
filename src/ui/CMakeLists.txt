@@ -20,6 +20,8 @@ qt_add_qml_module(jotui
         BacklinksModel.cpp
         CodeHighlighter.h
         CodeHighlighter.cpp
+        EmojiList.h
+        EmojiList.cpp
         MarkdownHighlighter.h
         MarkdownHighlighter.cpp
         MarkdownStyler.h
@@ -56,6 +58,7 @@ qt_add_qml_module(jotui
         CommandPalette.qml
         DangerButton.qml
         Dropdown.qml
+        EmojiPicker.qml
         DatePicker.qml
         Field.qml
         FormatBar.qml
@@ -101,6 +104,13 @@ qt_add_resources(jotui "jot_logo"
     PREFIX "/jot"
     BASE "${PROJECT_SOURCE_DIR}"
     FILES "${PROJECT_SOURCE_DIR}/assets/logo.png"
+)
+
+# Names for the emoji picker's search, made by data/emoji.pl.
+qt_add_resources(jotui "jot_emoji"
+    PREFIX "/jot"
+    BASE "${PROJECT_SOURCE_DIR}/data"
+    FILES "${PROJECT_SOURCE_DIR}/data/emoji.txt"
 )
 
 target_include_directories(jotui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

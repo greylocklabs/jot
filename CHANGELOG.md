@@ -3,6 +3,15 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## Unreleased
+
+### Added
+
+- Notebooks can have an emoji, shown before their name in the sidebar and wherever notebooks are
+  listed. Choose one from a notebook's menu, by typing words of its name. It is kept in the
+  notes folder's `.jot/layout.yaml`, so it syncs with the notes, and notebooks imported from
+  Joplin keep theirs.
+
 ## 0.0.11 - 2026-10-27
 
 ### Added
