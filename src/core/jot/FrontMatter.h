@@ -34,6 +34,9 @@ NoteParts splitFrontMatter(QStringView note);
 [[nodiscard]] QString setFrontMatterKey(const QString &note, const QString &key,
                                         const QVariant &value);
 
+/// A YAML scalar as written after a key or a list dash, with its quotes and comment removed.
+[[nodiscard]] QString readYamlScalar(QStringView text);
+
 /// `text` as a YAML scalar, quoted only when it would otherwise read as something else.
 [[nodiscard]] QString yamlScalar(const QString &text);
 

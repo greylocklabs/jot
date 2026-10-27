@@ -3,6 +3,7 @@
 #include "jot/FrontMatter.h"
 #include "jot/JoplinExport.h"
 #include "jot/JoplinImport.h"
+#include "jot/Layout.h"
 #include "jot/Logging.h"
 #include "jot/NoteScan.h"
 #include "jot/Rename.h"
@@ -324,6 +325,22 @@ QString VaultController::newNotebook(const QString &parent)
         m_watcher->start();
     reloadModels();
     return *path;
+}
+
+bool VaultController::setNotebookEmoji(const QString &path, const QString &emoji)
+{
+    if (!m_vault || !m_vault->writable() || path.isEmpty())
+        return false;
+    Layout layout = Layout::read(*m_vault);
+    layout.setEmoji(path, emoji);
+    QString error;
+    if (!layout.write(*m_vault, &error)) {
+        qCWarning(lcVault) << "could not set the emoji of" << path << error;
+        setProblem(tr("Could not change the notebook's emoji: %1").arg(error));
+        return false;
+    }
+    reloadModels();
+    return true;
 }
 
 bool VaultController::renameNotebook(const QString &path, const QString &name)
@@ -824,6 +841,12 @@ QVariantMap VaultController::importJoplin(const QUrl &file, const QString &folde
 
 void VaultController::reloadModels()
 {
+    m_notebookEmoji.clear();
+    if (m_vault) {
+        const QHash<QString, QString> emojis = Layout::read(*m_vault).emojis();
+        for (auto it = emojis.cbegin(); it != emojis.cend(); ++it)
+            m_notebookEmoji.insert(it.key(), it.value());
+    }
     if (m_index) {
         m_notebooks.reload(m_vault.get(), m_index->noteCounts(), m_index->noteCount());
         m_notes.reload(m_index.get());

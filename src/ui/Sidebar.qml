@@ -173,6 +173,7 @@ Rectangle {
                     required property bool expanded
                     required property int count
 
+                    readonly property string emoji: Vault.notebookEmoji[path] ?? ""
                     readonly property bool renaming: root.renamingPath !== "" && root.renamingPath
                                                      === path
 
@@ -325,7 +326,8 @@ Rectangle {
                                 rightMargin: Theme.space3
                                 verticalCenter: parent.verticalCenter
                             }
-                            text: notebook.name
+                            text: notebook.emoji !== "" ? notebook.emoji + "  " + notebook.name :
+                                                          notebook.name
                             elide: Text.ElideRight
                             color: notebook.selected ? Theme.text : Theme.textMuted
                             font.family: Theme.fontFamily
@@ -429,6 +431,13 @@ Rectangle {
             onTriggered: root.renamingPath = notebookMenu.path
         }
         MenuEntry {
+            text: qsTr("Choose an emoji...")
+            visible: notebookMenu.path !== ""
+            height: visible ? implicitHeight : 0
+            enabled: Vault.writable
+            onTriggered: emojiPicker.choose(notebookMenu.path)
+        }
+        MenuEntry {
             text: notebookMenu.path === "" ? qsTr("Import from Joplin...") : qsTr(
                                                  "Import from Joplin into here...")
             enabled: Vault.writable
@@ -445,6 +454,10 @@ Rectangle {
             enabled: Vault.writable
             onTriggered: trashConfirm.askForNotebook(notebookMenu.path)
         }
+    }
+
+    EmojiPicker {
+        id: emojiPicker
     }
 
     TrashConfirm {

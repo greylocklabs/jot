@@ -40,6 +40,7 @@ private Q_SLOTS:
     void followsTheOrderInSettings();
     void switcherFindsByTitleAliasAndPath();
     void makesRenamesAndMovesNotebooks();
+    void givesNotebooksAnEmoji();
     void movesANoteToAnotherNotebook();
     void followsANotebookThatMovedThoughALinkCouldNotBeRewritten();
     void actsOnNotesThatAreNotShown();
@@ -376,6 +377,29 @@ void TestVaultController::followsANotebookThatMovedThoughALinkCouldNotBeRewritte
     QCOMPARE(m_vault->current(), u"Ashfall/Cast/Mara Vey.md"_s);
     QVERIFY(m_vault->index()->note(u"Ashfall/Cast/Mara Vey.md"_s));
     QVERIFY(!m_vault->index()->note(u"Ashfall/Characters/Mara Vey.md"_s));
+}
+
+void TestVaultController::givesNotebooksAnEmoji()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    QSignalSpy changed(m_vault.get(), &VaultController::notesChanged);
+    QVERIFY(m_vault->setNotebookEmoji(u"Ashfall/Characters"_s, u"🎭"_s));
+    QCOMPARE(m_vault->notebookEmoji(), (QVariantMap{{u"Ashfall/Characters"_s, u"🎭"_s}}));
+    QVERIFY(!changed.isEmpty());
+    QVERIFY(QFile::exists(m_root + u"/.jot/layout.yaml"_s));
+
+    // It goes with the notebook, and away when taken off.
+    QVERIFY(m_vault->renameNotebook(u"Ashfall/Characters"_s, u"Cast"_s));
+    QCOMPARE(m_vault->notebookEmoji(), (QVariantMap{{u"Ashfall/Cast"_s, u"🎭"_s}}));
+    QVERIFY(m_vault->setNotebookEmoji(u"Ashfall/Cast"_s, {}));
+    QVERIFY(m_vault->notebookEmoji().isEmpty());
+
+    // Opening the folder again reads it from the vault.
+    QVERIFY(m_vault->setNotebookEmoji(u"Ashfall"_s, u"🔥"_s));
+    VaultController again(*m_settings);
+    again.setIndexPath(m_dir->filePath(u"index2.sqlite"_s));
+    QVERIFY(again.openPath(m_root));
+    QCOMPARE(again.notebookEmoji(), (QVariantMap{{u"Ashfall"_s, u"🔥"_s}}));
 }
 
 void TestVaultController::movesANoteToAnotherNotebook()

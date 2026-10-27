@@ -181,6 +181,11 @@ bool needsQuotes(const QString &text)
 
 } // namespace
 
+QString readYamlScalar(QStringView text)
+{
+    return readScalar(text);
+}
+
 NoteParts splitFrontMatter(QStringView note)
 {
     const Span span = frontMatterSpan(note);

@@ -103,7 +103,7 @@ void TestDialogs::everyModalHasAClose_data()
     for (const QString &dialog :
          {u"SettingsDialog {}"_s, u"KeyHelp { actions: [] }"_s, u"AboutDialog {}"_s,
           u"WhatsNewDialog {}"_s, u"UpdateDialog {}"_s, u"ThemeEditor {}"_s, u"TrashConfirm {}"_s,
-          u"QuickSwitcher {}"_s, u"CommandPalette {}"_s, u"JoplinImport {}"_s})
+          u"QuickSwitcher {}"_s, u"CommandPalette {}"_s, u"EmojiPicker {}"_s, u"JoplinImport {}"_s})
         QTest::newRow(qPrintable(dialog)) << dialog;
 }
 

@@ -1,5 +1,6 @@
 #include "jot/FrontMatter.h"
 #include "jot/JoplinImport.h"
+#include "jot/Layout.h"
 #include "jot/Vault.h"
 
 #include <QCryptographicHash>
@@ -76,6 +77,7 @@ private Q_SLOTS:
     void aFailedWriteKeepsTrackOfWhatWasWritten();
     void aNotebookKnownFromBeforeKeepsItsName();
     void aRemovedNoteIsNotFoundInAnotherWithTheSameText();
+    void notebooksKeepTheirEmojiUnlessChangedInJot();
 
 private:
     QString read(const QString &path) const;
@@ -356,6 +358,23 @@ void TestJoplinImport::aRemovedNoteIsNotFoundInAnotherWithTheSameText()
     QCOMPARE(again->notes[0].outcome, JoplinImport::Outcome::Removed);
     QCOMPARE(read(u"Second.md"_s), second);
     QVERIFY(!QFileInfo::exists(m_vault->absolute(u"First.md"_s)));
+}
+
+void TestJoplinImport::notebooksKeepTheirEmojiUnlessChangedInJot()
+{
+    QString error;
+    QVERIFY(importJoplin(*m_vault, stories(), {}, true, &error));
+    QVERIFY(!QFileInfo::exists(m_vault->absolute(Layout::kPath)));
+
+    QVERIFY2(importJoplin(*m_vault, stories(), {}, false, &error), qPrintable(error));
+    Layout layout = Layout::read(*m_vault);
+    QCOMPARE(layout.emojis(), (QHash<QString, QString>{{u"Stories"_s, u"🦊"_s}}));
+
+    // One chosen in Jot since stays.
+    layout.setEmoji(u"Stories"_s, u"📚"_s);
+    QVERIFY(layout.write(*m_vault, &error));
+    QVERIFY2(importJoplin(*m_vault, stories(), {}, false, &error), qPrintable(error));
+    QCOMPARE(Layout::read(*m_vault).emoji(u"Stories"_s), u"📚"_s);
 }
 
 QTEST_GUILESS_MAIN(TestJoplinImport)
