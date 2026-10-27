@@ -11,10 +11,8 @@
 
 namespace jot {
 
-/// What a Joplin JEX export holds: a tar of Joplin's raw items, one `<id>.md` each, with the
-/// files notes attach under `resources/`. Written from Joplin's documented export format.
-/// Where a note was written (`latitude`, `longitude`, `altitude`) is left out on purpose:
-/// Jot does not keep it.
+/// What a Joplin JEX export holds: a tar of Joplin's raw items, with attachments under
+/// `resources/`. Where each note was written is never read, as Jot does not keep it.
 struct JoplinExport
 {
     struct Notebook
@@ -36,8 +34,9 @@ struct JoplinExport
         QDateTime created;
         QDateTime updated;
         bool isTodo = false;
-        /// Invalid when the to-do has no due time or is not done.
+        /// Invalid when the to-do has no due time.
         QDateTime due;
+        /// Invalid until the to-do is done.
         QDateTime completed;
         /// Written in HTML rather than Markdown.
         bool html = false;

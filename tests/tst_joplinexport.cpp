@@ -1,5 +1,7 @@
 #include "jot/JoplinExport.h"
 
+#include <QHash>
+#include <QTemporaryDir>
 #include <QTest>
 
 using namespace jot;
@@ -7,31 +9,39 @@ using namespace Qt::StringLiterals;
 
 namespace {
 
-/// A ustar archive of `files`, by path, as Joplin writes a JEX.
-QByteArray tar(const QList<std::pair<QString, QByteArray>> &files)
+/// One tar entry: a 512-byte header, then `data` padded to whole blocks. `type` is '0' for a
+/// file, 'x' for a pax header and 'L' for a GNU long name; `prefix` is ustar's path prefix.
+QByteArray tarEntry(const QByteArray &name, const QByteArray &data, char type = '0',
+                    const QByteArray &prefix = {})
 {
     // Each field has a fixed width; the value is written at its start, padded with NULs.
     const auto put = [](QByteArray &header, qsizetype at, const QByteArray &value) {
         std::copy(value.cbegin(), value.cend(), header.begin() + at);
     };
+    QByteArray header(512, '\0');
+    put(header, 0, name);
+    put(header, 100, "0000644");
+    put(header, 124, QByteArray::number(data.size(), 8).rightJustified(11, '0'));
+    put(header, 148, QByteArray(8, ' '));
+    header[156] = type;
+    put(header, 257,
+        QByteArray("ustar\0"
+                   "00",
+                   8));
+    put(header, 345, prefix);
+    int sum = 0;
+    for (const char c : std::as_const(header))
+        sum += static_cast<unsigned char>(c);
+    put(header, 148, QByteArray::number(sum, 8).rightJustified(6, '0') + '\0');
+    return header + data + QByteArray((512 - data.size() % 512) % 512, '\0');
+}
+
+/// A ustar archive of `files`, by path, as Joplin writes a JEX.
+QByteArray tar(const QList<std::pair<QString, QByteArray>> &files)
+{
     QByteArray out;
-    for (const auto &[path, data] : files) {
-        QByteArray header(512, '\0');
-        put(header, 0, path.toUtf8());
-        put(header, 100, "0000644");
-        put(header, 124, QByteArray::number(data.size(), 8).rightJustified(11, '0'));
-        put(header, 148, QByteArray(8, ' '));
-        header[156] = '0';
-        put(header, 257,
-            QByteArray("ustar\0"
-                       "00",
-                       8));
-        int sum = 0;
-        for (const char c : std::as_const(header))
-            sum += static_cast<unsigned char>(c);
-        put(header, 148, QByteArray::number(sum, 8).rightJustified(6, '0') + '\0');
-        out += header + data + QByteArray((512 - data.size() % 512) % 512, '\0');
-    }
+    for (const auto &[path, data] : files)
+        out += tarEntry(path.toUtf8(), data);
     return out + QByteArray(1024, '\0');
 }
 
@@ -63,6 +73,8 @@ private Q_SLOTS:
     void readsToDosTrashAndConflicts();
     void leavesWhereANoteWasWrittenOut();
     void skipsEncryptedItemsAndRevisions();
+    void findsFilesByPaxGnuAndPrefixedPaths();
+    void readsAnExportFromAFile();
     void turnsAwayWhatIsNotAnExport();
 };
 
@@ -194,6 +206,53 @@ void TestJoplinExport::skipsEncryptedItemsAndRevisions()
     QCOMPARE(ex->skipped,
              (QStringList{u"1 encrypted item, which Joplin has to decrypt first"_s,
                           u"1 note revision"_s, u"1 item of a kind Jot does not read"_s}));
+}
+
+void TestJoplinExport::findsFilesByPaxGnuAndPrefixedPaths()
+{
+    // Three attachments, each named another way tar allows: a pax header, a GNU long-name
+    // entry and the ustar prefix field.
+    const QString ids[] = {u"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"_s,
+                           u"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"_s,
+                           u"cccccccccccccccccccccccccccccccc"_s};
+    QByteArray archive =
+        tarEntry("n1.md", item(u"Uses them"_s, {}, u"id: n1\n"_s + kTimes + u"\ntype_: 1"_s));
+    for (const QString &id : ids)
+        archive +=
+            tarEntry((id + u".md"_s).toUtf8(), item(id + u".png"_s, {},
+                                                    u"id: "_s + id + u"\nfile_extension: png\n"_s +
+                                                        kTimes + u"\ntype_: 4"_s));
+    const QByteArray pax = "path=resources/" + ids[0].toUtf8() + ".png\n";
+    const QByteArray record = QByteArray::number(pax.size() + 3) + ' ' + pax;
+    archive += tarEntry("PaxHeader/x", record, 'x') + tarEntry("x", "pax");
+    archive += tarEntry("././@LongLink", "resources/" + ids[1].toUtf8() + ".png", 'L') +
+               tarEntry("y", "gnu");
+    archive += tarEntry(ids[2].toUtf8() + ".png", "prefix", '0', "resources");
+    archive += QByteArray(1024, '\0');
+
+    QString error;
+    const auto ex = readJoplinExport(archive, &error);
+    QVERIFY2(ex, qPrintable(error));
+    QHash<QString, QByteArray> data;
+    for (const auto &resource : ex->resources)
+        data.insert(resource.id, resource.data);
+    QCOMPARE(data.value(ids[0]), QByteArray("pax"));
+    QCOMPARE(data.value(ids[1]), QByteArray("gnu"));
+    QCOMPARE(data.value(ids[2]), QByteArray("prefix"));
+}
+
+void TestJoplinExport::readsAnExportFromAFile()
+{
+    QTemporaryDir dir;
+    QFile file(dir.filePath(u"notes.jex"_s));
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write(
+        tar({{u"n1.md"_s, item(u"Kept"_s, u"text"_s, u"id: n1\n"_s + kTimes + u"\ntype_: 1"_s)}}));
+    file.close();
+    QString error;
+    const auto ex = readJoplinExport(file.fileName(), &error);
+    QVERIFY2(ex, qPrintable(error));
+    QCOMPARE(ex->notes.first().title, u"Kept"_s);
 }
 
 void TestJoplinExport::turnsAwayWhatIsNotAnExport()
