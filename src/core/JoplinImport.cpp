@@ -11,6 +11,7 @@
 #include <QHash>
 #include <QObject>
 #include <QRegularExpression>
+#include <QScopeGuard>
 #include <QSet>
 #include <QTimeZone>
 
@@ -191,7 +192,16 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
         taken.insert(path);
         return path;
     };
+    // The ledger has to cover whatever is on disk, or the next import copies those notes again.
+    const auto saveLedger = [&](QString *why) {
+        if (dryRun)
+            return true;
+        QDir().mkpath(vault.absolute(u".jot"_s));
+        return notefile::write(vault.absolute(kLedger), ledgerText(ledger), why);
+    };
     const auto fail = [&](const QString &why) -> std::optional<JoplinImport> {
+        QString ignored;
+        saveLedger(&ignored);
         *error = why;
         return std::nullopt;
     };
@@ -203,10 +213,17 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
         notebooks.insert(notebook.id, &notebook);
     QHash<QString, QString> folderOf;
     QSet<QString> dropped;
+    // Being placed, so a notebook that is its own ancestor, as a broken export may say, stops
+    // at the top instead of recursing for ever.
+    QSet<QString> placing;
     QString unmade;
     std::function<QString(const QString &)> placeNotebook = [&](const QString &id) -> QString {
         if (folderOf.contains(id))
             return folderOf[id];
+        if (placing.contains(id))
+            return folder;
+        placing.insert(id);
+        const auto placed = qScopeGuard([&] { placing.remove(id); });
         const auto *notebook = notebooks.value(id);
         const bool known = ledger.notebooks.contains(id);
         if (!notebook && !known)
@@ -246,10 +263,10 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
             if (QFileInfo(vault.absolute(entry.path)).isDir() || taken.contains(entry.path))
                 return folderOf[id] = entry.path;
         }
-        // A folder of the same name is merged with rather than numbered.
-        QString name = Vault::fileNameFor(notebook ? notebook->title : QString());
-        if (name.isEmpty())
-            name = QObject::tr("Untitled notebook");
+        // A folder of the same name is merged with rather than numbered. One known only from an
+        // earlier import, whose folder has gone, comes back under the name it had.
+        const QString name = notebook ? Vault::fileNameFor(notebook->title)
+                                      : ledger.notebooks[id].path.section(u'/', -1);
         const QString path = join(parent, name);
         if (!QFileInfo(vault.absolute(path)).isDir() && !taken.contains(path)) {
             if (!dryRun && !QDir().mkpath(vault.absolute(path)))
@@ -330,10 +347,8 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
                 taken.insert(path);
             }
         } else {
-            QString base = Vault::fileNameFor(title);
-            if (base.isEmpty())
-                base = QObject::tr("Untitled");
-            line.path = freeName(folderOf.value(note.notebookId, folder), base, u".md"_s);
+            line.path = freeName(folderOf.value(note.notebookId, folder), Vault::fileNameFor(title),
+                                 u".md"_s);
         }
         notePath.insert(note.id, line.path);
         if (line.outcome == JoplinImport::Outcome::Created ||
@@ -354,6 +369,7 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
         tagTitles.insert(tag.id, tag.title);
 
     int missingFiles = 0;
+    int unwritten = 0;
     // The vault path an attachment ends up at, copying it beside the first note that links it.
     const auto attachmentFor = [&](const QString &id, const QString &note) -> QString {
         if (ledger.attachments.contains(id) &&
@@ -367,10 +383,8 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
             ++missingFiles;
             return {};
         }
-        QString name = resource->fileName.isEmpty() ? resource->title : resource->fileName;
-        name = Vault::fileNameFor(name);
-        if (name.isEmpty())
-            name = id;
+        QString name =
+            Vault::fileNameFor(resource->fileName.isEmpty() ? resource->title : resource->fileName);
         if (!resource->extension.isEmpty() &&
             !name.endsWith(u'.' + resource->extension, Qt::CaseInsensitive))
             name += u'.' + resource->extension;
@@ -379,17 +393,19 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
         const QString path =
             freeName(Vault::assetsFolderFor(note), info.completeBaseName(), suffix);
         if (!dryRun) {
-            QDir().mkpath(vault.absolute(Vault::assetsFolderFor(note)));
-            QFile file(vault.absolute(path));
-            if (!file.open(QIODevice::WriteOnly) ||
-                file.write(resource->data) != resource->data.size())
+            // The name is free, so the vault keeps it as planned.
+            QString why;
+            if (!vault.addAttachment(note, QFileInfo(path).fileName(), resource->data, &why)) {
+                ++unwritten;
                 return {};
+            }
         }
         ++result.attachments;
         ledger.attachments.insert(id, path);
         return path;
     };
 
+    int written = 0;
     for (const Planned &write : writes) {
         const auto &note = *write.note;
         const auto target = [&](const QString &id) -> std::optional<QString> {
@@ -461,6 +477,12 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
             }
         }
         ledger.notes[note.id] = {write.path, iso(note.updated), sha(text)};
+        // Now and then on the way, so a long import cut short leaves little to bring again.
+        if (++written % 50 == 0) {
+            QString why;
+            if (!saveLedger(&why))
+                return fail(QObject::tr("could not write %1: %2").arg(kLedger, why));
+        }
     }
 
     if (trashed > 0)
@@ -473,11 +495,18 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
                 ? QObject::tr("1 attachment the export left out")
                 : QObject::tr("%1 attachments the export left out").arg(missingFiles));
 
-    if (!dryRun) {
-        QString why;
-        QDir().mkpath(vault.absolute(u".jot"_s));
-        if (!notefile::write(vault.absolute(kLedger), ledgerText(ledger), &why))
-            return fail(QObject::tr("could not write %1: %2").arg(kLedger, why));
+    if (unwritten > 0)
+        result.skipped.append(
+            unwritten == 1
+                ? QObject::tr("1 attachment that could not be written, so its link stays as it was")
+                : QObject::tr(
+                      "%1 attachments that could not be written, so their links stay as they were")
+                      .arg(unwritten));
+
+    QString why;
+    if (!saveLedger(&why)) {
+        *error = QObject::tr("could not write %1: %2").arg(kLedger, why);
+        return std::nullopt;
     }
     return result;
 }
