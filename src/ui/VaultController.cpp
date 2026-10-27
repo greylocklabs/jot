@@ -331,10 +331,11 @@ bool VaultController::setNotebookEmoji(const QString &path, const QString &emoji
 {
     if (!m_vault || !m_vault->writable() || path.isEmpty())
         return false;
-    Layout layout = Layout::read(*m_vault);
-    layout.setEmoji(path, emoji);
     QString error;
-    if (!layout.write(*m_vault, &error)) {
+    std::optional<Layout> layout = Layout::read(*m_vault, &error);
+    if (layout)
+        layout->setEmoji(path, emoji);
+    if (!layout || !layout->write(*m_vault, &error)) {
         qCWarning(lcVault) << "could not set the emoji of" << path << error;
         setProblem(tr("Could not change the notebook's emoji: %1").arg(error));
         return false;
@@ -843,7 +844,12 @@ void VaultController::reloadModels()
 {
     m_notebookEmoji.clear();
     if (m_vault) {
-        const QHash<QString, QString> emojis = Layout::read(*m_vault).emojis();
+        QString error;
+        const std::optional<Layout> layout = Layout::read(*m_vault, &error);
+        if (!layout)
+            qCWarning(lcVault) << error;
+        const QHash<QString, QString> emojis =
+            layout ? layout->emojis() : QHash<QString, QString>();
         for (auto it = emojis.cbegin(); it != emojis.cend(); ++it)
             m_notebookEmoji.insert(it.key(), it.value());
     }

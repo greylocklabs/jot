@@ -179,6 +179,9 @@ folders:
   entries with it.
 - Entries that no longer exist are ignored and pruned on the next write. Files missing from a
   list sort after the listed ones, alphabetically.
+- Jot keeps what it does not use as written: other sections, and values nested under a
+  notebook. Comments inside the sections it writes are not kept. A file Jot cannot read is left
+  alone, and changes to it are refused until it is fixed.
 - When sync finds this file changed on both sides, Jot merges it key by key.
 
 ## Vault settings

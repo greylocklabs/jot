@@ -252,7 +252,7 @@ void TestRename::aMovedNotebookKeepsItsEmoji()
     QVERIFY2(moveNotebook(*m_vault, *m_index, u"Cast"_s, u"Story/People"_s, &error),
              qPrintable(error));
     QCOMPARE(
-        Layout::read(*m_vault).emojis(),
+        Layout::read(*m_vault).value().emojis(),
         (QHash<QString, QString>{{u"Story/People"_s, u"a"_s}, {u"Story/People/Minor"_s, u"b"_s}}));
 }
 
