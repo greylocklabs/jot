@@ -1,5 +1,7 @@
 #include "VaultController.h"
 
+#include "JexBuilder.h"
+
 #include "jot/Settings.h"
 
 #include <QClipboard>
@@ -58,6 +60,7 @@ private Q_SLOTS:
     void listsBacklinksAndMentions();
     void previewsWhatALinkLeadsTo();
     void listsAndTicksWhatIsLeftToDo();
+    void importsFromJoplinAfterSayingWhatItWouldDo();
 
 private:
     QStringList column(const QAbstractItemModel &model, const QByteArray &role) const;
@@ -773,6 +776,43 @@ void TestVaultController::listsAndTicksWhatIsLeftToDo()
     m_vault->openAt(u"Ashfall/Characters/Soren.md"_s, 7);
     QCOMPARE(m_vault->current(), u"Ashfall/Characters/Soren.md"_s);
     QCOMPARE(m_vault->currentText().mid(reveal.first().first().toInt(), 9), u"- [x] dec"_s);
+}
+
+void TestVaultController::importsFromJoplinAfterSayingWhatItWouldDo()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    const int before = m_vault->noteCount();
+    const QString jex = m_dir->filePath(u"export.jex"_s);
+    QFile file(jex);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write(tar({{u"n1.md"_s, item(u"From Joplin"_s, u"Hello."_s,
+                                      u"id: fedcba9876543210fedcba9876543210\n"
+                                      u"user_created_time: 2026-10-01T09:00:00.000Z\n"
+                                      u"user_updated_time: 2026-10-02T10:00:00.000Z\n"
+                                      u"encryption_applied: 0\ntype_: 1"_s)}}));
+    file.close();
+
+    const QVariantMap planned = m_vault->importJoplin(QUrl::fromLocalFile(jex), u"Inbox"_s, true);
+    QVERIFY(planned.value(u"ok"_s).toBool());
+    QCOMPARE(planned.value(u"created"_s).toInt(), 1);
+    QCOMPARE(m_vault->noteCount(), before);
+
+    const QSignalSpy changed(m_vault.get(), &VaultController::notesChanged);
+    const QVariantMap done = m_vault->importJoplin(QUrl::fromLocalFile(jex), u"Inbox"_s, false);
+    QVERIFY(done.value(u"ok"_s).toBool());
+    // The lists show it straight away.
+    QCOMPARE(m_vault->noteCount(), before + 1);
+    QVERIFY(changed.count() > 0);
+    QVERIFY(QFileInfo::exists(m_root + u"/Inbox/From Joplin.md"_s));
+
+    const QVariantMap again = m_vault->importJoplin(QUrl::fromLocalFile(jex), u"Inbox"_s, true);
+    QCOMPARE(again.value(u"unchanged"_s).toInt(), 1);
+    QCOMPARE(again.value(u"created"_s).toInt(), 0);
+
+    const QVariantMap bad =
+        m_vault->importJoplin(QUrl::fromLocalFile(m_dir->filePath(u"missing.jex"_s)), {}, true);
+    QVERIFY(!bad.value(u"ok"_s).toBool());
+    QVERIFY(!bad.value(u"error"_s).toString().isEmpty());
 }
 
 QTEST_MAIN(TestVaultController)

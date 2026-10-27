@@ -18,6 +18,7 @@ Popup {
 
     /// The user wants to edit the theme's colors, which needs the window in view.
     signal editColorsRequested
+    signal joplinImportRequested
 
     /// Which group of settings shows: "general", "appearance" or "developer".
     property string tab: "general"
@@ -146,6 +147,12 @@ Popup {
                     visible: Vault.isOpen
                     text: qsTr("Show in Files")
                     onClicked: Support.openFolder("vault")
+                }
+                StickerButton {
+                    visible: Vault.isOpen
+                    enabled: Vault.writable
+                    text: qsTr("Import from Joplin...")
+                    onClicked: root.joplinImportRequested()
                 }
             }
             Text {

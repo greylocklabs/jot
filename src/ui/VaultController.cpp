@@ -1,6 +1,8 @@
 #include "VaultController.h"
 
 #include "jot/FrontMatter.h"
+#include "jot/JoplinExport.h"
+#include "jot/JoplinImport.h"
 #include "jot/Logging.h"
 #include "jot/NoteScan.h"
 #include "jot/Rename.h"
@@ -759,6 +761,52 @@ bool VaultController::follow(const QString &target, bool wiki)
     reloadModels();
     setCurrent(*created);
     return true;
+}
+
+QVariantMap VaultController::importJoplin(const QUrl &file, const QString &folder, bool dryRun)
+{
+    const auto failed = [](const QString &why) {
+        return QVariantMap{{u"ok"_s, false}, {u"error"_s, why}};
+    };
+    if (!m_vault)
+        return failed(tr("No notes folder is open."));
+    QString error;
+    const std::optional<JoplinExport> from = readJoplinExport(file.toLocalFile(), &error);
+    if (!from)
+        return failed(error);
+    // What is typed so far is saved first, so the import cannot pass it by.
+    if (!dryRun)
+        saveNow();
+    const std::optional<JoplinImport> done =
+        jot::importJoplin(*m_vault, *from, folder, dryRun, &error);
+    if (!dryRun) {
+        // Even a failed import may have written some notes, which the lists should show.
+        m_index->refresh();
+        if (m_watcher)
+            m_watcher->start();
+        reloadModels();
+    }
+    if (!done) {
+        qCWarning(lcVault) << "could not import" << file.toLocalFile() << error;
+        return failed(error);
+    }
+    QStringList keptEdits;
+    QStringList notBroughtBack;
+    for (const auto &note : done->notes) {
+        if (note.outcome == JoplinImport::Outcome::ChangedInJot)
+            keptEdits.append(note.path);
+        else if (note.outcome == JoplinImport::Outcome::Removed)
+            notBroughtBack.append(note.path);
+    }
+    return {{u"ok"_s, true},
+            {u"created"_s, done->count(JoplinImport::Outcome::Created)},
+            {u"updated"_s, done->count(JoplinImport::Outcome::Updated)},
+            {u"unchanged"_s, done->count(JoplinImport::Outcome::Unchanged)},
+            {u"notebooks"_s, int(done->notebooks.size())},
+            {u"attachments"_s, done->attachments},
+            {u"keptEdits"_s, keptEdits},
+            {u"notBroughtBack"_s, notBroughtBack},
+            {u"skipped"_s, done->skipped}};
 }
 
 void VaultController::reloadModels()

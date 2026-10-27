@@ -14,6 +14,8 @@ Rectangle {
 
     /// A note was made from a notebook's menu, and is shown; its title should take the typing.
     signal noteMade
+    /// Import from Joplin was chosen for the notebook at `folder`.
+    signal joplinImportRequested(string folder)
 
     /// Moves what was dropped, a note or a notebook, into the notebook at `path`.
     function dropInto(path, drop) {
@@ -425,6 +427,12 @@ Rectangle {
             height: visible ? implicitHeight : 0
             enabled: Vault.writable
             onTriggered: root.renamingPath = notebookMenu.path
+        }
+        MenuEntry {
+            text: notebookMenu.path === "" ? qsTr("Import from Joplin...") : qsTr(
+                                                 "Import from Joplin into here...")
+            enabled: Vault.writable
+            onTriggered: root.joplinImportRequested(notebookMenu.path)
         }
         MenuEntry {
             text: qsTr("Show in Files")
