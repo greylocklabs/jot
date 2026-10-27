@@ -10,6 +10,8 @@ add_library(jotcore STATIC
     MarkdownEdit.cpp
     jot/MonthModel.h
     MonthModel.cpp
+    jot/JoplinExport.h
+    JoplinExport.cpp
     jot/NoteScan.h
     NoteScan.cpp
     jot/Rename.h
