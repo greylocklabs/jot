@@ -42,8 +42,11 @@ void TagModel::rebuild()
 
 void TagModel::toggle(const QString &tag)
 {
+    // Tags match whatever their case, and the spelling shown can change as notes do.
     QStringList collapsed = m_settings.collapsedTags();
-    if (collapsed.removeAll(tag) == 0)
+    if (collapsed.removeIf([&tag](const QString &folded) {
+            return folded.compare(tag, Qt::CaseInsensitive) == 0;
+        }) == 0)
         collapsed.append(tag);
     collapsed.sort(Qt::CaseInsensitive);
     m_settings.setCollapsedTags(collapsed);

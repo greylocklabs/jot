@@ -242,6 +242,11 @@ void TestVaultController::listsTagsThatFold()
     QCOMPARE(m_settings->collapsedTags(), QStringList{u"cast"_s});
     tags.toggle(u"cast"_s);
     QVERIFY(column(tags, "tag").contains(u"cast/lead"_s));
+    // Folded under another spelling, it still opens.
+    m_settings->setCollapsedTags({u"Cast"_s});
+    tags.toggle(u"cast"_s);
+    QVERIFY(m_settings->collapsedTags().isEmpty());
+    QVERIFY(column(tags, "tag").contains(u"cast/lead"_s));
 
     // A parent tag lists the notes nested in it too.
     m_vault->notes()->setTag(u"cast"_s);
