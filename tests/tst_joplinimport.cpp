@@ -4,6 +4,7 @@
 
 #include <QCryptographicHash>
 #include <QFileInfo>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QTimeZone>
@@ -71,6 +72,9 @@ private Q_SLOTS:
     void aSubNotebookAloneMovesUnderItsParentLater();
     void mergesWithFoldersAndNumbersClashingNames();
     void writesTasksAndLeavesTrashOut();
+    void aNotebookThatIsItsOwnAncestorStopsAtTheTop();
+    void aFailedWriteKeepsTrackOfWhatWasWritten();
+    void aNotebookKnownFromBeforeKeepsItsName();
 
 private:
     QString read(const QString &path) const;
@@ -267,6 +271,67 @@ void TestJoplinImport::writesTasksAndLeavesTrashOut()
     QCOMPARE(closed.value(u"task"_s).toString(), u"done"_s);
     QCOMPARE(closed.value(u"done"_s).toString(), u"2026-10-03T09:00:00Z"_s);
     QVERIFY(QFileInfo::exists(m_vault->absolute(u"Book tickets (conflict).md"_s)));
+}
+
+void TestJoplinImport::aNotebookThatIsItsOwnAncestorStopsAtTheTop()
+{
+    JoplinExport ex;
+    ex.notebooks = {{jid(u"a1"_s), jid(u"a2"_s), u"One"_s, {}, false},
+                    {jid(u"a2"_s), jid(u"a1"_s), u"Two"_s, {}, false},
+                    {jid(u"a3"_s), jid(u"a3"_s), u"Self"_s, {}, false}};
+    ex.notes = {note(u"n1"_s, u"a1"_s, u"In one"_s, u"x"_s),
+                note(u"n2"_s, u"a3"_s, u"In self"_s, u"y"_s)};
+    QString error;
+    const auto done = importJoplin(*m_vault, ex, {}, false, &error);
+    QVERIFY2(done, qPrintable(error));
+    QCOMPARE(done->count(JoplinImport::Outcome::Created), 2);
+    QCOMPARE(m_vault->notes().size(), 2);
+}
+
+void TestJoplinImport::aFailedWriteKeepsTrackOfWhatWasWritten()
+{
+    // A folder the import merges into, but cannot write in, fails the second note.
+    QString error;
+    QVERIFY(m_vault->createFolder({}, u"Locked"_s, &error));
+    QFile locked(m_vault->absolute(u"Locked"_s));
+    QVERIFY(locked.setPermissions(QFile::ReadOwner | QFile::ExeOwner));
+    const auto unlock = qScopeGuard(
+        [&] { locked.setPermissions(QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner); });
+    QFile probe(m_vault->absolute(u"Locked/probe"_s));
+    if (probe.open(QIODevice::WriteOnly))
+        QSKIP("permissions are not enforced here, as when tests run as root");
+
+    JoplinExport ex;
+    ex.notebooks = {{jid(u"a1"_s), {}, u"Open"_s, {}, false},
+                    {jid(u"a2"_s), {}, u"Locked"_s, {}, false}};
+    ex.notes = {note(u"n1"_s, u"a1"_s, u"First"_s, u"x"_s),
+                note(u"n2"_s, u"a2"_s, u"Second"_s, u"y"_s)};
+    QVERIFY(!importJoplin(*m_vault, ex, {}, false, &error));
+    QVERIFY(QFileInfo::exists(m_vault->absolute(u"Open/First.md"_s)));
+
+    // Once it can be written, the next import brings the rest and no second copy of the first.
+    locked.setPermissions(QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner);
+    const auto again = importJoplin(*m_vault, ex, {}, false, &error);
+    QVERIFY2(again, qPrintable(error));
+    QCOMPARE(again->count(JoplinImport::Outcome::Unchanged), 1);
+    QCOMPARE(again->count(JoplinImport::Outcome::Created), 1);
+    QVERIFY(!QFileInfo::exists(m_vault->absolute(u"Open/First 2.md"_s)));
+}
+
+void TestJoplinImport::aNotebookKnownFromBeforeKeepsItsName()
+{
+    QString error;
+    QVERIFY(importJoplin(*m_vault, stories(), {}, false, &error));
+    QVERIFY(m_vault->moveFolder(u"Stories"_s, u"Tales"_s, &error));
+
+    // Places again, without Stories: Stories is known only from the first import, and its
+    // folder has gone, so it comes back by the name it had.
+    JoplinExport places;
+    places.notebooks = {{jid(u"a2"_s), jid(u"a1"_s), u"Places"_s, {}, false}};
+    places.notes = {note(u"n9"_s, u"a2"_s, u"The harbour"_s, u"z"_s)};
+    QVERIFY(importJoplin(*m_vault, places, {}, false, &error));
+    QVERIFY(QFileInfo::exists(m_vault->absolute(u"Stories/Places/The harbour.md"_s)));
+    QVERIFY(!QFileInfo::exists(m_vault->absolute(u"Untitled"_s)));
 }
 
 QTEST_GUILESS_MAIN(TestJoplinImport)
