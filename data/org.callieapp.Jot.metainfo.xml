@@ -35,6 +35,14 @@
   </categories>
 
   <releases>
+    <release version="0.0.11" date="2026-10-27">
+      <description>
+        <ul>
+          <li>A command palette: press Ctrl+Shift+P, or the leader then c in vi mode, and type a few letters of any command to run it, including those only in menus. Commands that cannot run at the moment are left out.</li>
+          <li>Choosing a file or folder opens your desktop's own file chooser, with its places and bookmarks, rather than a plain one of its own.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.0.10" date="2026-10-27">
       <description>
         <ul>
