@@ -12,6 +12,8 @@ add_library(jotcore STATIC
     MonthModel.cpp
     jot/JoplinExport.h
     JoplinExport.cpp
+    jot/JoplinImport.h
+    JoplinImport.cpp
     jot/NoteScan.h
     NoteScan.cpp
     jot/Rename.h
