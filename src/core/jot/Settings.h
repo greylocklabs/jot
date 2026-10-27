@@ -16,7 +16,7 @@ class Settings : public QObject
     Q_PROPERTY(QString vaultPath READ vaultPath WRITE setVaultPath NOTIFY vaultPathChanged)
     /// A built-in theme id or a theme file path; empty is the default theme.
     Q_PROPERTY(QString theme READ theme WRITE setTheme NOTIFY themeChanged)
-    /// How the note list is ordered: "updated" or "title".
+    /// How the note list is ordered: "updated", "created" or "title".
     Q_PROPERTY(QString noteSort READ noteSort WRITE setNoteSort NOTIFY noteSortChanged)
     /// Notebooks folded shut in the sidebar, by vault path.
     Q_PROPERTY(QStringList collapsedNotebooks READ collapsedNotebooks WRITE setCollapsedNotebooks

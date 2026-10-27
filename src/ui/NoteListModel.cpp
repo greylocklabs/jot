@@ -1,5 +1,6 @@
 #include "NoteListModel.h"
 
+#include "jot/Settings.h"
 #include "jot/Vault.h"
 
 #include <QSet>
@@ -34,9 +35,10 @@ QString scopedQuery(const QString &query, const QString &notebook, const QString
 
 NoteListModel::NoteListModel(QObject *parent) : QAbstractListModel(parent) {}
 
-void NoteListModel::reload(const VaultIndex *index)
+void NoteListModel::reload(const VaultIndex *index, const QStringList &pinned)
 {
     m_index = index;
+    m_pinned = pinned;
     refill();
 }
 
@@ -72,7 +74,7 @@ void NoteListModel::setQuery(const QString &query)
 
 void NoteListModel::setOrder(const QString &order)
 {
-    if (m_order == order)
+    if (m_order == order || !Settings::noteSorts().contains(order))
         return;
     m_order = order;
     Q_EMIT orderChanged();
@@ -87,7 +89,8 @@ void NoteListModel::refill()
     if (m_index) {
         if (!m_query.trimmed().isEmpty()) {
             for (const SearchHit &hit : m_index->search(scopedQuery(m_query, m_notebook, m_tag)))
-                m_rows.append({hit.path, hit.title, hit.modified, hit.snippet});
+                m_rows.append(
+                    {hit.path, hit.title, hit.modified, hit.snippet, m_pinned.contains(hit.path)});
         } else {
             QList<NoteInfo> notes;
             if (!m_tag.isEmpty()) {
@@ -100,17 +103,10 @@ void NoteListModel::refill()
             } else {
                 notes = m_index->notesIn(m_notebook);
             }
+            sortNotes(notes, m_order, m_pinned);
             for (const NoteInfo &note : std::as_const(notes))
-                m_rows.append({note.path, note.title, note.modified, {}});
-            if (m_order == u"title") {
-                std::ranges::stable_sort(m_rows, [](const Row &a, const Row &b) {
-                    return naturalCompare(a.title, b.title) < 0;
-                });
-            } else {
-                std::ranges::stable_sort(m_rows, [](const Row &a, const Row &b) {
-                    return a.modified != b.modified ? a.modified > b.modified : a.path < b.path;
-                });
-            }
+                m_rows.append(
+                    {note.path, note.title, note.modified, {}, m_pinned.contains(note.path)});
         }
     }
     endResetModel();
@@ -148,17 +144,15 @@ QVariant NoteListModel::data(const QModelIndex &index, int role) const
     case NotebookRole: return notebookOf(row.path);
     case ModifiedRole: return QDateTime::fromMSecsSinceEpoch(row.modified / 1000000);
     case SnippetRole: return row.snippet;
+    case PinnedRole: return row.pinned;
     }
     return {};
 }
 
 QHash<int, QByteArray> NoteListModel::roleNames() const
 {
-    return {{PathRole, "path"},
-            {TitleRole, "title"},
-            {NotebookRole, "notebook"},
-            {ModifiedRole, "modified"},
-            {SnippetRole, "snippet"}};
+    return {{PathRole, "path"},         {TitleRole, "title"},     {NotebookRole, "notebook"},
+            {ModifiedRole, "modified"}, {SnippetRole, "snippet"}, {PinnedRole, "pinned"}};
 }
 
 } // namespace jot

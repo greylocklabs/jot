@@ -67,6 +67,12 @@ struct SearchHit
 /// past due on `today`. A due that is not a date never is.
 [[nodiscard]] bool isOverdue(const QString &due, const QDate &today);
 
+/// Puts `notes` in `order`, one of Settings::noteSorts(): "updated" most recently changed first,
+/// "created" most recently made first by the `created` front matter key (or when it last
+/// changed, for a note without one), "title" by title. Notes in `pinned` come first, in the
+/// same order among themselves.
+void sortNotes(QList<NoteInfo> &notes, const QString &order, const QStringList &pinned = {});
+
 /// What Jot knows about a vault's notes, kept in SQLite for search, links, tags and
 /// tasks. It is a cache: deleting it loses nothing, and refresh() rebuilds it from the
 /// files. It lives outside the vault, so syncing a vault never syncs its index.

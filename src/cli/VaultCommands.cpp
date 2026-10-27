@@ -3,6 +3,8 @@
 #include "jot/Fuzzy.h"
 #include "jot/JoplinExport.h"
 #include "jot/JoplinImport.h"
+#include "jot/Layout.h"
+#include "jot/Settings.h"
 
 #include <QDateTime>
 #include <QDir>
@@ -79,8 +81,8 @@ int VaultCommands::status(const QString &indexPath, bool json)
 
 int VaultCommands::list(const QString &notebook, const QString &order, bool json)
 {
-    if (!order.isEmpty() && order != u"updated" && order != u"title") {
-        m_err << tr("usage: jot ls [notebook] [--order updated|title]") << "\n";
+    if (!order.isEmpty() && !Settings::noteSorts().contains(order)) {
+        m_err << tr("usage: jot ls [notebook] [--order updated|created|title]") << "\n";
         return 2;
     }
     if (!insideVault(notebook)) {
@@ -92,20 +94,21 @@ int VaultCommands::list(const QString &notebook, const QString &order, bool json
         return 1;
     }
     QList<NoteInfo> notes = m_index.notesIn(notebook);
-    if (order == u"title")
-        std::ranges::sort(notes, [](const NoteInfo &a, const NoteInfo &b) {
-            return naturalCompare(a.title, b.title) < 0;
-        });
-    else
-        std::ranges::sort(
-            notes, [](const NoteInfo &a, const NoteInfo &b) { return a.modified > b.modified; });
+    // Without the pins when the layout cannot be read, which is said once.
+    QString error;
+    const std::optional<Layout> layout = Layout::read(m_vault, &error);
+    if (!layout)
+        m_err << tr("jot: %1").arg(error) << "\n";
+    const QStringList pinned = layout ? layout->pinned() : QStringList();
+    sortNotes(notes, order.isEmpty() ? u"updated"_s : order, pinned);
     if (json) {
         QJsonArray array;
         for (const NoteInfo &note : std::as_const(notes))
             array.append(QJsonObject{{u"path"_s, note.path},
                                      {u"title"_s, note.title},
                                      {u"tags"_s, QJsonArray::fromStringList(note.tags)},
-                                     {u"modified"_s, when(note.modified)}});
+                                     {u"modified"_s, when(note.modified)},
+                                     {u"pinned"_s, pinned.contains(note.path)}});
         print(m_out, array);
         return 0;
     }

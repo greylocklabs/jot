@@ -38,6 +38,7 @@ private Q_SLOTS:
     void listsNotesByNotebookTagAndSearch();
     void ordersNotesAsAsked();
     void followsTheOrderInSettings();
+    void pinsNotesToTheTop();
     void switcherFindsByTitleAliasAndPath();
     void makesRenamesAndMovesNotebooks();
     void givesNotebooksAnEmoji();
@@ -280,6 +281,29 @@ void TestVaultController::followsTheOrderInSettings()
     QCOMPARE(m_settings->noteSort(), u"title"_s);
     m_settings->reset();
     QCOMPARE(m_vault->notes()->order(), u"updated"_s);
+}
+
+void TestVaultController::pinsNotesToTheTop()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    NoteListModel &notes = *m_vault->notes();
+    notes.setNotebook(u"Recipes"_s);
+    notes.setOrder(u"title"_s);
+    QVERIFY(m_vault->setPinned(u"Recipes/Sourdough.md"_s, true));
+    QVERIFY(m_vault->isPinned(u"Recipes/Sourdough.md"_s));
+    QCOMPARE(column(notes, "title"), (QStringList{u"Sourdough"_s, u"Pancakes"_s}));
+    QCOMPARE(column(notes, "pinned"), (QStringList{u"true"_s, u"false"_s}));
+
+    // Moved, it stays pinned; unpinned, it goes back in order.
+    QVERIFY(m_vault->moveNoteTo(u"Recipes/Sourdough.md"_s, u"Ashfall"_s));
+    QVERIFY(m_vault->isPinned(u"Ashfall/Sourdough.md"_s));
+    QVERIFY(m_vault->setPinned(u"Ashfall/Sourdough.md"_s, false));
+    QVERIFY(!m_vault->isPinned(u"Ashfall/Sourdough.md"_s));
+
+    notes.setOrder(u"created"_s);
+    QCOMPARE(m_settings->noteSort(), u"created"_s);
+    notes.setOrder(u"oldest"_s);
+    QCOMPARE(notes.order(), u"created"_s);
 }
 
 void TestVaultController::suggestsLinksThatResolve()

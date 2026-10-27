@@ -14,6 +14,7 @@
 #include <QSqlError>
 #include <QSqlQuery>
 #include <QStandardPaths>
+#include <QTimeZone>
 #include <QUrl>
 
 #include <sys/stat.h>
@@ -101,6 +102,36 @@ bool isOverdue(const QString &due, const QDate &today)
 {
     const QDate date = QDate::fromString(due.trimmed().left(10), Qt::ISODate);
     return date.isValid() && date < today;
+}
+
+void sortNotes(QList<NoteInfo> &notes, const QString &order, const QStringList &pinned)
+{
+    // When the note was made, in milliseconds, or when it last changed for want of that.
+    const auto made = [](const NoteInfo &note) {
+        QDateTime when = QDateTime::fromString(note.created.trimmed(), Qt::ISODate);
+        if (!when.isValid()) {
+            const QDate date = QDate::fromString(note.created.trimmed().left(10), Qt::ISODate);
+            if (date.isValid())
+                when = date.startOfDay(QTimeZone::UTC);
+        }
+        return when.isValid() ? when.toMSecsSinceEpoch() : note.modified / 1000000;
+    };
+    const QSet<QString> pins(pinned.cbegin(), pinned.cend());
+    QHash<QString, qint64> created;
+    if (order == u"created") {
+        for (const NoteInfo &note : std::as_const(notes))
+            created.insert(note.path, made(note));
+    }
+    std::ranges::stable_sort(notes, [&](const NoteInfo &a, const NoteInfo &b) {
+        const bool aPinned = pins.contains(a.path);
+        if (aPinned != pins.contains(b.path))
+            return aPinned;
+        if (order == u"title")
+            return naturalCompare(a.title, b.title) < 0;
+        if (order == u"created" && created[a.path] != created[b.path])
+            return created[a.path] > created[b.path];
+        return a.modified != b.modified ? a.modified > b.modified : a.path < b.path;
+    });
 }
 
 VaultIndex::VaultIndex(Vault vault, QString databasePath)

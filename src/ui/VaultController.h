@@ -112,6 +112,9 @@ public:
     Q_INVOKABLE QString titleOf(const QString &path) const;
     /// The notebook the note at `path` is in; empty for the top of the vault.
     Q_INVOKABLE QString notebookOf(const QString &path) const { return Vault::notebookOf(path); }
+    /// Keeps the note at `path` at the top of the note list, or lets it go back in order.
+    Q_INVOKABLE bool setPinned(const QString &path, bool pinned);
+    Q_INVOKABLE bool isPinned(const QString &path) const { return m_pinned.contains(path); }
     /// Shows `emoji` before the notebook's name, or no emoji when it is empty.
     Q_INVOKABLE bool setNotebookEmoji(const QString &path, const QString &emoji);
     /// Makes a notebook in `parent`, or at the top for none, and gives its path.
@@ -249,6 +252,7 @@ private:
     TaskModel m_tasks;
     bool m_showingTasks = false;
     QVariantMap m_notebookEmoji;
+    QStringList m_pinned;
     QString m_indexPath;
     bool m_systemTrash = true;
     QString m_error;

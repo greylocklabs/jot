@@ -20,7 +20,7 @@ class NoteListModel : public QAbstractListModel
     /// The tag shown, instead of a notebook; empty for none.
     Q_PROPERTY(QString tag READ tag WRITE setTag NOTIFY scopeChanged)
     Q_PROPERTY(QString query READ query WRITE setQuery NOTIFY queryChanged)
-    /// "updated" or "title".
+    /// "updated", "created" or "title".
     Q_PROPERTY(QString order READ order WRITE setOrder NOTIFY orderChanged)
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
 
@@ -31,12 +31,14 @@ public:
         NotebookRole,
         ModifiedRole,
         SnippetRole,
+        PinnedRole,
     };
 
     explicit NoteListModel(QObject *parent = nullptr);
 
-    /// Reads the notes again from `index`, or empties the list without one.
-    void reload(const VaultIndex *index);
+    /// Reads the notes again from `index`, or empties the list without one. Those in
+    /// `pinned` come first.
+    void reload(const VaultIndex *index, const QStringList &pinned = {});
 
     [[nodiscard]] QString notebook() const { return m_notebook; }
     void setNotebook(const QString &notebook);
@@ -69,6 +71,7 @@ private:
         QString title;
         qint64 modified = 0;
         QString snippet;
+        bool pinned = false;
     };
     void refill();
 
@@ -76,6 +79,7 @@ private:
     QString m_notebook;
     QString m_tag;
     QString m_query;
+    QStringList m_pinned;
     QString m_order = QStringLiteral("updated");
     QList<Row> m_rows;
 };

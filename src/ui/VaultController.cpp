@@ -327,6 +327,23 @@ QString VaultController::newNotebook(const QString &parent)
     return *path;
 }
 
+bool VaultController::setPinned(const QString &path, bool pinned)
+{
+    if (!m_vault || !m_vault->writable() || path.isEmpty())
+        return false;
+    QString error;
+    std::optional<Layout> layout = Layout::read(*m_vault, &error);
+    if (layout)
+        layout->setPinned(path, pinned);
+    if (!layout || !layout->write(*m_vault, &error)) {
+        qCWarning(lcVault) << "could not pin" << path << error;
+        setProblem(tr("Could not pin the note: %1").arg(error));
+        return false;
+    }
+    reloadModels();
+    return true;
+}
+
 bool VaultController::setNotebookEmoji(const QString &path, const QString &emoji)
 {
     if (!m_vault || !m_vault->writable() || path.isEmpty())
@@ -843,6 +860,7 @@ QVariantMap VaultController::importJoplin(const QUrl &file, const QString &folde
 void VaultController::reloadModels()
 {
     m_notebookEmoji.clear();
+    m_pinned.clear();
     if (m_vault) {
         QString error;
         const std::optional<Layout> layout = Layout::read(*m_vault, &error);
@@ -852,10 +870,11 @@ void VaultController::reloadModels()
             layout ? layout->emojis() : QHash<QString, QString>();
         for (auto it = emojis.cbegin(); it != emojis.cend(); ++it)
             m_notebookEmoji.insert(it.key(), it.value());
+        m_pinned = layout ? layout->pinned() : QStringList();
     }
     if (m_index) {
         m_notebooks.reload(m_vault.get(), m_index->noteCounts(), m_index->noteCount());
-        m_notes.reload(m_index.get());
+        m_notes.reload(m_index.get(), m_pinned);
         m_switcher.reload(m_index.get());
         m_linkSuggestions.reload(m_index.get());
         m_tasks.reload(m_index.get());
