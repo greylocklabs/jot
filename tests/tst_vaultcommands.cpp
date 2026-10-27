@@ -1,5 +1,7 @@
 #include "VaultCommands.h"
 
+#include "JexBuilder.h"
+
 #include <QDir>
 #include <QDirIterator>
 #include <QJsonArray>
@@ -26,6 +28,8 @@ private Q_SLOTS:
     void showsANoteByTitleAliasOrPath();
     void listsWhatIsLeftToDo();
     void opensANoteInTheApp();
+    void listsTagsWithTheirNotes();
+    void importsAJoplinExportAfterADryRun();
 
 private:
     int run(const std::function<int(cli::VaultCommands &)> &command);
@@ -195,6 +199,66 @@ void TestVaultCommands::opensANoteInTheApp()
              }),
              1);
     QVERIFY(m_err.contains(u"could not start /x"_s));
+}
+
+void TestVaultCommands::listsTagsWithTheirNotes()
+{
+    QCOMPARE(run([](auto &c) { return c.listTags(true); }), 0);
+    QHash<QString, int> notes;
+    for (const QJsonValue &tag : json().array())
+        notes.insert(tag[u"tag"_s].toString(), tag[u"notes"_s].toInt());
+    QCOMPARE(notes.value(u"food"_s), 2);
+    // A tag counts the notes with tags nested in it too.
+    QVERIFY(notes.value(u"cast"_s) >= notes.value(u"cast/lead"_s) + 1);
+
+    QCOMPARE(run([](auto &c) { return c.listTags(false); }), 0);
+    QVERIFY2(m_out.contains(u"food  2"_s), qPrintable(m_out));
+}
+
+void TestVaultCommands::importsAJoplinExportAfterADryRun()
+{
+    const QString times = u"user_created_time: 2026-10-01T09:00:00.000Z\n"
+                          u"user_updated_time: 2026-10-02T10:00:00.000Z\nencryption_applied: 0\n"_s;
+    const QString notebook = u"0123456789abcdef0123456789abcdef"_s;
+    const QString jex = m_dir->filePath(u"travel.jex"_s);
+    QFile file(jex);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write(tar({
+        {notebook + u".md"_s,
+         item(u"Travel"_s, {},
+              u"id: "_s + notebook + u"\n"_s + times + u"parent_id: \ntype_: 2"_s)},
+        {u"n1.md"_s, item(u"Packing list"_s, u"- [ ] passport"_s,
+                          u"id: fedcba9876543210fedcba9876543210\nparent_id: "_s + notebook +
+                              u"\n"_s + times + u"latitude: 40.6\nlongitude: -73.9\ntype_: 1"_s)},
+    }));
+    file.close();
+
+    QCOMPARE(run([&](auto &c) { return c.importJoplin(jex, u"From Joplin"_s, true, true); }), 0);
+    const QJsonObject planned = json().object();
+    QVERIFY(planned[u"dryRun"_s].toBool());
+    QCOMPARE(planned[u"notes"_s].toArray().first()[u"outcome"_s].toString(), u"created"_s);
+    QCOMPARE(planned[u"notes"_s].toArray().first()[u"path"_s].toString(),
+             u"From Joplin/Travel/Packing list.md"_s);
+    QVERIFY(!QFileInfo::exists(m_vault->absolute(u"From Joplin"_s)));
+
+    QCOMPARE(run([&](auto &c) { return c.importJoplin(jex, u"From Joplin"_s, false, false); }), 0);
+    QVERIFY2(m_out.contains(u"1 new note"_s), qPrintable(m_out));
+    QVERIFY(QFileInfo::exists(m_vault->absolute(u"From Joplin/Travel/Packing list.md"_s)));
+    QString error;
+    const QString text =
+        notefile::read(m_vault->absolute(u"From Joplin/Travel/Packing list.md"_s), &error)
+            .value_or(QString());
+    QVERIFY(!text.contains(u"40.6"_s));
+    // The index has it straight away, so ls and search find it.
+    QCOMPARE(run([](auto &c) { return c.list(u"From Joplin"_s, {}, true); }), 0);
+    QCOMPARE(json().array().size(), 1);
+
+    QCOMPARE(run([&](auto &c) { return c.importJoplin(jex, u"From Joplin"_s, false, false); }), 0);
+    QVERIFY2(m_out.contains(u"1 note unchanged since the last import"_s), qPrintable(m_out));
+
+    QCOMPARE(run([](auto &c) { return c.importJoplin({}, {}, false, false); }), 2);
+    QCOMPARE(run([](auto &c) { return c.importJoplin(u"/no/such.jex"_s, {}, false, false); }), 1);
+    QCOMPARE(run([&](auto &c) { return c.importJoplin(jex, u"../outside"_s, false, false); }), 2);
 }
 
 QTEST_GUILESS_MAIN(TestVaultCommands)

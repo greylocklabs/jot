@@ -53,6 +53,8 @@ const QList<std::pair<QString, QString>> kCommands = {
     {u"show"_s, u"Print a note, by its title, an alias or its path"_s},
     {u"open"_s, u"Open a note in the app"_s},
     {u"tasks"_s, u"Task notes and unticked boxes"_s},
+    {u"tags"_s, u"Every tag, with how many notes have it"_s},
+    {u"import"_s, u"Bring notes in: jot import joplin export.jex; --dry-run first to see"_s},
     {u"logs"_s, u"Show, follow (-f) or open (--open) the log files"_s},
     {u"doctor"_s, u"Details for a bug report; --report opens a new issue"_s},
     {u"donate"_s, u"Support Jot on Ko-fi: opens the page, or --print prints its link"_s},
@@ -254,17 +256,20 @@ int main(int argc, char *argv[])
     const QCommandLineOption vaultOption(u"vault"_s, u"The vault to use, rather than the app's."_s,
                                          u"folder"_s);
     addOption(vaultOption);
-    const QCommandLineOption notebookOption(u"notebook"_s,
-                                            u"With new: the notebook to put it in."_s, u"name"_s);
+    const QCommandLineOption notebookOption(
+        u"notebook"_s, u"With new: the notebook to put it in; with import, to import into."_s,
+        u"name"_s);
     addOption(notebookOption);
     const QCommandLineOption orderOption(u"order"_s, u"With ls: updated (the default) or title."_s,
                                          u"order"_s);
     addOption(orderOption);
     const QCommandLineOption jsonOption(
-        u"json"_s, u"With status, ls, search, new and tasks: print JSON for scripts."_s);
+        u"json"_s,
+        u"With status, ls, search, new, tasks, tags and import: print JSON for scripts."_s);
     addOption(jsonOption);
     const QCommandLineOption dryRunOption(
-        u"dry-run"_s, u"With upgrade and downgrade: say what would happen, and change nothing."_s);
+        u"dry-run"_s,
+        u"With upgrade, downgrade and import: say what would happen, and change nothing."_s);
     addOption(dryRunOption);
 
     // Run by the shell completion scripts with the words typed so far, which
@@ -325,6 +330,8 @@ int main(int argc, char *argv[])
                 return cli::Completion::plain({u"bash"_s, u"zsh"_s, u"fish"_s});
             if (positional.size() == 1 && command == u"ls")
                 return notebooks();
+            if (positional.size() == 1 && command == u"import")
+                return cli::Completion::plain({u"joplin"_s});
             if (positional.size() == 1 && (command == u"show" || command == u"open"))
                 return titles();
             return QList<cli::Candidate>();
@@ -368,8 +375,9 @@ int main(int argc, char *argv[])
     if (command == u"completions" && args.size() == 2)
         return runCompletions(args.at(1));
 
-    static const QStringList kVaultCommands = {u"status"_s, u"ls"_s,   u"search"_s, u"new"_s,
-                                               u"show"_s,   u"open"_s, u"tasks"_s};
+    static const QStringList kVaultCommands = {u"status"_s, u"ls"_s,   u"search"_s,
+                                               u"new"_s,    u"show"_s, u"open"_s,
+                                               u"tasks"_s,  u"tags"_s, u"import"_s};
     if (kVaultCommands.contains(command)) {
         std::optional<OpenVault> open = openVault(parser.value(vaultOption));
         if (!open)
@@ -388,6 +396,18 @@ int main(int argc, char *argv[])
             return commands.show(rest);
         if (command == u"tasks")
             return commands.listTasks(json);
+        if (command == u"tags")
+            return commands.listTags(json);
+        if (command == u"import") {
+            if (args.size() != 3 || args.at(1) != u"joplin") {
+                err << QObject::tr(
+                           "usage: jot import joplin <export.jex> [--notebook name] [--dry-run]")
+                    << "\n";
+                return 2;
+            }
+            return commands.importJoplin(args.at(2), parser.value(notebookOption),
+                                         parser.isSet(dryRunOption), json);
+        }
         if (command == u"new") {
             // Piped in, the text becomes the note's body.
             QString body;

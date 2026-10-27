@@ -50,6 +50,8 @@ echo "Bring a lantern." | jot new "Ferry checklist" --notebook Ashfall
 jot show "mara"                  # print a note, by title, alias or path
 jot open "mara"                  # or open it in the app
 jot tasks                        # task notes and unticked boxes
+jot tags                         # every tag, and how many notes have it
+jot import joplin notes.jex --dry-run   # what importing a Joplin export would do
 ```
 
 `--json` gives scripts the same, and the shell completions know your notebooks and notes.
