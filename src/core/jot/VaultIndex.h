@@ -1,5 +1,6 @@
 #pragma once
 
+#include "jot/TaskLine.h"
 #include "jot/Vault.h"
 
 #include <QDate>
@@ -19,6 +20,8 @@ struct NoteInfo
     QString title;
     QStringList tags;
     QStringList aliases;
+    /// A task note's @labels, from `labels:` in its front matter.
+    QStringList labels;
     /// "open", "done" or empty for a note that is not a task.
     QString task;
     QString due;
@@ -50,6 +53,8 @@ struct NoteTask
     int line = 0;
     bool done = false;
     QString text;
+    /// What the text says about the to-do: its words, due date, repeats and labels.
+    TaskLine parts;
 
     bool operator==(const NoteTask &) const = default;
 };
@@ -89,7 +94,7 @@ class VaultIndex
 {
 public:
     /// Raised whenever what the index stores changes shape; an older index is rebuilt.
-    static constexpr int kSchema = 3;
+    static constexpr int kSchema = 4;
 
     explicit VaultIndex(Vault vault, QString databasePath = {});
     ~VaultIndex();
@@ -136,6 +141,9 @@ public:
     [[nodiscard]] QList<TagCount> tagCounts() const;
     /// Notes with `tag` or a tag nested in it.
     [[nodiscard]] QStringList tagged(const QString &tag) const;
+    /// Every @label on a to-do still open, a checkbox or a task note, with how many have it,
+    /// alphabetically.
+    [[nodiscard]] QList<TagCount> labels() const;
     /// Unticked checkboxes across the vault, note by note.
     [[nodiscard]] QList<NoteTask> openTasks() const;
     /// Notes whose front matter makes them tasks that are still open, soonest due first.

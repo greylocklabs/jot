@@ -20,6 +20,8 @@ add_library(jotcore STATIC
     Layout.cpp
     jot/NoteScan.h
     NoteScan.cpp
+    jot/TaskLine.h
+    TaskLine.cpp
     jot/Rename.h
     Rename.cpp
     jot/Settings.h
