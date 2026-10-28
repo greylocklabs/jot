@@ -145,6 +145,11 @@ public:
     /// cursor just after it.
     Q_INVOKABLE QVariantMap placeBlock(const QString &text, int position,
                                        const QString &markdown) const;
+    /// How quick add reads `typed`: `{title, due, when, repeat, labels, line}`, where `when` says
+    /// the day and time for people, and `line` is the checkbox it would add.
+    Q_INVOKABLE QVariantMap readQuickTask(const QString &typed) const;
+    /// Adds the to-do `typed` says to the inbox note, making the note if need be.
+    Q_INVOKABLE bool addQuickTask(const QString &typed);
     /// Where the editor's cursor at `cursor` in `shown`, the text it has, belongs in the note
     /// shown now that it has changed, such as by an outside edit merged in.
     Q_INVOKABLE int movedCursor(const QString &shown, int cursor) const;

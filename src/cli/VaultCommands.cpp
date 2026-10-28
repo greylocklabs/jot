@@ -4,6 +4,7 @@
 #include "jot/JoplinExport.h"
 #include "jot/JoplinImport.h"
 #include "jot/Layout.h"
+#include "jot/QuickAdd.h"
 #include "jot/Settings.h"
 #include "jot/ToDos.h"
 
@@ -192,6 +193,42 @@ int VaultCommands::create(const QString &title, const QString &notebook, const Q
         print(m_out, QJsonObject{{u"path"_s, *path}, {u"file"_s, m_vault.absolute(*path)}});
     else
         m_out << *path << "\n";
+    return 0;
+}
+
+int VaultCommands::addTask(const QString &typed, bool json)
+{
+    const QuickTask task = readQuickTask(typed, QDateTime::currentDateTime());
+    if (task.title.isEmpty()) {
+        m_err << tr("usage: jot add <to-do, with a day, time, repeat, @labels and #tags>") << "\n";
+        return 2;
+    }
+    const QString path = inboxPath(m_vault);
+    QString error;
+    const QString file = m_vault.absolute(path);
+    QString note;
+    if (QFileInfo::exists(file)) {
+        const std::optional<QString> read = notefile::read(file, &error);
+        if (!read) {
+            m_err << tr("jot: could not read %1: %2").arg(path, error) << "\n";
+            return 1;
+        }
+        note = *read;
+    }
+    if (!QDir().mkpath(QFileInfo(file).path()) ||
+        !notefile::write(file, withTaskAdded(note, task.line), &error)) {
+        m_err << tr("jot: could not add to %1: %2").arg(path, error) << "\n";
+        return 1;
+    }
+    m_index.update({path});
+    if (json)
+        print(m_out, QJsonObject{{u"path"_s, path},
+                                 {u"line"_s, task.line},
+                                 {u"title"_s, task.title},
+                                 {u"due"_s, task.due},
+                                 {u"repeat"_s, task.repeat}});
+    else
+        m_out << path << ": - [ ] " << task.line << "\n";
     return 0;
 }
 

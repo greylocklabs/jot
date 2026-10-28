@@ -216,6 +216,7 @@ format: 1
 attachments: per-note # per-note, per-folder or vault
 attachments-folder: attachments # for per-folder and vault layouts
 links: markdown # markdown or wikilink, for note-to-note links
+inbox: Inbox.md # where quick add puts to-dos, as a checkbox at the end
 ```
 
 Jot refuses to write to a vault whose `format` is newer than it understands, and says so.

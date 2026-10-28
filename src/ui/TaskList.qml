@@ -9,6 +9,9 @@ import QtQuick.Controls
 Rectangle {
     id: root
 
+    /// The + was pressed, to add a to-do.
+    signal addRequested
+
     color: Theme.bg
 
     Column {
@@ -22,30 +25,44 @@ Rectangle {
         }
         spacing: Theme.space3
 
-        ModeSwitch {
-            objectName: "taskViews"
-            readonly property var views: ["today", "upcoming", "anytime", "all"]
+        Row {
+            width: parent.width
+            spacing: Theme.space3
 
-            options: [
-                {
-                    "label": qsTr("Today"),
-                    "tip": qsTr("Overdue, and due today")
-                },
-                {
-                    "label": qsTr("Upcoming"),
-                    "tip": qsTr("Due after today, soonest first")
-                },
-                {
-                    "label": qsTr("Anytime"),
-                    "tip": qsTr("Not due on any day")
-                },
-                {
-                    "label": qsTr("All"),
-                    "tip": qsTr("Everything left to do")
-                }
-            ]
-            current: Math.max(0, views.indexOf(Vault.tasks.view))
-            onPicked: index => Vault.tasks.view = views[index]
+            ModeSwitch {
+                objectName: "taskViews"
+                readonly property var views: ["today", "upcoming", "anytime", "all"]
+
+                options: [
+                    {
+                        "label": qsTr("Today"),
+                        "tip": qsTr("Overdue, and due today")
+                    },
+                    {
+                        "label": qsTr("Upcoming"),
+                        "tip": qsTr("Due after today, soonest first")
+                    },
+                    {
+                        "label": qsTr("Anytime"),
+                        "tip": qsTr("Not due on any day")
+                    },
+                    {
+                        "label": qsTr("All"),
+                        "tip": qsTr("Everything left to do")
+                    }
+                ]
+                current: Math.max(0, views.indexOf(Vault.tasks.view))
+                onPicked: index => Vault.tasks.view = views[index]
+            }
+
+            StickerButton {
+                anchors.verticalCenter: parent.verticalCenter
+                visible: Vault.writable
+                glyph: "plus"
+                Accessible.name: qsTr("Add a to-do")
+                tip: qsTr("Add a to-do (Ctrl+Shift+A)")
+                onClicked: root.addRequested()
+            }
         }
 
         Row {

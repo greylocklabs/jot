@@ -80,6 +80,7 @@ qt_add_qml_module(jotui
         NoteList.qml
         PickerButton.qml
         PillButton.qml
+        QuickAdd.qml
         QuickSwitcher.qml
         ResizeFrame.qml
         SettingsDialog.qml
