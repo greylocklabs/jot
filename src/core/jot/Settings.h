@@ -46,13 +46,13 @@ class Settings : public QObject
     Q_PROPERTY(QString leaderKey READ leaderKey WRITE setLeaderKey NOTIFY keyboardChanged)
     /// Milliseconds the leader waits for the next key; 0 waits until Escape.
     Q_PROPERTY(int leaderTimeout READ leaderTimeout WRITE setLeaderTimeout NOTIFY keyboardChanged)
-    /// The version that ran last, so a new one can say what changed.
     /// Closing the window leaves Jot running in the tray, so reminders still come.
     Q_PROPERTY(bool keepRunning READ keepRunning WRITE setKeepRunning NOTIFY remindersChanged)
     /// Notify when a to-do comes due.
     Q_PROPERTY(bool remindersOn READ remindersOn WRITE setRemindersOn NOTIFY remindersChanged)
     /// When, as "HH:mm" local time, a to-do due on a day with no time of its own reminds.
     Q_PROPERTY(QString reminderTime READ reminderTime WRITE setReminderTime NOTIFY remindersChanged)
+    /// The version that ran last, so a new one can say what changed.
     Q_PROPERTY(QString lastSeenVersion READ lastSeenVersion WRITE setLastSeenVersion NOTIFY
                    lastSeenVersionChanged)
 

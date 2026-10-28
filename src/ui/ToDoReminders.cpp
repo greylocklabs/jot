@@ -47,6 +47,7 @@ void ToDoReminders::setup(VaultController *vault, greylock::NotificationServer *
     m_lastCheck =
         m_settings->lastReminderCheck().isValid() ? m_settings->lastReminderCheck() : m_now();
     connect(m_vault, &VaultController::notesChanged, &m_soon, qOverload<>(&QTimer::start));
+    connect(m_vault, &VaultController::openChanged, this, &ToDoReminders::forget);
     connect(m_settings, &Settings::remindersChanged, &m_soon, qOverload<>(&QTimer::start));
     connect(m_server, &greylock::NotificationServer::actionInvoked, this, &ToDoReminders::onAction);
     connect(m_server, &greylock::NotificationServer::closed, this,
@@ -69,9 +70,10 @@ void ToDoReminders::check()
     }
 
     const QTime allDay = QTime::fromString(m_settings->reminderTime(), u"HH:mm"_s);
+    const QList<ToDo> open = toDos(*index, ToDoView::All, now.date());
     QList<ToDo> due;
     QDateTime next;
-    for (const ToDo &todo : toDos(*index, ToDoView::All, now.date())) {
+    for (const ToDo &todo : open) {
         const QDateTime at = reminderAt(todo, allDay);
         if (!at.isValid())
             continue;
@@ -82,7 +84,12 @@ void ToDoReminders::check()
     }
     for (auto it = m_snoozed.begin(); it != m_snoozed.end();) {
         if (it->at <= now) {
-            due.append(it->todo);
+            // Only if it is still open and says the same; it may have moved to another line.
+            const auto same = std::find_if(open.cbegin(), open.cend(), [&](const ToDo &todo) {
+                return todo.path == it->todo.path && todo.text == it->todo.text;
+            });
+            if (same != open.cend())
+                due.append(*same);
             it = m_snoozed.erase(it);
         } else {
             if (!next.isValid() || it->at < next)
@@ -157,10 +164,14 @@ void ToDoReminders::onAction(uint id, const QString &key)
     } else if (key == u"default"_s) {
         Q_EMIT openRequested(todo.path, todo.line);
     } else if (key == u"done"_s) {
-        if (todo.kind == u"note"_s)
-            m_vault->completeTask(todo.path);
-        else
-            m_vault->setTaskDone(todo.path, todo.line, true, todo.text);
+        const bool ticked = todo.kind == u"note"_s
+                                ? m_vault->completeTask(todo.path)
+                                : m_vault->setTaskDone(todo.path, todo.line, true, todo.text);
+        // Left as it was, as when the note changed since, the to-do is shown to tick by hand.
+        if (!ticked) {
+            Q_EMIT openRequested(todo.path, todo.line);
+            return;
+        }
     } else if (key == u"snooze"_s) {
         m_snoozed.append({todo, m_now().addSecs(60LL * kSnoozeMinutes)});
         m_soon.start();
@@ -169,6 +180,15 @@ void ToDoReminders::onAction(uint id, const QString &key)
     }
     m_server->close(id);
     m_shown.remove(id);
+}
+
+void ToDoReminders::forget()
+{
+    // What was shown or snoozed belongs to the vault that was open.
+    for (auto it = m_shown.cbegin(); it != m_shown.cend(); ++it)
+        m_server->close(it.key());
+    m_shown.clear();
+    m_snoozed.clear();
 }
 
 } // namespace jot
