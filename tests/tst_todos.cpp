@@ -16,6 +16,7 @@ private Q_SLOTS:
     void cleanup();
     void showsEachView();
     void filtersByLabelAndTag();
+    void remindsAtTheTimeOrInTheMorning();
 
 private:
     QStringList titles(ToDoView view, const QString &label = {}, const QString &tag = {}) const;
@@ -97,6 +98,26 @@ void TestToDos::filtersByLabelAndTag()
              (QStringList{u"Late fee #home/money"_s, u"Taxes"_s}));
     QCOMPARE(titles(ToDoView::Today, u"hours"_s, u"home"_s),
              QStringList{u"Late fee #home/money"_s});
+}
+
+void TestToDos::remindsAtTheTimeOrInTheMorning()
+{
+    const QTime nine(9, 0);
+    ToDo todo;
+    QVERIFY(!reminderAt(todo, nine).isValid());
+    todo.due = u"2026-10-29"_s;
+    QCOMPARE(reminderAt(todo, nine), QDateTime(QDate(2026, 10, 29), nine));
+    todo.due = u"2026-10-29T14:30"_s;
+    QCOMPARE(reminderAt(todo, nine), QDateTime(QDate(2026, 10, 29), QTime(14, 30)));
+    todo.due = u"2026-10-29 07:15"_s;
+    QCOMPARE(reminderAt(todo, nine), QDateTime(QDate(2026, 10, 29), QTime(7, 15)));
+    todo.due = u"2026-10-29T14:30:00Z"_s;
+    QCOMPARE(reminderAt(todo, nine),
+             QDateTime(QDate(2026, 10, 29), QTime(14, 30), QTimeZone::UTC).toLocalTime());
+
+    // Ticking finds a checkbox by its text as written.
+    const ToDo call = toDos(*m_index, ToDoView::Today, m_today).last();
+    QCOMPARE(call.text, u"Call Soren @minutes #calls 📅 2026-10-28 14:00"_s);
 }
 
 QTEST_GUILESS_MAIN(TestToDos)

@@ -22,6 +22,7 @@ private Q_SLOTS:
     void keepsColumnWidthsInBounds();
     void keepsKeyboardChoices();
     void keepsTheTasksView();
+    void keepsReminderChoices();
 };
 
 void TestSettings::startsWithDefaults()
@@ -178,6 +179,32 @@ void TestSettings::keepsTheTasksView()
     settings.setTasksView(u"anytime"_s);
     settings.reset();
     QCOMPARE(settings.tasksView(), u"today"_s);
+}
+
+void TestSettings::keepsReminderChoices()
+{
+    QTemporaryDir dir;
+    const QString path = dir.filePath(u"settings.ini"_s);
+    {
+        Settings settings(path);
+        QVERIFY(settings.keepRunning());
+        QVERIFY(settings.remindersOn());
+        QCOMPARE(settings.reminderTime(), u"09:00"_s);
+        QVERIFY(!settings.lastReminderCheck().isValid());
+        settings.setKeepRunning(false);
+        settings.setRemindersOn(false);
+        settings.setReminderTime(u"7:30"_s);
+        settings.setReminderTime(u"25:00"_s);
+        settings.setLastReminderCheck(QDateTime(QDate(2026, 10, 28), QTime(8, 0)));
+    }
+    Settings settings(path);
+    QVERIFY(!settings.keepRunning());
+    QVERIFY(!settings.remindersOn());
+    QCOMPARE(settings.reminderTime(), u"07:30"_s);
+    QCOMPARE(settings.lastReminderCheck(), QDateTime(QDate(2026, 10, 28), QTime(8, 0)));
+    settings.reset();
+    QVERIFY(settings.keepRunning());
+    QCOMPARE(settings.reminderTime(), u"09:00"_s);
 }
 
 QTEST_GUILESS_MAIN(TestSettings)

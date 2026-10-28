@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QDateTime>
 #include <QObject>
 #include <QSettings>
 #include <QStringList>
@@ -46,6 +47,12 @@ class Settings : public QObject
     /// Milliseconds the leader waits for the next key; 0 waits until Escape.
     Q_PROPERTY(int leaderTimeout READ leaderTimeout WRITE setLeaderTimeout NOTIFY keyboardChanged)
     /// The version that ran last, so a new one can say what changed.
+    /// Closing the window leaves Jot running in the tray, so reminders still come.
+    Q_PROPERTY(bool keepRunning READ keepRunning WRITE setKeepRunning NOTIFY remindersChanged)
+    /// Notify when a to-do comes due.
+    Q_PROPERTY(bool remindersOn READ remindersOn WRITE setRemindersOn NOTIFY remindersChanged)
+    /// When, as "HH:mm" local time, a to-do due on a day with no time of its own reminds.
+    Q_PROPERTY(QString reminderTime READ reminderTime WRITE setReminderTime NOTIFY remindersChanged)
     Q_PROPERTY(QString lastSeenVersion READ lastSeenVersion WRITE setLastSeenVersion NOTIFY
                    lastSeenVersionChanged)
 
@@ -100,6 +107,17 @@ public:
                                                    QStringLiteral(" ")};
     [[nodiscard]] QString lastSeenVersion() const { return m_lastSeenVersion; }
     void setLastSeenVersion(const QString &version);
+    [[nodiscard]] bool keepRunning() const { return m_keepRunning; }
+    void setKeepRunning(bool keep);
+    [[nodiscard]] bool remindersOn() const { return m_remindersOn; }
+    void setRemindersOn(bool on);
+    [[nodiscard]] QString reminderTime() const { return m_reminderTime; }
+    /// Takes "H:mm" or "HH:mm"; anything else is ignored.
+    void setReminderTime(const QString &time);
+    /// When reminders were last looked for, so those that came due while Jot was closed can be
+    /// told; invalid before the first look.
+    [[nodiscard]] QDateTime lastReminderCheck() const { return m_lastReminderCheck; }
+    void setLastReminderCheck(const QDateTime &at);
 
     /// Puts every choice back to its default. The vault stays open, and which
     /// notebooks are folded is kept, since neither is a preference.
@@ -120,6 +138,7 @@ Q_SIGNALS:
     void readModeChanged();
     void keyboardChanged();
     void lastSeenVersionChanged();
+    void remindersChanged();
 
 private:
     QSettings m_store;
@@ -139,6 +158,10 @@ private:
     QString m_leaderKey = QStringLiteral(",");
     int m_leaderTimeout = 5000;
     QString m_lastSeenVersion;
+    bool m_keepRunning = true;
+    bool m_remindersOn = true;
+    QString m_reminderTime = QStringLiteral("09:00");
+    QDateTime m_lastReminderCheck;
 };
 
 } // namespace jot

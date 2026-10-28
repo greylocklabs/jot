@@ -45,6 +45,8 @@ jot_add_test(tst_windowbuttons)
 target_link_libraries(tst_windowbuttons PRIVATE jotui)
 jot_add_test(tst_vaultcontroller)
 target_link_libraries(tst_vaultcontroller PRIVATE jotui)
+jot_add_test(tst_todoreminders)
+target_link_libraries(tst_todoreminders PRIVATE jotui)
 target_compile_definitions(tst_vaultcontroller PRIVATE
     JOT_SAMPLE_VAULT="${CMAKE_CURRENT_SOURCE_DIR}/data/sample-vault")
 jot_add_test(tst_noteeditor)
