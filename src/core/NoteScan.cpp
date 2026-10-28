@@ -316,12 +316,18 @@ std::optional<QString> setTaskDone(const QString &note, int line, bool done, con
         changed[mark] = u' ';
         return changed;
     }
-    const qsizetype start = note.lastIndexOf(u'\n', mark) + 1;
-    qsizetype end = note.indexOf(u'\n', mark);
+    const TickEdit edit = tickedLineAt(note, mark, today);
+    return changed.replace(edit.start, edit.end - edit.start, edit.text);
+}
+
+TickEdit tickedLineAt(QStringView note, qsizetype position, const QDate &today)
+{
+    position = std::clamp<qsizetype>(position, 0, note.size());
+    const qsizetype start = position > 0 ? note.lastIndexOf(u'\n', position - 1) + 1 : 0;
+    qsizetype end = note.indexOf(u'\n', position);
     if (end < 0)
         end = note.size();
-    return changed.replace(start, end - start,
-                           completedTaskLine(note.sliced(start, end - start), today));
+    return {start, end, completedTaskLine(note.sliced(start, end - start).toString(), today)};
 }
 
 int bodyFirstLine(QStringView note, QStringView body)

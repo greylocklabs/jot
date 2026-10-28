@@ -584,9 +584,10 @@ QVariantMap VaultController::readQuickTask(const QString &typed) const
             {u"line"_s, task.line}};
 }
 
-QString VaultController::completedTaskLine(const QString &line) const
+QVariantMap VaultController::tickedLineAt(const QString &text, int position) const
 {
-    return jot::completedTaskLine(line, QDate::currentDate());
+    const TickEdit edit = jot::tickedLineAt(text, position, QDate::currentDate());
+    return {{u"start"_s, int(edit.start)}, {u"end"_s, int(edit.end)}, {u"text"_s, edit.text}};
 }
 
 bool VaultController::addQuickTask(const QString &typed)

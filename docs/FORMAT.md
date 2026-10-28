@@ -172,9 +172,10 @@ the same vault works there:
   shows it as text.
 - `🔁` and a rule is how it repeats, `✅` and a date when it was done. Jot reads `every day`,
   `every week`, `every month` and `every year`, with a number (`every 2 weeks`) or `other`,
-  `every weekday`, and `every monday` through `every sunday`. Ticking one that is due writes the
-  next one above it, unticked and due on its next day after today, and gives the ticked one `✅`
-  and today's date, as Obsidian does. A rule Jot does not read is kept, and only ticked.
+  `every weekday`, `every monday` through `every sunday`, and `every 2 weeks on monday`. Ticking
+  one that is due writes the next one above it, unticked and due on its next day after today,
+  and gives the ticked one `✅` and today's date, as Obsidian does. A rule Jot does not read is
+  kept, and only ticked.
 - `@label` gives it a label, like Todoist's. `#tags` work as they do anywhere in a note.
 - Each marker's value runs to the next marker. Obsidian's other markers (`⏳`, `🛫`, `➕`, `❌`
   and the priorities) are kept as written, and not yet read.

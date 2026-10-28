@@ -74,7 +74,12 @@ void TestTaskLine::findsTheNextDay()
     QCOMPARE(nextOccurrence(u"Every Monday"_s, wednesday), QDate(2026, 11, 2));
     QCOMPARE(nextOccurrence(u"every wednesday"_s, wednesday), QDate(2026, 11, 4));
     QCOMPARE(nextOccurrence(u"every weekday"_s, QDate(2026, 10, 30)), QDate(2026, 11, 2));
+    QCOMPARE(nextOccurrence(u"every 2 weeks on monday"_s, QDate(2026, 11, 2)), QDate(2026, 11, 16));
+    QCOMPARE(nextOccurrence(u"every 2 weeks on monday"_s, wednesday), QDate(2026, 11, 9));
     QVERIFY(!nextOccurrence(u"every full moon"_s, wednesday).isValid());
+    // A count past any sensible repeat is no rule Jot reads.
+    QVERIFY(!nextOccurrence(u"every 400000000 weeks"_s, wednesday).isValid());
+    QVERIFY(!nextOccurrence(u"every 99999999999999999999 days"_s, wednesday).isValid());
     QVERIFY(!nextOccurrence(u"every week"_s, {}).isValid());
 }
 
@@ -97,6 +102,8 @@ void TestTaskLine::writesTheNextOneWhenDone()
         completedTaskLine(u"- [ ] Pay 🔁 every month 📅 2026-10-28\r"_s, today),
         u"- [ ] Pay 🔁 every month 📅 2026-11-28\r\n- [x] Pay 🔁 every month 📅 2026-10-28 ✅ 2026-10-28\r"_s);
     QCOMPARE(completedTaskLine(u"- [ ] Pay 🔁 every week"_s, today), u"- [x] Pay 🔁 every week"_s);
+    QCOMPARE(completedTaskLine(u"- [ ] Huge 🔁 every 400000000 weeks 📅 2000-01-01"_s, today),
+             u"- [x] Huge 🔁 every 400000000 weeks 📅 2000-01-01"_s);
     QCOMPARE(completedTaskLine(u"- [ ] Moon 🔁 every full moon 📅 2026-10-28"_s, today),
              u"- [x] Moon 🔁 every full moon 📅 2026-10-28"_s);
 }

@@ -64,7 +64,7 @@ TaskLine readTaskLine(const QString &text)
 QDate nextOccurrence(const QString &rule, const QDate &from)
 {
     static const QRegularExpression every(
-        uR"(^every\s+(?:(other|\d+)\s+)?(day|week|month|year|weekday|monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?$)"_s,
+        uR"(^every\s+(?:(other|\d+)\s+)?(day|week|month|year|weekday|monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?(?:\s+on\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday))?$)"_s,
         QRegularExpression::CaseInsensitiveOption);
     static const QStringList weekdays = {u"monday"_s, u"tuesday"_s,  u"wednesday"_s, u"thursday"_s,
                                          u"friday"_s, u"saturday"_s, u"sunday"_s};
@@ -72,26 +72,39 @@ QDate nextOccurrence(const QString &rule, const QDate &from)
     if (!m.hasMatch() || !from.isValid())
         return {};
     const QString count = m.captured(1).toLower();
-    const int n = count.isEmpty() ? 1 : count == u"other" ? 2 : count.toInt();
-    const QString step = m.captured(2).toLower();
-    if (n < 1)
+    // A count beyond any sensible repeat is a rule Jot does not read, rather than days too far
+    // off to count.
+    bool ok = true;
+    const qint64 n = count.isEmpty() ? 1 : count == u"other" ? 2 : count.toLongLong(&ok);
+    if (!ok || n < 1 || n > 1000)
         return {};
+    const QString step = m.captured(2).toLower();
+    const QString on = m.captured(3).toLower();
+    // The next `day` of the week after `after`.
+    const auto nextOn = [](const QDate &after, int day) {
+        return after.addDays((day - after.dayOfWeek() + 6) % 7 + 1);
+    };
+    if (!on.isEmpty()) {
+        // Every N weeks on a day: that day, N weeks on.
+        if (step != u"week")
+            return {};
+        return nextOn(from.addDays(7 * (n - 1)), int(weekdays.indexOf(on)) + 1);
+    }
     if (step == u"day")
         return from.addDays(n);
     if (step == u"week")
         return from.addDays(7 * n);
     if (step == u"month")
-        return from.addMonths(n);
+        return from.addMonths(int(n));
     if (step == u"year")
-        return from.addYears(n);
+        return from.addYears(int(n));
     if (step == u"weekday") {
         QDate next = from.addDays(1);
         while (next.dayOfWeek() > 5)
             next = next.addDays(1);
         return next;
     }
-    const int wanted = int(weekdays.indexOf(step)) + 1;
-    return from.addDays((wanted - from.dayOfWeek() + 6) % 7 + 1);
+    return nextOn(from, int(weekdays.indexOf(step)) + 1);
 }
 
 QString completedTaskLine(const QString &line, const QDate &today)
@@ -110,8 +123,10 @@ QString completedTaskLine(const QString &line, const QDate &today)
     if (!next.isValid())
         return done + m.captured(4);
     // Done late, it comes round again after today rather than on a day already gone.
-    while (next <= today)
+    while (next.isValid() && next <= today)
         next = nextOccurrence(parts.repeat, next);
+    if (!next.isValid())
+        return done + m.captured(4);
     QString again = text;
     const QRegularExpressionMatch day = due.match(again);
     again.replace(day.capturedStart(1), day.capturedLength(1), next.toString(Qt::ISODate));
