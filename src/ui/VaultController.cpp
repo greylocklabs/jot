@@ -7,8 +7,10 @@
 #include "jot/Logging.h"
 #include "jot/Merge.h"
 #include "jot/NoteScan.h"
+#include "jot/QuickAdd.h"
 #include "jot/Rename.h"
 #include "jot/Settings.h"
+#include "jot/TaskLine.h"
 
 #include <QBuffer>
 #include <QClipboard>
@@ -18,6 +20,7 @@
 #include <QGuiApplication>
 #include <QImage>
 #include <QImageReader>
+#include <QLocale>
 #include <QRegularExpression>
 
 using namespace Qt::StringLiterals;
@@ -556,6 +559,56 @@ QVariantMap VaultController::placeBlock(const QString &text, int position,
     return {{u"position"_s, position},
             {u"text"_s, inserted},
             {u"cursor"_s, position + int(inserted.size())}};
+}
+
+QVariantMap VaultController::readQuickTask(const QString &typed) const
+{
+    const QuickTask task = jot::readQuickTask(typed, QDateTime::currentDateTime());
+    const QLocale locale;
+    QString when;
+    if (!task.due.isEmpty()) {
+        const QDate day = QDate::fromString(task.due.left(10), Qt::ISODate);
+        const QDate today = QDate::currentDate();
+        when = day == today              ? tr("Today")
+               : day == today.addDays(1) ? tr("Tomorrow")
+                                         : locale.toString(day, u"dddd, MMMM d"_s);
+        const QTime time = QTime::fromString(task.due.mid(11, 5), u"HH:mm"_s);
+        if (time.isValid())
+            when += u", "_s + locale.toString(time, QLocale::ShortFormat);
+    }
+    return {{u"title"_s, task.title},
+            {u"due"_s, task.due},
+            {u"when"_s, when},
+            {u"repeat"_s, task.repeat},
+            {u"labels"_s, readTaskLine(task.line).labels},
+            {u"line"_s, task.line}};
+}
+
+bool VaultController::addQuickTask(const QString &typed)
+{
+    if (!m_vault || !m_vault->writable())
+        return false;
+    const QuickTask task = jot::readQuickTask(typed, QDateTime::currentDateTime());
+    if (task.title.isEmpty())
+        return false;
+    const QString path = inboxPath(*m_vault);
+    if (QFileInfo::exists(m_vault->absolute(path)))
+        return rewriteNote(path, [&task](const QString &note) {
+            return std::optional(withTaskAdded(note, task.line));
+        });
+    QString error;
+    const QString file = m_vault->absolute(path);
+    if (!QDir().mkpath(QFileInfo(file).path()) ||
+        !notefile::write(file, withTaskAdded({}, task.line), &error)) {
+        qCWarning(lcVault) << "could not add a to-do to" << path << error;
+        setProblem(tr("Could not add the to-do: %1").arg(error));
+        return false;
+    }
+    if (m_watcher)
+        m_watcher->start();
+    m_index->update({path});
+    reloadModels();
+    return true;
 }
 
 int VaultController::movedCursor(const QString &shown, int cursor) const

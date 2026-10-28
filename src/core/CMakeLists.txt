@@ -24,6 +24,8 @@ add_library(jotcore STATIC
     TaskLine.cpp
     jot/ToDos.h
     ToDos.cpp
+    jot/QuickAdd.h
+    QuickAdd.cpp
     jot/Rename.h
     Rename.cpp
     jot/Settings.h

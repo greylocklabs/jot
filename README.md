@@ -51,6 +51,7 @@ jot show "mara"                  # print a note, by title, alias or path
 jot open "mara"                  # or open it in the app
 jot tasks --view today           # to-dos due today or overdue; also upcoming, anytime, all
 jot tasks --label minutes        # to-dos with a label, or --tag for a tag
+jot add "call Soren tomorrow 3pm @minutes"   # a to-do in the inbox, as you would say it
 jot tags                         # every tag, and how many notes have it
 jot import joplin notes.jex --dry-run   # what importing a Joplin export would do
 ```

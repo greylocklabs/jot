@@ -33,6 +33,8 @@ public:
     int create(const QString &title, const QString &notebook, const QString &body, bool json);
     /// Prints the note `name` names: a path, a title or an alias.
     int show(const QString &name);
+    /// Adds a to-do, read from `typed` as quick add reads it, to the inbox note.
+    int addTask(const QString &typed, bool json);
     /// The to-dos left in `view`, "all" when empty, with `label` and `tag` when given.
     int listTasks(bool json, const QString &view = {}, const QString &label = {},
                   const QString &tag = {});

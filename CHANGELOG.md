@@ -7,6 +7,10 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ### Added
 
+- Quick add: press Ctrl+Shift+A, or the + in Tasks, and type a to-do as you would say it, "call
+  Soren tomorrow 3pm @minutes #calls" or "water the plants every week". Jot shows the day, time,
+  repeat and labels it read, then adds a checkbox to the Inbox note, which `inbox:` in
+  `.jot/vault.yaml` can name. `jot add` does the same from the command line.
 - Tasks has Today, Upcoming, Anytime and All views, as a to-do app does. A checkbox can say when
   it is due and give itself labels, in the format of Obsidian's Tasks plugin:
   `- [ ] Call Soren @minutes 📅 2026-10-29 14:00`. Labels are listed in the sidebar, and choosing

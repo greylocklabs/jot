@@ -322,6 +322,7 @@ ApplicationWindow {
                 onReset: Settings.resetSidebarWidth()
             }
             TaskList {
+                onAddRequested: quickAdd.open()
                 visible: Vault.isOpen && Vault.showingTasks
                 anchors {
                     left: sidebar.right
@@ -372,6 +373,10 @@ ApplicationWindow {
 
     QuickSwitcher {
         id: switcher
+    }
+
+    QuickAdd {
+        id: quickAdd
     }
 
     CommandPalette {
@@ -444,6 +449,7 @@ ApplicationWindow {
         const note = Vault.current !== ""
         switch (id) {
         case "newNote":
+        case "quickAdd":
         case "importJoplin":
             return Vault.isOpen && Vault.writable
         case "goTo":
@@ -487,6 +493,9 @@ ApplicationWindow {
             break
         case "goTo":
             switcher.open()
+            break
+        case "quickAdd":
+            quickAdd.open()
             break
         case "commands":
             palette.unavailable = keys.actions.filter(a => a.scope === "window" && !can(a.id)).map(a

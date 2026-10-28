@@ -29,6 +29,7 @@ private Q_SLOTS:
     void makesNotesWithAPipedBody();
     void showsANoteByTitleAliasOrPath();
     void listsWhatIsLeftToDo();
+    void addsAToDoToTheInbox();
     void opensANoteInTheApp();
     void listsTagsWithTheirNotes();
     void importsAJoplinExportAfterADryRun();
@@ -210,6 +211,23 @@ void TestVaultCommands::listsWhatIsLeftToDo()
     QCOMPARE(run([](auto &c) { return c.listTasks(true, u"anytime"_s, {}, u"#calls"_s); }), 0);
     QVERIFY(json().array().isEmpty());
     QCOMPARE(run([](auto &c) { return c.listTasks(false, u"later"_s); }), 2);
+}
+
+void TestVaultCommands::addsAToDoToTheInbox()
+{
+    QCOMPARE(run([](auto &c) { return c.addTask(u"pay rent today @minutes"_s, true); }), 0);
+    QCOMPARE(json()[u"path"_s].toString(), u"Inbox.md"_s);
+    QCOMPARE(json()[u"due"_s].toString(), QDate::currentDate().toString(Qt::ISODate));
+    QCOMPARE(run([](auto &c) { return c.addTask(u"buy rope"_s, false); }), 0);
+    QCOMPARE(m_out, u"Inbox.md: - [ ] buy rope\n"_s);
+    QString error;
+    QCOMPARE(*notefile::read(m_vault->absolute(u"Inbox.md"_s), &error),
+             u"- [ ] pay rent @minutes 📅 %1\n- [ ] buy rope\n"_s.arg(
+                 QDate::currentDate().toString(Qt::ISODate)));
+    // The index knows them at once.
+    QCOMPARE(run([](auto &c) { return c.listTasks(true, u"today"_s, u"minutes"_s); }), 0);
+    QCOMPARE(json().array().size(), 1);
+    QCOMPARE(run([](auto &c) { return c.addTask({}, false); }), 2);
 }
 
 void TestVaultCommands::opensANoteInTheApp()

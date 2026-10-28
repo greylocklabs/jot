@@ -67,6 +67,7 @@ private Q_SLOTS:
     void previewsWhatALinkLeadsTo();
     void listsAndTicksWhatIsLeftToDo();
     void headsToDosByDay();
+    void addsToDosToTheInbox();
     void importsFromJoplinAfterSayingWhatItWouldDo();
     void anImportShowsWhatItWroteToTheNoteOpen();
     void anImportThatFailsPartwayStillShowsWhatItWrote();
@@ -974,6 +975,41 @@ void TestVaultController::headsToDosByDay()
     tasks.setLabel(u"minutes"_s);
     tasks.setView(u"all"_s);
     QCOMPARE(column(tasks, "title"), (QStringList{u"Call Soren"_s, u"Buy rope"_s}));
+}
+
+void TestVaultController::addsToDosToTheInbox()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    const QVariantMap read = m_vault->readQuickTask(u"call Soren tomorrow 3pm @minutes"_s);
+    QCOMPARE(read.value(u"title"_s).toString(), u"call Soren @minutes"_s);
+    QVERIFY(read.value(u"when"_s).toString().startsWith(u"Tomorrow, "_s));
+    QCOMPARE(read.value(u"labels"_s).toStringList(), QStringList{u"minutes"_s});
+    QVERIFY(!m_vault->addQuickTask(u"   "_s));
+
+    // The inbox is made on the first, and added to after.
+    QVERIFY(m_vault->addQuickTask(u"call Soren tomorrow 3pm @minutes"_s));
+    QVERIFY(m_vault->addQuickTask(u"buy rope"_s));
+    const QString inbox = readFile(m_root + u"/Inbox.md"_s);
+    QVERIFY2(inbox.startsWith(u"- [ ] call Soren @minutes 📅 "_s), qPrintable(inbox));
+    QVERIFY(inbox.endsWith(u"15:00\n- [ ] buy rope\n"_s));
+    m_vault->tasks()->setView(u"anytime"_s);
+    QVERIFY(column(*m_vault->tasks(), "title").contains(u"buy rope"_s));
+
+    // Shown and being edited, it is added through the editor, keeping what was typed.
+    m_vault->setCurrent(u"Inbox.md"_s);
+    m_vault->setSaveDelay(60000);
+    m_vault->edit(m_vault->currentText() + u"Notes for later.\n"_s);
+    QVERIFY(m_vault->addQuickTask(u"water plants every week"_s));
+    QVERIFY(m_vault->currentText().contains(
+        u"Notes for later.\n- [ ] water plants 🔁 every week 📅 "_s));
+    QVERIFY(!m_vault->unsaved());
+
+    // A vault can name its own inbox.
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/.jot/vault.yaml"_s, u"format: 1\ninbox: Ashfall/To do\n"_s,
+                            &error));
+    QVERIFY(m_vault->addQuickTask(u"outline act two"_s));
+    QCOMPARE(readFile(m_root + u"/Ashfall/To do.md"_s), u"- [ ] outline act two\n"_s);
 }
 
 void TestVaultController::importsFromJoplinAfterSayingWhatItWouldDo()
