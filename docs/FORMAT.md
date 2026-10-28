@@ -82,6 +82,7 @@ Keys Jot understands:
 | `task`    | `open` or `done`           | Makes the note a task                           |
 | `due`     | ISO 8601 date or date-time | When a task is due                              |
 | `done`    | ISO 8601 date-time         | When a task was completed                       |
+| `labels`  | list of strings            | A task's labels, with or without `@`            |
 | `type`    | string                     | Note type, for templates and properties (later) |
 
 Rules:
@@ -94,7 +95,7 @@ Rules:
 - Jot never writes an `updated` key. The file's modification time is the update time, which keeps
   saves from rewriting the front matter.
 - No id is required or written. Links work by path and name.
-- `tags` also accepts a single string. `aliases` also accepts `alias`.
+- `tags` also accepts a single string. `aliases` also accepts `alias`, and `labels` `label`.
 
 ### Body
 
@@ -156,7 +157,23 @@ There are two kinds, and the task view shows both:
 
 - **Checkboxes** in any note: `- [ ] task` and `- [x] task`. Ticking one in Jot edits that line.
 - **Task notes**: a note with `task: open` or `task: done` in its front matter, and optionally
-  `due` and `done`. Completing one sets `task: done` and `done:` to the current time.
+  `due`, `done` and `labels`. Completing one sets `task: done` and `done:` to the current time.
+
+A checkbox says more about itself on its own line, in the format of Obsidian's Tasks plugin, so
+the same vault works there:
+
+```markdown
+- [ ] Call Soren @minutes #calls 📅 2026-10-29 14:00
+- [ ] Water the plants @day 🔁 every week 📅 2026-10-30
+- [x] Pay rent ✅ 2026-10-01
+```
+
+- `📅` and a date is when it is due. A time after the date, `14:00`, is Jot's addition; Obsidian
+  shows it as text.
+- `🔁` and a rule is how it repeats, `✅` and a date when it was done.
+- `@label` gives it a label, like Todoist's. `#tags` work as they do anywhere in a note.
+- Each marker's value runs to the next marker. Obsidian's other markers (`⏳`, `🛫`, `➕`, `❌`
+  and the priorities) are kept as written, and not yet read.
 
 ## Order, pins and notebook appearance
 

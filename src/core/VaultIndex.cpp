@@ -207,6 +207,8 @@ bool VaultIndex::createSchema(QString *error)
         u"CREATE INDEX links_by_target ON links (target)"_s,
         u"CREATE TABLE tasks (path TEXT, line INTEGER, done INTEGER, text TEXT)"_s,
         u"CREATE INDEX tasks_by_path ON tasks (path)"_s,
+        u"CREATE TABLE labels (path TEXT, label TEXT COLLATE NOCASE)"_s,
+        u"CREATE INDEX labels_by_path ON labels (path)"_s,
         u"CREATE VIRTUAL TABLE notes_fts USING fts5(path UNINDEXED, title, aliases, tags, body, "
         u"tokenize = 'unicode61 remove_diacritics 2')"_s,
         u"PRAGMA user_version = %1"_s.arg(kSchema),
@@ -266,7 +268,7 @@ void VaultIndex::drop(const QString &path)
          {u"DELETE FROM notes_fts WHERE rowid = (SELECT rowid FROM notes WHERE path = ?)"_s,
           u"DELETE FROM notes WHERE path = ?"_s, u"DELETE FROM tags WHERE path = ?"_s,
           u"DELETE FROM aliases WHERE path = ?"_s, u"DELETE FROM links WHERE source = ?"_s,
-          u"DELETE FROM tasks WHERE path = ?"_s}) {
+          u"DELETE FROM tasks WHERE path = ?"_s, u"DELETE FROM labels WHERE path = ?"_s}) {
         QSqlQuery query(db);
         query.prepare(statement);
         query.addBindValue(path);
@@ -302,6 +304,13 @@ void VaultIndex::read(const QString &path)
             tags.append(tag);
     }
     const QStringList aliases = listOf(meta.value(u"aliases"_s, meta.value(u"alias"_s)));
+    QStringList labels;
+    for (QString label : listOf(meta.value(u"labels"_s, meta.value(u"label"_s)))) {
+        if (label.startsWith(u'@'))
+            label.remove(0, 1);
+        if (!label.isEmpty() && !labels.contains(label, Qt::CaseInsensitive))
+            labels.append(label);
+    }
     QString task = meta.value(u"task"_s).toString().trimmed().toLower();
     if (task != u"open" && task != u"done")
         task.clear();
@@ -328,6 +337,7 @@ void VaultIndex::read(const QString &path)
     };
     insertAll(u"INSERT INTO tags VALUES (?, ?)"_s, tags);
     insertAll(u"INSERT INTO aliases VALUES (?, ?)"_s, aliases);
+    insertAll(u"INSERT INTO labels VALUES (?, ?)"_s, labels);
 
     for (const NoteScan::Link &link : scan.links) {
         QSqlQuery query(db);
@@ -510,6 +520,7 @@ NoteInfo VaultIndex::infoFrom(const QSqlQuery &query) const
     };
     info.tags = listFor(u"SELECT tag FROM tags WHERE path = ? ORDER BY rowid"_s);
     info.aliases = listFor(u"SELECT alias FROM aliases WHERE path = ? ORDER BY rowid"_s);
+    info.labels = listFor(u"SELECT label FROM labels WHERE path = ? ORDER BY rowid"_s);
     return info;
 }
 
@@ -534,12 +545,14 @@ QList<NoteInfo> VaultIndex::notesIn(const QString &folder) const
                       u"WHERE path LIKE ? ESCAPE '\\'"_s);
         query.addBindValue(likeEscaped(folder) + u"/%"_s);
     }
-    // Tags and aliases come in one query each, not two for every note.
+    // Tags, aliases and labels come in one query each, not three for every note.
     QHash<QString, QStringList> tags;
     QHash<QString, QStringList> aliases;
+    QHash<QString, QStringList> labels;
     QSqlDatabase db = QSqlDatabase::database(m_connection);
     for (auto [table, column, into] :
-         {std::tuple{"tags", "tag", &tags}, std::tuple{"aliases", "alias", &aliases}}) {
+         {std::tuple{"tags", "tag", &tags}, std::tuple{"aliases", "alias", &aliases},
+          std::tuple{"labels", "label", &labels}}) {
         QSqlQuery list(u"SELECT path, %1 FROM %2 ORDER BY rowid"_s.arg(QLatin1String(column),
                                                                        QLatin1String(table)),
                        db);
@@ -559,6 +572,7 @@ QList<NoteInfo> VaultIndex::notesIn(const QString &folder) const
             info.modified = query.value(6).toLongLong();
             info.tags = tags.value(info.path);
             info.aliases = aliases.value(info.path);
+            info.labels = labels.value(info.path);
             notes.append(info);
         }
     }
@@ -772,10 +786,34 @@ QList<NoteTask> VaultIndex::openTasks() const
         u"SELECT path, line, done, text FROM tasks WHERE done = 0 ORDER BY path, line"_s,
         QSqlDatabase::database(m_connection));
     QList<NoteTask> tasks;
-    while (query.next())
+    while (query.next()) {
+        const QString text = query.value(3).toString();
         tasks.append({query.value(0).toString(), query.value(1).toInt(), query.value(2).toBool(),
-                      query.value(3).toString()});
+                      text, readTaskLine(text)});
+    }
     return tasks;
+}
+
+QList<TagCount> VaultIndex::labels() const
+{
+    QHash<QString, TagCount> counts;
+    const auto count = [&counts](const QStringList &labels) {
+        for (const QString &label : labels) {
+            TagCount &each = counts[label.toCaseFolded()];
+            if (each.tag.isEmpty())
+                each.tag = label;
+            ++each.notes;
+        }
+    };
+    for (const NoteTask &task : openTasks())
+        count(task.parts.labels);
+    for (const NoteInfo &note : openTaskNotes())
+        count(note.labels);
+    QList<TagCount> labels = counts.values();
+    std::ranges::sort(labels, [](const TagCount &a, const TagCount &b) {
+        return naturalCompare(a.tag, b.tag) < 0;
+    });
+    return labels;
 }
 
 QList<NoteInfo> VaultIndex::openTaskNotes() const

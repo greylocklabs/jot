@@ -36,6 +36,7 @@ private Q_SLOTS:
     void listsOpenTasksAndTaskNotes();
     void rebuildsAnIndexFromAnotherSchema();
     void sortsNotesWithThePinnedFirst();
+    void readsToDoDatesAndLabels();
 
 private:
     void write(const QString &path, const QString &text);
@@ -307,8 +308,9 @@ void TestVaultIndex::listsOpenTasksAndTaskNotes()
     write(u"Done.md"_s, u"---\ntask: done\n---\n"_s);
     open();
 
-    QCOMPARE(m_index->openTasks(), (QList<NoteTask>{{u"Shop.md"_s, 1, false, u"paper"_s},
-                                                    {u"Shop.md"_s, 3, false, u"ink"_s}}));
+    QCOMPARE(m_index->openTasks(),
+             (QList<NoteTask>{{u"Shop.md"_s, 1, false, u"paper"_s, readTaskLine(u"paper"_s)},
+                              {u"Shop.md"_s, 3, false, u"ink"_s, readTaskLine(u"ink"_s)}}));
     QStringList tasks;
     for (const NoteInfo &note : m_index->openTaskNotes())
         tasks.append(note.path);
@@ -366,6 +368,26 @@ void TestVaultIndex::sortsNotesWithThePinnedFirst()
     QCOMPARE(paths(), (QStringList{u"c.md"_s, u"a.md"_s, u"b.md"_s}));
     sortNotes(notes, u"title"_s, {u"b.md"_s, u"a.md"_s});
     QCOMPARE(paths(), (QStringList{u"a.md"_s, u"b.md"_s, u"c.md"_s}));
+}
+
+void TestVaultIndex::readsToDoDatesAndLabels()
+{
+    write(u"Calls.md"_s, u"- [ ] Call Soren @minutes #calls 📅 2026-10-29 14:00\n"
+                         "- [x] Call Mara @minutes ✅ 2026-10-27\n"
+                         "- [ ] Water plants @Day 🔁 every week 📅 2026-10-30\n"_s);
+    write(u"Taxes.md"_s,
+          u"---\ntask: open\ndue: 2026-11-15\nlabels: [\"@days\", minutes]\n---\n"_s);
+    open();
+    const QList<NoteTask> tasks = m_index->openTasks();
+    QCOMPARE(tasks.size(), 2);
+    QCOMPARE(tasks.at(0).parts.title, u"Call Soren #calls"_s);
+    QCOMPARE(tasks.at(0).parts.due, u"2026-10-29T14:00"_s);
+    QCOMPARE(tasks.at(0).parts.labels, QStringList{u"minutes"_s});
+    QCOMPARE(tasks.at(1).parts.repeat, u"every week"_s);
+    QCOMPARE(m_index->openTaskNotes().first().labels, (QStringList{u"days"_s, u"minutes"_s}));
+    // Open to-dos only, case aside, in order.
+    QCOMPARE(m_index->labels(),
+             (QList<TagCount>{{u"Day"_s, 1}, {u"days"_s, 1}, {u"minutes"_s, 2}}));
 }
 
 QTEST_GUILESS_MAIN(TestVaultIndex)
