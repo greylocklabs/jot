@@ -36,10 +36,15 @@ void TestTaskLine::reads_data()
         << TaskLine{u"Pay rent #home"_s, u"2026-11-01"_s, {}, {}, {}};
     QTest::newRow("other markers left out")
         << u"Plan ⏫ ⏳ 2026-10-30 🛫 2026-10-28"_s << TaskLine{u"Plan"_s, {}, {}, {}, {}};
+    QTest::newRow("labels and tags after the rule")
+        << u"Water plants 🔁 every week @day #home"_s
+        << TaskLine{u"Water plants #home"_s, {}, u"every week"_s, {}, {u"day"_s}};
+    QTest::newRow("words after a priority")
+        << u"Plan ⏫ the trip @days"_s << TaskLine{u"Plan the trip"_s, {}, {}, {}, {u"days"_s}};
     QTest::newRow("an address is no label")
         << u"Mail hello@example.org"_s << TaskLine{u"Mail hello@example.org"_s, {}, {}, {}, {}};
     QTest::newRow("a date that is not one")
-        << u"Pay 📅 soon"_s << TaskLine{u"Pay"_s, {}, {}, {}, {}};
+        << u"Pay 📅 soon @bills"_s << TaskLine{u"Pay soon"_s, {}, {}, {}, {u"bills"_s}};
 }
 
 void TestTaskLine::reads()

@@ -35,15 +35,22 @@ TaskLine readTaskLine(const QString &text)
         } else if (kind == u"✅"_s && day.hasMatch()) {
             line.done = day.captured(1);
         } else if (kind == u"🔁"_s) {
-            line.repeat = value;
+            // A label or a tag after the rule is the to-do's, not part of the rule.
+            QStringList rule;
+            for (const QString &word : value.split(u' ', Qt::SkipEmptyParts)) {
+                if (word.startsWith(u'@') || word.startsWith(u'#'))
+                    words += u' ' + word;
+                else
+                    rule << word;
+            }
+            line.repeat = rule.join(u' ');
+            continue;
         }
-        // Words after a value, such as a tag written after the date, still belong to the to-do.
-        if (kind != u"🔁"_s) {
-            const QString rest =
-                day.hasMatch() ? value.sliced(day.capturedLength()).trimmed() : QString();
-            if (!rest.isEmpty())
-                words += u' ' + rest;
-        }
+        // Words after a date, such as a tag, and a value that is no date at all, still belong
+        // to the to-do.
+        const QString rest = day.hasMatch() ? value.sliced(day.capturedLength()).trimmed() : value;
+        if (!rest.isEmpty())
+            words += u' ' + rest;
     }
     for (const QRegularExpressionMatch &m : label.globalMatch(words)) {
         if (!line.labels.contains(m.captured(1), Qt::CaseInsensitive))
