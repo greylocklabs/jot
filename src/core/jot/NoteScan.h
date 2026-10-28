@@ -67,6 +67,19 @@ rewriteLinks(QStringView body,
                                                  const QString &text = {},
                                                  const QDate &today = QDate::currentDate());
 
+/// What ticking a checkbox done changes: the stretch of text from `start` to `end`, its whole
+/// line, becomes `text`.
+struct TickEdit
+{
+    qsizetype start = 0;
+    qsizetype end = 0;
+    QString text;
+};
+
+/// The edit that ticks done the checkbox on the line holding `position` in `note`, on `today`,
+/// as completedTaskLine() says: the next one above it when it repeats.
+[[nodiscard]] TickEdit tickedLineAt(QStringView note, qsizetype position, const QDate &today);
+
 /// Where `line` (counted from 1) starts in `text`, or its end for a line past the last.
 [[nodiscard]] qsizetype lineStart(QStringView text, int line);
 

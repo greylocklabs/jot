@@ -600,12 +600,9 @@ Rectangle {
                         }
                         // Ticked, the whole line is written again, with the next one above it
                         // when it repeats.
-                        const start = body.text.lastIndexOf("\n", hit.position - 1) + 1
-                        const newline = body.text.indexOf("\n", hit.position)
-                        const end = newline < 0 ? body.length : newline
-                        const line = Vault.completedTaskLine(body.getText(start, end))
-                        body.remove(start, end)
-                        body.insert(start, line)
+                        const edit = Vault.tickedLineAt(body.text, hit.position)
+                        body.remove(edit.start, edit.end)
+                        body.insert(edit.start, edit.text)
                     }
                 }
                 HoverHandler {

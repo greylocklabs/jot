@@ -167,6 +167,11 @@ void TestNoteScan::tickingARepeatingTaskWritesTheNext()
     QVERIFY(ticked);
     QCOMPARE(*ticked, u"# Chores\n\n- [ ] Water 🔁 every week 📅 2026-11-04\n"
                       "- [x] Water 🔁 every week 📅 2026-10-28 ✅ 2026-10-28\n- [ ] Sweep\n"_s);
+    // The editor's edit for the same: the line's stretch, and what replaces it.
+    const TickEdit edit = tickedLineAt(note, note.indexOf(u"[ ] Water"_s) + 1, QDate(2026, 10, 28));
+    QCOMPARE(edit.start, note.indexOf(u"- [ ] Water"_s));
+    QCOMPARE(edit.end, note.indexOf(u"\n- [ ] Sweep"_s));
+    QVERIFY(edit.text.startsWith(u"- [ ] Water 🔁 every week 📅 2026-11-04\n- [x] Water"_s));
     // Unticking only unticks.
     QCOMPARE(*setTaskDone(*ticked, 4, false, {}, QDate(2026, 10, 28)),
              u"# Chores\n\n- [ ] Water 🔁 every week 📅 2026-11-04\n"
