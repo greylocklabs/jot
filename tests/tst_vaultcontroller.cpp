@@ -66,6 +66,7 @@ private Q_SLOTS:
     void listsBacklinksAndMentions();
     void previewsWhatALinkLeadsTo();
     void listsAndTicksWhatIsLeftToDo();
+    void headsToDosByDay();
     void importsFromJoplinAfterSayingWhatItWouldDo();
     void anImportShowsWhatItWroteToTheNoteOpen();
     void anImportThatFailsPartwayStillShowsWhatItWrote();
@@ -927,6 +928,52 @@ void TestVaultController::listsAndTicksWhatIsLeftToDo()
     m_vault->openAt(u"Ashfall/Characters/Soren.md"_s, 7);
     QCOMPARE(m_vault->current(), u"Ashfall/Characters/Soren.md"_s);
     QCOMPARE(m_vault->currentText().mid(reveal.first().first().toInt(), 9), u"- [x] dec"_s);
+}
+
+void TestVaultController::headsToDosByDay()
+{
+    const QDate today = QDate::currentDate();
+    const auto day = [&today](int days) { return today.addDays(days).toString(Qt::ISODate); };
+    QString error;
+    QVERIFY(
+        notefile::write(m_root + u"/Plans.md"_s,
+                        u"- [ ] Pay the fine @hours 📅 %1\n"
+                        "- [ ] Call Soren @minutes 📅 %2 14:00\n"
+                        "- [ ] Buy rope @minutes 📅 %3\n"
+                        "- [ ] Water @day 🔁 every week 📅 %4\n"
+                        "- [ ] Next year 📅 %5\n"_s.arg(day(-2), day(0), day(1), day(3), day(400)),
+                        &error));
+    QVERIFY(m_vault->openPath(m_root));
+    TaskModel &tasks = *m_vault->tasks();
+    const QLocale locale;
+
+    tasks.setView(u"today"_s);
+    QCOMPARE(column(tasks, "group"), (QStringList{u"Overdue"_s, u"Overdue"_s, u"Today"_s}));
+    // Under a day's heading only a time is worth saying; an overdue one says its day.
+    QCOMPARE(column(tasks, "due").last(), locale.toString(QTime(14, 0), QLocale::ShortFormat));
+    QCOMPARE(column(tasks, "overdue"), (QStringList{u"true"_s, u"true"_s, u"false"_s}));
+    QCOMPARE(column(tasks, "note").last(), u"Plans"_s);
+
+    tasks.setView(u"upcoming"_s);
+    const QStringList groups = column(tasks, "group");
+    QCOMPARE(groups.at(0), u"Tomorrow"_s);
+    QCOMPARE(groups.at(1), locale.toString(today.addDays(3), u"dddd, MMMM d"_s));
+    // A day in another year says the year.
+    QVERIFY(groups.at(2).endsWith(QString::number(today.addDays(400).year())));
+    QCOMPARE(column(tasks, "repeats").at(1), u"true"_s);
+    QCOMPARE(column(tasks, "due").first(), QString());
+
+    tasks.setView(u"anytime"_s);
+    QVERIFY(!column(tasks, "title").contains(u"Buy rope"_s));
+
+    // The sidebar's labels, with how many open to-dos have each.
+    QCOMPARE(m_vault->labels(),
+             (QVariantList{QVariantMap{{u"label"_s, u"day"_s}, {u"count"_s, 1}},
+                           QVariantMap{{u"label"_s, u"hours"_s}, {u"count"_s, 1}},
+                           QVariantMap{{u"label"_s, u"minutes"_s}, {u"count"_s, 2}}}));
+    tasks.setLabel(u"minutes"_s);
+    tasks.setView(u"all"_s);
+    QCOMPARE(column(tasks, "title"), (QStringList{u"Call Soren"_s, u"Buy rope"_s}));
 }
 
 void TestVaultController::importsFromJoplinAfterSayingWhatItWouldDo()

@@ -7,7 +7,11 @@ using namespace Qt::StringLiterals;
 
 namespace jot {
 
-TaskModel::TaskModel(QObject *parent) : QAbstractListModel(parent) {}
+TaskModel::TaskModel(QObject *parent) : QAbstractListModel(parent)
+{
+    m_midnight.setSingleShot(true);
+    connect(&m_midnight, &QTimer::timeout, this, &TaskModel::refill);
+}
 
 void TaskModel::reload(const VaultIndex *index)
 {
@@ -51,6 +55,8 @@ void TaskModel::refill()
                      : QList<ToDo>();
     m_todayCount = m_index ? int(toDos(*m_index, ToDoView::Today, m_today).size()) : 0;
     endResetModel();
+    m_midnight.start(int(std::max<qint64>(1000, QDateTime::currentDateTime().msecsTo(QDateTime(
+                                                    m_today.addDays(1), QTime(0, 0, 1))))));
     Q_EMIT countChanged();
 }
 

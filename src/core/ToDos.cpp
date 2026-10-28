@@ -82,11 +82,15 @@ QList<ToDo> toDos(const VaultIndex &index, ToDoView view, const QDate &today, co
     }
     // Dated first, soonest first, a day's untimed ones before its timed ones; the rest keep
     // the index's order, task notes and then each note's checkboxes.
+    // By the day, then by the clock, whether a time is written "T14:00" or " 14:00".
     std::ranges::stable_sort(shown, [](const ToDo &a, const ToDo &b) {
-        const bool aDated = a.dueDate().isValid();
-        if (aDated != b.dueDate().isValid())
-            return aDated;
-        return aDated && a.due < b.due;
+        const QDate aDay = a.dueDate();
+        const QDate bDay = b.dueDate();
+        if (aDay.isValid() != bDay.isValid())
+            return aDay.isValid();
+        if (!aDay.isValid())
+            return false;
+        return aDay != bDay ? aDay < bDay : a.due.mid(11, 5) < b.due.mid(11, 5);
     });
     return shown;
 }

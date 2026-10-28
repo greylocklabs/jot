@@ -5,6 +5,7 @@
 
 #include <QAbstractListModel>
 #include <QQmlEngine>
+#include <QTimer>
 
 namespace jot {
 
@@ -76,6 +77,8 @@ private:
     QDate m_today;
     QList<ToDo> m_rows;
     int m_todayCount = 0;
+    /// Fills the list again just after midnight, when Today becomes another day.
+    QTimer m_midnight;
 };
 
 } // namespace jot

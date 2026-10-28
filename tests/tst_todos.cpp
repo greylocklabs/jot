@@ -44,6 +44,8 @@ void TestToDos::init()
     write(u"Taxes.md"_s,
           u"---\ntask: open\ndue: 2026-10-30\nlabels: [days]\ntags: [home]\n---\n"_s);
     write(u"Fence.md"_s, u"---\ntask: open\n---\n"_s);
+    // A time written with a space, as YAML allows, sorts by the clock too.
+    write(u"Dentist.md"_s, u"---\ntask: open\ndue: 2026-10-28 09:00\n---\n"_s);
     m_index = std::make_unique<VaultIndex>(*m_vault, m_dir->filePath(u"index.sqlite"_s));
     QString error;
     QVERIFY2(m_index->open(&error), qPrintable(error));
@@ -66,12 +68,12 @@ QStringList TestToDos::titles(ToDoView view, const QString &label, const QString
 void TestToDos::showsEachView()
 {
     // Overdue and today's, a day's untimed before its timed.
-    QCOMPARE(titles(ToDoView::Today),
-             (QStringList{u"Late fee #home/money"_s, u"Buy rope"_s, u"Call Soren #calls"_s}));
+    QCOMPARE(titles(ToDoView::Today), (QStringList{u"Late fee #home/money"_s, u"Buy rope"_s,
+                                                   u"Dentist"_s, u"Call Soren #calls"_s}));
     QCOMPARE(titles(ToDoView::Upcoming), (QStringList{u"Taxes"_s, u"Plan trip"_s}));
     // Task notes first, then each note's boxes.
     QCOMPARE(titles(ToDoView::Anytime), (QStringList{u"Fence"_s, u"Someday read Proust"_s}));
-    QCOMPARE(titles(ToDoView::All).size(), 7);
+    QCOMPARE(titles(ToDoView::All).size(), 8);
 
     const ToDo call = toDos(*m_index, ToDoView::Today, m_today).last();
     QCOMPARE(call.kind, u"task"_s);

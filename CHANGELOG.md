@@ -12,7 +12,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   `- [ ] Call Soren @minutes 📅 2026-10-29 14:00`. Labels are listed in the sidebar, and choosing
   one, or a tag while in Tasks, narrows the list. Task notes take labels in `labels:`. The badge
   on Tasks counts what is due today or overdue.
-- `jot tasks` takes `--view`, `--label` and `--tag` to match.
+- `jot tasks` takes `--view`, `--label` and `--tag` to match. Its JSON names a to-do's words
+  `title` rather than `text`, and adds `note`, `due`, `repeat`, `labels` and `tags`.
 - A reading view: choose Read beside Styled and Source, or press Ctrl+Shift+R, to see the note
   drawn as it reads, with tables, quotes, code and images. Links, wikilinks and tags open what
   they lead to, and a click on a checkbox ticks it. Formatted is now called Styled, to make room.
