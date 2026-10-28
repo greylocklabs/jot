@@ -3,6 +3,13 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## Unreleased
+
+### Changed
+
+- Callie Light's pink is deeper, with white text on it, so buttons and what is selected are
+  easier to read.
+
 ## 0.0.12 - 2026-10-27
 
 ### Added
