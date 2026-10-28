@@ -54,6 +54,11 @@ void TestQuickAdd::reads_data()
     QTest::newRow("daily, from tomorrow")
         << u"stretch daily tomorrow"_s << u"stretch 🔁 every day 📅 2026-10-29"_s;
     QTest::newRow("a number is not a time") << u"buy 3 apples"_s << u"buy 3 apples"_s;
+    QTest::newRow("marbles are no month") << u"buy 2 marbles"_s << u"buy 2 marbles"_s;
+    QTest::newRow("nor decorations") << u"pick up 3 decorations"_s << u"pick up 3 decorations"_s;
+    QTest::newRow("nor a market") << u"read market 5 times"_s << u"read market 5 times"_s;
+    QTest::newRow("a month in full, gone by this year")
+        << u"trip september 12"_s << u"trip 📅 2027-09-12"_s;
     QTest::newRow("no such day stays in the words") << u"pay rent feb 30"_s << u"pay rent feb 30"_s;
     QTest::newRow("no such time stays") << u"meet 25pm"_s << u"meet 25pm"_s;
     QTest::newRow("nor minutes") << u"call 3:75pm"_s << u"call 3:75pm"_s;

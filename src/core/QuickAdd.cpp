@@ -111,10 +111,10 @@ QuickTask readQuickTask(const QString &typed, const QDateTime &now)
         words(uR"((?:on|by|next|this)\s+(mon|tues?|wed|thu|thurs?|fri|sat|sun))"_s);
     static const QRegularExpression monthDay = words(
         lead +
-        uR"((jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?)"_s);
+        uR"((jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?)"_s);
     static const QRegularExpression dayMonth = words(
         lead +
-        uR"((\d{1,2})(?:st|nd|rd|th)?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*(?:\s+(\d{4}))?)"_s);
+        uR"((\d{1,2})(?:st|nd|rd|th)?\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:\s+(\d{4}))?)"_s);
     // What it said before the day was taken out, put back when the words name no real day.
     const QString beforeDay = text;
     if (QRegularExpressionMatch m = take(text, iso); m.hasMatch()) {
