@@ -143,6 +143,9 @@ public:
     /// cursor just after it.
     Q_INVOKABLE QVariantMap placeBlock(const QString &text, int position,
                                        const QString &markdown) const;
+    /// Where the editor's cursor at `cursor` in `shown`, the text it has, belongs in the note
+    /// shown now that it has changed, such as by an outside edit merged in.
+    Q_INVOKABLE int movedCursor(const QString &shown, int cursor) const;
     /// The file an image link in the note shown reaches, or empty for none.
     Q_INVOKABLE QString attachmentPath(const QString &target, bool wiki) const;
     /// What a link in the note shown leads to, for a preview: `{path, title, text}`, where

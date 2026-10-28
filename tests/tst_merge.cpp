@@ -13,6 +13,7 @@ private Q_SLOTS:
     void merges_data();
     void merges();
     void givesUpOnTextTooDifferentToCompare();
+    void movesAPositionWithTheTextAroundIt();
 };
 
 void TestMerge::merges_data()
@@ -82,6 +83,23 @@ void TestMerge::givesUpOnTextTooDifferentToCompare()
     }
     theirs += u"one more\n"_s;
     QVERIFY(!mergeText(base, mine, theirs));
+}
+
+void TestMerge::movesAPositionWithTheTextAroundIt()
+{
+    const QString before = u"one\ntwo\nthree\n"_s;
+    // In "two", after the t.
+    const int inTwo = 5;
+    QCOMPARE(movedPosition(before, before, inTwo), inTwo);
+    // A line put in ahead of it moves it along; one after leaves it.
+    QCOMPARE(movedPosition(before, u"zero\none\ntwo\nthree\n"_s, inTwo), inTwo + 5);
+    QCOMPARE(movedPosition(before, u"one\ntwo\nthree\nfour\n"_s, inTwo), inTwo);
+    // Changes on both sides of it.
+    QCOMPARE(movedPosition(before, u"ONE!\ntwo\nthree, four\n"_s, inTwo), inTwo + 1);
+    // Its own line changed: at that line's end.
+    QCOMPARE(movedPosition(before, u"one\nTWO, too\nthree\n"_s, inTwo), 12);
+    // Ahead of it taken out.
+    QCOMPARE(movedPosition(before, u"two\nthree\n"_s, inTwo), 1);
 }
 
 QTEST_GUILESS_MAIN(TestMerge)

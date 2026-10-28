@@ -131,4 +131,34 @@ std::optional<QString> mergeText(const QString &base, const QString &mine, const
     return merged;
 }
 
+int movedPosition(const QString &before, const QString &after, int position)
+{
+    if (before == after)
+        return position;
+    const QStringList original = linesOf(before);
+    const std::optional<QList<Hunk>> hunks = changes(original, linesOf(after));
+    if (!hunks)
+        return std::min<int>(position, int(after.size()));
+    // Where each line of `before` starts, so line changes become character ones.
+    QList<qsizetype> starts{0};
+    for (const QString &line : original)
+        starts.append(starts.last() + line.size());
+    qsizetype shift = 0;
+    for (const Hunk &hunk : *hunks) {
+        const qsizetype from = starts[hunk.start];
+        const qsizetype to = starts[hunk.end];
+        const qsizetype length = hunk.lines.join(QString()).size();
+        if (to <= position) {
+            shift += length - (to - from);
+        } else if (from < position) {
+            // Inside what changed: at the end of what replaced it, before its line break.
+            const bool newline = length > 0 && hunk.lines.last().endsWith(u'\n');
+            return int(from + shift + length - (newline ? 1 : 0));
+        } else {
+            break;
+        }
+    }
+    return int(std::clamp<qsizetype>(position + shift, 0, after.size()));
+}
+
 } // namespace jot
