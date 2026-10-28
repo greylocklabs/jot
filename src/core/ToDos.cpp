@@ -27,6 +27,22 @@ QDate ToDo::dueDate() const
     return QDate::fromString(due.left(10), Qt::ISODate);
 }
 
+QDateTime reminderAt(const ToDo &todo, const QTime &allDay)
+{
+    const QDate day = todo.dueDate();
+    if (!day.isValid())
+        return {};
+    // A time as Jot writes it, "T14:00", or as YAML may, " 14:00" or "T14:00:00Z".
+    const QString written = todo.due.mid(10).trimmed().remove(u'T');
+    if (written.endsWith(u'Z') || written.contains(u'+')) {
+        const QDateTime exact = QDateTime::fromString(todo.due, Qt::ISODate);
+        if (exact.isValid())
+            return exact.toLocalTime();
+    }
+    const QTime time = QTime::fromString(written.left(5), u"HH:mm"_s);
+    return QDateTime(day, time.isValid() ? time : allDay);
+}
+
 std::optional<ToDoView> toDoView(const QString &name)
 {
     if (name == u"today")
@@ -53,7 +69,8 @@ QList<ToDo> toDos(const VaultIndex &index, ToDoView view, const QDate &today, co
                     note.due.trimmed(),
                     {},
                     note.labels,
-                    note.tags});
+                    note.tags,
+                    {}});
     QHash<QString, QString> titles;
     for (const NoteTask &task : index.openTasks()) {
         if (!titles.contains(task.path)) {
@@ -62,7 +79,7 @@ QList<ToDo> toDos(const VaultIndex &index, ToDoView view, const QDate &today, co
         }
         all.append({u"task"_s, task.path, task.line, task.parts.title, titles.value(task.path),
                     task.parts.due, task.parts.repeat, task.parts.labels,
-                    scanNote(task.parts.title).tags});
+                    scanNote(task.parts.title).tags, task.text});
     }
 
     QList<ToDo> shown;

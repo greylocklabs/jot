@@ -31,7 +31,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     endif()
 endif()
 
-find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Network Qml Quick QuickControls2 Sql)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Core DBus Gui Network Qml Quick QuickControls2 Sql)
 # Colors fenced code by language; found here, where every target that links the UI sees it.
 # 6.13 is what Debian trixie ships.
 find_package(KF6SyntaxHighlighting 6.13 REQUIRED)

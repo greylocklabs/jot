@@ -38,11 +38,14 @@ qt_add_qml_module(jotui
         TagModel.cpp
         TaskModel.h
         TaskModel.cpp
+        ToDoReminders.h
+        ToDoReminders.cpp
         VaultController.h
         VaultController.cpp
         ReleaseInfo.h
         ReleaseInfo.cpp
         SettingsForeign.h
+        StartAtLoginSetting.h
         MonthModelForeign.h
         SupportActions.h
         SupportActions.cpp

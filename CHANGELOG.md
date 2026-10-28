@@ -7,6 +7,11 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ### Added
 
+- Reminders: a to-do notifies when it comes due, at its time, or at 9:00 on its day when it has no
+  time; the morning time is in Settings. The notification opens the to-do, ticks it done, or
+  snoozes it for 10 minutes. Those that came due while Jot was closed are told when it starts.
+- Jot keeps running in the tray when its window closes, so reminders still come, and can start
+  when you log in. Opening Jot again brings back the window rather than a second Jot.
 - To-dos can repeat: `🔁 every week`, `every 2 weeks`, `every monday`, `every weekday` and the
   like, or "every week" in quick add. Ticking one writes the next one, due on its next day.
 - Quick add: press Ctrl+Shift+A, or the + in Tasks, and type a to-do as you would say it, "call

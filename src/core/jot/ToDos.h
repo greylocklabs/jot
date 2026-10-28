@@ -3,6 +3,7 @@
 #include "jot/VaultIndex.h"
 
 #include <QDate>
+#include <QDateTime>
 #include <QList>
 #include <QString>
 #include <QStringList>
@@ -28,6 +29,9 @@ struct ToDo
     QStringList labels;
     /// A checkbox's own #tags, or a task note's.
     QStringList tags;
+    /// A checkbox's text as written, markers and all, which ticking it looks for; empty for a
+    /// task note.
+    QString text;
 
     /// The day it is due, invalid when it is not.
     [[nodiscard]] QDate dueDate() const;
@@ -46,6 +50,10 @@ enum class ToDoView {
     /// All of them.
     All,
 };
+
+/// When a reminder about `todo` comes: when it is due, or at `allDay` on its day when it is due
+/// on a day without a time. Invalid when it is not due.
+[[nodiscard]] QDateTime reminderAt(const ToDo &todo, const QTime &allDay);
 
 /// The view a name gives, "today", "upcoming", "anytime" or "all", or nothing for another.
 [[nodiscard]] std::optional<ToDoView> toDoView(const QString &name);

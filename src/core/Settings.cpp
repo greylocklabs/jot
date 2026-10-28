@@ -3,6 +3,7 @@
 #include "greylock/Identity.h"
 
 #include <QStandardPaths>
+#include <QTime>
 
 #include <algorithm>
 
@@ -22,6 +23,10 @@ const QString kCollapsedTags = u"notes/collapsedTags"_s;
 const QString kTasksView = u"tasks/view"_s;
 const QString kCheckForUpdates = u"updates/check"_s;
 const QString kLastSeenVersion = u"app/lastSeenVersion"_s;
+const QString kKeepRunning = u"app/keepRunning"_s;
+const QString kRemindersOn = u"reminders/on"_s;
+const QString kReminderTime = u"reminders/time"_s;
+const QString kLastReminderCheck = u"reminders/lastCheck"_s;
 const QString kSourceMode = u"editor/sourceMode"_s;
 const QString kReadMode = u"editor/readMode"_s;
 const QString kNoteFont = u"editor/font"_s;
@@ -58,6 +63,12 @@ Settings::Settings(const QString &path, QObject *parent)
         m_tasksView = u"today"_s;
     m_checkForUpdates = m_store.value(kCheckForUpdates, true).toBool();
     m_lastSeenVersion = m_store.value(kLastSeenVersion).toString();
+    m_keepRunning = m_store.value(kKeepRunning, true).toBool();
+    m_remindersOn = m_store.value(kRemindersOn, true).toBool();
+    if (const QTime time = QTime::fromString(m_store.value(kReminderTime).toString(), u"HH:mm"_s);
+        time.isValid())
+        m_reminderTime = time.toString(u"HH:mm"_s);
+    m_lastReminderCheck = m_store.value(kLastReminderCheck).toDateTime();
     m_sourceMode = m_store.value(kSourceMode, false).toBool();
     m_readMode = m_store.value(kReadMode, false).toBool();
     m_noteFont = m_store.value(kNoteFont).toString();
@@ -159,6 +170,42 @@ void Settings::setLastSeenVersion(const QString &version)
     m_lastSeenVersion = version;
     m_store.setValue(kLastSeenVersion, version);
     Q_EMIT lastSeenVersionChanged();
+}
+
+void Settings::setKeepRunning(bool keep)
+{
+    if (m_keepRunning == keep)
+        return;
+    m_keepRunning = keep;
+    m_store.setValue(kKeepRunning, keep);
+    Q_EMIT remindersChanged();
+}
+
+void Settings::setRemindersOn(bool on)
+{
+    if (m_remindersOn == on)
+        return;
+    m_remindersOn = on;
+    m_store.setValue(kRemindersOn, on);
+    Q_EMIT remindersChanged();
+}
+
+void Settings::setReminderTime(const QString &time)
+{
+    QTime read = QTime::fromString(time.trimmed(), u"H:mm"_s);
+    if (!read.isValid())
+        read = QTime::fromString(time.trimmed(), u"HH:mm"_s);
+    if (!read.isValid() || read.toString(u"HH:mm"_s) == m_reminderTime)
+        return;
+    m_reminderTime = read.toString(u"HH:mm"_s);
+    m_store.setValue(kReminderTime, m_reminderTime);
+    Q_EMIT remindersChanged();
+}
+
+void Settings::setLastReminderCheck(const QDateTime &at)
+{
+    m_lastReminderCheck = at;
+    m_store.setValue(kLastReminderCheck, at);
 }
 
 void Settings::setSidebarWidth(int width)
@@ -268,6 +315,9 @@ void Settings::reset()
     setSourceMode(false);
     setReadMode(false);
     setTasksView(u"today"_s);
+    setKeepRunning(true);
+    setRemindersOn(true);
+    setReminderTime(u"09:00"_s);
     setNoteFont({});
     resetSidebarWidth();
     resetNoteListWidth();

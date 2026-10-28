@@ -188,6 +188,76 @@ Popup {
         }
 
         Section {
+            title: qsTr("Reminders")
+            visible: root.tab === "general"
+
+            Toggle {
+                width: parent.width
+                text: qsTr("Remind me when a to-do comes due")
+                checked: Settings.remindersOn
+                onToggled: Settings.remindersOn = checked
+            }
+            Row {
+                spacing: Theme.space3
+                enabled: Settings.remindersOn
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: qsTr("For those due on a day without a time, at")
+                    color: Theme.text
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.textMd
+                }
+                Field {
+                    id: reminderTime
+
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 72
+                    text: Settings.reminderTime
+                    inputMethodHints: Qt.ImhTime
+                    Accessible.name: qsTr("Reminder time for to-dos without a time")
+                    // A time Settings cannot read goes back to the one it has.
+                    onEditingFinished: {
+                        Settings.reminderTime = text
+                        text = Settings.reminderTime
+                    }
+                }
+            }
+            Toggle {
+                width: parent.width
+                text: qsTr("Keep running in the tray when the window closes")
+                checked: Settings.keepRunning
+                onToggled: Settings.keepRunning = checked
+            }
+            Toggle {
+                width: parent.width
+                visible: StartAtLogin.available
+                enabled: Settings.keepRunning
+                text: qsTr("Start Jot when I log in")
+                checked: StartAtLogin.enabled
+                onToggled: StartAtLogin.enabled = checked
+            }
+            Text {
+                width: parent.width
+                visible: StartAtLogin.error !== ""
+                wrapMode: Text.Wrap
+                text: StartAtLogin.error
+                color: Theme.danger
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.textSm
+            }
+            Text {
+                width: parent.width
+                wrapMode: Text.Wrap
+                text: qsTr(
+                          "Reminders come while Jot is running, with its window open or in the tray, and those that came due while it was closed are told when it starts.")
+                color: Theme.textMuted
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.textSm
+            }
+        }
+
+        Section {
             title: qsTr("Theme")
             visible: root.tab === "appearance"
 
