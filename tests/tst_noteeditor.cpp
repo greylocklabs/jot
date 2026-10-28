@@ -532,9 +532,14 @@ void TestNoteEditor::readsTheNoteWithLinksAndBoxesToTick()
     QCOMPARE(m_vault->notes()->tag(), u"ferry"_s);
     QMetaObject::invokeMethod(reader, "linkActivated", Q_ARG(QString, u"jot-note:Mara%20Vey"_s));
     QCOMPARE(m_vault->current(), u"Ashfall/Characters/Mara Vey.md"_s);
-    // Writing again leaves reading.
-    m_settings->setReadMode(false);
+    // Ctrl+/ there goes back to writing, in Source.
+    m_vault->setCurrent(u"Reading.md"_s);
+    reader->forceActiveFocus();
+    QTest::keyClick(m_window.get(), Qt::Key_Slash, Qt::ControlModifier);
+    QVERIFY(!m_settings->readMode());
+    QVERIFY(m_settings->sourceMode());
     QTRY_VERIFY(find(u"body"_s)->isVisible());
+    m_settings->setSourceMode(false);
 }
 
 void TestNoteEditor::writesInTheChosenFont()

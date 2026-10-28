@@ -20,6 +20,9 @@ class CodeHighlighter;
 /// character: headings grow, emphasis shows, and the marks that make them fade, folding
 /// away entirely except on the line the cursor is on. Formats are not part of the text or
 /// its undo history, so the note stays exactly what the user wrote.
+/// Each heading level's size against the body text, as the editor and the reading view draw it.
+inline constexpr double kHeadingScale[] = {1.75, 1.45, 1.22, 1.08, 1.0, 1.0};
+
 class MarkdownHighlighter : public QSyntaxHighlighter
 {
     Q_OBJECT

@@ -312,6 +312,13 @@ Rectangle {
                 selectByMouse: true
                 Accessible.name: qsTr("Note, to read")
                 onLinkActivated: link => root.openLink(link)
+                // Ctrl+/ goes back to writing, in the mode it switches to, as it does there.
+                Keys.onPressed: event => {
+                    if (event.key === Qt.Key_Slash && event.modifiers === Qt.ControlModifier) {
+                        root.format("source", "")
+                        event.accepted = true
+                    }
+                }
 
                 NoteReader {
                     id: reading

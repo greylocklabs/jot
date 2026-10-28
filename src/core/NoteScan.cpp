@@ -184,8 +184,15 @@ QString readingMarkdown(QStringView body, const std::function<QString(const QStr
             rest.replace(m.capturedStart(), m.capturedLength(), QString(m.capturedLength(), u' '));
         }
         // Tags, but not the # in a link's target or label, such as a heading's anchor.
-        for (const QRegularExpressionMatch &m : markdownPattern().globalMatch(rest))
+        for (const QRegularExpressionMatch &m : markdownPattern().globalMatch(rest)) {
+            // An image from the web becomes a link to it, so reading fetches nothing.
+            const QString target = m.captured(2);
+            if (!m.captured(1).isEmpty() &&
+                isUrl(target.startsWith(u'<') ? target.mid(1) : target) &&
+                !target.contains(u"file:"_s))
+                changes.append({m.capturedStart(), 1, {}});
             rest.replace(m.capturedStart(), m.capturedLength(), QString(m.capturedLength(), u' '));
+        }
         for (const QRegularExpressionMatch &m : tagPattern().globalMatch(rest)) {
             QString name = m.captured(1);
             while (name.endsWith(u'/'))

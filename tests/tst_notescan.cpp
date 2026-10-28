@@ -148,6 +148,9 @@ void TestNoteScan::readsAsMarkdownWithLinks()
              u"![map.png](<file:///v/map.png>) [gone.png](jot-note:gone.png)\n"_s);
     QCOMPARE(readingMarkdown(u"#ferry and #cast/lead, not [x](#heading)\n"_s, embed),
              u"[#ferry](jot-tag:ferry) and [#cast/lead](jot-tag:cast/lead), not [x](#heading)\n"_s);
+    // An image from the web is only linked to; one in the vault stays an image.
+    QCOMPARE(readingMarkdown(u"![pixel](https://tracker.example/p.png) ![map](map.png)\n"_s, embed),
+             u"[pixel](https://tracker.example/p.png) ![map](map.png)\n"_s);
     // Code is left as it is.
     const QString code = u"`[[not]] #code`\n```\n[[Mara]] #tag\n```\n"_s;
     QCOMPARE(readingMarkdown(code, embed), code);
