@@ -7,6 +7,8 @@
 
 #include <QDir>
 #include <QDirIterator>
+#include <QElapsedTimer>
+#include <QInputMethodEvent>
 #include <QQmlComponent>
 #include <QQmlEngine>
 #include <QQuickItem>
@@ -19,6 +21,8 @@
 #include <QTest>
 #include <QTextDocument>
 #include <QtQml/qqmlextensionplugin.h>
+
+#include <algorithm>
 
 Q_IMPORT_QML_PLUGIN(Jot_UiPlugin)
 
@@ -54,6 +58,8 @@ private Q_SLOTS:
     void readsTheNoteWithLinksAndBoxesToTick();
     void tickingARepeatingToDoWritesTheNext();
     void editsInViModes();
+    void staysQuickAndStillInALongNote();
+    void composesWithAnInputMethod();
 
 private:
     /// Pixels in the body's area that are not the background, as a measure of text drawn.
@@ -657,6 +663,102 @@ void TestNoteEditor::editsInViModes()
     body->setProperty("cursorPosition", 0);
     type(u"j"_s);
     QCOMPARE(text(), u"jha big beta\n**z**"_s);
+}
+
+void TestNoteEditor::staysQuickAndStillInALongNote()
+{
+    // Some 2,400 lines with every kind of Markdown the editor styles.
+    QString text = u"# A long note\n\n"_s;
+    for (int i = 1; i <= 150; ++i) {
+        text += u"## Section %1\n\n"_s.arg(i);
+        text += u"A paragraph with **bold**, *italic*, `code`, a [[Mara Vey]] link and a "
+                "[site](https://example.com), long enough to wrap across the editor's width "
+                "at least once.\n\n"_s;
+        text += u"- An item\n  - A nested item\n- [ ] A to-do @minutes #calls\n\n"_s;
+        text +=
+            u"```\nint x = %1;\n```\n\n| Name | Value |\n| --- | --- |\n| x | %1 |\n\n"_s.arg(i);
+    }
+    QFile file(m_root + u"/Long.md"_s);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write(text.toUtf8());
+    file.close();
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Long.md"_s), 3000);
+    m_vault->setCurrent(u"Long.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    QQuickItem *scroll = find(u"scroll"_s);
+    body->forceActiveFocus();
+    const QString marker = u"x = 75;"_s;
+    const int at = int(m_vault->currentText().indexOf(marker) + marker.size());
+    body->setProperty("cursorPosition", at);
+    QTest::qWait(300);
+    const qreal top = scroll->property("contentY").toReal();
+    QVERIFY(top > 0);
+
+    // Typed in the middle, keys are taken and drawn without a lag one would feel, and the view
+    // holds still. The middle key is timed, so one slow moment on a busy machine passes.
+    const QString typed = u" // typed in the middle"_s;
+    QSignalSpy scrolled(scroll, SIGNAL(contentYChanged()));
+    QList<qint64> times;
+    QElapsedTimer timer;
+    for (const QChar c : typed) {
+        timer.start();
+        QTest::keyClick(m_window.get(), c.toLatin1());
+        QCoreApplication::processEvents();
+        times.append(timer.elapsed());
+    }
+    std::ranges::sort(times);
+    QVERIFY2(times.at(times.size() / 2) < 50,
+             qPrintable(u"%1 ms a key"_s.arg(times.at(times.size() / 2))));
+    QCOMPARE(scrolled.count(), 0);
+    QCOMPARE(scroll->property("contentY").toReal(), top);
+    QCOMPARE(body->property("cursorPosition").toInt(), at + typed.size());
+    QCOMPARE(m_vault->currentText().mid(at - marker.size(), marker.size() + typed.size()),
+             marker + typed);
+    QTRY_VERIFY_WITH_TIMEOUT(!m_vault->unsaved(), 2000);
+}
+
+void TestNoteEditor::composesWithAnInputMethod()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    body->forceActiveFocus();
+    body->setProperty("cursorPosition", body->property("length"));
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    for (const char c : {'-', ' '})
+        QTest::keyClick(m_window.get(), c);
+    const QString before = m_vault->currentText();
+    const auto compose = [body](const QString &preedit, const QString &commit = {}) {
+        QInputMethodEvent event(preedit, {});
+        if (!commit.isEmpty())
+            event.setCommitString(commit);
+        QCoreApplication::sendEvent(body, &event);
+    };
+
+    // While composing, what is shown is not yet the note's.
+    compose(u"に"_s);
+    compose(u"にほん"_s);
+    QVERIFY(body->property("inputMethodComposing").toBool());
+    QCOMPARE(body->property("preeditText").toString(), u"にほん"_s);
+    QCOMPARE(m_vault->currentText(), before);
+
+    // Committed, it goes in once, and composing again in Hangul adds to it.
+    compose({}, u"日本"_s);
+    for (const QString &step : {u"ㅎ"_s, u"하"_s, u"한"_s})
+        compose(step);
+    compose(u"ㄱ"_s, u"한"_s);
+    compose(u"그"_s);
+    compose(u"글"_s);
+    compose({}, u"글"_s);
+    QVERIFY(!body->property("inputMethodComposing").toBool());
+    QCOMPARE(m_vault->currentText(), before + u"日本한글"_s);
+    QCOMPARE(body->property("cursorPosition").toInt(), body->property("length").toInt());
+
+    // The list carries on from the composed item, and the note is saved as typed.
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    QCOMPARE(m_vault->currentText(), before + u"日本한글\n- "_s);
+    QTRY_VERIFY_WITH_TIMEOUT(!m_vault->unsaved(), 2000);
+    QString error;
+    QVERIFY(notefile::read(m_root + u"/Welcome.md"_s, &error)->contains(u"- 日本한글"_s));
 }
 
 QTEST_MAIN(TestNoteEditor)
