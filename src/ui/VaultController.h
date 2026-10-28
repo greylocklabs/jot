@@ -239,6 +239,9 @@ private:
     /// Replaces the whole text of the note at `path`, through the editor's copy when shown.
     bool rewriteNote(const QString &path,
                      const std::function<std::optional<QString>(const QString &)> &change);
+    /// Brings what another program wrote to the note shown into the edits not yet saved, or,
+    /// where both changed the same lines, keeps it beside the note as a copy.
+    void takeOutsideEdit(const QString &theirs);
     /// Keeps what another program wrote to the note shown beside it, as the user's own
     /// edits are about to replace it.
     void keepConflict(const QString &theirs);
@@ -263,6 +266,9 @@ private:
     QString m_error;
     QString m_current;
     QString m_currentText;
+    /// The note shown as it was last read from or written to its file, which outside edits
+    /// and the user's are merged from.
+    QString m_savedText;
     bool m_unsaved = false;
     QString m_problem;
     /// How the note on disk ends its lines and whether it starts with a byte order mark,

@@ -8,6 +8,8 @@ add_library(jotcore STATIC
     Fuzzy.cpp
     jot/MarkdownEdit.h
     MarkdownEdit.cpp
+    jot/Merge.h
+    Merge.cpp
     jot/MonthModel.h
     MonthModel.cpp
     jot/JoplinExport.h

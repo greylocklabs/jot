@@ -5,6 +5,7 @@
 #include "jot/JoplinImport.h"
 #include "jot/Layout.h"
 #include "jot/Logging.h"
+#include "jot/Merge.h"
 #include "jot/NoteScan.h"
 #include "jot/Rename.h"
 #include "jot/Settings.h"
@@ -147,7 +148,7 @@ void VaultController::notesChangedOnDisk(const QStringList &paths)
             QString error;
             if (const std::optional<QString> theirs =
                     notefile::read(m_vault->absolute(m_current), &error))
-                keepConflict(*theirs);
+                takeOutsideEdit(*theirs);
         } else {
             readCurrent();
         }
@@ -156,6 +157,27 @@ void VaultController::notesChangedOnDisk(const QStringList &paths)
     reloadModels();
     // Other notes changing is what changes what links here; saving this one does not.
     m_backlinks.reload(m_vault.get(), m_index.get(), m_current);
+}
+
+void VaultController::takeOutsideEdit(const QString &theirs)
+{
+    const std::optional<QString> merged = mergeText(m_savedText, m_currentText, theirs);
+    if (!merged) {
+        keepConflict(theirs);
+        return;
+    }
+    qCInfo(lcVault) << m_current << "changed on disk while being edited; merged the two";
+    m_savedText = theirs;
+    if (*merged == theirs) {
+        // The file holds everything typed already.
+        m_saveTimer.stop();
+        m_currentText = theirs;
+        setUnsaved(false);
+    } else {
+        m_currentText = *merged;
+        m_saveTimer.start();
+    }
+    Q_EMIT currentChanged();
 }
 
 void VaultController::keepConflict(const QString &theirs)
@@ -230,6 +252,7 @@ void VaultController::saveNow()
         return;
     }
     m_saveTimer.setInterval(m_saveDelay);
+    m_savedText = m_currentText;
     setUnsaved(false);
     setProblem({});
     m_index->update({m_current});
@@ -950,6 +973,7 @@ void VaultController::readCurrent()
             setProblem(tr("Could not read the note: %1").arg(error));
     }
     m_backlinks.reload(m_vault.get(), m_index.get(), m_current);
+    m_savedText = m_currentText;
     m_crlf = m_currentText.contains(u"\r\n"_s);
     m_byteOrderMark = m_currentText.startsWith(QChar(0xfeff));
     Q_EMIT currentChanged();

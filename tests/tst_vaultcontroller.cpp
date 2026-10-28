@@ -53,6 +53,7 @@ private Q_SLOTS:
     void savesShortlyAfterTypingStops();
     void savesBeforeSwitchingNotes();
     void keepsTheOtherVersionWhenBothChanged();
+    void mergesOutsideEditsToOtherLines();
     void makesNewNotesInTheNotebookShown();
     void renamingRewritesLinksAndKeepsTheTitle();
     void trashesTheNoteShown();
@@ -623,6 +624,35 @@ void TestVaultController::keepsTheOtherVersionWhenBothChanged()
     QCOMPARE(readFile(m_root + u'/' + copy), u"Theirs\n"_s);
     m_vault->saveNow();
     QCOMPARE(readFile(m_root + u"/Welcome.md"_s), u"Mine\n"_s);
+}
+
+void TestVaultController::mergesOutsideEditsToOtherLines()
+{
+    QString error;
+    QVERIFY(
+        notefile::write(m_root + u"/List.md"_s, u"# List\n\n- one\n- two\n- three\n"_s, &error));
+    QVERIFY(m_vault->openPath(m_root));
+    m_vault->setSaveDelay(60000);
+    m_vault->setCurrent(u"List.md"_s);
+    QSignalSpy changed(m_vault.get(), &VaultController::currentChanged);
+    m_vault->edit(u"# Shopping\n\n- one\n- two\n- three\n"_s);
+    QVERIFY(notefile::write(m_root + u"/List.md"_s, u"# List\n\n- one\n- two\n- three\n- four\n"_s,
+                            &error));
+
+    // Both edits stay, with nothing kept aside, and the merge is yet to be saved.
+    QTRY_COMPARE_WITH_TIMEOUT(m_vault->currentText(),
+                              u"# Shopping\n\n- one\n- two\n- three\n- four\n"_s, 3000);
+    QVERIFY(!changed.isEmpty());
+    QVERIFY(m_vault->unsaved());
+    QVERIFY(QDir(m_root).entryList({u"List (conflict *).md"_s}).isEmpty());
+    m_vault->saveNow();
+    QCOMPARE(readFile(m_root + u"/List.md"_s), u"# Shopping\n\n- one\n- two\n- three\n- four\n"_s);
+
+    // A file that already holds what was typed leaves nothing to save.
+    m_vault->edit(u"# Shopping\n\n- one\n- two\n- three\n- four\n- five\n"_s);
+    QVERIFY(notefile::write(m_root + u"/List.md"_s,
+                            u"# Shopping\n\n- one\n- two\n- three\n- four\n- five\n"_s, &error));
+    QTRY_VERIFY_WITH_TIMEOUT(!m_vault->unsaved(), 3000);
 }
 
 void TestVaultController::makesNewNotesInTheNotebookShown()
