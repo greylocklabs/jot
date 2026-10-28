@@ -1,5 +1,6 @@
 #include "NoteReader.h"
 
+#include "MarkdownHighlighter.h"
 #include "ThemeController.h"
 #include "VaultController.h"
 
@@ -21,9 +22,6 @@ using namespace Qt::StringLiterals;
 namespace jot {
 
 namespace {
-
-/// Each heading level's size against the body text, as the editor draws them.
-constexpr double kHeadingScale[] = {1.75, 1.45, 1.22, 1.08, 1.0, 1.0};
 
 bool isCode(const QTextBlock &block)
 {

@@ -45,7 +45,8 @@ struct NoteScan
 
 /// `body` as Markdown for reading: [[wikilinks]] become links to `jot-note:` targets,
 /// ![[embeds]] images at the URL `embedUrl` gives for their target (links when it gives
-/// none), and #tags links to `jot-tag:` ones. Targets are percent-encoded. Code is left alone.
+/// none), and #tags links to `jot-tag:` ones. Images from the web become links to them, so
+/// drawing the note fetches nothing. Targets are percent-encoded. Code is left alone.
 [[nodiscard]] QString readingMarkdown(QStringView body,
                                       const std::function<QString(const QString &)> &embedUrl);
 

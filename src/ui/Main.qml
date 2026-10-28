@@ -524,6 +524,8 @@ ApplicationWindow {
             noteList.askToTrash(Vault.current)
             break
         case "sourceMode":
+            // Out of reading too, as the switch does, since the source is only seen writing.
+            Settings.readMode = false
             Settings.sourceMode = !Settings.sourceMode
             break
         case "readMode":

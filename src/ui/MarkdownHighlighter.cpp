@@ -283,11 +283,10 @@ void MarkdownHighlighter::highlightBlock(const QString &text)
     static const QRegularExpression rule(uR"(^\s*([-*_])(\s*\1){2,}\s*$)"_s);
     int from = 0;
     if (const QRegularExpressionMatch m = heading.match(text); m.hasMatch()) {
-        static constexpr double kScale[] = {1.75, 1.45, 1.22, 1.08, 1.0, 1.0};
         const int level = int(m.capturedLength(1));
         QTextCharFormat format;
         format.setProperty(QTextFormat::FontPixelSize,
-                           int(m_look.pixelSize * kScale[level - 1] + 0.5));
+                           int(m_look.pixelSize * kHeadingScale[level - 1] + 0.5));
         format.setFontWeight(m_look.boldWeight);
         if (level <= 2 && !m_look.displayFamily.isEmpty())
             format.setFontFamilies({m_look.displayFamily});
