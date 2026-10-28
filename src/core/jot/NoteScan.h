@@ -43,6 +43,12 @@ struct NoteScan
 /// Scans `body`, whose first line is line `firstLine` of the file.
 [[nodiscard]] NoteScan scanNote(QStringView body, int firstLine = 1);
 
+/// `body` as Markdown for reading: [[wikilinks]] become links to `jot-note:` targets,
+/// ![[embeds]] images at the URL `embedUrl` gives for their target (links when it gives
+/// none), and #tags links to `jot-tag:` ones. Targets are percent-encoded. Code is left alone.
+[[nodiscard]] QString readingMarkdown(QStringView body,
+                                      const std::function<QString(const QString &)> &embedUrl);
+
 /// `body` with link targets changed: `replace` gets each link's target as written, without
 /// its label, and whether it is a [[wikilink]], and gives a new target or nothing to leave
 /// it. Code is left alone.

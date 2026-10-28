@@ -5,6 +5,12 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ## Unreleased
 
+### Added
+
+- A reading view: choose Read beside Styled and Source, or press Ctrl+Shift+R, to see the note
+  drawn as it reads, with tables, quotes, code and images. Links, wikilinks and tags open what
+  they lead to, and a click on a checkbox ticks it. Formatted is now called Styled, to make room.
+
 ### Changed
 
 - When a note changes elsewhere while you are typing in it, such as from a sync, Jot merges the

@@ -31,6 +31,8 @@ Rectangle {
     Flow {
         id: row
 
+        // Nothing to format while reading.
+        visible: !Settings.readMode
         anchors {
             left: parent.left
             right: parent.right
@@ -142,22 +144,30 @@ Rectangle {
         }
         spacing: Theme.space3
 
-        // The note styled as it is typed, or its Markdown as written.
+        // The note styled as it is typed, its Markdown as written, or drawn to read.
         ModeSwitch {
             objectName: "modes"
             anchors.verticalCenter: parent.verticalCenter
             options: [
                 {
-                    "label": qsTr("Formatted"),
+                    "label": qsTr("Styled"),
                     "tip": qsTr("Style the Markdown as you type (Ctrl+/)")
                 },
                 {
                     "label": qsTr("Source"),
                     "tip": qsTr("Show the Markdown as written (Ctrl+/)")
+                },
+                {
+                    "label": qsTr("Read"),
+                    "tip": qsTr("Read the note as it looks, with links to follow (Ctrl+Shift+R)")
                 }
             ]
-            current: Settings.sourceMode ? 1 : 0
-            onPicked: index => Settings.sourceMode = index === 1
+            current: Settings.readMode ? 2 : Settings.sourceMode ? 1 : 0
+            onPicked: index => {
+                Settings.readMode = index === 2
+                if (index < 2)
+                    Settings.sourceMode = index === 1
+            }
         }
 
         // A note that is a task shows in Tasks until it is done.

@@ -11,11 +11,13 @@
 #include <QQmlEngine>
 #include <QQuickItem>
 #include <QQuickStyle>
+#include <QQuickTextDocument>
 #include <QQuickWindow>
 #include <QRegularExpression>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
+#include <QTextDocument>
 #include <QtQml/qqmlextensionplugin.h>
 
 Q_IMPORT_QML_PLUGIN(Jot_UiPlugin)
@@ -49,6 +51,7 @@ private Q_SLOTS:
     void completesWikilinksFromTheKeyboard();
     void togglesSourceMode();
     void writesInTheChosenFont();
+    void readsTheNoteWithLinksAndBoxesToTick();
     void editsInViModes();
 
 private:
@@ -458,20 +461,80 @@ void TestNoteEditor::togglesSourceMode()
     // At rest under Formatted, once back from the Ctrl+/ above.
     const qreal start = ThemeController::instance()->space1();
     QTRY_COMPARE(thumb->x(), start);
-    const auto click = [this, modes](qreal across) {
-        const QPointF at = modes->mapToScene(QPointF(modes->width() * across, modes->height() / 2));
-        QTest::mouseClick(m_window.get(), Qt::LeftButton, {}, at.toPoint());
+    const auto click = [this, modes](int choice) {
+        QQuickItem *item = find(u"choice%1"_s.arg(choice), modes);
+        QTest::mouseClick(
+            m_window.get(), Qt::LeftButton, {},
+            item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint());
+        return item;
     };
-    click(0.75);
+    QQuickItem *source = click(1);
     QVERIFY(m_settings->sourceMode());
-    QTRY_COMPARE(thumb->x(), start + modes->property("segment").toReal());
-    click(0.25);
+    QTRY_COMPARE(thumb->x(), start + source->x());
+    QTRY_COMPARE(thumb->width(), source->width());
+    click(0);
     QVERIFY(!m_settings->sourceMode());
     QTRY_COMPARE(thumb->x(), start);
+    // Read draws the note to read, and Formatted goes back to writing.
+    QQuickItem *read = click(2);
+    QVERIFY(m_settings->readMode());
+    QTRY_VERIFY(!find(u"body"_s)->isVisible());
+    QTRY_COMPARE(thumb->x(), start + read->x());
+    click(0);
+    QVERIFY(!m_settings->readMode());
+    QVERIFY(!m_settings->sourceMode());
     // Slimmer than the row, so it does not touch its edges.
     const int slim = ThemeController::instance()->switchHeight();
     QCOMPARE(modes->height(), qreal(slim));
     QVERIFY(find(u"formatBar"_s)->height() >= slim + 2 * ThemeController::instance()->space2());
+}
+
+void TestNoteEditor::readsTheNoteWithLinksAndBoxesToTick()
+{
+    QString error;
+    QVERIFY(notefile::write(
+        m_root + u"/Reading.md"_s,
+        u"---\ntags: [demo]\n---\n# Today\n\n- [ ] Buy rope\n- [x] Patch the hull\n\nSee [[Mara Vey]] and #ferry.\n\n> A quote.\n\n| Crossing | Fare |\n|---|---|\n| Dawn | 2 |\n\n```\nlet fare = 2\n```\n"_s,
+        &error));
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Reading.md"_s), 3000);
+    m_vault->setCurrent(u"Reading.md"_s);
+    m_settings->setReadMode(true);
+    QQuickItem *reader = find(u"reader"_s);
+    QVERIFY(reader);
+    QTRY_VERIFY(reader->isVisible());
+    QVERIFY(!find(u"body"_s)->isVisible());
+    // Drawn, not written: no front matter, marks or brackets.
+    auto *doc = reader->property("textDocument").value<QQuickTextDocument *>()->textDocument();
+    QTRY_VERIFY(doc->toPlainText().contains(u"Buy rope"_s));
+    const QString shown = doc->toPlainText();
+    QVERIFY2(!shown.contains(u"tags:"_s) && !shown.contains(u"[["_s) && !shown.contains(u"# "_s),
+             qPrintable(shown));
+
+    // A click left of the task's text ticks it in the file, once the view has settled where
+    // the editor was.
+    QPointF placed(-1, -1);
+    QTRY_VERIFY([&] {
+        const QPointF now = reader->mapToScene(QPointF(0, 0));
+        const bool settled = now == placed;
+        placed = now;
+        return settled;
+    }());
+    QRectF line;
+    QMetaObject::invokeMethod(reader, "positionToRectangle", Q_RETURN_ARG(QRectF, line),
+                              Q_ARG(int, int(shown.indexOf(u"Buy rope"_s))));
+    QTest::mouseClick(m_window.get(), Qt::LeftButton, {},
+                      reader->mapToScene(QPointF(line.x() - 6, line.center().y())).toPoint());
+    QTRY_VERIFY_WITH_TIMEOUT(
+        notefile::read(m_root + u"/Reading.md"_s, &error)->contains(u"- [x] Buy rope"_s), 3000);
+
+    // Its links lead to the note, and to the tag's notes.
+    QMetaObject::invokeMethod(reader, "linkActivated", Q_ARG(QString, u"jot-tag:ferry"_s));
+    QCOMPARE(m_vault->notes()->tag(), u"ferry"_s);
+    QMetaObject::invokeMethod(reader, "linkActivated", Q_ARG(QString, u"jot-note:Mara%20Vey"_s));
+    QCOMPARE(m_vault->current(), u"Ashfall/Characters/Mara Vey.md"_s);
+    // Writing again leaves reading.
+    m_settings->setReadMode(false);
+    QTRY_VERIFY(find(u"body"_s)->isVisible());
 }
 
 void TestNoteEditor::writesInTheChosenFont()

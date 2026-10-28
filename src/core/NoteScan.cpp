@@ -1,6 +1,7 @@
 #include "jot/NoteScan.h"
 
 #include <QRegularExpression>
+#include <QUrl>
 
 #include <algorithm>
 #include <functional>
@@ -94,12 +95,18 @@ void forEachProseLine(QStringView body, int firstLine,
     }
 }
 
+const QRegularExpression &tagPattern()
+{
+    static const QRegularExpression tag(
+        uR"((?:^|(?<=[\s(,]))#([\p{L}\p{N}_/-]*[\p{L}_/-][\p{L}\p{N}_/-]*))"_s);
+    return tag;
+}
+
 } // namespace
 
 NoteScan scanNote(QStringView body, int firstLine)
 {
-    static const QRegularExpression tag(
-        uR"((?:^|(?<=[\s(,]))#([\p{L}\p{N}_/-]*[\p{L}_/-][\p{L}\p{N}_/-]*))"_s);
+    const QRegularExpression &tag = tagPattern();
     static const QRegularExpression task(uR"(^\s*(?:[-*+]|\d+[.)])\s+\[([ xX])\]\s+(.*)$)"_s);
 
     NoteScan scan;
@@ -139,6 +146,70 @@ NoteScan scanNote(QStringView body, int firstLine)
         }
     });
     return scan;
+}
+
+QString readingMarkdown(QStringView body, const std::function<QString(const QString &)> &embedUrl)
+{
+    // A wikilink with its label, after a bar, when it has one.
+    static const QRegularExpression wiki(uR"((!?)\[\[([^\[\]|]*?)(?:\|([^\[\]]*))?\]\])"_s);
+    const auto encode = [](const QString &target) {
+        return QString::fromLatin1(QUrl::toPercentEncoding(target.trimmed(), "/#"));
+    };
+    const auto escape = [](QString label) {
+        return label.replace(u'[', u"\\["_s).replace(u']', u"\\]"_s);
+    };
+    QString out;
+    qsizetype copied = 0;
+    forEachProseLine(body, 1, [&](int, qsizetype start, const QString &line) {
+        // Each replacement by where it starts in the line, and how long a stretch it replaces.
+        struct Change
+        {
+            qsizetype at;
+            qsizetype length;
+            QString text;
+        };
+        QList<Change> changes;
+        // Matched with code spans blanked, so what is in them stays as written.
+        const QString prose = withoutCodeSpans(line);
+        QString rest = prose;
+        for (const QRegularExpressionMatch &m : wiki.globalMatch(prose)) {
+            const QString target = m.captured(2).trimmed();
+            const QString label = m.captured(3).isEmpty() ? target : m.captured(3).trimmed();
+            QString text = u"[%1](jot-note:%2)"_s.arg(escape(label), encode(target));
+            if (!m.captured(1).isEmpty()) {
+                if (const QString url = embedUrl(target); !url.isEmpty())
+                    text = u"![%1](<%2>)"_s.arg(escape(label), url);
+            }
+            changes.append({m.capturedStart(), m.capturedLength(), text});
+            rest.replace(m.capturedStart(), m.capturedLength(), QString(m.capturedLength(), u' '));
+        }
+        // Tags, but not the # in a link's target or label, such as a heading's anchor.
+        for (const QRegularExpressionMatch &m : markdownPattern().globalMatch(rest))
+            rest.replace(m.capturedStart(), m.capturedLength(), QString(m.capturedLength(), u' '));
+        for (const QRegularExpressionMatch &m : tagPattern().globalMatch(rest)) {
+            QString name = m.captured(1);
+            while (name.endsWith(u'/'))
+                name.chop(1);
+            if (name.isEmpty())
+                continue;
+            changes.append({m.capturedStart(), name.size() + 1,
+                            u"[#%1](jot-tag:%2)"_s.arg(escape(name), encode(name))});
+        }
+        if (changes.isEmpty())
+            return;
+        std::ranges::sort(changes, {}, &Change::at);
+        out += body.sliced(copied, start - copied);
+        qsizetype at = 0;
+        for (const Change &change : std::as_const(changes)) {
+            out += QStringView(line).sliced(at, change.at - at);
+            out += change.text;
+            at = change.at + change.length;
+        }
+        out += QStringView(line).sliced(at);
+        copied = start + line.size();
+    });
+    out += body.sliced(copied);
+    return out;
 }
 
 QString

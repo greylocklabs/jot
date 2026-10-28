@@ -457,6 +457,7 @@ ApplicationWindow {
         case "lastNote":
             return Vault.isOpen && !Vault.showingTasks
         case "editNote":
+        case "readMode":
         case "copyLink":
         case "showInFiles":
             return note
@@ -524,6 +525,12 @@ ApplicationWindow {
             break
         case "sourceMode":
             Settings.sourceMode = !Settings.sourceMode
+            break
+        case "readMode":
+            if (Settings.readMode)
+                editor.write()
+            else
+                Settings.readMode = true
             break
         case "copyLink":
             Support.copyText(Vault.linkTo(Vault.current))

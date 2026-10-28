@@ -36,6 +36,8 @@ class Settings : public QObject
     Q_PROPERTY(QString noteFont READ noteFont WRITE setNoteFont NOTIFY noteFontChanged)
     /// Notes show their Markdown as written rather than styled.
     Q_PROPERTY(bool sourceMode READ sourceMode WRITE setSourceMode NOTIFY sourceModeChanged)
+    /// Notes are shown rendered, to read, rather than to write in.
+    Q_PROPERTY(bool readMode READ readMode WRITE setReadMode NOTIFY readModeChanged)
     /// Single keys act, as in vi, with a leader key before commands.
     Q_PROPERTY(bool viMode READ viMode WRITE setViMode NOTIFY keyboardChanged)
     Q_PROPERTY(QString leaderKey READ leaderKey WRITE setLeaderKey NOTIFY keyboardChanged)
@@ -79,6 +81,8 @@ public:
     void setNoteFont(const QString &font);
     [[nodiscard]] bool sourceMode() const { return m_sourceMode; }
     void setSourceMode(bool source);
+    [[nodiscard]] bool readMode() const { return m_readMode; }
+    void setReadMode(bool read);
     [[nodiscard]] bool viMode() const { return m_viMode; }
     void setViMode(bool on);
     [[nodiscard]] QString leaderKey() const { return m_leaderKey; }
@@ -106,6 +110,7 @@ Q_SIGNALS:
     void sidebarWidthChanged();
     void noteListWidthChanged();
     void sourceModeChanged();
+    void readModeChanged();
     void keyboardChanged();
     void lastSeenVersionChanged();
 
@@ -121,6 +126,7 @@ private:
     int m_sidebarWidth = 0;
     int m_noteListWidth = 0;
     bool m_sourceMode = false;
+    bool m_readMode = false;
     bool m_viMode = false;
     QString m_leaderKey = QStringLiteral(",");
     int m_leaderTimeout = 5000;

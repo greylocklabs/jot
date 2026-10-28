@@ -11,6 +11,7 @@ class TestNoteScan : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void readsAsMarkdownWithLinks();
     void findsEveryKindOfLink();
     void leavesUrlsAndAnchorsOut();
     void findsNestedTagsButNotHeadingsOrNumbers();
@@ -134,6 +135,25 @@ void TestNoteScan::findsWhereLinesStart()
     QCOMPARE(lineStart(u"a\nbb\nccc", 1), 0);
     QCOMPARE(lineStart(u"a\nbb\nccc", 3), 5);
     QCOMPARE(lineStart(u"a\nbb\nccc", 9), 8);
+}
+
+void TestNoteScan::readsAsMarkdownWithLinks()
+{
+    const auto embed = [](const QString &target) {
+        return target == u"map.png"_s ? u"file:///v/map.png"_s : QString();
+    };
+    QCOMPARE(readingMarkdown(u"See [[Mara Vey]] and [[Cast/Soren|her brother]].\n"_s, embed),
+             u"See [Mara Vey](jot-note:Mara%20Vey) and [her brother](jot-note:Cast/Soren).\n"_s);
+    QCOMPARE(readingMarkdown(u"![[map.png]] ![[gone.png]]\n"_s, embed),
+             u"![map.png](<file:///v/map.png>) [gone.png](jot-note:gone.png)\n"_s);
+    QCOMPARE(readingMarkdown(u"#ferry and #cast/lead, not [x](#heading)\n"_s, embed),
+             u"[#ferry](jot-tag:ferry) and [#cast/lead](jot-tag:cast/lead), not [x](#heading)\n"_s);
+    // Code is left as it is.
+    const QString code = u"`[[not]] #code`\n```\n[[Mara]] #tag\n```\n"_s;
+    QCOMPARE(readingMarkdown(code, embed), code);
+    // A heading's # is not a tag, and lines keep their Windows line breaks.
+    QCOMPARE(readingMarkdown(u"# Title\r\nA #tag\r\n"_s, embed),
+             u"# Title\r\nA [#tag](jot-tag:tag)\r\n"_s);
 }
 
 QTEST_GUILESS_MAIN(TestNoteScan)

@@ -23,13 +23,15 @@ Rectangle {
 
     /// Puts the cursor at the end of the body.
     function editBody() {
+        Settings.readMode = false
         body.forceActiveFocus()
         body.cursorPosition = body.length
         vi.mode = "insert"
     }
 
-    /// Puts the cursor back in the body where it was, to type.
+    /// Puts the cursor back in the body where it was, to type, out of reading.
     function write() {
+        Settings.readMode = false
         body.forceActiveFocus()
         vi.mode = "insert"
     }
@@ -38,6 +40,7 @@ Rectangle {
     /// the note. Says whether anything was done.
     function format(action, argument) {
         if (action === "source") {
+            Settings.readMode = false
             Settings.sourceMode = !Settings.sourceMode
             return true
         }
@@ -67,6 +70,19 @@ Rectangle {
     property bool loading: false
     /// Another note is on its way in, rather than this one changed on disk or renamed.
     property bool fresh: true
+
+    /// Opens what a link in the reading view leads to: a note, a tag's notes, or anything
+    /// else with the desktop.
+    function openLink(link) {
+        if (link.startsWith("jot-tag:")) {
+            Vault.showingTasks = false
+            Vault.notes.tag = decodeURIComponent(link.slice("jot-tag:".length))
+        } else if (link.startsWith("jot-note:")) {
+            Vault.follow(decodeURIComponent(link.slice("jot-note:".length)), true)
+        } else {
+            Vault.follow(link, false)
+        }
+    }
 
     function load() {
         loading = true
@@ -277,10 +293,57 @@ Rectangle {
                 font.weight: Theme.weightStrong
             }
 
+            // The note drawn to read, in place of the text to write in.
+            TextEdit {
+                id: reader
+
+                objectName: "reader"
+                visible: Settings.readMode
+                width: parent.width - 2 * parent.padding
+                readOnly: true
+                // NoteReader draws the document itself; the TextEdit only shows it.
+                textFormat: TextEdit.PlainText
+                wrapMode: TextEdit.Wrap
+                color: Theme.text
+                selectionColor: Theme.tint(Theme.accent, 0.4)
+                selectedTextColor: Theme.text
+                font.family: root.noteFamily
+                font.pixelSize: Theme.textLg
+                selectByMouse: true
+                Accessible.name: qsTr("Note, to read")
+                onLinkActivated: link => root.openLink(link)
+
+                NoteReader {
+                    id: reading
+
+                    document: reader.textDocument
+                    text: Settings.readMode ? Vault.currentText : ""
+                    fontFamily: root.noteFamily
+                    pixelSize: reader.font.pixelSize
+                    width: reader.width
+                }
+                HoverHandler {
+                    cursorShape: reader.hoveredLink !== "" ? Qt.PointingHandCursor : Qt.IBeamCursor
+                }
+                // A click on a checkbox, left of its text, ticks it in the note.
+                TapHandler {
+                    enabled: Vault.writable
+                    onTapped: point => {
+                        const position = reader.positionAt(point.position.x, point.position.y)
+                        const task = reading.taskAt(position)
+                        if (task.line === undefined || point.position.x
+                                >= reader.positionToRectangle(position).x)
+                            return
+                        Vault.setTaskDone(Vault.current, task.line, !task.done, task.text)
+                    }
+                }
+            }
+
             TextEdit {
                 id: body
 
                 objectName: "body"
+                visible: !Settings.readMode
 
                 width: parent.width - 2 * parent.padding
                 readOnly: !Vault.writable
