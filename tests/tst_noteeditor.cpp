@@ -521,7 +521,8 @@ void TestNoteEditor::readsTheNoteWithLinksAndBoxesToTick()
                                   Q_ARG(int, int(doc->toPlainText().indexOf(u"Buy rope"_s))));
         QTest::mouseClick(m_window.get(), Qt::LeftButton, {},
                           reader->mapToScene(QPointF(line.x() - 6, line.center().y())).toPoint());
-        QTest::qWaitFor(ticked, 300);
+        if (QTest::qWaitFor(ticked, 300))
+            break;
     }
     QVERIFY(ticked());
 
