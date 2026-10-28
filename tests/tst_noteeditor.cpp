@@ -52,6 +52,7 @@ private Q_SLOTS:
     void togglesSourceMode();
     void writesInTheChosenFont();
     void readsTheNoteWithLinksAndBoxesToTick();
+    void tickingARepeatingToDoWritesTheNext();
     void editsInViModes();
 
 private:
@@ -539,6 +540,36 @@ void TestNoteEditor::readsTheNoteWithLinksAndBoxesToTick()
     QVERIFY(m_settings->sourceMode());
     QTRY_VERIFY(find(u"body"_s)->isVisible());
     m_settings->setSourceMode(false);
+}
+
+void TestNoteEditor::tickingARepeatingToDoWritesTheNext()
+{
+    const QString today = QDate::currentDate().toString(Qt::ISODate);
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Chores.md"_s,
+                            u"- [ ] Water 🔁 every day 📅 %1\n"_s.arg(today), &error));
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Chores.md"_s), 3000);
+    m_vault->setCurrent(u"Chores.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    QPointF placed(-1, -1);
+    QTRY_VERIFY([&] {
+        const QPointF now = body->mapToScene(QPointF(0, 0));
+        const bool settled = now == placed;
+        placed = now;
+        return settled;
+    }());
+    // A click on the box, where the mark between the brackets is.
+    QRectF mark;
+    QMetaObject::invokeMethod(body, "positionToRectangle", Q_RETURN_ARG(QRectF, mark),
+                              Q_ARG(int, 3));
+    QTest::mouseClick(m_window.get(), Qt::LeftButton, {},
+                      body->mapToScene(mark.center()).toPoint());
+    const QString tomorrow = QDate::currentDate().addDays(1).toString(Qt::ISODate);
+    QTRY_COMPARE_WITH_TIMEOUT(
+        body->property("text").toString(),
+        u"- [ ] Water 🔁 every day 📅 %1\n- [x] Water 🔁 every day 📅 %2 ✅ %2\n"_s.arg(tomorrow,
+                                                                                        today),
+        3000);
 }
 
 void TestNoteEditor::writesInTheChosenFont()

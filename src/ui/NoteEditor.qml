@@ -593,8 +593,19 @@ Rectangle {
                         if (hit.kind !== "task")
                             return
                         const done = body.getText(hit.position, hit.position + 1) !== " "
-                        body.remove(hit.position, hit.position + 1)
-                        body.insert(hit.position, done ? " " : "x")
+                        if (done) {
+                            body.remove(hit.position, hit.position + 1)
+                            body.insert(hit.position, " ")
+                            return
+                        }
+                        // Ticked, the whole line is written again, with the next one above it
+                        // when it repeats.
+                        const start = body.text.lastIndexOf("\n", hit.position - 1) + 1
+                        const newline = body.text.indexOf("\n", hit.position)
+                        const end = newline < 0 ? body.length : newline
+                        const line = Vault.completedTaskLine(body.getText(start, end))
+                        body.remove(start, end)
+                        body.insert(start, line)
                     }
                 }
                 HoverHandler {

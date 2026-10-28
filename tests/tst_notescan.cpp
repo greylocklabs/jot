@@ -11,6 +11,7 @@ class TestNoteScan : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void tickingARepeatingTaskWritesTheNext();
     void readsAsMarkdownWithLinks();
     void findsEveryKindOfLink();
     void leavesUrlsAndAnchorsOut();
@@ -157,6 +158,19 @@ void TestNoteScan::readsAsMarkdownWithLinks()
     // A heading's # is not a tag, and lines keep their Windows line breaks.
     QCOMPARE(readingMarkdown(u"# Title\r\nA #tag\r\n"_s, embed),
              u"# Title\r\nA [#tag](jot-tag:tag)\r\n"_s);
+}
+
+void TestNoteScan::tickingARepeatingTaskWritesTheNext()
+{
+    const QString note = u"# Chores\n\n- [ ] Water 🔁 every week 📅 2026-10-28\n- [ ] Sweep\n"_s;
+    const std::optional<QString> ticked = setTaskDone(note, 3, true, {}, QDate(2026, 10, 28));
+    QVERIFY(ticked);
+    QCOMPARE(*ticked, u"# Chores\n\n- [ ] Water 🔁 every week 📅 2026-11-04\n"
+                      "- [x] Water 🔁 every week 📅 2026-10-28 ✅ 2026-10-28\n- [ ] Sweep\n"_s);
+    // Unticking only unticks.
+    QCOMPARE(*setTaskDone(*ticked, 4, false, {}, QDate(2026, 10, 28)),
+             u"# Chores\n\n- [ ] Water 🔁 every week 📅 2026-11-04\n"
+             "- [ ] Water 🔁 every week 📅 2026-10-28 ✅ 2026-10-28\n- [ ] Sweep\n"_s);
 }
 
 QTEST_GUILESS_MAIN(TestNoteScan)

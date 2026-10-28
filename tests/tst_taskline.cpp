@@ -12,6 +12,8 @@ class TestTaskLine : public QObject
 private Q_SLOTS:
     void reads_data();
     void reads();
+    void findsTheNextDay();
+    void writesTheNextOneWhenDone();
 };
 
 void TestTaskLine::reads_data()
@@ -57,6 +59,46 @@ void TestTaskLine::reads()
     QCOMPARE(read.repeat, line.repeat);
     QCOMPARE(read.done, line.done);
     QCOMPARE(read.labels, line.labels);
+}
+
+void TestTaskLine::findsTheNextDay()
+{
+    const QDate wednesday(2026, 10, 28);
+    QCOMPARE(nextOccurrence(u"every day"_s, wednesday), QDate(2026, 10, 29));
+    QCOMPARE(nextOccurrence(u"every 3 days"_s, wednesday), QDate(2026, 10, 31));
+    QCOMPARE(nextOccurrence(u"every week"_s, wednesday), QDate(2026, 11, 4));
+    QCOMPARE(nextOccurrence(u"every other week"_s, wednesday), QDate(2026, 11, 11));
+    QCOMPARE(nextOccurrence(u"every 2 weeks"_s, wednesday), QDate(2026, 11, 11));
+    QCOMPARE(nextOccurrence(u"every month"_s, QDate(2026, 1, 31)), QDate(2026, 2, 28));
+    QCOMPARE(nextOccurrence(u"every year"_s, wednesday), QDate(2027, 10, 28));
+    QCOMPARE(nextOccurrence(u"Every Monday"_s, wednesday), QDate(2026, 11, 2));
+    QCOMPARE(nextOccurrence(u"every wednesday"_s, wednesday), QDate(2026, 11, 4));
+    QCOMPARE(nextOccurrence(u"every weekday"_s, QDate(2026, 10, 30)), QDate(2026, 11, 2));
+    QVERIFY(!nextOccurrence(u"every full moon"_s, wednesday).isValid());
+    QVERIFY(!nextOccurrence(u"every week"_s, {}).isValid());
+}
+
+void TestTaskLine::writesTheNextOneWhenDone()
+{
+    const QDate today(2026, 10, 28);
+    // One that does not repeat is only ticked.
+    QCOMPARE(completedTaskLine(u"- [ ] Buy rope 📅 2026-10-28"_s, today),
+             u"- [x] Buy rope 📅 2026-10-28"_s);
+    // One that does gets its next one above it, at the same time of day.
+    QCOMPARE(completedTaskLine(u"  - [ ] Water @day 🔁 every week 📅 2026-10-28 09:00"_s, today),
+             u"  - [ ] Water @day 🔁 every week 📅 2026-11-04 09:00\n"
+             "  - [x] Water @day 🔁 every week 📅 2026-10-28 09:00 ✅ 2026-10-28"_s);
+    // Done late, it comes round after today, not on a day gone by.
+    QCOMPARE(completedTaskLine(u"- [ ] Stretch 🔁 every day 📅 2026-10-20"_s, today),
+             u"- [ ] Stretch 🔁 every day 📅 2026-10-29\n"
+             "- [x] Stretch 🔁 every day 📅 2026-10-20 ✅ 2026-10-28"_s);
+    // Windows line breaks stay, and one with no day, or a rule Jot cannot read, is only ticked.
+    QCOMPARE(
+        completedTaskLine(u"- [ ] Pay 🔁 every month 📅 2026-10-28\r"_s, today),
+        u"- [ ] Pay 🔁 every month 📅 2026-11-28\r\n- [x] Pay 🔁 every month 📅 2026-10-28 ✅ 2026-10-28\r"_s);
+    QCOMPARE(completedTaskLine(u"- [ ] Pay 🔁 every week"_s, today), u"- [x] Pay 🔁 every week"_s);
+    QCOMPARE(completedTaskLine(u"- [ ] Moon 🔁 every full moon 📅 2026-10-28"_s, today),
+             u"- [x] Moon 🔁 every full moon 📅 2026-10-28"_s);
 }
 
 QTEST_GUILESS_MAIN(TestTaskLine)
