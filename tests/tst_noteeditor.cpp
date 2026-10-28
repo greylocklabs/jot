@@ -38,6 +38,7 @@ private Q_SLOTS:
     void opensALongNoteAtTheTop();
     void typingIsDrawnAndSaved();
     void typingKeepsWindowsLineEndings();
+    void anOutsideEditKeepsTheCursorWhereItWas();
     void showsImagesInPlaceOfTheirLinks();
     void switchingAwayFromAPictureLeavesNoStalePlace();
     void formatsAndUndoesInOneStep();
@@ -223,6 +224,24 @@ void TestNoteEditor::typingKeepsWindowsLineEndings()
     QTRY_VERIFY_WITH_TIMEOUT(!m_vault->unsaved(), 2000);
     QVERIFY(file.open(QIODevice::ReadOnly));
     QCOMPARE(file.readAll(), QByteArray("one!\r\ntwo\r\n"));
+}
+
+void TestNoteEditor::anOutsideEditKeepsTheCursorWhereItWas()
+{
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Draft.md"_s, u"one\ntwo\nthree\n"_s, &error));
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Draft.md"_s), 3000);
+    m_vault->setSaveDelay(60000);
+    m_vault->setCurrent(u"Draft.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    body->forceActiveFocus();
+    // Typing at the end of "three", unsaved, while a line goes in at the top elsewhere.
+    body->setProperty("cursorPosition", 13);
+    QTest::keyClick(m_window.get(), '!');
+    QVERIFY(notefile::write(m_root + u"/Draft.md"_s, u"zero\none\ntwo\nthree\n"_s, &error));
+    QTRY_COMPARE_WITH_TIMEOUT(body->property("text").toString(), u"zero\none\ntwo\nthree!\n"_s,
+                              3000);
+    QCOMPARE(body->property("cursorPosition").toInt(), 19);
 }
 
 void TestNoteEditor::showsImagesInPlaceOfTheirLinks()

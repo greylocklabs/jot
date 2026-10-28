@@ -7,6 +7,9 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ### Changed
 
+- When a note changes elsewhere while you are typing in it, such as from a sync, Jot merges the
+  two when they touch different lines, and the cursor stays where you were. Only where both
+  changed the same lines is the other version kept aside as a conflict copy, as before.
 - Callie Light's pink is deeper, with white text on it, so buttons and what is selected are
   easier to read.
 

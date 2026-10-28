@@ -42,6 +42,9 @@ My Notes/                    the vault: any folder
 - Saving a note writes back exactly the bytes in the editor. Jot never reformats a note's
   Markdown or YAML on load or save.
 - Writes are atomic: a temporary file in the same folder, then a rename.
+- When a note changes on disk while it has edits not yet saved, Jot merges the two line by line.
+  Where both changed the same lines, or lines next to each other, the other version is kept
+  beside the note as `<title> (conflict <date> <time>).md`, and Jot's version is saved.
 
 ### Titles and file names
 
