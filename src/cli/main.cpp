@@ -263,6 +263,15 @@ int main(int argc, char *argv[])
     const QCommandLineOption orderOption(
         u"order"_s, u"With ls: updated (the default), created or title."_s, u"order"_s);
     addOption(orderOption);
+    const QCommandLineOption viewOption(
+        u"view"_s, u"With tasks: today, upcoming, anytime or all (the default)."_s, u"view"_s);
+    addOption(viewOption);
+    const QCommandLineOption labelOption(u"label"_s, u"With tasks: only those with this @label."_s,
+                                         u"label"_s);
+    addOption(labelOption);
+    const QCommandLineOption tagOption(
+        u"tag"_s, u"With tasks: only those with this #tag, or one nested in it."_s, u"tag"_s);
+    addOption(tagOption);
     const QCommandLineOption jsonOption(
         u"json"_s,
         u"With status, ls, search, new, tasks, tags and import: print JSON for scripts."_s);
@@ -341,6 +350,8 @@ int main(int argc, char *argv[])
                 return notebooks();
             if (option == u"order")
                 return cli::Completion::plain(Settings::noteSorts());
+            if (option == u"view")
+                return cli::Completion::plain(Settings::toDoViews());
             return QList<cli::Candidate>();
         };
         const cli::Completion completion(commands, named, sources);
@@ -395,7 +406,8 @@ int main(int argc, char *argv[])
         if (command == u"show")
             return commands.show(rest);
         if (command == u"tasks")
-            return commands.listTasks(json);
+            return commands.listTasks(json, parser.value(viewOption), parser.value(labelOption),
+                                      parser.value(tagOption));
         if (command == u"tags")
             return commands.listTags(json);
         if (command == u"import") {

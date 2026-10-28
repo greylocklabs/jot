@@ -76,8 +76,12 @@ Rectangle {
 
                 width: root.width
                 label: qsTr("Tasks")
-                selected: Vault.showingTasks
-                onClicked: Vault.showingTasks = true
+                selected: Vault.showingTasks && Vault.tasks.label === "" && Vault.tasks.tag === ""
+                onClicked: {
+                    Vault.showingTasks = true
+                    Vault.tasks.label = ""
+                    Vault.tasks.tag = ""
+                }
 
                 contentItem: Item {
                     Text {
@@ -98,8 +102,9 @@ Rectangle {
                             rightMargin: Theme.space5
                             verticalCenter: parent.verticalCenter
                         }
-                        visible: Vault.tasks.count > 0
-                        text: Vault.tasks.count
+                        // What is due today or overdue, as the badge on a to-do app does.
+                        visible: Vault.tasks.todayCount > 0
+                        text: Vault.tasks.todayCount
                         color: Theme.accent
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.textXs
@@ -375,10 +380,13 @@ Rectangle {
 
                     width: root.width
                     label: "#" + tag
-                    selected: !Vault.showingTasks && Vault.notes.tag === tag
+                    // In Tasks, a tag narrows the to-dos; elsewhere it lists its notes.
+                    selected: Vault.showingTasks ? Vault.tasks.tag === tag : Vault.notes.tag === tag
                     onClicked: {
-                        Vault.showingTasks = false
-                        Vault.notes.tag = tag
+                        if (Vault.showingTasks)
+                            Vault.tasks.tag = Vault.tasks.tag === tag ? "" : tag
+                        else
+                            Vault.notes.tag = tag
                     }
 
                     contentItem: Item {
@@ -426,6 +434,65 @@ Rectangle {
                                 verticalCenter: parent.verticalCenter
                             }
                             text: tagRow.count
+                            color: Theme.textFaint
+                            font.family: Theme.fontFamily
+                            font.pixelSize: Theme.textXs
+                            font.features: {
+                                "tnum": 1
+                            }
+                        }
+                    }
+                }
+            }
+
+            Heading {
+                visible: Vault.labels.length > 0
+                text: qsTr("Labels")
+            }
+
+            // Labels on open to-dos; choosing one shows its to-dos.
+            Repeater {
+                model: Vault.labels
+
+                Entry {
+                    id: labelRow
+
+                    required property var modelData
+
+                    width: root.width
+                    label: "@" + modelData.label
+                    selected: Vault.showingTasks && Vault.tasks.label === modelData.label
+                    onClicked: {
+                        Vault.showingTasks = true
+                        Vault.tasks.label = modelData.label
+                    }
+
+                    contentItem: Item {
+                        Text {
+                            anchors {
+                                left: parent.left
+                                // In line with the tags, past where their folds go.
+                                leftMargin: Theme.space4 + Theme.smallGlyphSize + Theme.space3
+                                right: labelCount.left
+                                rightMargin: Theme.space3
+                                verticalCenter: parent.verticalCenter
+                            }
+                            text: labelRow.label
+                            elide: Text.ElideRight
+                            color: labelRow.selected ? Theme.text : Theme.textMuted
+                            font.family: Theme.fontFamily
+                            font.pixelSize: Theme.textMd
+                            font.weight: labelRow.selected ? Theme.weightBold : Theme.weightStrong
+                        }
+                        Text {
+                            id: labelCount
+
+                            anchors {
+                                right: parent.right
+                                rightMargin: Theme.space5
+                                verticalCenter: parent.verticalCenter
+                            }
+                            text: labelRow.modelData.count
                             color: Theme.textFaint
                             font.family: Theme.fontFamily
                             font.pixelSize: Theme.textXs

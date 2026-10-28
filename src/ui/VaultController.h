@@ -44,6 +44,8 @@ class VaultController : public QObject
     Q_PROPERTY(QString error READ error NOTIFY errorChanged)
     Q_PROPERTY(int noteCount READ noteCount NOTIFY notesChanged)
     Q_PROPERTY(QStringList tags READ tags NOTIFY notesChanged)
+    /// The @labels on open to-dos: `{label, count}` for each, alphabetically.
+    Q_PROPERTY(QVariantList labels READ labels NOTIFY notesChanged)
     /// Each notebook's emoji, by its path, for those that have one.
     Q_PROPERTY(QVariantMap notebookEmoji READ notebookEmoji NOTIFY notesChanged)
     Q_PROPERTY(jot::NotebookModel *notebooks READ notebooks CONSTANT)
@@ -188,6 +190,7 @@ public:
     [[nodiscard]] QString error() const { return m_error; }
     [[nodiscard]] int noteCount() const;
     [[nodiscard]] QStringList tags() const;
+    [[nodiscard]] QVariantList labels() const;
     [[nodiscard]] QVariantMap notebookEmoji() const { return m_notebookEmoji; }
     [[nodiscard]] NotebookModel *notebooks() { return &m_notebooks; }
     [[nodiscard]] TagModel *tagTree() { return &m_tagTree; }

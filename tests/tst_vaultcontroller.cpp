@@ -882,12 +882,20 @@ void TestVaultController::listsAndTicksWhatIsLeftToDo()
 {
     QVERIFY(m_vault->openPath(m_root));
     TaskModel &tasks = *m_vault->tasks();
+    // The groceries were due before today, which keeps them in Today; the rest has no day.
+    QCOMPARE(tasks.view(), u"today"_s);
+    QCOMPARE(column(tasks, "title"), QStringList{u"Groceries"_s});
+    QCOMPARE(column(tasks, "group"), QStringList{u"Overdue"_s});
+    QCOMPARE(tasks.todayCount(), 1);
+    tasks.setView(u"all"_s);
+    QCOMPARE(m_settings->tasksView(), u"all"_s);
     // The task note first, then the open boxes, note by note.
     QCOMPARE(column(tasks, "kind"), (QStringList{u"note"_s, u"task"_s, u"task"_s, u"task"_s}));
-    QCOMPARE(column(tasks, "title").first(), u"Groceries"_s);
-    QCOMPARE(column(tasks, "due").first(), u"2026-10-20"_s);
-    QCOMPARE(column(tasks, "task").mid(1), (QStringList{u"decide what he wants by act two"_s,
-                                                        u"watercolor paper"_s, u"oat milk"_s}));
+    QCOMPARE(column(tasks, "title"),
+             (QStringList{u"Groceries"_s, u"decide what he wants by act two"_s,
+                          u"watercolor paper"_s, u"oat milk"_s}));
+    QCOMPARE(column(tasks, "note").mid(1),
+             (QStringList{u"Soren"_s, u"Groceries"_s, u"Groceries"_s}));
 
     const QStringList lines = column(tasks, "line");
     // A box in a note that is not shown is ticked in its file.

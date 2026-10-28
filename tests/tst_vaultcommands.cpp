@@ -176,7 +176,8 @@ void TestVaultCommands::listsWhatIsLeftToDo()
     const QJsonArray tasks = json().array();
     QCOMPARE(tasks.size(), 4);
     QCOMPARE(tasks.first().toObject().value(u"kind"_s).toString(), u"note"_s);
-    QCOMPARE(tasks.last().toObject().value(u"text"_s).toString(), u"oat milk"_s);
+    QCOMPARE(tasks.last().toObject().value(u"title"_s).toString(), u"oat milk"_s);
+    QCOMPARE(tasks.last().toObject().value(u"note"_s).toString(), u"Groceries"_s);
     QCOMPARE(tasks.last().toObject().value(u"line"_s).toInt(), 6);
 
     // A due that is not a date is never overdue.
@@ -186,10 +187,24 @@ void TestVaultCommands::listsWhatIsLeftToDo()
     m_index->update({u"Someday.md"_s});
     m_index->update({u"Inbox/Groceries.md"_s});
     QCOMPARE(run([](auto &c) { return c.listTasks(false); }), 0);
-    QVERIFY(m_out.contains(u"[ ] Someday  someday"_s));
+    // One due on no day it can read counts as due on none.
+    QVERIFY2(m_out.contains(u"[ ] Someday\n"_s), qPrintable(m_out));
     QVERIFY(!isOverdue(u"someday"_s, QDate(2026, 10, 15)));
     QVERIFY(isOverdue(u"2026-10-14T09:00:00Z"_s, QDate(2026, 10, 15)));
     QVERIFY(!isOverdue(u"2026-10-15"_s, QDate(2026, 10, 15)));
+
+    // Views, labels and tags, with their marks or without.
+    QVERIFY(notefile::write(
+        m_vault->absolute(u"Calls.md"_s),
+        u"- [ ] Call Soren @minutes #calls 📅 2020-01-01\n- [ ] Call Mara @hours\n"_s, &error));
+    m_index->update({u"Calls.md"_s});
+    QCOMPARE(run([](auto &c) { return c.listTasks(true, u"today"_s, u"@minutes"_s); }), 0);
+    QCOMPARE(json().array().size(), 1);
+    QCOMPARE(json().array().first()[u"due"_s].toString(), u"2020-01-01"_s);
+    QCOMPARE(json().array().first()[u"labels"_s].toArray().first().toString(), u"minutes"_s);
+    QCOMPARE(run([](auto &c) { return c.listTasks(true, u"anytime"_s, {}, u"#calls"_s); }), 0);
+    QVERIFY(json().array().isEmpty());
+    QCOMPARE(run([](auto &c) { return c.listTasks(false, u"later"_s); }), 2);
 }
 
 void TestVaultCommands::opensANoteInTheApp()

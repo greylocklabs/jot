@@ -19,6 +19,7 @@ const QString kTheme = u"appearance/theme"_s;
 const QString kNoteSort = u"notes/sort"_s;
 const QString kCollapsedNotebooks = u"notes/collapsedNotebooks"_s;
 const QString kCollapsedTags = u"notes/collapsedTags"_s;
+const QString kTasksView = u"tasks/view"_s;
 const QString kCheckForUpdates = u"updates/check"_s;
 const QString kLastSeenVersion = u"app/lastSeenVersion"_s;
 const QString kSourceMode = u"editor/sourceMode"_s;
@@ -52,6 +53,9 @@ Settings::Settings(const QString &path, QObject *parent)
         m_noteSort = noteSorts().first();
     m_collapsedNotebooks = m_store.value(kCollapsedNotebooks).toStringList();
     m_collapsedTags = m_store.value(kCollapsedTags).toStringList();
+    m_tasksView = m_store.value(kTasksView, u"today"_s).toString();
+    if (!toDoViews().contains(m_tasksView))
+        m_tasksView = u"today"_s;
     m_checkForUpdates = m_store.value(kCheckForUpdates, true).toBool();
     m_lastSeenVersion = m_store.value(kLastSeenVersion).toString();
     m_sourceMode = m_store.value(kSourceMode, false).toBool();
@@ -105,6 +109,20 @@ void Settings::setNoteSort(const QString &sort)
     m_noteSort = sort;
     m_store.setValue(kNoteSort, sort);
     Q_EMIT noteSortChanged();
+}
+
+QStringList Settings::toDoViews()
+{
+    return {u"today"_s, u"upcoming"_s, u"anytime"_s, u"all"_s};
+}
+
+void Settings::setTasksView(const QString &view)
+{
+    if (m_tasksView == view || !toDoViews().contains(view))
+        return;
+    m_tasksView = view;
+    m_store.setValue(kTasksView, view);
+    Q_EMIT tasksViewChanged();
 }
 
 void Settings::setCollapsedTags(const QStringList &tags)
@@ -249,6 +267,7 @@ void Settings::reset()
     setCheckForUpdates(true);
     setSourceMode(false);
     setReadMode(false);
+    setTasksView(u"today"_s);
     setNoteFont({});
     resetSidebarWidth();
     resetNoteListWidth();

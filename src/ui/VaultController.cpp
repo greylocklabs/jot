@@ -45,6 +45,11 @@ VaultController::VaultController(Settings &settings, QObject *parent)
             [this] { m_settings.setNoteSort(m_notes.order()); });
     connect(&settings, &Settings::noteSortChanged, this,
             [this] { m_notes.setOrder(m_settings.noteSort()); });
+    m_tasks.setView(settings.tasksView());
+    connect(&m_tasks, &TaskModel::filterChanged, this,
+            [this] { m_settings.setTasksView(m_tasks.view()); });
+    connect(&settings, &Settings::tasksViewChanged, this,
+            [this] { m_tasks.setView(m_settings.tasksView()); });
 }
 
 VaultController::~VaultController()
@@ -942,6 +947,16 @@ bool VaultController::writable() const
 int VaultController::noteCount() const
 {
     return m_index ? m_index->noteCount() : 0;
+}
+
+QVariantList VaultController::labels() const
+{
+    QVariantList labels;
+    if (m_index) {
+        for (const TagCount &each : m_index->labels())
+            labels.append(QVariantMap{{u"label"_s, each.tag}, {u"count"_s, each.notes}});
+    }
+    return labels;
 }
 
 QStringList VaultController::tags() const

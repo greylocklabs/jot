@@ -1,5 +1,6 @@
 #pragma once
 
+#include "jot/ToDos.h"
 #include "jot/VaultIndex.h"
 
 #include <QAbstractListModel>
@@ -7,30 +8,41 @@
 
 namespace jot {
 
-/// Everything left to do in the vault: notes that are tasks, soonest due first, then the
-/// unticked checkboxes in every note, note by note.
+/// The to-dos Tasks shows: one view of them, Today, Upcoming, Anytime or All, with a label
+/// or a tag to narrow it, under headings for the day or the note they are in.
 class TaskModel : public QAbstractListModel
 {
     Q_OBJECT
     QML_ELEMENT
     QML_UNCREATABLE("Given by Vault")
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
+    /// "today", "upcoming", "anytime" or "all".
+    Q_PROPERTY(QString view READ view WRITE setView NOTIFY filterChanged)
+    /// Only to-dos with this @label, when set.
+    Q_PROPERTY(QString label READ label WRITE setLabel NOTIFY filterChanged)
+    /// Only to-dos with this #tag or one nested in it, when set.
+    Q_PROPERTY(QString tag READ tag WRITE setTag NOTIFY filterChanged)
+    /// How many are overdue or due today, whatever the view.
+    Q_PROPERTY(int todayCount READ todayCount NOTIFY countChanged)
 
 public:
     enum Role {
         /// "note" for a note that is a task, "task" for a checkbox in a note.
         KindRole = Qt::UserRole + 1,
         PathRole,
-        /// The note's title: what a task note says, or where a task is written.
+        /// The to-do's words, or a task note's title.
         TitleRole,
-        /// A task's own words; empty for a task note.
-        TaskRole,
+        /// The note a checkbox is in; empty for a task note.
+        NoteRole,
         LineRole,
-        /// When a task note is due, as written, or empty.
+        /// When it is due, as the list says it: a time today, a day otherwise; or empty.
         DueRole,
-        /// The due date is past.
+        /// The due day is past.
         OverdueRole,
-        /// The heading it is listed under: "Task notes", or a task's note.
+        LabelsRole,
+        /// It repeats.
+        RepeatsRole,
+        /// The heading it is listed under: a day, or the note it is in.
         GroupRole,
     };
 
@@ -38,25 +50,32 @@ public:
 
     void reload(const VaultIndex *index);
 
+    [[nodiscard]] QString view() const { return m_view; }
+    void setView(const QString &view);
+    [[nodiscard]] QString label() const { return m_label; }
+    void setLabel(const QString &label);
+    [[nodiscard]] QString tag() const { return m_tag; }
+    void setTag(const QString &tag);
+    [[nodiscard]] int todayCount() const { return m_todayCount; }
+
     [[nodiscard]] int rowCount(const QModelIndex &parent = {}) const override;
     [[nodiscard]] QVariant data(const QModelIndex &index, int role) const override;
     [[nodiscard]] QHash<int, QByteArray> roleNames() const override;
 
 Q_SIGNALS:
     void countChanged();
+    void filterChanged();
 
 private:
-    struct Row
-    {
-        QString kind;
-        QString path;
-        QString title;
-        QString task;
-        int line = 0;
-        QString due;
-    };
+    void refill();
 
-    QList<Row> m_rows;
+    const VaultIndex *m_index = nullptr;
+    QString m_view = QStringLiteral("today");
+    QString m_label;
+    QString m_tag;
+    QDate m_today;
+    QList<ToDo> m_rows;
+    int m_todayCount = 0;
 };
 
 } // namespace jot

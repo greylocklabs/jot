@@ -22,6 +22,8 @@ add_library(jotcore STATIC
     NoteScan.cpp
     jot/TaskLine.h
     TaskLine.cpp
+    jot/ToDos.h
+    ToDos.cpp
     jot/Rename.h
     Rename.cpp
     jot/Settings.h
