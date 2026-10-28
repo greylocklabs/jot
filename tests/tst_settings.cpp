@@ -1,5 +1,6 @@
 #include "jot/Settings.h"
 
+#include <QSettings>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
@@ -20,6 +21,7 @@ private Q_SLOTS:
     void refusesAnUnknownNoteFont();
     void keepsColumnWidthsInBounds();
     void keepsKeyboardChoices();
+    void keepsTheTasksView();
 };
 
 void TestSettings::startsWithDefaults()
@@ -153,6 +155,29 @@ void TestSettings::keepsKeyboardChoices()
     QVERIFY(!settings.viMode());
     QCOMPARE(settings.leaderKey(), u","_s);
     QCOMPARE(settings.leaderTimeout(), 5000);
+}
+
+void TestSettings::keepsTheTasksView()
+{
+    QTemporaryDir dir;
+    const QString path = dir.filePath(u"settings.ini"_s);
+    {
+        Settings settings(path);
+        QCOMPARE(settings.tasksView(), u"today"_s);
+        QSignalSpy changed(&settings, &Settings::tasksViewChanged);
+        settings.setTasksView(u"upcoming"_s);
+        settings.setTasksView(u"someday"_s);
+        QCOMPARE(settings.tasksView(), u"upcoming"_s);
+        QCOMPARE(changed.count(), 1);
+    }
+    QCOMPARE(Settings(path).tasksView(), u"upcoming"_s);
+    // A view this Jot does not know, as from a newer one, falls back to Today.
+    QSettings(path, QSettings::IniFormat).setValue(u"tasks/view"_s, u"someday"_s);
+    Settings settings(path);
+    QCOMPARE(settings.tasksView(), u"today"_s);
+    settings.setTasksView(u"anytime"_s);
+    settings.reset();
+    QCOMPARE(settings.tasksView(), u"today"_s);
 }
 
 QTEST_GUILESS_MAIN(TestSettings)
