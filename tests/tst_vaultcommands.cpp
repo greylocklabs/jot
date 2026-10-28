@@ -189,6 +189,11 @@ void TestVaultCommands::listsWhatIsLeftToDo()
     QCOMPARE(run([](auto &c) { return c.listTasks(false); }), 0);
     // One due on no day it can read counts as due on none.
     QVERIFY2(m_out.contains(u"[ ] Someday\n"_s), qPrintable(m_out));
+    QVERIFY(notefile::write(m_vault->absolute(u"Someday.md"_s),
+                            u"---\ntask: open\ndue: someday soon maybe\n---\n"_s, &error));
+    m_index->update({u"Someday.md"_s});
+    QCOMPARE(run([](auto &c) { return c.listTasks(false); }), 0);
+    QVERIFY2(m_out.contains(u"[ ] Someday\n"_s), qPrintable(m_out));
     QVERIFY(!isOverdue(u"someday"_s, QDate(2026, 10, 15)));
     QVERIFY(isOverdue(u"2026-10-14T09:00:00Z"_s, QDate(2026, 10, 15)));
     QVERIFY(!isOverdue(u"2026-10-15"_s, QDate(2026, 10, 15)));

@@ -284,7 +284,7 @@ int VaultCommands::listTasks(bool json, const QString &view, const QString &labe
             extra << each.repeat;
         if (due.isValid() && due != today)
             extra << (due < today ? m_paint.danger(each.due) : each.due);
-        else if (each.due.size() > 10)
+        else if (due.isValid() && each.due.size() > 10)
             extra << each.due.mid(11);
         m_out << "  [ ] " << (each.kind == u"note" ? m_paint.bold(each.title) : each.title)
               << (extra.isEmpty() ? QString() : u"  "_s + m_paint.dim(extra.join(u"  "_s))) << "\n";
