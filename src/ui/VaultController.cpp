@@ -592,10 +592,14 @@ bool VaultController::addQuickTask(const QString &typed)
     if (task.title.isEmpty())
         return false;
     const QString path = inboxPath(*m_vault);
-    if (QFileInfo::exists(m_vault->absolute(path)))
-        return rewriteNote(path, [&task](const QString &note) {
+    if (QFileInfo::exists(m_vault->absolute(path))) {
+        const bool added = rewriteNote(path, [&task](const QString &note) {
             return std::optional(withTaskAdded(note, task.line));
         });
+        if (!added)
+            setProblem(tr("Could not add the to-do to %1.").arg(path));
+        return added;
+    }
     QString error;
     const QString file = m_vault->absolute(path);
     if (!QDir().mkpath(QFileInfo(file).path()) ||

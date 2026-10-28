@@ -228,6 +228,12 @@ void TestVaultCommands::addsAToDoToTheInbox()
     QCOMPARE(run([](auto &c) { return c.listTasks(true, u"today"_s, u"minutes"_s); }), 0);
     QCOMPARE(json().array().size(), 1);
     QCOMPARE(run([](auto &c) { return c.addTask({}, false); }), 2);
+    // A vault from a newer Jot is only read.
+    QVERIFY(QDir().mkpath(m_vault->absolute(u".jot"_s)));
+    QVERIFY(notefile::write(m_vault->absolute(u".jot/vault.yaml"_s), u"format: 99\n"_s, &error));
+    QCOMPARE(run([](auto &c) { return c.addTask(u"buy rope"_s, false); }), 1);
+    QVERIFY(m_err.contains(u"newer Jot"_s));
+    QCOMPARE(notefile::read(m_vault->absolute(u"Inbox.md"_s), &error)->count(u"buy rope"_s), 1);
 }
 
 void TestVaultCommands::opensANoteInTheApp()
