@@ -54,6 +54,7 @@ private Q_SLOTS:
     void savesBeforeSwitchingNotes();
     void keepsTheOtherVersionWhenBothChanged();
     void mergesOutsideEditsToOtherLines();
+    void mergesKeepingLineEndingsAndTheByteOrderMark();
     void makesNewNotesInTheNotebookShown();
     void renamingRewritesLinksAndKeepsTheTitle();
     void trashesTheNoteShown();
@@ -653,6 +654,27 @@ void TestVaultController::mergesOutsideEditsToOtherLines()
     QVERIFY(notefile::write(m_root + u"/List.md"_s,
                             u"# Shopping\n\n- one\n- two\n- three\n- four\n- five\n"_s, &error));
     QTRY_VERIFY_WITH_TIMEOUT(!m_vault->unsaved(), 3000);
+}
+
+void TestVaultController::mergesKeepingLineEndingsAndTheByteOrderMark()
+{
+    const QString start = u"\ufeff# List\r\n\r\n- one\r\n- two\r\n"_s;
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Windows.md"_s, start, &error));
+    QVERIFY(m_vault->openPath(m_root));
+    m_vault->setSaveDelay(60000);
+    m_vault->setCurrent(u"Windows.md"_s);
+    // The editor's text: plain line breaks, no mark.
+    m_vault->edit(u"# Shopping\n\n- one\n- two\n"_s);
+    QVERIFY(notefile::write(m_root + u"/Windows.md"_s, start + u"- three\r\n"_s, &error));
+
+    const QString merged = u"\ufeff# Shopping\r\n\r\n- one\r\n- two\r\n- three\r\n"_s;
+    QTRY_COMPARE_WITH_TIMEOUT(m_vault->currentText(), merged, 3000);
+    QVERIFY(QDir(m_root).entryList({u"Windows (conflict *).md"_s}).isEmpty());
+    m_vault->saveNow();
+    QCOMPARE(readFile(m_root + u"/Windows.md"_s), merged);
+    // The cursor, at the end of "two" in the editor, stays there.
+    QCOMPARE(m_vault->movedCursor(u"# Shopping\n\n- one\n- two\n"_s, 23), 23);
 }
 
 void TestVaultController::makesNewNotesInTheNotebookShown()

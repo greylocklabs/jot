@@ -242,6 +242,18 @@ void TestNoteEditor::anOutsideEditKeepsTheCursorWhereItWas()
     QTRY_COMPARE_WITH_TIMEOUT(body->property("text").toString(), u"zero\none\ntwo\nthree!\n"_s,
                               3000);
     QCOMPARE(body->property("cursorPosition").toInt(), 19);
+
+    // The same in a note with Windows line breaks, which the editor shows as plain ones.
+    QVERIFY(notefile::write(m_root + u"/Windows.md"_s, u"one\r\ntwo\r\nthree\r\n"_s, &error));
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Windows.md"_s), 3000);
+    m_vault->setCurrent(u"Windows.md"_s);
+    body->forceActiveFocus();
+    body->setProperty("cursorPosition", 13);
+    QTest::keyClick(m_window.get(), '!');
+    QVERIFY(
+        notefile::write(m_root + u"/Windows.md"_s, u"zero\r\none\r\ntwo\r\nthree\r\n"_s, &error));
+    QTRY_VERIFY_WITH_TIMEOUT(body->property("text").toString().contains(u"zero"_s), 3000);
+    QCOMPARE(body->property("cursorPosition").toInt(), 19);
 }
 
 void TestNoteEditor::showsImagesInPlaceOfTheirLinks()

@@ -553,6 +553,16 @@ QVariantMap VaultController::placeBlock(const QString &text, int position,
             {u"cursor"_s, position + int(inserted.size())}};
 }
 
+int VaultController::movedCursor(const QString &shown, int cursor) const
+{
+    // The editor has plain \n lines and no byte order mark, which the note's text may have.
+    QString now = m_currentText;
+    if (now.startsWith(QChar(0xfeff)))
+        now.remove(0, 1);
+    now.replace(u"\r\n"_s, u"\n"_s);
+    return movedPosition(shown, now, cursor);
+}
+
 QString VaultController::attachmentPath(const QString &target, bool wiki) const
 {
     if (!m_vault || !m_index || m_current.isEmpty())

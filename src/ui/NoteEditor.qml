@@ -68,24 +68,12 @@ Rectangle {
     /// Another note is on its way in, rather than this one changed on disk or renamed.
     property bool fresh: true
 
-    /// Where the cursor at `cursor` in `before` belongs in `after`, the same note changed
-    /// elsewhere: in the same place when the change came after it, moved along with the text
-    /// after it when the change came before.
-    function keptCursor(before, after, cursor) {
-        if (after.startsWith(before.slice(0, cursor)))
-            return cursor
-        if (after.endsWith(before.slice(cursor)))
-            return after.length - (before.length - cursor)
-        return cursor
-    }
-
     function load() {
         loading = true
         // Another note starts at its top; the same one, reloaded, stays where it was.
         const another = fresh
         fresh = false
-        const cursor = another ? 0 : root.keptCursor(body.text, Vault.currentText,
-                                                     body.cursorPosition)
+        const cursor = another ? 0 : Vault.movedCursor(body.text, body.cursorPosition)
 
         // Swapping a whole note in under a live highlighter leaves the TextEdit blank, so
         // the styling comes off for the swap and goes back on after.
