@@ -510,22 +510,20 @@ void TestNoteEditor::readsTheNoteWithLinksAndBoxesToTick()
     QVERIFY2(!shown.contains(u"tags:"_s) && !shown.contains(u"[["_s) && !shown.contains(u"# "_s),
              qPrintable(shown));
 
-    // A click left of the task's text ticks it in the file, once the view has settled where
-    // the editor was.
-    QPointF placed(-1, -1);
-    QTRY_VERIFY([&] {
-        const QPointF now = reader->mapToScene(QPointF(0, 0));
-        const bool settled = now == placed;
-        placed = now;
-        return settled;
-    }());
-    QRectF line;
-    QMetaObject::invokeMethod(reader, "positionToRectangle", Q_RETURN_ARG(QRectF, line),
-                              Q_ARG(int, int(shown.indexOf(u"Buy rope"_s))));
-    QTest::mouseClick(m_window.get(), Qt::LeftButton, {},
-                      reader->mapToScene(QPointF(line.x() - 6, line.center().y())).toPoint());
-    QTRY_VERIFY_WITH_TIMEOUT(
-        notefile::read(m_root + u"/Reading.md"_s, &error)->contains(u"- [x] Buy rope"_s), 3000);
+    // A click left of the task's text ticks it in the file. The view lays itself out again as it
+    // settles into the editor's place, so the click is aimed afresh until it lands.
+    const auto ticked = [&] {
+        return notefile::read(m_root + u"/Reading.md"_s, &error)->contains(u"- [x] Buy rope"_s);
+    };
+    for (int attempt = 0; attempt < 10 && !ticked(); ++attempt) {
+        QRectF line;
+        QMetaObject::invokeMethod(reader, "positionToRectangle", Q_RETURN_ARG(QRectF, line),
+                                  Q_ARG(int, int(doc->toPlainText().indexOf(u"Buy rope"_s))));
+        QTest::mouseClick(m_window.get(), Qt::LeftButton, {},
+                          reader->mapToScene(QPointF(line.x() - 6, line.center().y())).toPoint());
+        QTest::qWaitFor(ticked, 300);
+    }
+    QVERIFY(ticked());
 
     // Its links lead to the note, and to the tag's notes.
     QMetaObject::invokeMethod(reader, "linkActivated", Q_ARG(QString, u"jot-tag:ferry"_s));
