@@ -7,6 +7,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ### Added
 
+- To-dos can repeat: `🔁 every week`, `every 2 weeks`, `every monday`, `every weekday` and the
+  like, or "every week" in quick add. Ticking one writes the next one, due on its next day.
 - Quick add: press Ctrl+Shift+A, or the + in Tasks, and type a to-do as you would say it, "call
   Soren tomorrow 3pm @minutes #calls" or "water the plants every week". Jot shows the day, time,
   repeat and labels it read, then adds a checkbox to the Inbox note, which `inbox:` in

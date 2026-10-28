@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QDate>
 #include <QString>
 #include <QStringList>
 
@@ -27,5 +28,15 @@ struct TaskLine
 
 /// Reads a to-do's text, as it follows `- [ ] ` on its line.
 [[nodiscard]] TaskLine readTaskLine(const QString &text);
+
+/// The day after `from` that a repeat, as written after 🔁, falls on: "every day", "every 2
+/// weeks", "every month", "every year", "every weekday", "every monday" and the like. Invalid
+/// for a rule Jot does not read.
+[[nodiscard]] QDate nextOccurrence(const QString &rule, const QDate &from);
+
+/// A whole checkbox line, `- [ ] …`, ticked done on `today`. When it repeats and is due, the
+/// next one goes above it, unticked and due on its next day after today, and the done one gets
+/// `✅` and today's date, as Obsidian Tasks does.
+[[nodiscard]] QString completedTaskLine(const QString &line, const QDate &today);
 
 } // namespace jot

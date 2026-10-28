@@ -61,4 +61,68 @@ TaskLine readTaskLine(const QString &text)
     return line;
 }
 
+QDate nextOccurrence(const QString &rule, const QDate &from)
+{
+    static const QRegularExpression every(
+        uR"(^every\s+(?:(other|\d+)\s+)?(day|week|month|year|weekday|monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?$)"_s,
+        QRegularExpression::CaseInsensitiveOption);
+    static const QStringList weekdays = {u"monday"_s, u"tuesday"_s,  u"wednesday"_s, u"thursday"_s,
+                                         u"friday"_s, u"saturday"_s, u"sunday"_s};
+    const QRegularExpressionMatch m = every.match(rule.simplified());
+    if (!m.hasMatch() || !from.isValid())
+        return {};
+    const QString count = m.captured(1).toLower();
+    const int n = count.isEmpty() ? 1 : count == u"other" ? 2 : count.toInt();
+    const QString step = m.captured(2).toLower();
+    if (n < 1)
+        return {};
+    if (step == u"day")
+        return from.addDays(n);
+    if (step == u"week")
+        return from.addDays(7 * n);
+    if (step == u"month")
+        return from.addMonths(n);
+    if (step == u"year")
+        return from.addYears(n);
+    if (step == u"weekday") {
+        QDate next = from.addDays(1);
+        while (next.dayOfWeek() > 5)
+            next = next.addDays(1);
+        return next;
+    }
+    const int wanted = int(weekdays.indexOf(step)) + 1;
+    return from.addDays((wanted - from.dayOfWeek() + 6) % 7 + 1);
+}
+
+QString completedTaskLine(const QString &line, const QDate &today)
+{
+    static const QRegularExpression box(
+        uR"(^(\s*(?:[-*+]|\d+[.)])\s+\[)[ xX](\]\s*)(.*?)(\r?)$)"_s);
+    static const QRegularExpression due(u"📅\\x{FE0F}?\\s*(\\d{4}-\\d{2}-\\d{2})"_s);
+    const QRegularExpressionMatch m = box.match(line);
+    if (!m.hasMatch())
+        return line;
+    const QString text = m.captured(3);
+    const QString done = m.captured(1) + u'x' + m.captured(2) + text;
+    const TaskLine parts = readTaskLine(text);
+    const QDate was = QDate::fromString(parts.due.left(10), Qt::ISODate);
+    QDate next = nextOccurrence(parts.repeat, was);
+    if (!next.isValid())
+        return done + m.captured(4);
+    // Done late, it comes round again after today rather than on a day already gone.
+    while (next <= today)
+        next = nextOccurrence(parts.repeat, next);
+    QString again = text;
+    const QRegularExpressionMatch day = due.match(again);
+    again.replace(day.capturedStart(1), day.capturedLength(1), next.toString(Qt::ISODate));
+    // The next one carries no done date of its own.
+    static const QRegularExpression doneMark(u"\\s*✅\\x{FE0F}?\\s*\\d{4}-\\d{2}-\\d{2}"_s);
+    again.remove(doneMark);
+    QString completed = done;
+    completed.remove(doneMark);
+    const QString ending = m.captured(4);
+    return m.captured(1) + u' ' + m.captured(2) + again + ending + u'\n' + completed + u" ✅ "_s +
+           today.toString(Qt::ISODate) + ending;
+}
+
 } // namespace jot

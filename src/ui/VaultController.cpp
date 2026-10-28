@@ -584,6 +584,11 @@ QVariantMap VaultController::readQuickTask(const QString &typed) const
             {u"line"_s, task.line}};
 }
 
+QString VaultController::completedTaskLine(const QString &line) const
+{
+    return jot::completedTaskLine(line, QDate::currentDate());
+}
+
 bool VaultController::addQuickTask(const QString &typed)
 {
     if (!m_vault || !m_vault->writable())

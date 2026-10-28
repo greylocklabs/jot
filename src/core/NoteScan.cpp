@@ -1,5 +1,7 @@
 #include "jot/NoteScan.h"
 
+#include "jot/TaskLine.h"
+
 #include <QRegularExpression>
 #include <QUrl>
 
@@ -276,7 +278,8 @@ qsizetype lineStart(QStringView text, int line)
     return start;
 }
 
-std::optional<QString> setTaskDone(const QString &note, int line, bool done, const QString &text)
+std::optional<QString> setTaskDone(const QString &note, int line, bool done, const QString &text,
+                                   const QDate &today)
 {
     static const QRegularExpression task(uR"(^\s*(?:[-*+]|\d+[.)])\s+\[([ xX])\]\s*(.*?)\s*$)"_s);
     // The mark's place in the note, if `number` is a task that says `text` (when given).
@@ -309,8 +312,16 @@ std::optional<QString> setTaskDone(const QString &note, int line, bool done, con
     if (mark < 0)
         return std::nullopt;
     QString changed = note;
-    changed[mark] = done ? u'x' : u' ';
-    return changed;
+    if (!done) {
+        changed[mark] = u' ';
+        return changed;
+    }
+    const qsizetype start = note.lastIndexOf(u'\n', mark) + 1;
+    qsizetype end = note.indexOf(u'\n', mark);
+    if (end < 0)
+        end = note.size();
+    return changed.replace(start, end - start,
+                           completedTaskLine(note.sliced(start, end - start), today));
 }
 
 int bodyFirstLine(QStringView note, QStringView body)

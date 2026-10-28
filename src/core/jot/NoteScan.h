@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QDate>
 #include <QList>
 #include <QString>
 #include <QStringList>
@@ -59,10 +60,12 @@ rewriteLinks(QStringView body,
 
 /// `note` with the task on `line` (counted from 1, in the whole file) ticked or unticked,
 /// and nothing else changed. Given `text`, the task must say that: when lines have moved
-/// since `line` was read, the one task that does is changed instead. Nothing when there is
+/// since `line` was read, the one task that does is changed instead. Ticking one that repeats
+/// on `today` puts its next one above it, as completedTaskLine() says. Nothing when there is
 /// no such task.
 [[nodiscard]] std::optional<QString> setTaskDone(const QString &note, int line, bool done,
-                                                 const QString &text = {});
+                                                 const QString &text = {},
+                                                 const QDate &today = QDate::currentDate());
 
 /// Where `line` (counted from 1) starts in `text`, or its end for a line past the last.
 [[nodiscard]] qsizetype lineStart(QStringView text, int line);
