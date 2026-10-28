@@ -33,7 +33,9 @@ public:
     int create(const QString &title, const QString &notebook, const QString &body, bool json);
     /// Prints the note `name` names: a path, a title or an alias.
     int show(const QString &name);
-    int listTasks(bool json);
+    /// The to-dos left in `view`, "all" when empty, with `label` and `tag` when given.
+    int listTasks(bool json, const QString &view = {}, const QString &label = {},
+                  const QString &tag = {});
     /// Every tag, with how many notes have it or a tag nested in it.
     int listTags(bool json);
     /// Imports the Joplin JEX export at `file` under `notebook`, or says what it would do.

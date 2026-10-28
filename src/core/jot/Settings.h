@@ -18,6 +18,8 @@ class Settings : public QObject
     Q_PROPERTY(QString theme READ theme WRITE setTheme NOTIFY themeChanged)
     /// How the note list is ordered: "updated", "created" or "title".
     Q_PROPERTY(QString noteSort READ noteSort WRITE setNoteSort NOTIFY noteSortChanged)
+    /// Which to-dos Tasks shows: "today", "upcoming", "anytime" or "all".
+    Q_PROPERTY(QString tasksView READ tasksView WRITE setTasksView NOTIFY tasksViewChanged)
     /// Notebooks folded shut in the sidebar, by vault path.
     Q_PROPERTY(QStringList collapsedNotebooks READ collapsedNotebooks WRITE setCollapsedNotebooks
                    NOTIFY collapsedNotebooksChanged)
@@ -53,6 +55,8 @@ public:
     /// $XDG_CONFIG_HOME/jot/settings.ini
     [[nodiscard]] static QString defaultPath();
     [[nodiscard]] static QStringList noteSorts();
+    /// The views Tasks has, as toDoView() names them.
+    [[nodiscard]] static QStringList toDoViews();
 
     [[nodiscard]] QString vaultPath() const { return m_vaultPath; }
     void setVaultPath(const QString &path);
@@ -62,6 +66,8 @@ public:
     void setNoteSort(const QString &sort);
     [[nodiscard]] QStringList collapsedNotebooks() const { return m_collapsedNotebooks; }
     void setCollapsedNotebooks(const QStringList &paths);
+    [[nodiscard]] QString tasksView() const { return m_tasksView; }
+    void setTasksView(const QString &view);
     [[nodiscard]] QStringList collapsedTags() const { return m_collapsedTags; }
     void setCollapsedTags(const QStringList &tags);
     [[nodiscard]] bool checkForUpdates() const { return m_checkForUpdates; }
@@ -105,6 +111,7 @@ Q_SIGNALS:
     void noteSortChanged();
     void collapsedNotebooksChanged();
     void collapsedTagsChanged();
+    void tasksViewChanged();
     void checkForUpdatesChanged();
     void noteFontChanged();
     void sidebarWidthChanged();
@@ -121,6 +128,7 @@ private:
     QString m_noteSort;
     QStringList m_collapsedNotebooks;
     QStringList m_collapsedTags;
+    QString m_tasksView = QStringLiteral("today");
     bool m_checkForUpdates = true;
     QString m_noteFont;
     int m_sidebarWidth = 0;

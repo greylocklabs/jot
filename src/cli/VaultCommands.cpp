@@ -5,6 +5,7 @@
 #include "jot/JoplinImport.h"
 #include "jot/Layout.h"
 #include "jot/Settings.h"
+#include "jot/ToDos.h"
 
 #include <QDateTime>
 #include <QDir>
@@ -233,42 +234,62 @@ int VaultCommands::show(const QString &name)
     return 0;
 }
 
-int VaultCommands::listTasks(bool json)
+int VaultCommands::listTasks(bool json, const QString &view, const QString &label,
+                             const QString &tag)
 {
-    const QList<NoteInfo> notes = m_index.openTaskNotes();
-    const QList<NoteTask> tasks = m_index.openTasks();
+    const std::optional<ToDoView> shown = toDoView(view.isEmpty() ? u"all"_s : view);
+    if (!shown) {
+        m_err << tr("usage: jot tasks [--view today|upcoming|anytime|all] [--label name] "
+                    "[--tag name]")
+              << "\n";
+        return 2;
+    }
+    const QDate today = QDate::currentDate();
+    // Written with their mark or without: @minutes or minutes, #calls or calls.
+    const QList<ToDo> list =
+        toDos(m_index, *shown, today, label.startsWith(u'@') ? label.mid(1) : label,
+              tag.startsWith(u'#') ? tag.mid(1) : tag);
     if (json) {
         QJsonArray array;
-        for (const NoteInfo &note : notes)
-            array.append(QJsonObject{{u"kind"_s, u"note"_s},
-                                     {u"path"_s, note.path},
-                                     {u"title"_s, note.title},
-                                     {u"due"_s, note.due}});
-        for (const NoteTask &task : tasks)
-            array.append(QJsonObject{{u"kind"_s, u"task"_s},
-                                     {u"path"_s, task.path},
-                                     {u"line"_s, task.line},
-                                     {u"text"_s, task.text}});
+        for (const ToDo &each : list)
+            array.append(QJsonObject{{u"kind"_s, each.kind},
+                                     {u"path"_s, each.path},
+                                     {u"line"_s, each.line},
+                                     {u"title"_s, each.title},
+                                     {u"note"_s, each.note},
+                                     {u"due"_s, each.due},
+                                     {u"repeat"_s, each.repeat},
+                                     {u"labels"_s, QJsonArray::fromStringList(each.labels)},
+                                     {u"tags"_s, QJsonArray::fromStringList(each.tags)}});
         print(m_out, array);
         return 0;
     }
-    for (const NoteInfo &note : notes) {
-        const bool overdue = isOverdue(note.due, QDate::currentDate());
-        m_out << "[ ] " << m_paint.bold(note.title)
-              << (note.due.isEmpty() ? QString()
-                                     : u"  "_s + (overdue ? m_paint.danger(note.due.left(10))
-                                                          : m_paint.dim(note.due.left(10))))
-              << "\n";
-    }
+    // Under the day it is due, or the note it is in, as the app lists them.
     QString last;
-    for (const NoteTask &task : tasks) {
-        if (task.path != last) {
-            m_out << m_paint.dim(task.path) << "\n";
-            last = task.path;
+    for (const ToDo &each : list) {
+        const QDate due = each.dueDate();
+        const QString group = due.isValid() && due < today ? tr("Overdue")
+                              : due == today               ? tr("Today")
+                              : due.isValid()              ? due.toString(Qt::ISODate)
+                              : each.kind == u"note"       ? tr("Task notes")
+                                                           : each.path;
+        if (group != last) {
+            m_out << m_paint.dim(group) << "\n";
+            last = group;
         }
-        m_out << "  [ ] " << task.text << m_paint.dim(u"  :%1"_s.arg(task.line)) << "\n";
+        QStringList extra;
+        for (const QString &each : each.labels)
+            extra << u'@' + each;
+        if (!each.repeat.isEmpty())
+            extra << each.repeat;
+        if (due.isValid() && due != today)
+            extra << (due < today ? m_paint.danger(each.due) : each.due);
+        else if (each.due.size() > 10)
+            extra << each.due.mid(11);
+        m_out << "  [ ] " << (each.kind == u"note" ? m_paint.bold(each.title) : each.title)
+              << (extra.isEmpty() ? QString() : u"  "_s + m_paint.dim(extra.join(u"  "_s))) << "\n";
     }
-    if (notes.isEmpty() && tasks.isEmpty())
+    if (list.isEmpty())
         m_err << tr("Nothing left to do.") << "\n";
     return 0;
 }

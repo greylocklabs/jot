@@ -7,6 +7,12 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ### Added
 
+- Tasks has Today, Upcoming, Anytime and All views, as a to-do app does. A checkbox can say when
+  it is due and give itself labels, in the format of Obsidian's Tasks plugin:
+  `- [ ] Call Soren @minutes 📅 2026-10-29 14:00`. Labels are listed in the sidebar, and choosing
+  one, or a tag while in Tasks, narrows the list. Task notes take labels in `labels:`. The badge
+  on Tasks counts what is due today or overdue.
+- `jot tasks` takes `--view`, `--label` and `--tag` to match.
 - A reading view: choose Read beside Styled and Source, or press Ctrl+Shift+R, to see the note
   drawn as it reads, with tables, quotes, code and images. Links, wikilinks and tags open what
   they lead to, and a click on a checkbox ticks it. Formatted is now called Styled, to make room.
