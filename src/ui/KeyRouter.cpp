@@ -66,6 +66,8 @@ QList<KeyAction> KeyRouter::actions()
         act(u"lastNote"_s, tr("Last note in the list"), window, {}, u"G"_s),
         act(u"editNote"_s, tr("Write in the note"), window, {}, u"i"_s),
         act(u"rename"_s, tr("Rename the note"), window, {}, {}, u"r"_s),
+        act(u"readMode"_s, tr("Read the note, or write in it"), window, {u"Ctrl+Shift+R"_s}, {},
+            u"v"_s),
         // Commands with no keys, for the palette.
         act(u"copyLink"_s, tr("Copy a link to the note"), window, {}),
         act(u"showInFiles"_s, tr("Show the note in Files"), window, {}),

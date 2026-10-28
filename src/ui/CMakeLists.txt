@@ -30,6 +30,8 @@ qt_add_qml_module(jotui
         NotebookModel.cpp
         NoteListModel.h
         NoteListModel.cpp
+        NoteReader.h
+        NoteReader.cpp
         SwitcherModel.h
         SwitcherModel.cpp
         TagModel.h

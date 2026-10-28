@@ -3,21 +3,20 @@ import Jot.Ui
 import QtQuick
 import QtQuick.Controls
 
-/// A choice between two modes, as a slider: the accent slides under the one chosen.
+/// A choice between a few modes, as a slider: the accent slides under the one chosen.
 Rectangle {
     id: root
 
-    /// The two choices: {label, tip} for each.
+    /// The choices: {label, tip} for each.
     required property var options
-    /// Which is chosen, 0 or 1.
+    /// Which is chosen, by index.
     property int current: 0
 
     signal picked(int index)
 
-    readonly property real segment: Math.max(first.implicitWidth, second.implicitWidth)
     readonly property real inset: Theme.space1
 
-    implicitWidth: 2 * segment + 2 * inset
+    implicitWidth: choiceRow.implicitWidth + 2 * inset
     implicitHeight: Theme.switchHeight
     radius: height / 2
     color: Theme.surfaceAlt
@@ -26,9 +25,13 @@ Rectangle {
         id: thumb
 
         objectName: "thumb"
-        x: root.inset + root.current * root.segment
+        // Under the chosen choice, each as wide as its own label.
+        readonly property Item chosen: choices.count > root.current ? choices.itemAt(root.current) :
+                                                                      null
+
+        x: root.inset + (chosen ? chosen.x : 0)
         y: root.inset
-        width: root.segment
+        width: chosen ? chosen.width : 0
         height: root.height - 2 * root.inset
         radius: height / 2
         color: Theme.accent
@@ -40,20 +43,27 @@ Rectangle {
                 easing.overshoot: Theme.bounce
             }
         }
+        Behavior on width {
+            NumberAnimation {
+                duration: Theme.durMed
+                easing.type: Theme.easingBounce
+                easing.overshoot: Theme.bounce
+            }
+        }
     }
 
     Row {
+        id: choiceRow
+
         x: root.inset
         y: root.inset
         height: root.height - 2 * root.inset
 
-        Choice {
-            id: first
-            index: 0
-        }
-        Choice {
-            id: second
-            index: 1
+        Repeater {
+            id: choices
+            model: root.options.length
+
+            Choice {}
         }
     }
 
@@ -64,7 +74,8 @@ Rectangle {
         readonly property bool chosen: root.current === index
         readonly property var option: root.options[index]
 
-        width: root.segment
+        objectName: "choice" + index
+        width: implicitWidth
         height: parent.height
         // Measured in the heaviest weight, so choosing a side does not change the width.
         implicitWidth: widest.advanceWidth + 2 * Theme.space3
