@@ -83,8 +83,7 @@ QVariant TaskModel::data(const QModelIndex &index, int role) const
             return QString();
         const QTime time = QTime::fromString(row.due.mid(11, 5), u"HH:mm"_s);
         // Under a day's heading the day goes without saying, and only a time is worth adding.
-        const bool byDay = m_view != u"anytime";
-        if (byDay && due >= m_today)
+        if (due >= m_today)
             return time.isValid() ? locale.toString(time, QLocale::ShortFormat) : QString();
         const QString day = locale.toString(due, u"MMM d"_s);
         return time.isValid() ? day + u' ' + locale.toString(time, QLocale::ShortFormat) : day;
