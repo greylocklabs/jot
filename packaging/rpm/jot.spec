@@ -12,6 +12,7 @@ BuildRequires:  cmake >= 3.28
 BuildRequires:  gcc-c++
 BuildRequires:  ninja-build
 BuildRequires:  cmake(Qt6Core)
+BuildRequires:  cmake(Qt6DBus)
 BuildRequires:  cmake(Qt6Gui)
 BuildRequires:  cmake(Qt6Network)
 BuildRequires:  cmake(Qt6Qml)

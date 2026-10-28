@@ -61,6 +61,7 @@ private:
     void notifyMany(const QList<ToDo> &todos);
     void onAction(uint id, const QString &key);
     void schedule(const QDateTime &next);
+    void forget();
 
     QPointer<VaultController> m_vault;
     QPointer<greylock::NotificationServer> m_server;

@@ -53,6 +53,9 @@ private Q_SLOTS:
     void manyAtOnceComeAsOne();
     void buttonsOpenTickAndSnooze();
     void quietWhenTurnedOff();
+    void snoozedComesBackOnlyWhileOpen();
+    void doneOpensWhatChangedSince();
+    void anotherVaultForgetsTheLast();
 
 private:
     void write(const QString &path, const QString &text);
@@ -198,6 +201,75 @@ void TestToDoReminders::quietWhenTurnedOff()
     m_now = QDateTime(QDate(2026, 10, 28), QTime(9, 0));
     m_reminders.check();
     QVERIFY(m_server.shown.isEmpty());
+}
+
+void TestToDoReminders::snoozedComesBackOnlyWhileOpen()
+{
+    write(u"Today.md"_s,
+          u"- [ ] Call Soren 📅 2026-10-28 09:00\n- [ ] Buy rope 📅 2026-10-28 09:00\n"_s);
+    QVERIFY(m_vault->openPath(m_dir->filePath(u"Notes"_s)));
+    m_reminders.setup(m_vault.get(), &m_server, m_settings.get());
+    m_now = QDateTime(QDate(2026, 10, 28), QTime(9, 0));
+    m_reminders.check();
+    QCOMPARE(m_server.shown.size(), 2);
+    m_server.click(1, u"snooze"_s);
+    m_server.click(2, u"snooze"_s);
+
+    // One ticked meanwhile, and a line added above the other.
+    const bool call = m_server.shown.at(0).title == u"Call Soren"_s;
+    QVERIFY(m_vault->setTaskDone(u"Today.md"_s, call ? 1 : 2, true));
+    QString error;
+    const QString note = *notefile::read(m_dir->filePath(u"Notes/Today.md"_s), &error);
+    m_vault->openAt(u"Today.md"_s, 1);
+    m_vault->edit(u"# Today\n\n"_s + note);
+    m_vault->saveNow();
+    m_now = m_now.addSecs(10 * 60);
+    m_reminders.check();
+    QCOMPARE(m_server.shown.size(), 3);
+    QCOMPARE(m_server.shown.last().title, call ? u"Buy rope"_s : u"Call Soren"_s);
+    QSignalSpy opened(&m_reminders, &ToDoReminders::openRequested);
+    m_server.click(3, u"default"_s);
+    QCOMPARE(opened.first().at(1).toInt(), call ? 4 : 3);
+}
+
+void TestToDoReminders::doneOpensWhatChangedSince()
+{
+    write(u"Today.md"_s, u"- [ ] Call Soren 📅 2026-10-28 09:00\n"_s);
+    QVERIFY(m_vault->openPath(m_dir->filePath(u"Notes"_s)));
+    m_reminders.setup(m_vault.get(), &m_server, m_settings.get());
+    m_now = QDateTime(QDate(2026, 10, 28), QTime(9, 0));
+    m_reminders.check();
+    QCOMPARE(m_server.shown.size(), 1);
+    write(u"Today.md"_s, u"- [ ] Call Soren and Ada 📅 2026-10-28 09:00\n"_s);
+    QSignalSpy opened(&m_reminders, &ToDoReminders::openRequested);
+    m_server.click(1, u"done"_s);
+    QCOMPARE(opened.size(), 1);
+    QVERIFY(m_server.closedIds.isEmpty());
+    QString error;
+    QVERIFY(notefile::read(m_dir->filePath(u"Notes/Today.md"_s), &error)->startsWith(u"- [ ]"_s));
+}
+
+void TestToDoReminders::anotherVaultForgetsTheLast()
+{
+    write(u"Today.md"_s,
+          u"- [ ] Call Soren 📅 2026-10-28 09:00\n- [ ] Buy rope 📅 2026-10-28 09:00\n"_s);
+    QVERIFY(QDir().mkpath(m_dir->filePath(u"Other"_s)));
+    QVERIFY(m_vault->openPath(m_dir->filePath(u"Notes"_s)));
+    m_reminders.setup(m_vault.get(), &m_server, m_settings.get());
+    m_now = QDateTime(QDate(2026, 10, 28), QTime(9, 0));
+    m_reminders.check();
+    QCOMPARE(m_server.shown.size(), 2);
+    m_server.click(2, u"snooze"_s);
+
+    QVERIFY(m_vault->openPath(m_dir->filePath(u"Other"_s)));
+    QCOMPARE(m_server.closedIds, (QList<uint>{2, 1}));
+    QSignalSpy opened(&m_reminders, &ToDoReminders::openRequested);
+    m_server.click(1, u"done"_s);
+    m_server.click(1, u"default"_s);
+    QVERIFY(opened.isEmpty());
+    m_now = m_now.addSecs(10 * 60);
+    m_reminders.check();
+    QCOMPARE(m_server.shown.size(), 2);
 }
 
 QTEST_MAIN(TestToDoReminders)
