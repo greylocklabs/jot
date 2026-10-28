@@ -70,18 +70,20 @@ QuickTask readQuickTask(const QString &typed, const QDateTime &now)
     // How it repeats, and the first day that gives when no other day is said.
     QDate firstDay;
     static const QRegularExpression every = words(
-        uR"(every\s+(other\s+|\d+\s+)?(day|week|month|year|weekday|monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?)"_s);
+        uR"(every\s+(other\s+|\d+\s+)?(day|week|month|year|monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?)"_s);
+    static const QRegularExpression weekdays = words(uR"(every\s+weekday)"_s);
     static const QRegularExpression often = words(uR"((daily|weekly|monthly|yearly))"_s);
-    if (const QRegularExpressionMatch m = take(text, every); m.hasMatch()) {
+    if (const QRegularExpressionMatch m = take(text, weekdays); m.hasMatch()) {
+        repeat = u"every weekday"_s;
+        firstDay = today.dayOfWeek() <= 5 ? today : next(today, 1);
+    } else if (const QRegularExpressionMatch m = take(text, every); m.hasMatch()) {
         const QString step = m.captured(2).toLower();
         const QString count = m.captured(1).trimmed().toLower();
         const int n = count == u"other" ? 2 : count.isEmpty() ? 1 : count.toInt();
         if (const int wd = weekday(step); wd > 0) {
-            repeat = u"every %1"_s.arg(step);
+            // Every other Monday is every two weeks, on Mondays, as Obsidian Tasks writes it.
+            repeat = n > 1 ? u"every %1 weeks on %2"_s.arg(n).arg(step) : u"every %1"_s.arg(step);
             firstDay = next(today, wd, true);
-        } else if (step == u"weekday") {
-            repeat = u"every weekday"_s;
-            firstDay = today.dayOfWeek() <= 5 ? today : next(today, 1);
         } else {
             repeat = n > 1 ? u"every %1 %2s"_s.arg(n).arg(step) : u"every %1"_s.arg(step);
             firstDay = today;
@@ -113,6 +115,8 @@ QuickTask readQuickTask(const QString &typed, const QDateTime &now)
     static const QRegularExpression dayMonth = words(
         lead +
         uR"((\d{1,2})(?:st|nd|rd|th)?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*(?:\s+(\d{4}))?)"_s);
+    // What it said before the day was taken out, put back when the words name no real day.
+    const QString beforeDay = text;
     if (QRegularExpressionMatch m = take(text, iso); m.hasMatch()) {
         day = QDate::fromString(m.captured(1), Qt::ISODate);
     } else if (m = take(text, in); m.hasMatch()) {
@@ -148,7 +152,11 @@ QuickTask readQuickTask(const QString &typed, const QDateTime &now)
             day = day.addYears(1);
     }
 
-    // The time, as 3pm, 3:30 pm, 15:00, noon or "at 9".
+    if (!day.isValid())
+        text = beforeDay;
+
+    // The time, as 3pm, 3:30 pm, 15:00, noon or "at 9", put back when it is no real time.
+    const QString beforeTime = text;
     static const QRegularExpression twelve =
         words(uR"((?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm))"_s);
     static const QRegularExpression twentyFour =
@@ -156,17 +164,19 @@ QuickTask readQuickTask(const QString &typed, const QDateTime &now)
     static const QRegularExpression noon = words(uR"((?:at\s+)?(noon|midday))"_s);
     static const QRegularExpression bare = words(uR"(at\s+(\d{1,2}))"_s);
     if (QRegularExpressionMatch m = take(text, twelve); m.hasMatch()) {
-        int hour = m.captured(1).toInt() % 12;
-        if (m.captured(3).toLower() == u"pm")
-            hour += 12;
-        time = QTime(hour, m.captured(2).toInt());
+        const int clock = m.captured(1).toInt();
+        const int hour = clock % 12 + (m.captured(3).toLower() == u"pm" ? 12 : 0);
+        if (clock >= 1 && clock <= 12)
+            time = QTime(hour, m.captured(2).toInt());
     } else if (m = take(text, twentyFour); m.hasMatch()) {
         time = QTime(m.captured(1).toInt(), m.captured(2).toInt());
     } else if (m = take(text, noon); m.hasMatch()) {
         time = QTime(12, 0);
-    } else if (m = take(text, bare); m.hasMatch() && m.captured(1).toInt() < 24) {
+    } else if (m = take(text, bare); m.hasMatch()) {
         time = QTime(m.captured(1).toInt(), 0);
     }
+    if (!time.isValid())
+        text = beforeTime;
 
     if (!day.isValid())
         day = firstDay.isValid() ? firstDay : time.isValid() ? today : QDate();

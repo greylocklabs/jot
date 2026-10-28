@@ -54,6 +54,14 @@ void TestQuickAdd::reads_data()
     QTest::newRow("daily, from tomorrow")
         << u"stretch daily tomorrow"_s << u"stretch 🔁 every day 📅 2026-10-29"_s;
     QTest::newRow("a number is not a time") << u"buy 3 apples"_s << u"buy 3 apples"_s;
+    QTest::newRow("no such day stays in the words") << u"pay rent feb 30"_s << u"pay rent feb 30"_s;
+    QTest::newRow("no such time stays") << u"meet 25pm"_s << u"meet 25pm"_s;
+    QTest::newRow("nor minutes") << u"call 3:75pm"_s << u"call 3:75pm"_s;
+    QTest::newRow("nor an hour") << u"gate at 30"_s << u"gate at 30"_s;
+    QTest::newRow("every other monday")
+        << u"1:1 every other monday"_s << u"1:1 🔁 every 2 weeks on monday 📅 2026-11-02"_s;
+    QTest::newRow("every weekday")
+        << u"stand-up every weekday at 9am"_s << u"stand-up 🔁 every weekday 📅 2026-10-28 09:00"_s;
 }
 
 void TestQuickAdd::reads()

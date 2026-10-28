@@ -203,6 +203,10 @@ int VaultCommands::addTask(const QString &typed, bool json)
         m_err << tr("usage: jot add <to-do, with a day, time, repeat, @labels and #tags>") << "\n";
         return 2;
     }
+    if (!m_vault.writable()) {
+        m_err << tr("jot: this vault is from a newer Jot, so this one only reads it") << "\n";
+        return 1;
+    }
     const QString path = inboxPath(m_vault);
     QString error;
     const QString file = m_vault.absolute(path);

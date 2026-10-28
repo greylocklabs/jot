@@ -1010,6 +1010,15 @@ void TestVaultController::addsToDosToTheInbox()
                             &error));
     QVERIFY(m_vault->addQuickTask(u"outline act two"_s));
     QCOMPARE(readFile(m_root + u"/Ashfall/To do.md"_s), u"- [ ] outline act two\n"_s);
+
+    // An inbox that cannot be read says so, rather than leaving the to-do nowhere.
+    QFile broken(m_root + u"/Ashfall/To do.md"_s);
+    QVERIFY(broken.open(QIODevice::WriteOnly));
+    broken.write("\xff\xfe not text\n");
+    broken.close();
+    m_vault->setCurrent({});
+    QVERIFY(!m_vault->addQuickTask(u"outline act three"_s));
+    QVERIFY(m_vault->problem().contains(u"Ashfall/To do.md"_s));
 }
 
 void TestVaultController::importsFromJoplinAfterSayingWhatItWouldDo()
