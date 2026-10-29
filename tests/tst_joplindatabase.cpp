@@ -3,6 +3,8 @@
 
 #include "jot/JoplinExport.h"
 #include "jot/JoplinImport.h"
+#include "jot/JoplinPatch.h"
+#include "jot/NoteHistory.h"
 #include "jot/Vault.h"
 
 #include <QDir>
@@ -28,6 +30,43 @@ const QString kTag = u"dd23456789abcdef0123456789abcdef"_s;
 constexpr qint64 kNine = 1791796500000;
 constexpr qint64 kTen = kNine + 3600000;
 
+/// One patch as Joplin stores it: at `at`, `lead` kept, `before` made `after`, `trail` kept.
+QString patch(qsizetype at, const QString &lead, const QString &before, const QString &after,
+              const QString &trail = {})
+{
+    const auto json = [](QString s) {
+        return u'"' +
+               s.replace(u'\\', u"\\\\"_s).replace(u'"', u"\\\""_s).replace(u'\n', u"\\n"_s) + u'"';
+    };
+    QStringList diffs;
+    for (const auto &[op, part] : {std::pair{0, lead}, {-1, before}, {1, after}, {0, trail}}) {
+        if (!part.isEmpty())
+            diffs.append(u"[%1,%2]"_s.arg(op).arg(json(part)));
+    }
+    return u"{\"diffs\":[%1],\"start1\":%2,\"start2\":%2,\"length1\":%3,\"length2\":%4}"_s
+        .arg(diffs.join(u','))
+        .arg(at)
+        .arg(lead.size() + before.size() + trail.size())
+        .arg(lead.size() + after.size() + trail.size());
+}
+
+/// Patches as a revision holds them.
+QString patches(const QStringList &each)
+{
+    return u'[' + each.join(u',') + u']';
+}
+
+/// A revision of `note` from `time`, its title and body patched by `titleDiff` and `bodyDiff`.
+QString revision(const QString &id, const QString &note, qint64 time, const QString &titleDiff,
+                 const QString &bodyDiff)
+{
+    const auto sql = [](QString s) { return u'\'' + s.replace(u'\'', u"''"_s) + u'\''; };
+    return u"INSERT INTO revisions (id, item_id, item_updated_time, title_diff, body_diff) "
+           "VALUES (%1, %2, %3, %4, %5)"_s.arg(sql(id), sql(note))
+               .arg(time)
+               .arg(sql(titleDiff), sql(bodyDiff));
+}
+
 } // namespace
 
 class TestJoplinDatabase : public QObject
@@ -42,6 +81,9 @@ private Q_SLOTS:
     void importsLikeAnExport();
     void tellsADatabaseFromAnExport();
     void findsJoplinOnThisComputer();
+    void appliesJoplinsPatches();
+    void piecesRevisionsTogether();
+    void keepsRevisionsAsPastVersions();
 
 private:
     QString profile(const QString &name, const QStringList &rows);
@@ -146,12 +188,6 @@ void TestJoplinDatabase::leavesOutWhatCannotBeRead()
             // Encrypted details and file both: one item, counted once.
             u"INSERT INTO resources (id, title, encryption_applied, encryption_blob_encrypted) "
             "VALUES ('%1', '', 1, 1)"_s.arg(kGone),
-            u"INSERT INTO revisions (id, item_id, item_updated_time) VALUES ('r1', '%1', %2)"_s
-                .arg(kPlain)
-                .arg(kNine),
-            u"INSERT INTO revisions (id, item_id, item_updated_time) VALUES ('r2', '%1', %2)"_s
-                .arg(kPlain)
-                .arg(kTen),
         });
     QVERIFY(!database.isEmpty());
     QString error;
@@ -160,8 +196,7 @@ void TestJoplinDatabase::leavesOutWhatCannotBeRead()
     QCOMPARE(read->notes.size(), 1);
     QVERIFY(read->notes.first().deleted);
     QVERIFY(read->resources.isEmpty());
-    QCOMPARE(read->skipped, (QStringList{u"3 encrypted items, which Joplin has to decrypt first"_s,
-                                         u"2 note revisions"_s}));
+    QCOMPARE(read->skipped, QStringList{u"3 encrypted items, which Joplin has to decrypt first"_s});
 }
 
 void TestJoplinDatabase::importsLikeAnExport()
@@ -252,6 +287,150 @@ void TestJoplinDatabase::findsJoplinOnThisComputer()
     QVERIFY(QDir().mkpath(QFileInfo(package).path()));
     QVERIFY(makeJoplinDatabase(package, {}).isEmpty());
     QCOMPARE(joplinProfileDatabase(), package);
+}
+
+void TestJoplinDatabase::appliesJoplinsPatches()
+{
+    QCOMPARE(applyJoplinPatch(u"same"_s, {}), u"same"_s);
+    const auto hello = applyJoplinPatch({}, patches({patch(0, {}, {}, u"Hello world\nBye"_s)}));
+    QCOMPARE(hello, u"Hello world\nBye"_s);
+    QCOMPARE(
+        applyJoplinPatch(*hello, patches({patch(2, u"llo "_s, u"world"_s, u"Jot"_s, u"\nB"_s)})),
+        u"Hello Jot\nBye"_s);
+
+    // Two in one: the second's place counts the first's change, as Joplin's do.
+    QCOMPARE(
+        applyJoplinPatch(u"one two three"_s, patches({patch(0, {}, u"one"_s, u"1"_s, u" two"_s),
+                                                      patch(5, u" "_s, u"three"_s, u"3"_s)})),
+        u"1 two 3"_s);
+    // One that went elsewhere moves where the next is looked for: of the two cats, the first.
+    QCOMPARE(applyJoplinPatch(u"zzzz cat. cat."_s, patches({patch(4, {}, u"zzzz"_s, {}),
+                                                            patch(6, {}, u"cat"_s, u"dog"_s)})),
+             u" dog. cat."_s);
+    // Not where it says, as when an earlier revision is gone: the nearest place it fits.
+    QCOMPARE(applyJoplinPatch(u"intro. Hello world"_s,
+                              patches({patch(2, u"llo "_s, u"world"_s, u"Jot"_s)})),
+             u"intro. Hello Jot"_s);
+
+    QVERIFY(!applyJoplinPatch(u"Hello"_s, patches({patch(0, {}, u"world"_s, u"Jot"_s)})));
+    QVERIFY(!applyJoplinPatch(u"Hello"_s, u"@@ -1,5 +1,3 @@"_s));
+    QVERIFY(!applyJoplinPatch(u"Hello"_s, u"[{\"diffs\":[[7,\"x\"]],\"start2\":0}]"_s));
+}
+
+void TestJoplinDatabase::piecesRevisionsTogether()
+{
+    // Out of order in the table, as rows can be: they are pieced together by time.
+    const QString database = profile(
+        u"joplin-desktop"_s,
+        {
+            u"INSERT INTO notes (id, title, body) VALUES ('%1', 'Packing list', 'socks, hat')"_s
+                .arg(kPacking),
+            revision(u"r2"_s, kPacking, kTen, {}, patches({patch(0, u"socks"_s, {}, u", hat"_s)})),
+            revision(u"r1"_s, kPacking, kNine, patches({patch(0, {}, {}, u"Packing"_s)}),
+                     patches({patch(0, {}, {}, u"socks"_s)})),
+            // A revision of a note Joplin no longer has.
+            revision(u"r0"_s, kPlain, kNine, {}, patches({patch(0, {}, {}, u"gone"_s)})),
+        });
+    QVERIFY(!database.isEmpty());
+    QString error;
+    std::optional<JoplinExport> read = readJoplinDatabase(database, &error);
+    QVERIFY2(read, qPrintable(error));
+    const QList<JoplinExport::Revision> revisions = read->notes.first().revisions;
+    QCOMPARE(revisions.size(), 2);
+    QCOMPARE(revisions.at(0).updated, QDateTime::fromMSecsSinceEpoch(kNine, QTimeZone::UTC));
+    QCOMPARE(revisions.at(0).title, u"Packing"_s);
+    QCOMPARE(revisions.at(0).body, u"socks"_s);
+    QCOMPARE(revisions.at(1).title, u"Packing"_s);
+    QCOMPARE(revisions.at(1).body, u"socks, hat"_s);
+    QVERIFY(read->skipped.isEmpty());
+
+    // One that will not apply ends the note's revisions there, and says so.
+    const QString broken = profile(
+        u"broken"_s,
+        {
+            u"INSERT INTO notes (id, title, body) VALUES ('%1', 'Packing list', 'x')"_s.arg(
+                kPacking),
+            revision(u"r1"_s, kPacking, kNine, {}, patches({patch(0, {}, {}, u"socks"_s)})),
+            revision(u"r2"_s, kPacking, kTen, {}, patches({patch(0, {}, u"boots"_s, u"hat"_s)})),
+            revision(u"r3"_s, kPacking, kTen + 1000, {},
+                     patches({patch(0, {}, u"socks"_s, u"boots"_s)})),
+        });
+    QVERIFY(!broken.isEmpty());
+    read = readJoplinDatabase(broken, &error);
+    QVERIFY2(read, qPrintable(error));
+    QCOMPARE(read->notes.first().revisions.size(), 1);
+    QCOMPARE(read->skipped, QStringList{u"2 note revisions that could not be pieced together"_s});
+}
+
+void TestJoplinDatabase::keepsRevisionsAsPastVersions()
+{
+    const QString database = profile(
+        u"joplin-desktop"_s,
+        {
+            u"INSERT INTO folders (id, title) VALUES ('%1', 'Travel')"_s.arg(kTravel),
+            u"INSERT INTO notes (id, parent_id, title, body, user_created_time, "
+            "user_updated_time) VALUES ('%1', '%2', 'Packing list', '![beach](:/%3) socks, hat', "
+            "%4, %5)"_s.arg(kPacking, kTravel, kPhoto)
+                .arg(kNine)
+                .arg(kTen + 60000),
+            u"INSERT INTO resources (id, title, mime, filename, file_extension) VALUES ('%1', "
+            "'Beach', 'image/png', 'beach.png', 'png')"_s.arg(kPhoto),
+            // One links the note's photo, one an attachment only it used; the last is the note
+            // as it is, so it is not a past version.
+            revision(u"r1"_s, kPacking, kNine, {},
+                     patches({patch(0, {}, {}, u"![beach](:/%1) socks"_s.arg(kPhoto))})),
+            revision(u"r2"_s, kPacking, kTen, {},
+                     patches({patch(u"![beach](:/%1) socks"_s.arg(kPhoto).size(), {}, {},
+                                    u" ![old](:/%1)"_s.arg(kGone))})),
+            revision(u"r3"_s, kPacking, kTen + 60000, {},
+                     patches({patch(0, u"![beach](:/%1) socks"_s.arg(kPhoto),
+                                    u" ![old](:/%1)"_s.arg(kGone), u", hat"_s)})),
+        });
+    QVERIFY(!database.isEmpty());
+    QFile photo(QFileInfo(database).dir().filePath(u"resources/"_s + kPhoto + u".png"_s));
+    QVERIFY(photo.open(QIODevice::WriteOnly));
+    photo.write("png bytes");
+    photo.close();
+
+    const Vault vault(m_dir->filePath(u"Notes"_s));
+    QVERIFY(QDir().mkpath(vault.root()));
+    QString error;
+    const std::optional<JoplinExport> read = readJoplin(database, &error);
+    QVERIFY2(read, qPrintable(error));
+    QCOMPARE(read->notes.first().revisions.size(), 3);
+
+    // A dry run counts them and keeps none.
+    std::optional<JoplinImport> done = importJoplin(vault, *read, {}, true, &error);
+    QVERIFY2(done, qPrintable(error));
+    QCOMPARE(done->versions, 2);
+    const QString note = u"Travel/Packing list.md"_s;
+    QVERIFY(NoteHistory(vault).versions(note).isEmpty());
+
+    done = importJoplin(vault, *read, {}, false, &error);
+    QVERIFY2(done, qPrintable(error));
+    QCOMPARE(done->versions, 2);
+    const QList<NoteHistory::Version> versions = NoteHistory(vault).versions(note);
+    QCOMPARE(versions.size(), 2);
+    QCOMPARE(versions.at(0).written, QDateTime::fromMSecsSinceEpoch(kTen, QTimeZone::UTC));
+    QCOMPARE(versions.at(1).written, QDateTime::fromMSecsSinceEpoch(kNine, QTimeZone::UTC));
+    const auto text = [&](const NoteHistory::Version &version) {
+        return notefile::read(vault.absolute(version.path), &error).value_or(QString());
+    };
+    // Front matter as the note has it; the photo's link made relative, and the attachment only
+    // an old version used left as it was rather than brought in.
+    QVERIFY2(text(versions.at(1)).startsWith(u"---\ncreated: "_s),
+             qPrintable(text(versions.at(1))));
+    QVERIFY2(text(versions.at(1)).endsWith(u"![beach](Packing%20list.assets/beach.png) socks\n"_s),
+             qPrintable(text(versions.at(1))));
+    QVERIFY2(text(versions.at(0)).contains(u"![old](:/%1)"_s.arg(kGone)),
+             qPrintable(text(versions.at(0))));
+    QCOMPARE(done->attachments, 1);
+
+    // Importing again keeps nothing twice.
+    done = importJoplin(vault, *read, {}, false, &error);
+    QVERIFY2(done, qPrintable(error));
+    QCOMPARE(done->versions, 0);
+    QCOMPARE(NoteHistory(vault).versions(note).size(), 2);
 }
 
 QTEST_GUILESS_MAIN(TestJoplinDatabase)

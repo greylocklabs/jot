@@ -1,5 +1,7 @@
 #include "jot/JoplinExport.h"
 
+#include "jot/JoplinPatch.h"
+
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -11,6 +13,8 @@
 #include <QSqlRecord>
 #include <QStandardPaths>
 #include <QTimeZone>
+
+#include <algorithm>
 
 using namespace Qt::StringLiterals;
 
@@ -112,6 +116,7 @@ std::optional<JoplinExport> readJoplinDatabase(const QString &path, QString *err
                          .author = row.text(u"author"_s),
                          .conflict = row.flag(u"is_conflict"_s),
                          .deleted = row.flag(u"deleted_time"_s),
+                         .revisions = {},
                      });
                  }) &&
             rows(u"folders"_s,
@@ -164,16 +169,52 @@ std::optional<JoplinExport> readJoplinDatabase(const QString &path, QString *err
         if (!read)
             return fail(u"Could not read the Joplin database: %1"_s.arg(query.lastError().text()));
 
-        int revisions = 0;
-        if (tables.contains(u"revisions"_s) && query.exec(u"SELECT count(*) FROM revisions"_s) &&
-            query.next())
-            revisions = query.value(0).toInt();
+        // Each revision is a patch on the one before it, so a note's are pieced together from
+        // nothing, in order, as Joplin does; the first that will not apply ends the note's.
+        struct Patch
+        {
+            QDateTime updated;
+            QString title;
+            QString body;
+            bool encrypted = false;
+        };
+        QHash<QString, QList<Patch>> patches;
+        if (!rows(u"revisions"_s, [&](const Row &row) {
+                if (!row.text(u"item_type"_s).isEmpty() && row.text(u"item_type"_s) != u"1"_s)
+                    return;
+                patches[row.text(u"item_id"_s)].append(
+                    {row.time(u"item_updated_time"_s), row.text(u"title_diff"_s),
+                     row.text(u"body_diff"_s), row.flag(u"encryption_applied"_s)});
+            }))
+            return fail(u"Could not read the Joplin database: %1"_s.arg(query.lastError().text()));
+        int unread = 0;
+        for (JoplinExport::Note &note : out.notes) {
+            QList<Patch> list = patches.take(note.id);
+            std::ranges::stable_sort(
+                list, [](const Patch &a, const Patch &b) { return a.updated < b.updated; });
+            QString title;
+            QString body;
+            for (qsizetype i = 0; i < list.size(); ++i) {
+                const std::optional<QString> nextTitle =
+                    list[i].encrypted ? std::nullopt : applyJoplinPatch(title, list[i].title);
+                const std::optional<QString> nextBody =
+                    list[i].encrypted ? std::nullopt : applyJoplinPatch(body, list[i].body);
+                if (!nextTitle || !nextBody) {
+                    unread += int(list.size() - i);
+                    break;
+                }
+                title = *nextTitle;
+                body = *nextBody;
+                note.revisions.append({list[i].updated, title, body});
+            }
+        }
 
         if (encrypted > 0)
             out.skipped.append(count(encrypted, u"encrypted item"_s, u"encrypted items"_s) +
                                u", which Joplin has to decrypt first"_s);
-        if (revisions > 0)
-            out.skipped.append(count(revisions, u"note revision"_s, u"note revisions"_s));
+        if (unread > 0)
+            out.skipped.append(count(unread, u"note revision"_s, u"note revisions"_s) +
+                               u" that could not be pieced together"_s);
     }
     return out;
 }

@@ -332,11 +332,23 @@ void TestVaultCommands::importsAJoplinExportAfterADryRun()
     // Named nothing, it reads the Joplin on this computer.
     const QString database = m_dir->filePath(u"home/.config/joplin-desktop/database.sqlite"_s);
     QVERIFY(QDir().mkpath(QFileInfo(database).path()));
-    QCOMPARE(makeJoplinDatabase(database, {u"INSERT INTO notes (id, title) VALUES "
-                                           "('00112233445566778899aabbccddeef0', 'Desk')"_s}),
-             QString());
+    QCOMPARE(
+        makeJoplinDatabase(
+            database,
+            {u"INSERT INTO notes (id, title, body) VALUES "
+             "('00112233445566778899aabbccddeef0', 'Desk', 'Newer')"_s,
+             u"INSERT INTO revisions (id, item_id, item_updated_time, body_diff) VALUES ('r1', "
+             "'00112233445566778899aabbccddeef0', 1791796500000, "
+             "'[{\"diffs\":[[1,\"Older\"]],\"start1\":0,\"start2\":0,\"length1\":0,"
+             "\"length2\":5}]')"_s}),
+        QString());
     QCOMPARE(run([](auto &c) { return c.importJoplin({}, {}, true, true); }), 0);
     QCOMPARE(json().object()[u"notes"_s].toArray().first()[u"path"_s].toString(), u"Desk.md"_s);
+    QCOMPARE(json().object()[u"versions"_s].toInt(), 1);
+    QCOMPARE(run([](auto &c) { return c.importJoplin({}, {}, true, false); }), 0);
+    QVERIFY2(m_out.contains(u"Would import from the Joplin app on this computer"_s),
+             qPrintable(m_out));
+    QVERIFY2(m_out.contains(u"1 past version"_s), qPrintable(m_out));
     QCOMPARE(run([](auto &c) { return c.importJoplin(u"/no/such.jex"_s, {}, false, false); }), 1);
     QCOMPARE(run([&](auto &c) { return c.importJoplin(jex, u"../outside"_s, false, false); }), 2);
 

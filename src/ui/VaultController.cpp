@@ -1073,6 +1073,7 @@ QVariantMap VaultController::importJoplin(const QUrl &file, const QString &folde
             {u"unchanged"_s, done->count(JoplinImport::Outcome::Unchanged)},
             {u"notebooks"_s, int(done->notebooks.size())},
             {u"attachments"_s, done->attachments},
+            {u"versions"_s, done->versions},
             {u"keptEdits"_s, keptEdits},
             {u"notBroughtBack"_s, notBroughtBack},
             {u"skipped"_s, done->skipped}};

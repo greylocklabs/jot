@@ -160,9 +160,9 @@ void TestJoplinExport::skipsEncryptedItemsAndRevisions()
     }));
     QVERIFY(ex);
     QCOMPARE(ex->notes.size(), 1);
-    QCOMPARE(ex->skipped,
-             (QStringList{u"1 encrypted item, which Joplin has to decrypt first"_s,
-                          u"1 note revision"_s, u"1 item of a kind Jot does not read"_s}));
+    QCOMPARE(ex->skipped, (QStringList{u"1 encrypted item, which Joplin has to decrypt first"_s,
+                                       u"1 note revision, which only Joplin's database brings"_s,
+                                       u"1 item of a kind Jot does not read"_s}));
 }
 
 void TestJoplinExport::findsFilesByPaxGnuAndPrefixedPaths()
