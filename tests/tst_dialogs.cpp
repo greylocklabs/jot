@@ -302,8 +302,11 @@ void TestDialogs::asksBeforeTrashingSharedAttachments()
              qPrintable(shared->property("text").toString()));
     QVERIFY(content->findChild<QQuickItem *>(u"trashAttachmentsToo"_s)->isVisible());
 
-    // Move to trash takes the note and leaves what Atlas links to.
+    // Move to trash takes the note and leaves what Atlas links to. Clicked once the row has
+    // placed the extra button beside it, which Qt 6.8 does a frame later.
     auto *confirm = content->findChild<QQuickItem *>(u"confirmTrash"_s);
+    auto *too = content->findChild<QQuickItem *>(u"trashAttachmentsToo"_s);
+    QTRY_VERIFY(too->x() >= confirm->x() + confirm->width());
     QTest::mouseClick(
         &window, Qt::LeftButton, {},
         confirm->mapToScene(QPointF(confirm->width() / 2, confirm->height() / 2)).toPoint());

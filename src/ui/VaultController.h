@@ -98,7 +98,6 @@ public:
     /// Moves the note shown, and its attachments, to the system trash.
     Q_INVOKABLE bool trashCurrent();
     /// Moves the note at `path`, and its attachments unless `keepAttachments`, to the trash.
-    /// No default for `keepAttachments`: Qt 6.8's QML can call the one-argument form instead.
     Q_INVOKABLE bool trashNote(const QString &path, bool keepAttachments);
     /// The other notes that link into the attachments of the note at `path`, which trashing
     /// them with it would break.
