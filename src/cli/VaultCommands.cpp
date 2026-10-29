@@ -422,6 +422,7 @@ int VaultCommands::importJoplin(const QString &file, const QString &notebook, bo
                                  {u"notes"_s, notes},
                                  {u"notebooks"_s, QJsonArray::fromStringList(done->notebooks)},
                                  {u"attachments"_s, done->attachments},
+                                 {u"versions"_s, done->versions},
                                  {u"skipped"_s, QJsonArray::fromStringList(done->skipped)}});
         return 0;
     }
@@ -431,13 +432,18 @@ int VaultCommands::importJoplin(const QString &file, const QString &notebook, bo
     };
     const int created = done->count(Outcome::Created);
     const int updated = done->count(Outcome::Updated);
-    m_out << m_paint.bold(dryRun ? tr("Would import from %1").arg(QFileInfo(file).fileName())
-                                 : tr("Imported from %1").arg(QFileInfo(file).fileName()))
+    const QString origin =
+        file.isEmpty() ? tr("the Joplin app on this computer") : QFileInfo(file).fileName();
+    m_out << m_paint.bold(dryRun ? tr("Would import from %1").arg(origin)
+                                 : tr("Imported from %1").arg(origin))
           << "\n";
     m_out << "  " << plural(created, tr("1 new note"), tr("%1 new notes")) << ", "
           << plural(updated, tr("1 updated"), tr("%1 updated")) << ", "
           << plural(int(done->notebooks.size()), tr("1 new notebook"), tr("%1 new notebooks"))
-          << ", " << plural(done->attachments, tr("1 attachment"), tr("%1 attachments")) << "\n";
+          << ", " << plural(done->attachments, tr("1 attachment"), tr("%1 attachments"));
+    if (done->versions > 0)
+        m_out << ", " << plural(done->versions, tr("1 past version"), tr("%1 past versions"));
+    m_out << "\n";
     if (const int same = done->count(Outcome::Unchanged))
         m_out << "  "
               << plural(same, tr("1 note unchanged since the last import"),

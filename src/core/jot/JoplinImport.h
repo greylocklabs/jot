@@ -45,6 +45,8 @@ struct JoplinImport
     QStringList notebooks;
     /// Attachments copied into `.assets` folders.
     int attachments = 0;
+    /// Earlier versions of notes, from Joplin's revisions, kept in the notes' history.
+    int versions = 0;
     /// What was left out, in words: encrypted items, notes in Joplin's trash and the like.
     QStringList skipped;
 

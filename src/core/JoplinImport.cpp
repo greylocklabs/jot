@@ -2,6 +2,7 @@
 
 #include "jot/FrontMatter.h"
 #include "jot/Layout.h"
+#include "jot/NoteHistory.h"
 #include "jot/NoteScan.h"
 #include "jot/Vault.h"
 
@@ -429,20 +430,28 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
         return path;
     };
 
-    int written = 0;
-    for (const Planned &write : writes) {
-        const auto &note = *write.note;
+    // What the file at `path` holds for `note` with `body`: links made relative, and Joplin's
+    // fields in front matter. Without `copy`, as for an earlier version, links reach only
+    // attachments already brought, so nothing comes in for a version alone.
+    const auto fileText = [&](const JoplinExport::Note &note, const QString &title,
+                              const QString &path, const QString &raw, bool copy) {
         const auto target = [&](const QString &id) -> std::optional<QString> {
             if (notePath.contains(id))
-                return Vault::linkTarget(write.path, notePath[id]);
-            const QString attachment = attachmentFor(id, write.path);
+                return Vault::linkTarget(path, notePath[id]);
+            const QString attachment =
+                copy ? attachmentFor(id, path)
+                     : (ledger.attachments.contains(id) &&
+                                (taken.contains(ledger.attachments[id]) ||
+                                 QFileInfo::exists(vault.absolute(ledger.attachments[id])))
+                            ? ledger.attachments[id]
+                            : QString());
             if (attachment.isEmpty())
                 return std::nullopt;
-            return Vault::linkTarget(write.path, attachment);
+            return Vault::linkTarget(path, attachment);
         };
         QString body =
-            rewriteLinks(note.body, [&](const QString &raw, bool wiki) -> std::optional<QString> {
-                const QString id = joplinTarget(raw);
+            rewriteLinks(raw, [&](const QString &link, bool wiki) -> std::optional<QString> {
+                const QString id = joplinTarget(link);
                 if (wiki || id.isEmpty())
                     return std::nullopt;
                 return target(id);
@@ -467,8 +476,8 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
             text = setFrontMatterKey(text, key, value);
         };
         // Only when the file name cannot hold the title, as for any note.
-        if (Vault::fileNameFor(write.title) != write.title)
-            set(u"title"_s, write.title);
+        if (Vault::fileNameFor(title) != title)
+            set(u"title"_s, title);
         if (note.created.isValid())
             set(u"created"_s, iso(note.created));
         QStringList tags;
@@ -489,6 +498,13 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
             set(u"source_url"_s, note.sourceUrl);
         if (!note.author.isEmpty())
             set(u"author"_s, note.author);
+        return text;
+    };
+
+    int written = 0;
+    for (const Planned &write : writes) {
+        const auto &note = *write.note;
+        const QString text = fileText(note, write.title, write.path, note.body, true);
 
         if (!dryRun) {
             QString why;
@@ -506,6 +522,32 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
             QString why;
             if (!saveLedger(&why))
                 return fail(QObject::tr("could not write %1: %2").arg(kLedger, why));
+        }
+    }
+
+    // Joplin's revisions become past versions of the notes they were of, wherever those are now,
+    // under the times Joplin kept them; a time already in a note's history is not kept again.
+    QHash<QString, const JoplinExport::Note *> byId;
+    for (const auto &note : from.notes)
+        byId.insert(note.id, &note);
+    const NoteHistory history(vault);
+    for (const JoplinImport::Note &line : std::as_const(result.notes)) {
+        const JoplinExport::Note *note = byId.value(line.joplinId);
+        if (!note || note->revisions.isEmpty() || line.outcome == JoplinImport::Outcome::Removed)
+            continue;
+        QSet<qint64> kept;
+        for (const NoteHistory::Version &version : history.versions(line.path))
+            kept.insert(version.written.toSecsSinceEpoch());
+        for (const JoplinExport::Revision &revision : note->revisions) {
+            if (!revision.updated.isValid() || revision.body == note->body ||
+                kept.contains(revision.updated.toSecsSinceEpoch()))
+                continue;
+            const QString text = fileText(*note, line.title, line.path, revision.body, false);
+            QString why;
+            if (!dryRun && !history.keep(line.path, text, revision.updated, &why))
+                return fail(QObject::tr("could not keep a version of %1: %2").arg(line.path, why));
+            kept.insert(revision.updated.toSecsSinceEpoch());
+            ++result.versions;
         }
     }
 

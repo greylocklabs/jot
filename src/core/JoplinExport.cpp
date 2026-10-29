@@ -217,6 +217,7 @@ std::optional<JoplinExport> readJoplinExport(const QByteArray &jex, QString *err
                 .author = item.props.value(u"author"_s),
                 .conflict = flag(item, u"is_conflict"_s),
                 .deleted = hasTime(item, u"deleted_time"_s),
+                .revisions = {},
             });
             break;
         case NotebookType:
@@ -262,7 +263,8 @@ std::optional<JoplinExport> readJoplinExport(const QByteArray &jex, QString *err
         out.skipped.append(count(encrypted, u"encrypted item"_s, u"encrypted items"_s) +
                            u", which Joplin has to decrypt first"_s);
     if (revisions > 0)
-        out.skipped.append(count(revisions, u"note revision"_s, u"note revisions"_s));
+        out.skipped.append(count(revisions, u"note revision"_s, u"note revisions"_s) +
+                           u", which only Joplin's database brings"_s);
     if (unknown > 0)
         out.skipped.append(count(unknown, u"item of a kind Jot does not read"_s,
                                  u"items of a kind Jot does not read"_s));

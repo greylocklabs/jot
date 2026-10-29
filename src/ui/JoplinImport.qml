@@ -41,6 +41,9 @@ Popup {
         if (s.notebooks > 0)
             parts.push(s.notebooks === 1 ? qsTr("1 new notebook") : qsTr("%1 new notebooks").arg(
                                                s.notebooks))
+        if (s.versions > 0)
+            parts.push(s.versions === 1 ? qsTr("1 past version") : qsTr("%1 past versions").arg(
+                                              s.versions))
         if (s.attachments > 0)
             parts.push(s.attachments === 1 ? qsTr("1 attachment") : qsTr("%1 attachments").arg(
                                                  s.attachments))

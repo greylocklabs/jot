@@ -269,7 +269,9 @@ read while Joplin is closed. Either maps onto this format as follows:
 | `latitude`, `longitude`, `altitude` | Left out: Jot does not keep where a note was written         |
 | Conflict copies                     | A note called `<title> (conflict)` beside the original       |
 | Notes and notebooks in the trash    | Left out                                                     |
-| Encrypted items, revisions          | Left out, and counted in the import's summary                |
+| Revisions, from Joplin's database   | Past versions in the note's history, at Joplin's times       |
+| Revisions in a JEX export           | Left out: only the database brings them                      |
+| Encrypted items                     | Left out, and counted in the import's summary                |
 
 Importing again is safe, so a Joplin account can come across one notebook at a time.
 `.jot/joplin.yaml` records which file each Joplin note and notebook became, and what each note

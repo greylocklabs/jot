@@ -15,6 +15,8 @@ add_library(jotcore STATIC
     jot/JoplinExport.h
     JoplinExport.cpp
     JoplinDatabase.cpp
+    jot/JoplinPatch.h
+    JoplinPatch.cpp
     jot/JoplinImport.h
     JoplinImport.cpp
     jot/Layout.h

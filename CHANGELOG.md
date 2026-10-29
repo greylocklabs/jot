@@ -9,6 +9,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 - Import from Joplin reads the Joplin app on this computer when it is there, so nothing needs
   exporting first; a .jex export still works. `jot import joplin` with no file does the same.
+- Joplin's note history comes across too: importing from the Joplin app brings each note's
+  revisions in as past versions, at the times Joplin kept them.
 - Past versions: Jot keeps earlier versions of each note, one when you start editing it and then
   one every ten minutes while you write. Open them from a note's menu, the command palette, or
   the leader key then h, read any of them, and restore one; what it replaces is kept too. They

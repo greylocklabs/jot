@@ -25,6 +25,14 @@ struct JoplinExport
         QString emoji;
         bool deleted = false;
     };
+    /// A note as it was at some time before, which only Joplin's database keeps.
+    struct Revision
+    {
+        /// When the note was last changed before Joplin kept this.
+        QDateTime updated;
+        QString title;
+        QString body;
+    };
     struct Note
     {
         QString id;
@@ -46,6 +54,8 @@ struct JoplinExport
         bool conflict = false;
         /// In Joplin's trash.
         bool deleted = false;
+        /// Earlier versions, oldest first.
+        QList<Revision> revisions;
     };
     struct Tag
     {
