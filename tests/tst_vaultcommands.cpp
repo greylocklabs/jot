@@ -90,15 +90,15 @@ void TestVaultCommands::statusSaysWhatTheVaultHolds()
 {
     QCOMPARE(run([](auto &c) { return c.status(u"/cache/index.sqlite"_s, true); }), 0);
     const QJsonObject status = json().object();
-    QCOMPARE(status.value(u"notes"_s).toInt(), 8);
+    QCOMPARE(status.value(u"notes"_s).toInt(), 9);
     QCOMPARE(status.value(u"notebooks"_s).toInt(), 5);
-    QCOMPARE(status.value(u"openTasks"_s).toInt(), 3);
+    QCOMPARE(status.value(u"openTasks"_s).toInt(), 6);
     QCOMPARE(status.value(u"openTaskNotes"_s).toInt(), 1);
     QVERIFY(status.value(u"writable"_s).toBool());
 
     QCOMPARE(run([](auto &c) { return c.status(u"/cache/index.sqlite"_s, false); }), 0);
-    QVERIFY2(m_out.contains(u"8 notes in 5 notebooks"_s), qPrintable(m_out));
-    QVERIFY(m_out.contains(u"1 task note, 3 tasks"_s));
+    QVERIFY2(m_out.contains(u"9 notes in 5 notebooks"_s), qPrintable(m_out));
+    QVERIFY(m_out.contains(u"1 task note, 6 tasks"_s));
 }
 
 void TestVaultCommands::listsNotesNewestOrByTitle()
@@ -110,7 +110,7 @@ void TestVaultCommands::listsNotesNewestOrByTitle()
     QCOMPARE(notes.at(0).toObject().value(u"tags"_s).toArray().first().toString(), u"food"_s);
 
     QCOMPARE(run([](auto &c) { return c.list({}, {}, false); }), 0);
-    QCOMPARE(m_out.count(u'\n'), 8);
+    QCOMPARE(m_out.count(u'\n'), 9);
     QCOMPARE(run([](auto &c) { return c.list(u"Nowhere"_s, {}, false); }), 1);
     QVERIFY(m_err.contains(u"no notebook called Nowhere"_s));
     QCOMPARE(run([](auto &c) { return c.list({}, u"titel"_s, false); }), 2);
@@ -179,7 +179,7 @@ void TestVaultCommands::listsWhatIsLeftToDo()
 {
     QCOMPARE(run([](auto &c) { return c.listTasks(true); }), 0);
     const QJsonArray tasks = json().array();
-    QCOMPARE(tasks.size(), 4);
+    QCOMPARE(tasks.size(), 7);
     QCOMPARE(tasks.first().toObject().value(u"kind"_s).toString(), u"note"_s);
     QCOMPARE(tasks.last().toObject().value(u"title"_s).toString(), u"oat milk"_s);
     QCOMPARE(tasks.last().toObject().value(u"note"_s).toString(), u"Groceries"_s);
