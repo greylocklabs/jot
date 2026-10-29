@@ -64,6 +64,7 @@ private Q_SLOTS:
     void renamingRewritesLinksAndKeepsTheTitle();
     void trashesTheNoteShown();
     void keepsAttachmentsOtherNotesUse();
+    void removesAttachmentFoldersLeftEmpty();
     void followsLinksAndMakesMissingNotes();
     void keepsLineEndingsAndTheByteOrderMark();
     void aRenameThatFailsHalfwayShowsWhereTheNoteIs();
@@ -874,6 +875,24 @@ void TestVaultController::keepsAttachmentsOtherNotesUse()
     QVERIFY(QFileInfo::exists(m_root + u"/Mara.assets/map.png"_s));
     QVERIFY(m_vault->trashNote(u"Kit.md"_s));
     QVERIFY(!QFileInfo::exists(m_root + u"/Kit.assets"_s));
+}
+
+void TestVaultController::removesAttachmentFoldersLeftEmpty()
+{
+    QVERIFY(QDir().mkpath(m_root + u"/Recipes/Pancakes.assets"_s));
+    QFile photo(m_root + u"/Recipes/Pancakes.assets/photo.png"_s);
+    QVERIFY(photo.open(QIODevice::WriteOnly));
+    photo.close();
+    QVERIFY(QDir().mkpath(m_root + u"/Inbox/Groceries.assets"_s));
+
+    // Opening the notes folder takes one already empty, and opening a note whose last attachment
+    // was deleted elsewhere takes its.
+    QVERIFY(m_vault->openPath(m_root));
+    QVERIFY(!QFileInfo::exists(m_root + u"/Inbox/Groceries.assets"_s));
+    QVERIFY(QFileInfo::exists(m_root + u"/Recipes/Pancakes.assets"_s));
+    QVERIFY(photo.remove());
+    m_vault->setCurrent(u"Recipes/Pancakes.md"_s);
+    QVERIFY(!QFileInfo::exists(m_root + u"/Recipes/Pancakes.assets"_s));
 }
 
 void TestVaultController::trashesTheNoteShown()
