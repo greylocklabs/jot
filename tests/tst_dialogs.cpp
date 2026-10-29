@@ -32,6 +32,7 @@ private Q_SLOTS:
     void everyModalHasAClose_data();
     void everyModalHasAClose();
     void themeColorsFinishHoweverClosed();
+    void showsAndRestoresPastVersions();
 
 private:
     QTemporaryDir m_dir;
@@ -65,6 +66,7 @@ void TestDialogs::opensCleanly_data()
     QTest::newRow("update") << u"UpdateDialog {}"_s;
     QTest::newRow("theme colors") << u"ThemeEditor {}"_s;
     QTest::newRow("report a problem") << u"ReportDialog {}"_s;
+    QTest::newRow("past versions") << u"HistoryDialog {}"_s;
     QTest::newRow("import from joplin")
         << uR"(JoplinImport { summary: ({ ok: true, created: 3, updated: 1, unchanged: 2, notebooks: 1,
               attachments: 1, keptEdits: ["Stories/Mara.md"], notBroughtBack: ["Old.md"],
@@ -104,7 +106,7 @@ void TestDialogs::everyModalHasAClose_data()
          {u"SettingsDialog {}"_s, u"KeyHelp { actions: [] }"_s, u"AboutDialog {}"_s,
           u"WhatsNewDialog {}"_s, u"UpdateDialog {}"_s, u"ThemeEditor {}"_s, u"TrashConfirm {}"_s,
           u"QuickSwitcher {}"_s, u"CommandPalette {}"_s, u"EmojiPicker {}"_s, u"QuickAdd {}"_s,
-          u"JoplinImport {}"_s})
+          u"JoplinImport {}"_s, u"HistoryDialog {}"_s})
         QTest::newRow(qPrintable(dialog)) << dialog;
 }
 
@@ -170,6 +172,49 @@ void TestDialogs::themeColorsFinishHoweverClosed()
     QTRY_VERIFY(editor->property("opened").toBool());
     QTest::keyClick(&window, Qt::Key_Escape);
     QTRY_COMPARE(finished.size(), 2);
+}
+
+void TestDialogs::showsAndRestoresPastVersions()
+{
+    QTest::failOnWarning();
+    const QString path = m_vault->newNote(u"Mara"_s);
+    QVERIFY(!path.isEmpty());
+    m_vault->setHistoryInterval(0);
+    m_vault->edit(u"First\n"_s);
+    m_vault->saveNow();
+    m_vault->edit(u"Second\n"_s);
+    m_vault->saveNow();
+
+    QQuickWindow window;
+    window.resize(900, 700);
+    window.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&window));
+    QQmlEngine engine;
+    QQmlComponent component(&engine);
+    component.setData("import Jot.Ui\nHistoryDialog {}\n", QUrl(u"qrc:/test.qml"_s));
+    std::unique_ptr<QObject> dialog(component.create());
+    QVERIFY2(dialog, qPrintable(component.errorString()));
+    dialog->setProperty("parent", QVariant::fromValue(window.contentItem()));
+    QMetaObject::invokeMethod(dialog.get(), "open");
+    QTRY_VERIFY(dialog->property("opened").toBool());
+
+    auto *content = dialog->property("contentItem").value<QQuickItem *>();
+    auto *versions = content->findChild<QQuickItem *>(u"versions"_s);
+    auto *text = content->findChild<QQuickItem *>(u"versionText"_s);
+    auto *restore = content->findChild<QQuickItem *>(u"restore"_s);
+    QVERIFY(versions && text && restore);
+    // The note as made, then "First", newest first.
+    QCOMPARE(versions->property("count").toInt(), 2);
+    QCOMPARE(text->property("text").toString(), u"First\n"_s);
+
+    QTest::mouseClick(
+        &window, Qt::LeftButton, {},
+        restore->mapToScene(QPointF(restore->width() / 2, restore->height() / 2)).toPoint());
+    QTRY_VERIFY(!dialog->property("visible").toBool());
+    QCOMPARE(m_vault->currentText(), u"First\n"_s);
+    QCOMPARE(
+        m_vault->versionText(m_vault->historyOf(path).first().toMap().value(u"path"_s).toString()),
+        u"Second\n"_s);
 }
 
 QTEST_MAIN(TestDialogs)

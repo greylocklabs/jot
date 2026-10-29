@@ -105,6 +105,7 @@ qt_add_qml_module(jotui
         UpdateDialog.qml
         Welcome.qml
         WhatsNewDialog.qml
+        HistoryDialog.qml
         WindowControls.qml
 )
 

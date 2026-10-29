@@ -10,6 +10,8 @@ Rectangle {
 
     /// Rename was chosen for the note now shown, whose title should take the typing.
     signal titleEditRequested
+    /// Past versions were asked for the note now shown.
+    signal historyRequested
 
     /// The notebook at `path` as the list names it, after its emoji if it has one.
     function notebookLabel(path) {
@@ -370,6 +372,13 @@ Rectangle {
         MenuEntry {
             text: qsTr("Show in Files")
             onTriggered: Vault.showInFiles(noteMenu.path)
+        }
+        MenuEntry {
+            text: qsTr("Past versions...")
+            onTriggered: {
+                Vault.current = noteMenu.path
+                root.historyRequested()
+            }
         }
         MenuSeparator {
             contentItem: Rectangle {
