@@ -1,6 +1,7 @@
 #include "jot/Vault.h"
 
 #include "jot/FrontMatter.h"
+#include "jot/Logging.h"
 
 #include <QDir>
 #include <QDirIterator>
@@ -412,10 +413,9 @@ bool Vault::moveNote(const QString &from, const QString &to, QString *error) con
         *error = QObject::tr("moved %1, but not its attachments").arg(from);
         return false;
     }
-    if (!moveHistory(from, to)) {
-        *error = QObject::tr("moved %1, but not its history").arg(from);
-        return false;
-    }
+    // The note has moved, so links to it must follow whatever becomes of its history.
+    if (!moveHistory(from, to))
+        qCWarning(lcVault) << "moved" << from << "to" << to << "but not its history";
     return true;
 }
 
@@ -464,10 +464,8 @@ bool Vault::moveFolder(const QString &from, const QString &to, QString *error) c
         *error = QObject::tr("could not move %1 to %2").arg(from, to);
         return false;
     }
-    if (!moveHistory(from, to)) {
-        *error = QObject::tr("moved %1, but not the history of its notes").arg(from);
-        return false;
-    }
+    if (!moveHistory(from, to))
+        qCWarning(lcVault) << "moved" << from << "to" << to << "but not the history of its notes";
     return true;
 }
 

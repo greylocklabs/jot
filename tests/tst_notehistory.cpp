@@ -3,6 +3,7 @@
 #include "jot/Vault.h"
 
 #include <QDir>
+#include <QRegularExpression>
 #include <QTemporaryDir>
 #include <QTest>
 
@@ -126,6 +127,15 @@ void TestNoteHistory::movesWithItsNote()
     // A note with no history moves as before.
     write(u"Soren.md"_s, u"now\n"_s);
     QVERIFY2(m_vault->moveNote(u"Soren.md"_s, u"Ashfall/Soren.md"_s, &error), qPrintable(error));
+
+    // History that cannot follow does not undo or fail a move already made.
+    write(u"Kit.md"_s, u"now\n"_s);
+    QVERIFY(NoteHistory(*m_vault).keep(u"Kit.md"_s, u"then\n"_s,
+                                       QDateTime(QDate(2026, 10, 28), QTime(9, 0)), &error));
+    write(u".jot/history/Books"_s, u"a file where a folder would go\n"_s);
+    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"but not its history"_s));
+    QVERIFY2(m_vault->moveNote(u"Kit.md"_s, u"Books/Kit.md"_s, &error), qPrintable(error));
+    QVERIFY(QFileInfo::exists(m_vault->absolute(u"Books/Kit.md"_s)));
 }
 
 void TestNoteHistory::movesWithItsNotebook()

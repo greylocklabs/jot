@@ -28,8 +28,8 @@ Read `CONTRIBUTING.md` before writing commits or comments. In short:
   72 character header.
 - Comments are one or two sentences and explain why, not what. No em dashes anywhere in
   comments, docs, or commit messages.
-- Notes are plain files and stay the source of truth. Anything Jot stores beside them is a cache
-  that can be rebuilt.
+- Notes are plain files and stay the source of truth. Anything else Jot stores is a cache that can
+  be rebuilt, apart from the vault's settings and note history under `.jot/`.
 - Text and layout arithmetic belongs in C++ models, not QML.
 - Qt 6.8 (Debian trixie) cannot add a bare `u"..."` literal to a `QString`; use `QStringLiteral` or
   the `_s` suffix. Newer Qt accepts it, so only the Debian build catches it.
