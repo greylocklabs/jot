@@ -319,13 +319,15 @@ void TestJoplinDatabase::appliesJoplinsPatches()
 
 void TestJoplinDatabase::piecesRevisionsTogether()
 {
-    // Out of order in the table, as rows can be: they are pieced together by time.
+    // Out of order in the table, as rows can be: they are pieced together by time. A title patch
+    // that does not fit ends nothing, since versions take the note's title.
     const QString database = profile(
         u"joplin-desktop"_s,
         {
             u"INSERT INTO notes (id, title, body) VALUES ('%1', 'Packing list', 'socks, hat')"_s
                 .arg(kPacking),
-            revision(u"r2"_s, kPacking, kTen, {}, patches({patch(0, u"socks"_s, {}, u", hat"_s)})),
+            revision(u"r2"_s, kPacking, kTen, patches({patch(0, {}, u"nothing like it"_s, u"x"_s)}),
+                     patches({patch(0, u"socks"_s, {}, u", hat"_s)})),
             revision(u"r1"_s, kPacking, kNine, patches({patch(0, {}, {}, u"Packing"_s)}),
                      patches({patch(0, {}, {}, u"socks"_s)})),
             // A revision of a note Joplin no longer has.
@@ -338,9 +340,7 @@ void TestJoplinDatabase::piecesRevisionsTogether()
     const QList<JoplinExport::Revision> revisions = read->notes.first().revisions;
     QCOMPARE(revisions.size(), 2);
     QCOMPARE(revisions.at(0).updated, QDateTime::fromMSecsSinceEpoch(kNine, QTimeZone::UTC));
-    QCOMPARE(revisions.at(0).title, u"Packing"_s);
     QCOMPARE(revisions.at(0).body, u"socks"_s);
-    QCOMPARE(revisions.at(1).title, u"Packing"_s);
     QCOMPARE(revisions.at(1).body, u"socks, hat"_s);
     QVERIFY(read->skipped.isEmpty());
 
@@ -379,6 +379,9 @@ void TestJoplinDatabase::keepsRevisionsAsPastVersions()
             // as it is, so it is not a past version.
             revision(u"r1"_s, kPacking, kNine, {},
                      patches({patch(0, {}, {}, u"![beach](:/%1) socks"_s.arg(kPhoto))})),
+            // A new title alone is the same text as the one before, so no version of its own.
+            revision(u"r1b"_s, kPacking, kNine + 1000, patches({patch(0, {}, {}, u"Packing"_s)}),
+                     {}),
             revision(u"r2"_s, kPacking, kTen, {},
                      patches({patch(u"![beach](:/%1) socks"_s.arg(kPhoto).size(), {}, {},
                                     u" ![old](:/%1)"_s.arg(kGone))})),
@@ -397,7 +400,7 @@ void TestJoplinDatabase::keepsRevisionsAsPastVersions()
     QString error;
     const std::optional<JoplinExport> read = readJoplin(database, &error);
     QVERIFY2(read, qPrintable(error));
-    QCOMPARE(read->notes.first().revisions.size(), 3);
+    QCOMPARE(read->notes.first().revisions.size(), 4);
 
     // A dry run counts them and keeps none.
     std::optional<JoplinImport> done = importJoplin(vault, *read, {}, true, &error);

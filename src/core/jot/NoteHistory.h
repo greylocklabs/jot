@@ -29,6 +29,9 @@ public:
     /// same as the newest version, is not kept again.
     bool keep(const QString &note, const QString &text, const QDateTime &written,
               QString *error) const;
+    /// Keeps `text` as the version of `note` written at `written`, whatever versions it has.
+    bool add(const QString &note, const QString &text, const QDateTime &written,
+             QString *error) const;
 
 private:
     const Vault &m_vault;

@@ -526,7 +526,9 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
     }
 
     // Joplin's revisions become past versions of the notes they were of, wherever those are now,
-    // under the times Joplin kept them; a time already in a note's history is not kept again.
+    // under the times Joplin kept them. One with no text, or the text of the one before it or of
+    // the note now, is no version worth having; a time already in a note's history is not kept
+    // again, so importing again keeps nothing twice.
     QHash<QString, const JoplinExport::Note *> byId;
     for (const auto &note : from.notes)
         byId.insert(note.id, &note);
@@ -538,13 +540,16 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
         QSet<qint64> kept;
         for (const NoteHistory::Version &version : history.versions(line.path))
             kept.insert(version.written.toSecsSinceEpoch());
+        QString before;
         for (const JoplinExport::Revision &revision : note->revisions) {
-            if (!revision.updated.isValid() || revision.body == note->body ||
-                kept.contains(revision.updated.toSecsSinceEpoch()))
+            const bool repeated = revision.body == before;
+            before = revision.body;
+            if (!revision.updated.isValid() || revision.body.isEmpty() || repeated ||
+                revision.body == note->body || kept.contains(revision.updated.toSecsSinceEpoch()))
                 continue;
             const QString text = fileText(*note, line.title, line.path, revision.body, false);
             QString why;
-            if (!dryRun && !history.keep(line.path, text, revision.updated, &why))
+            if (!dryRun && !history.add(line.path, text, revision.updated, &why))
                 return fail(QObject::tr("could not keep a version of %1: %2").arg(line.path, why));
             kept.insert(revision.updated.toSecsSinceEpoch());
             ++result.versions;

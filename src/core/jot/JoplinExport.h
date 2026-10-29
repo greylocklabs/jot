@@ -30,7 +30,6 @@ struct JoplinExport
     {
         /// When the note was last changed before Joplin kept this.
         QDateTime updated;
-        QString title;
         QString body;
     };
     struct Note

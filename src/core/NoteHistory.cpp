@@ -63,6 +63,12 @@ bool NoteHistory::keep(const QString &note, const QString &text, const QDateTime
         if (notefile::read(m_vault.absolute(kept.first().path), &ignored) == text)
             return true;
     }
+    return add(note, text, written, error);
+}
+
+bool NoteHistory::add(const QString &note, const QString &text, const QDateTime &written,
+                      QString *error) const
+{
     const QString folder = Vault::historyFolderFor(note);
     if (!QDir().mkpath(m_vault.absolute(folder))) {
         *error = QObject::tr("could not create %1").arg(folder);
