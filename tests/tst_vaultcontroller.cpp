@@ -515,7 +515,7 @@ void TestVaultController::actsOnNotesThatAreNotShown()
     QVERIFY(m_vault->notebookPaths().contains(u"Ashfall/Places"_s));
     QVERIFY(!m_vault->notebookPaths().contains(QString()));
 
-    QVERIFY(m_vault->trashNote(u"Recipes/Sourdough.md"_s));
+    QVERIFY(m_vault->trashNote(u"Recipes/Sourdough.md"_s, false));
     QVERIFY(!QFileInfo::exists(m_root + u"/Recipes/Sourdough.md"_s));
     QCOMPARE(m_vault->current(), u"Welcome.md"_s);
 }
@@ -873,7 +873,7 @@ void TestVaultController::keepsAttachmentsOtherNotesUse()
     QVERIFY(m_vault->trashNote(u"Mara.md"_s, true));
     QVERIFY(!QFileInfo::exists(m_root + u"/Mara.md"_s));
     QVERIFY(QFileInfo::exists(m_root + u"/Mara.assets/map.png"_s));
-    QVERIFY(m_vault->trashNote(u"Kit.md"_s));
+    QVERIFY(m_vault->trashNote(u"Kit.md"_s, false));
     QVERIFY(!QFileInfo::exists(m_root + u"/Kit.assets"_s));
 }
 

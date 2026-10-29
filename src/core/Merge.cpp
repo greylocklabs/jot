@@ -117,7 +117,8 @@ QString keepLineEndings(const QString &before, const QString &after)
                               ? QStringLiteral("\r\n")
                               : QStringLiteral("\n");
 
-    // Which old line each new one is, where it is one; -1 for a new or changed line.
+    // Which old line each new one stands for, or -1 for one added. A line changed in place,
+    // one of a run that replaced as many or more, stands for the line it replaced.
     QList<qsizetype> from(lines.size(), -1);
     if (const std::optional<QList<Hunk>> hunks = changes(old, lines)) {
         qsizetype i = 0;
@@ -125,6 +126,8 @@ QString keepLineEndings(const QString &before, const QString &after)
         for (const Hunk &hunk : *hunks) {
             for (; i < hunk.start; ++i, ++j)
                 from[j] = i;
+            for (qsizetype k = 0; k < hunk.lines.size(); ++k)
+                from[j + k] = hunk.start + k < hunk.end ? hunk.start + k : -1;
             i = hunk.end;
             j += hunk.lines.size();
         }

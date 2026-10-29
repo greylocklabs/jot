@@ -863,7 +863,7 @@ void VaultController::resyncAfterRename(const QString &from, const QString &to)
 
 bool VaultController::trashCurrent()
 {
-    return trashNote(m_current);
+    return trashNote(m_current, false);
 }
 
 QStringList VaultController::notesUsingAttachments(const QString &path) const

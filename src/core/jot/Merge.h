@@ -14,8 +14,8 @@ namespace jot {
 [[nodiscard]] std::optional<QString> mergeText(const QString &base, const QString &mine,
                                                const QString &theirs);
 
-/// `after`, which ends its lines with `\n` alone, ending them as `before` did: a line kept from
-/// `before` keeps the break it had there, and a new or changed one takes the break most of
+/// `after`, which ends its lines with `\n` alone, ending them as `before` did: a line kept or
+/// changed in place keeps the break it had there, and an added one takes the break most of
 /// `before`'s lines have. The same `after` when `before` has no `\r\n`.
 [[nodiscard]] QString keepLineEndings(const QString &before, const QString &after);
 
