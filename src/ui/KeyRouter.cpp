@@ -72,6 +72,7 @@ QList<KeyAction> KeyRouter::actions()
         // Commands with no keys, for the palette.
         act(u"copyLink"_s, tr("Copy a link to the note"), window, {}),
         act(u"showInFiles"_s, tr("Show the note in Files"), window, {}),
+        act(u"history"_s, tr("Past versions of the note"), window, {}, {}, u"h"_s),
         act(u"togglePin"_s, tr("Pin the note to the top, or unpin it"), window, {}),
         act(u"toggleTask"_s, tr("Make the note a task, or not"), window, {}),
         act(u"importJoplin"_s, tr("Import from Joplin..."), window, {}),

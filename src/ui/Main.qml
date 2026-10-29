@@ -335,6 +335,7 @@ ApplicationWindow {
                 id: noteList
 
                 onTitleEditRequested: editor.editTitle()
+                onHistoryRequested: window.run("history")
                 visible: Vault.isOpen && !Vault.showingTasks
                 anchors {
                     left: sidebar.right
@@ -429,6 +430,10 @@ ApplicationWindow {
         sourceComponent: UpdateDialog {}
     }
     LazyPopup {
+        id: history
+        sourceComponent: HistoryDialog {}
+    }
+    LazyPopup {
         id: reportDialog
         sourceComponent: ReportDialog {}
     }
@@ -466,6 +471,7 @@ ApplicationWindow {
         case "readMode":
         case "copyLink":
         case "showInFiles":
+        case "history":
             return note
         case "rename":
         case "toggleTask":
@@ -548,6 +554,9 @@ ApplicationWindow {
             break
         case "showInFiles":
             Vault.showInFiles(Vault.current)
+            break
+        case "history":
+            history.open()
             break
         case "toggleTask":
             Vault.setTask(Vault.current, !Vault.isTask(Vault.current))
