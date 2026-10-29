@@ -11,8 +11,8 @@
 
 namespace jot {
 
-/// What a Joplin JEX export holds: a tar of Joplin's raw items, with attachments under
-/// `resources/`. Where each note was written is never read, as Jot does not keep it.
+/// What a Joplin JEX export or Joplin's database holds: Joplin's items, with the attachments'
+/// files. Where each note was written is never read, as Jot does not keep it.
 struct JoplinExport
 {
     struct Notebook
@@ -81,5 +81,18 @@ struct JoplinExport
 /// The same, from the export's bytes.
 [[nodiscard]] std::optional<JoplinExport> readJoplinExport(const QByteArray &jex,
                                                            QString *error = nullptr);
+
+/// The items in Joplin's own database at `path`, `database.sqlite` in a Joplin profile, with
+/// attachments from the `resources` folder beside it. The database is only read, and is best
+/// read while Joplin is closed. Nothing, with `error` set, when it is not Joplin's.
+[[nodiscard]] std::optional<JoplinExport> readJoplinDatabase(const QString &path,
+                                                             QString *error = nullptr);
+
+/// The items at `path`: a JEX export, Joplin's database, or a Joplin profile folder holding one.
+[[nodiscard]] std::optional<JoplinExport> readJoplin(const QString &path, QString *error = nullptr);
+
+/// The database of the Joplin desktop app on this computer, installed as a package or a Flatpak,
+/// or empty when there is none.
+[[nodiscard]] QString joplinProfileDatabase();
 
 } // namespace jot

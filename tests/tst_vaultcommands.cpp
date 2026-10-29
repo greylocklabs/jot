@@ -1,6 +1,7 @@
 #include "VaultCommands.h"
 
 #include "JexBuilder.h"
+#include "JoplinDatabaseBuilder.h"
 #include "jot/Layout.h"
 
 #include <QDir>
@@ -48,6 +49,9 @@ private:
 void TestVaultCommands::init()
 {
     m_dir = std::make_unique<QTemporaryDir>();
+    // Joplin is looked for in home and the config folder, which must never be the real ones.
+    qputenv("HOME", m_dir->filePath(u"home"_s).toUtf8());
+    qputenv("XDG_CONFIG_HOME", m_dir->filePath(u"home/.config"_s).toUtf8());
     const QString root = m_dir->filePath(u"Notes"_s);
     const QString sample = QStringLiteral(JOT_SAMPLE_VAULT);
     QDirIterator files(sample, QDir::Files, QDirIterator::Subdirectories);
@@ -325,6 +329,14 @@ void TestVaultCommands::importsAJoplinExportAfterADryRun()
     QVERIFY2(m_out.contains(u"1 note unchanged since the last import"_s), qPrintable(m_out));
 
     QCOMPARE(run([](auto &c) { return c.importJoplin({}, {}, false, false); }), 2);
+    // Named nothing, it reads the Joplin on this computer.
+    const QString database = m_dir->filePath(u"home/.config/joplin-desktop/database.sqlite"_s);
+    QVERIFY(QDir().mkpath(QFileInfo(database).path()));
+    QCOMPARE(makeJoplinDatabase(database, {u"INSERT INTO notes (id, title) VALUES "
+                                           "('00112233445566778899aabbccddeef0', 'Desk')"_s}),
+             QString());
+    QCOMPARE(run([](auto &c) { return c.importJoplin({}, {}, true, true); }), 0);
+    QCOMPARE(json().object()[u"notes"_s].toArray().first()[u"path"_s].toString(), u"Desk.md"_s);
     QCOMPARE(run([](auto &c) { return c.importJoplin(u"/no/such.jex"_s, {}, false, false); }), 1);
     QCOMPARE(run([&](auto &c) { return c.importJoplin(jex, u"../outside"_s, false, false); }), 2);
 

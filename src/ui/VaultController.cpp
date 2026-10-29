@@ -1008,6 +1008,12 @@ bool VaultController::follow(const QString &target, bool wiki)
     return true;
 }
 
+QUrl VaultController::joplinProfile() const
+{
+    const QString database = joplinProfileDatabase();
+    return database.isEmpty() ? QUrl() : QUrl::fromLocalFile(database);
+}
+
 QVariantMap VaultController::importJoplin(const QUrl &file, const QString &folder, bool dryRun)
 {
     const auto failed = [](const QString &why) {
@@ -1016,7 +1022,7 @@ QVariantMap VaultController::importJoplin(const QUrl &file, const QString &folde
     if (!m_vault)
         return failed(tr("No notes folder is open."));
     QString error;
-    const std::optional<JoplinExport> from = readJoplinExport(file.toLocalFile(), &error);
+    const std::optional<JoplinExport> from = readJoplin(file.toLocalFile(), &error);
     if (!from)
         return failed(error);
     // What is typed so far is saved first, so the import cannot pass it by; if it cannot be

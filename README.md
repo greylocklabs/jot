@@ -53,7 +53,8 @@ jot tasks --view today           # to-dos due today or overdue; also upcoming, a
 jot tasks --label minutes        # to-dos with a label, or --tag for a tag
 jot add "call Soren tomorrow 3pm @minutes"   # a to-do in the inbox, as you would say it
 jot tags                         # every tag, and how many notes have it
-jot import joplin notes.jex --dry-run   # what importing a Joplin export would do
+jot import joplin --dry-run      # what importing the Joplin app on this computer would do
+jot import joplin notes.jex      # or a Joplin export
 ```
 
 `--json` gives scripts the same, and the shell completions know your notebooks and notes.

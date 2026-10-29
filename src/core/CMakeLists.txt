@@ -14,6 +14,7 @@ add_library(jotcore STATIC
     MonthModel.cpp
     jot/JoplinExport.h
     JoplinExport.cpp
+    JoplinDatabase.cpp
     jot/JoplinImport.h
     JoplinImport.cpp
     jot/Layout.h

@@ -55,7 +55,8 @@ const QList<std::pair<QString, QString>> kCommands = {
     {u"tasks"_s, u"What is left to do: --view today, upcoming, anytime or all"_s},
     {u"add"_s, u"Add a to-do to the inbox: jot add \"call Soren tomorrow 3pm @minutes\""_s},
     {u"tags"_s, u"Every tag, with how many notes have it"_s},
-    {u"import"_s, u"Bring notes in: jot import joplin export.jex; --dry-run first to see"_s},
+    {u"import"_s,
+     u"Bring notes in from Joplin, its database or an export; --dry-run first to see"_s},
     {u"logs"_s, u"Show, follow (-f) or open (--open) the log files"_s},
     {u"doctor"_s, u"Details for a bug report; --report opens a new issue"_s},
     {u"donate"_s, u"Support Jot on Ko-fi: opens the page, or --print prints its link"_s},
@@ -414,13 +415,13 @@ int main(int argc, char *argv[])
         if (command == u"add")
             return commands.addTask(rest, json);
         if (command == u"import") {
-            if (args.size() != 3 || args.at(1) != u"joplin") {
-                err << QObject::tr(
-                           "usage: jot import joplin <export.jex> [--notebook name] [--dry-run]")
+            if (args.size() < 2 || args.size() > 3 || args.at(1) != u"joplin") {
+                err << QObject::tr("usage: jot import joplin [export.jex | database.sqlite | "
+                                   "profile folder] [--notebook name] [--dry-run]")
                     << "\n";
                 return 2;
             }
-            return commands.importJoplin(args.at(2), parser.value(notebookOption),
+            return commands.importJoplin(args.value(2), parser.value(notebookOption),
                                          parser.isSet(dryRunOption), json);
         }
         if (command == u"new") {

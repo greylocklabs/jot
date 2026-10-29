@@ -3,8 +3,9 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs
 
-/// Brings a Joplin export into the notes folder: choose the .jex, see what importing it would
-/// do, then import. Importing the same export again is safe, so the summary says what is new.
+/// Brings Joplin's notes into the notes folder: from the Joplin app on this computer when there
+/// is one, or from a .jex export, see what importing would do, then import. Importing again is
+/// safe, so the summary says what is new.
 Popup {
     id: root
 
@@ -15,10 +16,22 @@ Popup {
     property var summary: ({})
     property bool imported: false
 
-    /// Asks for an export to bring into the notebook at `folder`.
+    /// Brings Joplin's notes into the notebook at `folder`, asking for an export when the Joplin
+    /// app is not on this computer.
     function start(folder) {
         root.folder = folder
-        fileDialog.open()
+        const profile = Vault.joplinProfile()
+        if (profile.toString() === "")
+            fileDialog.open()
+        else
+            preview(profile)
+    }
+
+    function preview(file) {
+        root.file = file
+        root.imported = false
+        root.summary = Vault.importJoplin(file, root.folder, true)
+        root.open()
     }
 
     function counts(s) {
@@ -75,6 +88,21 @@ Popup {
             color: Theme.text
             font.family: Theme.displayFontFamily
             font.pixelSize: Theme.textLg
+            font.weight: Theme.weightBold
+        }
+        Text {
+            objectName: "importSource"
+            width: parent.width
+            wrapMode: Text.Wrap
+            textFormat: Text.PlainText
+            text: root.file.toString() === Vault.joplinProfile().toString() ? qsTr("From the Joplin app on this computer") :
+                                                                              qsTr("From %1").arg(
+                                                                                  root.file.toString(
+                                                                                      ).split("/").pop(
+                                                                                      ))
+            color: Theme.textMuted
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.textSm
             font.weight: Theme.weightBold
         }
         Text {
@@ -152,6 +180,16 @@ Popup {
                 text: root.imported || !root.summary.ok ? qsTr("Done") : qsTr("Cancel")
                 onClicked: root.close()
             }
+            StickerButton {
+                objectName: "chooseExport"
+                visible: !root.imported
+                text: qsTr("Use an export...")
+                tip: qsTr("Import a .jex file exported from Joplin instead")
+                onClicked: {
+                    root.close()
+                    fileDialog.open()
+                }
+            }
         }
     }
 
@@ -159,11 +197,6 @@ Popup {
         id: fileDialog
         title: qsTr("Choose a Joplin export")
         nameFilters: [qsTr("Joplin exports (*.jex)")]
-        onAccepted: {
-            root.file = selectedFile
-            root.imported = false
-            root.summary = Vault.importJoplin(selectedFile, root.folder, true)
-            root.open()
-        }
+        onAccepted: root.preview(selectedFile)
     }
 }
