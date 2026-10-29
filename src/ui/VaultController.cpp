@@ -298,8 +298,30 @@ QVariantList VaultController::historyOf(const QString &path) const
     QVariantList list;
     if (!m_vault)
         return list;
-    for (const NoteHistory::Version &version : NoteHistory(*m_vault).versions(path))
-        list.append(QVariantMap{{u"path"_s, version.path}, {u"written"_s, version.written}});
+    const QList<NoteHistory::Version> versions = NoteHistory(*m_vault).versions(path);
+    const QLocale locale;
+    const QDate today = QDate::currentDate();
+    // To the minute, or to the second beside a version from the same minute.
+    const QString seconds = locale.timeFormat(QLocale::LongFormat).remove(u't').trimmed();
+    const auto label = [&](const QDateTime &written, bool toTheSecond) {
+        const QDate day = written.date();
+        const QString date = day == today ? tr("Today")
+                             : day == today.addDays(-1)
+                                 ? tr("Yesterday")
+                                 : locale.toString(day, QLocale::ShortFormat);
+        const QString time = toTheSecond ? locale.toString(written.time(), seconds)
+                                         : locale.toString(written.time(), QLocale::ShortFormat);
+        return tr("%1, %2").arg(date, time);
+    };
+    for (qsizetype i = 0; i < versions.size(); ++i) {
+        const QString shown = label(versions[i].written, false);
+        const bool crowded =
+            (i > 0 && label(versions[i - 1].written, false) == shown) ||
+            (i + 1 < versions.size() && label(versions[i + 1].written, false) == shown);
+        list.append(QVariantMap{{u"path"_s, versions[i].path},
+                                {u"written"_s, versions[i].written},
+                                {u"label"_s, crowded ? label(versions[i].written, true) : shown}});
+    }
     return list;
 }
 

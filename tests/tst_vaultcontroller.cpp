@@ -2,6 +2,7 @@
 
 #include "JexBuilder.h"
 
+#include "jot/NoteHistory.h"
 #include "jot/Settings.h"
 
 #include <QClipboard>
@@ -54,6 +55,7 @@ private Q_SLOTS:
     void savesBeforeSwitchingNotes();
     void keepsPastVersionsWhileEditing();
     void restoresAPastVersion();
+    void saysWhenEachVersionIsFrom();
     void keepsTheOtherVersionWhenBothChanged();
     void mergesOutsideEditsToOtherLines();
     void mergesKeepingLineEndingsAndTheByteOrderMark();
@@ -692,6 +694,33 @@ void TestVaultController::restoresAPastVersion()
     // Another note's versions are not restored over this one.
     m_vault->setCurrent(u"Recipes/Pancakes.md"_s);
     QVERIFY(!m_vault->restoreVersion(original));
+}
+
+void TestVaultController::saysWhenEachVersionIsFrom()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    const Vault vault(m_root);
+    const NoteHistory history(vault);
+    const QDateTime today(QDate::currentDate(), QTime(9, 15, 30));
+    QString error;
+    for (const QDateTime &written :
+         {today, today.addSecs(15), today.addSecs(25 * 60), today.addDays(-1), today.addDays(-30)})
+        QVERIFY(history.keep(u"Welcome.md"_s, written.toString(Qt::ISODate), written, &error));
+
+    QStringList labels;
+    for (const QVariant &version : m_vault->historyOf(u"Welcome.md"_s))
+        labels.append(version.toMap().value(u"label"_s).toString());
+    const QLocale locale;
+    const auto at = [&](const QTime &time) { return locale.toString(time, QLocale::ShortFormat); };
+    // Newest first. The two from 9:15 differ by their seconds; the rest say the minute.
+    QCOMPARE(labels.size(), 5);
+    QCOMPARE(labels.at(0), u"Today, "_s + at(QTime(9, 40, 30)));
+    QVERIFY(labels.at(1).startsWith(u"Today, "_s));
+    QVERIFY(labels.at(1) != labels.at(2));
+    QVERIFY(labels.at(1) != u"Today, "_s + at(QTime(9, 15)));
+    QCOMPARE(labels.at(3), u"Yesterday, "_s + at(QTime(9, 15, 30)));
+    QCOMPARE(labels.at(4), locale.toString(today.date().addDays(-30), QLocale::ShortFormat) +
+                               u", "_s + at(QTime(9, 15, 30)));
 }
 
 void TestVaultController::keepsTheOtherVersionWhenBothChanged()

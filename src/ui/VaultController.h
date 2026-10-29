@@ -176,7 +176,7 @@ public:
     /// edited in Jot), `notBroughtBack` and `skipped`.
     Q_INVOKABLE QVariantMap importJoplin(const QUrl &file, const QString &folder, bool dryRun);
     /// The past versions of the note at `path`, newest first, each a map with `path` (the
-    /// version's own vault path) and `written`.
+    /// version's own vault path), `written`, and `label`, when it was written in words.
     Q_INVOKABLE QVariantList historyOf(const QString &path) const;
     /// The text of the past version at vault path `version`.
     Q_INVOKABLE QString versionText(const QString &version) const;
