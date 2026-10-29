@@ -4,20 +4,20 @@ A Jot vault is a folder of Markdown files that any editor can read and change. T
 what Jot reads and writes. Where it says "Jot writes", Jot also reads the alternatives listed, so
 vaults from Obsidian, Joplin exports and plain Markdown folders open unchanged.
 
-Status: draft, version 1. Nothing here is final until Jot 0.1 ships.
+Status: final, format 1, as of Jot 0.1. Changes follow [Versioning](#versioning).
 
 ## Layout
 
 ```text
 My Notes/                    the vault: any folder
-  .jot/                      vault settings, synced with the notes
-    vault.yaml
-    layout.yaml              manual order, notebook emoji, icons, colors and pins
-    types/                   note types (later)
-    views/                   saved views (later)
-    templates/
+  .jot/                      Jot's files for the vault, synced with the notes
+    vault.yaml               vault settings and the format number
+    layout.yaml              notebook emoji and pinned notes
     history/                 past versions of notes
-  Inbox/
+    joplin.yaml              what imports from Joplin brought, once there has been one
+    trash/                   what was deleted, where the drive has no trash
+  Inbox.md                   where quick add puts to-dos
+  Recipes/
     Pancakes.md
   Ashfall/
     Characters/
@@ -27,10 +27,11 @@ My Notes/                    the vault: any folder
       Soren.md
 ```
 
-- Folders are notebooks, nested to any depth.
+- Folders are notebooks, nested to any depth. A link to a folder is shown but not followed.
 - A note is a `.md` file. Other files are attachments, shown but not edited as notes.
 - Names starting with `.` are hidden from the app and the index, apart from `.jot/`.
-- Jot's own machine-local state (search index, link index, sync state, caches) lives under
+- Opening a folder in Jot makes `.jot/vault.yaml` with `format: 1`, if it has none.
+- Jot's own machine-local state (search index, link index, caches) lives under
   `$XDG_STATE_HOME/jot` and `$XDG_CACHE_HOME/jot`, never in the vault. Deleting it loses nothing:
   Jot rebuilds it from the files.
 
@@ -38,24 +39,28 @@ My Notes/                    the vault: any folder
 
 ### Encoding and bytes
 
-- UTF-8, read and written explicitly. A byte order mark is kept if the file had one.
-- Line endings are kept as found. New notes use `\n`.
+- UTF-8, read and written explicitly. A byte order mark is kept if the file had one. A file that
+  is not UTF-8 is not opened, so it is never written back with replacement characters.
+- Each line keeps the line ending it had. A new or changed line takes the ending most of the
+  file's lines have, and a new note uses `\n`.
 - Saving a note writes back exactly the bytes in the editor. Jot never reformats a note's
   Markdown or YAML on load or save.
-- Writes are atomic: a temporary file in the same folder, then a rename.
+- Writes are atomic: a temporary file in the same folder, then a rename. A file with more than one
+  hard link is written in place instead, and a symbolic link is written through to its target,
+  so the links survive.
 - When a note changes on disk while it has edits not yet saved, Jot merges the two line by line.
   Where both changed the same lines, or lines next to each other, the other version is kept
-  beside the note as `<title> (conflict <date> <time>).md`, and Jot's version is saved.
+  beside the note as `<file name> (conflict <yyyy-MM-dd HHmm>).md`, and Jot's version is saved.
 
 ### Titles and file names
 
 The file name, without `.md`, is the title. Renaming a note in Jot renames the file and updates
 every link to it.
 
-Characters that are unsafe in file names on any sync target are replaced with `-` for `/` and
-`\`, and with nothing for `:` `*` `?` `"` `<` `>` `|` and control characters. Leading and trailing
-dots and spaces are trimmed. When the replacement changes the title, the real title is kept in
-front matter:
+A title becomes a file name as follows: `/` and `\` become a `-` with a space each side;
+`:` `*` `?` `"` `<` `>` `|` and control characters are dropped; runs of spaces become one; and
+leading and trailing dots and spaces are trimmed. A title left empty is "Untitled", in the app's
+language. When the file name cannot hold the title, the real title is kept in front matter:
 
 ```markdown
 ---
@@ -72,58 +77,74 @@ A second note with the same name in the same folder gets a number: `Pancakes 2.m
 Optional YAML between a `---` line at the very start of the file and the next `---` or `...`
 line. Anything else, including an unclosed fence, is body text.
 
+Jot reads a simple subset of YAML: `key: value` with plain or quoted strings, and lists written
+`[a, b]` or as `- item` lines. Anything else, such as nested maps, is kept as text.
+
 Keys Jot understands:
 
-| Key       | Type                       | Meaning                                         |
-| --------- | -------------------------- | ----------------------------------------------- |
-| `title`   | string                     | Title, when the file name cannot hold it        |
-| `tags`    | list of strings            | Tags, nested with `/`: `cast/lead`              |
-| `aliases` | list of strings            | Other names links and mentions can use          |
-| `created` | ISO 8601 date-time         | When the note was created                       |
-| `task`    | `open` or `done`           | Makes the note a task                           |
-| `due`     | ISO 8601 date or date-time | When a task is due                              |
-| `done`    | ISO 8601 date-time         | When a task was completed                       |
-| `labels`  | list of strings            | A task's labels, with or without `@`            |
-| `type`    | string                     | Note type, for templates and properties (later) |
+| Key       | Type                       | Meaning                                        |
+| --------- | -------------------------- | ---------------------------------------------- |
+| `title`   | string                     | Title, when the file name cannot hold it       |
+| `tags`    | list of strings            | Tags, nested with `/`: `cast/lead`             |
+| `aliases` | list of strings            | Other names links and mentions can use         |
+| `created` | ISO 8601 date-time         | When the note was created                      |
+| `task`    | `open` or `done`           | Makes the note a task                          |
+| `due`     | ISO 8601 date or date-time | When a task is due                             |
+| `done`    | ISO 8601 date-time         | When a task was completed                      |
+| `labels`  | list of strings            | A task's labels                                |
+| `type`    | string                     | The note's type; searchable as `type:` for now |
 
 Rules:
 
-- Every other key is kept exactly as written, and shown as a property.
+- Every other key is kept exactly as written.
 - When Jot changes a key, it rewrites only that key's lines, so comments, order and quoting in the
   rest of the front matter survive.
-- Jot writes `created` once, when it creates or imports a note, because file times do not survive
+- Jot writes `created` once, when you make a note or import one, because file times do not survive
   copies and sync. A note without it shows the file's modification time.
+- Jot writes `created` and `done` in UTC, ending in `Z`. A `due` with a time and no offset is in
+  local time.
 - Jot never writes an `updated` key. The file's modification time is the update time, which keeps
   saves from rewriting the front matter.
 - No id is required or written. Links work by path and name.
-- `tags` also accepts a single string. `aliases` also accepts `alias`, and `labels` `label`.
+- A list key also accepts a single string, which is one item: `tags: a, b` is the one tag `a, b`.
+  `aliases` also accepts `alias`, `tags` `tag`, and `labels` `label`. A leading `#` on a tag and
+  `@` on a label are dropped, and `task:` ignores case.
+- Reopening a task removes its `done:`. Making a note no longer a task removes `task:` and leaves
+  `due:`.
 
 ### Body
 
 CommonMark with the GitHub extensions (tables, task lists, strikethrough, autolinks), plus:
 
-- `[[wikilinks]]`, `[[Note|label]]`, `[[Note#Heading]]`
-- inline tags: `#tag` and `#tag/nested`, outside code and links
-- footnotes: `[^1]`
-- math: `$inline$` and `$$block$$`
-- front matter, as above
+- `[[wikilinks]]`, `[[Note|label]]`, `[[Note#Heading]]` and `![[embeds]]`
+- inline tags: `#tag` and `#tag/nested`, outside code and links. A tag is letters, digits, `_`,
+  `-` and `/`, with at least one that is not a digit, and starts the line or follows a space, `(`
+  or `,`. Tags match without regard to case.
+
+Jot keeps any other Markdown as written, footnotes and math among them, and does not draw those
+yet.
 
 ## Links
 
-Jot writes standard Markdown links to notes and attachments, with paths relative to the note and
-spaces encoded as `%20`:
+Jot reads standard Markdown links and wikilinks, to notes and attachments alike. It writes:
 
-```markdown
-[Soren](Soren.md)
-![](Mara.assets/sketch.png)
-```
+- a wikilink when it links to a note, as `[[` completion and Copy link do: `[[Soren]]`, or
+  `[[Ashfall/Soren]]` when another note has the same name;
+- a Markdown link, relative to the note, when it adds an attachment: `![](Mara.assets/sketch.png)`.
+  Spaces become `%20`, and a path with `(` or `)` is written `<like this>`.
 
-Jot also reads `[[wikilinks]]` and `![[embeds]]`, and resolves them the way Obsidian does: an exact
-path from the vault root, then the shortest unique file name, then an alias. The user can choose
-to have Jot write wikilinks for note-to-note links.
+Jot resolves a link in this order:
 
-When a note or attachment is renamed or moved, Jot rewrites every link to it in the vault. A link
-whose target is missing is shown as broken and listed, never deleted.
+1. a path from the linking note's folder, then from the vault root, with or without `.md`;
+2. a note by name, ignoring case, where a name with folders must match the end of the path:
+   one in the linking note's folder first, then the one with the shortest path;
+3. a note by alias;
+4. for a bare file name such as `![[map.png]]`, an attachment in the linking note's `.assets`
+   folder, then beside the note.
+
+When a note is renamed or moved in Jot, every link to it, and every link into its `.assets`
+folder, is rewritten. A Markdown link keeps its style, with or without `.md`. A link whose target
+is missing stays as written.
 
 ## Attachments
 
@@ -136,27 +157,30 @@ Mara.assets/
   Pasted 2026-10-14 153012.png
 ```
 
-- The folder is created when the first file is added, and removed when it is empty.
+- The folder is made when the first file is added. A folder left empty, as when its files are
+  deleted in a file manager, is removed when Jot opens the vault or the note.
 - Renaming or moving a note renames or moves its `.assets` folder with it.
-- Deleting a note moves its `.assets` folder to the system trash with it, unless another note
-  links into it. Jot then asks. On a drive without a trash, both go to `.jot/trash/` in the vault.
-- Pasted images are named `Pasted <date> <time>.<ext>` and can be renamed in the app.
+- Moving a note to the trash takes its `.assets` folder too, unless another note links into it.
+  Jot then asks, and keeps the folder unless told to trash it as well.
+- Pasted images are named `Pasted <yyyy-MM-dd HHmmss>.<ext>`, with "Pasted" in the app's language.
 - A name already in the folder gets a number: `sketch 2.png`. Jot never overwrites an attachment.
-- Any file can be an attachment. Images, audio, video and PDFs are shown inline; other files as a
-  link.
-
-A vault setting in `.jot/vault.yaml` picks another layout for new attachments: one `assets/`
-folder per notebook folder, or one folder for the whole vault. Jot reads every layout, whatever the
-setting.
+- Any file can be an attachment. Images are drawn in the reading view; other files are links.
+- Jot follows a link to an attachment wherever it is, so attachments kept in other folders, as
+  other apps keep them, work too.
 
 Each `*.assets` folder belongs to the note with the same name. Jot hides it in the notebook tree
-and shows its files under the note instead.
+and shows its files under the note instead. One with no note of that name is a notebook.
+
+Where the drive has no trash, a deleted note, attachments folder or notebook goes to
+`.jot/trash/<yyyyMMdd-HHmmss>/` instead, with a number in front of a name already there:
+`2 Mara.md`.
 
 ## Tasks
 
 There are two kinds, and the task view shows both:
 
-- **Checkboxes** in any note: `- [ ] task` and `- [x] task`. Ticking one in Jot edits that line.
+- **Checkboxes** in any note: a list item starting `[ ]` or `[x]` (or `[X]`), after `-`, `*`, `+`,
+  `1.` or `1)`. Ticking one in Jot edits that line.
 - **Task notes**: a note with `task: open` or `task: done` in its front matter, and optionally
   `due`, `done` and `labels`. Completing one sets `task: done` and `done:` to the current time.
 
@@ -169,49 +193,52 @@ the same vault works there:
 - [x] Pay rent ✅ 2026-10-01
 ```
 
-- `📅` and a date is when it is due. A time after the date, `14:00`, is Jot's addition; Obsidian
-  shows it as text.
+- `📅` and a date is when it is due. A time after the date, `14:00`, `T14:00` or `9:30`, is Jot's
+  addition, in local time; Obsidian shows it as text.
 - `🔁` and a rule is how it repeats, `✅` and a date when it was done. Jot reads `every day`,
   `every week`, `every month` and `every year`, with a number (`every 2 weeks`) or `other`,
-  `every weekday`, `every monday` through `every sunday`, and `every 2 weeks on monday`. Ticking
-  one that is due writes the next one above it, unticked and due on its next day after today,
-  and gives the ticked one `✅` and today's date, as Obsidian does. A rule Jot does not read is
-  kept, and only ticked.
-- `@label` gives it a label, like Todoist's. `#tags` work as they do anywhere in a note.
-- Each marker's value runs to the next marker. Obsidian's other markers (`⏳`, `🛫`, `➕`, `❌`
-  and the priorities) are kept as written, and not yet read.
+  `every weekday`, `every monday` through `every sunday`, and `every 2 weeks on monday`, in any
+  case. Ticking one that is due writes the next one above it, unticked and due on its next day
+  after today, and gives the ticked one `✅` and today's date, as Obsidian does. A rule Jot does
+  not read is kept, and only ticked.
+- A checkbox that does not repeat is only ticked or unticked; a `✅` already there stays.
+- `@label` gives it a label, like Todoist's: `@` after a space or at the start, then letters,
+  digits, `_` and `-`. `#tags` work as they do anywhere in a note.
+- Each marker's value runs to the next marker, and a marker may carry the emoji variation
+  selector (U+FE0F). Obsidian's other markers (`⏳`, `🛫`, `➕`, `❌` and the priorities) are kept
+  as written, and not yet read.
 
-## Order, pins and notebook appearance
+Quick add appends a checkbox to the note `inbox:` names in `.jot/vault.yaml`, `Inbox.md` at the top
+of the vault by default, making the note if need be. It writes the repeat before the date:
 
-Notes and folders sort alphabetically, with natural number order (`Ch 2` before `Ch 10`), unless
-the user reorders a folder by hand. Manual order and folder appearance live in
-`.jot/layout.yaml`, so reordering never changes a note file:
+```markdown
+- [ ] Call Soren @minutes 🔁 every week 📅 2026-10-29 14:00
+```
+
+## Notebook appearance and pins
+
+How the note list is ordered (by when notes changed, when they were made, or by title) is each
+computer's own setting, not part of the vault. The notebook tree sorts in natural number order
+(`Ch 2` before `Ch 10`).
+
+`.jot/layout.yaml` keeps what belongs to the vault, so it never changes a note file:
 
 ```yaml
-order:
-  Ashfall/Chapters:
-    - Prologue.md
-    - The Ferry.md
-    - Ch 2.md
 folders:
   Ashfall:
     emoji: 📚
-    icon: book
-    color: pink
 pinned:
-  - Inbox/Pancakes.md
+  - Recipes/Pancakes.md
 ```
 
 - Paths are relative to the vault root and use `/`.
 - `emoji` is shown before the notebook's name.
 - `pinned` notes stay at the top of the note list, in whatever order it is in.
 - Renaming or moving a note or notebook in Jot takes its entries with it.
-- Entries that no longer exist are ignored and pruned on the next write. Files missing from a
-  list sort after the listed ones, alphabetically.
+- Entries that no longer exist are ignored and pruned on the next write.
 - Jot keeps what it does not use as written: other sections, and values nested under a
   notebook. Comments inside the sections it writes are not kept. A file Jot cannot read is left
   alone, and changes to it are refused until it is fixed.
-- When sync finds this file changed on both sides, Jot merges it key by key.
 
 ## History
 
@@ -240,13 +267,22 @@ for the note's path, and names each copy by when the note held it:
 
 ```yaml
 format: 1
-attachments: per-note # per-note, per-folder or vault
-attachments-folder: attachments # for per-folder and vault layouts
-links: markdown # markdown or wikilink, for note-to-note links
 inbox: Inbox.md # where quick add puts to-dos, as a checkbox at the end
 ```
 
-Jot refuses to write to a vault whose `format` is newer than it understands, and says so.
+- `format` is the vault's format number, as [Versioning](#versioning) says. One that is missing
+  or not a whole number is read as 1.
+- `inbox` is a note's path from the vault root, with or without `.md`. One starting with `/` or
+  `.`, or containing `../`, is ignored, and `Inbox.md` used instead.
+
+## Versioning
+
+- Adding a file, a key or a value that an older Jot can ignore is not a change of format. Every
+  Jot keeps what it does not know as written, and ignores it.
+- `format` goes up only when an older Jot would misread or damage something in a vault that uses
+  the change. Each such change says how a vault moves from the format before.
+- Jot reads a vault whose `format` is newer than it understands, but writes nothing to it, and
+  says so.
 
 ## Importing from Joplin
 
