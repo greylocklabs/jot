@@ -169,12 +169,12 @@ std::optional<JoplinExport> readJoplinDatabase(const QString &path, QString *err
         if (!read)
             return fail(u"Could not read the Joplin database: %1"_s.arg(query.lastError().text()));
 
-        // Each revision is a patch on the one before it, so a note's are pieced together from
+        // Each revision patches the body before it, so a note's are pieced together from
         // nothing, in order, as Joplin does; the first that will not apply ends the note's.
+        // Titles are patched too, but a version takes its note's title, so they are not read.
         struct Patch
         {
             QDateTime updated;
-            QString title;
             QString body;
             bool encrypted = false;
         };
@@ -182,9 +182,9 @@ std::optional<JoplinExport> readJoplinDatabase(const QString &path, QString *err
         if (!rows(u"revisions"_s, [&](const Row &row) {
                 if (!row.text(u"item_type"_s).isEmpty() && row.text(u"item_type"_s) != u"1"_s)
                     return;
-                patches[row.text(u"item_id"_s)].append(
-                    {row.time(u"item_updated_time"_s), row.text(u"title_diff"_s),
-                     row.text(u"body_diff"_s), row.flag(u"encryption_applied"_s)});
+                patches[row.text(u"item_id"_s)].append({row.time(u"item_updated_time"_s),
+                                                        row.text(u"body_diff"_s),
+                                                        row.flag(u"encryption_applied"_s)});
             }))
             return fail(u"Could not read the Joplin database: %1"_s.arg(query.lastError().text()));
         int unread = 0;
@@ -192,20 +192,16 @@ std::optional<JoplinExport> readJoplinDatabase(const QString &path, QString *err
             QList<Patch> list = patches.take(note.id);
             std::ranges::stable_sort(
                 list, [](const Patch &a, const Patch &b) { return a.updated < b.updated; });
-            QString title;
             QString body;
             for (qsizetype i = 0; i < list.size(); ++i) {
-                const std::optional<QString> nextTitle =
-                    list[i].encrypted ? std::nullopt : applyJoplinPatch(title, list[i].title);
-                const std::optional<QString> nextBody =
+                const std::optional<QString> next =
                     list[i].encrypted ? std::nullopt : applyJoplinPatch(body, list[i].body);
-                if (!nextTitle || !nextBody) {
+                if (!next) {
                     unread += int(list.size() - i);
                     break;
                 }
-                title = *nextTitle;
-                body = *nextBody;
-                note.revisions.append({list[i].updated, title, body});
+                body = *next;
+                note.revisions.append({list[i].updated, body});
             }
         }
 
