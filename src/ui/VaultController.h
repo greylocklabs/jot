@@ -175,12 +175,22 @@ public:
     /// `unchanged`, `notebooks` and `attachments`, and the lists `keptEdits` (notes left as
     /// edited in Jot), `notBroughtBack` and `skipped`.
     Q_INVOKABLE QVariantMap importJoplin(const QUrl &file, const QString &folder, bool dryRun);
+    /// The past versions of the note at `path`, newest first, each a map with `path` (the
+    /// version's own vault path) and `written`.
+    Q_INVOKABLE QVariantList historyOf(const QString &path) const;
+    /// The text of the past version at vault path `version`.
+    Q_INVOKABLE QString versionText(const QString &version) const;
+    /// Makes the past version at `version` the current note's text, keeping what it replaces
+    /// as a version of its own.
+    Q_INVOKABLE bool restoreVersion(const QString &version);
     /// How long typing must pause before edits are written, in ms.
     void setSaveDelay(int ms)
     {
         m_saveDelay = ms;
         m_saveTimer.setInterval(ms);
     }
+    /// The least time between two versions kept of a note while it is edited, in ms.
+    void setHistoryInterval(int ms) { m_historyInterval = ms; }
     /// Index the database at `path` rather than the default one, as tests do.
     void setIndexPath(const QString &path) { m_indexPath = path; }
     /// Trashes notes into the vault's own trash rather than the desktop's, as tests do.
@@ -240,6 +250,9 @@ private:
     void readCurrent();
     void fail(const QString &error);
     void setUnsaved(bool unsaved);
+    /// Keeps `before`, the text a write to the note at `path` replaces, as one of its past
+    /// versions: always with `now`, otherwise once per history interval.
+    void keepHistory(const QString &path, const QString &before, bool now = false);
     void setProblem(const QString &problem);
     /// After a rename that did not finish, shows whichever of the two paths now holds
     /// the note, so nothing writes to one that is gone.
@@ -291,6 +304,9 @@ private:
     bool m_crlf = false;
     bool m_byteOrderMark = false;
     int m_saveDelay = 500;
+    int m_historyInterval = 10 * 60 * 1000;
+    /// When a version of each note was last kept while running.
+    QHash<QString, QDateTime> m_historyKept;
     QTimer m_saveTimer;
     QTimer m_reloadTimer;
 };

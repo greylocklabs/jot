@@ -3,6 +3,7 @@
 #include "jot/FrontMatter.h"
 
 #include <QDir>
+#include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
 #include <QSaveFile>
@@ -21,6 +22,7 @@ namespace {
 const QString kSettingsFolder = u".jot"_s;
 const QString kNoteSuffix = u".md"_s;
 const QString kAssetsSuffix = u".assets"_s;
+const QString kHistoryFolder = u".jot/history"_s;
 
 QString join(const QString &folder, const QString &name)
 {
@@ -230,6 +232,11 @@ QString Vault::assetsFolderFor(const QString &notePath)
     return stem + kAssetsSuffix;
 }
 
+QString Vault::historyFolderFor(const QString &path)
+{
+    return kHistoryFolder + u'/' + path;
+}
+
 namespace {
 
 /// Where an attachment called `fileName` of the note at `notePath` can go without taking
@@ -404,6 +411,10 @@ bool Vault::moveNote(const QString &from, const QString &to, QString *error) con
         *error = QObject::tr("moved %1, but not its attachments").arg(from);
         return false;
     }
+    if (!moveHistory(from, to)) {
+        *error = QObject::tr("moved %1, but not its history").arg(from);
+        return false;
+    }
     return true;
 }
 
@@ -452,7 +463,36 @@ bool Vault::moveFolder(const QString &from, const QString &to, QString *error) c
         *error = QObject::tr("could not move %1 to %2").arg(from, to);
         return false;
     }
+    if (!moveHistory(from, to)) {
+        *error = QObject::tr("moved %1, but not the history of its notes").arg(from);
+        return false;
+    }
     return true;
+}
+
+bool Vault::moveHistory(const QString &from, const QString &to) const
+{
+    const QString source = absolute(historyFolderFor(from));
+    if (!QFileInfo(source).isDir())
+        return true;
+    const QString target = absolute(historyFolderFor(to));
+    if (!QFileInfo::exists(target))
+        return QDir().mkpath(QFileInfo(target).path()) && QDir().rename(source, target);
+    // History left by a note deleted from there joins this one's, file by file.
+    QDirIterator files(source, QDir::Files | QDir::Hidden, QDirIterator::Subdirectories);
+    while (files.hasNext()) {
+        const QString file = files.next();
+        const QString relativePath = QDir(source).relativeFilePath(file);
+        const QFileInfo wanted(target + u'/' + relativePath);
+        QString path = wanted.filePath();
+        for (int n = 2; QFileInfo::exists(path); ++n)
+            path = u"%1/%2 %3.%4"_s.arg(wanted.path(), wanted.completeBaseName())
+                       .arg(n)
+                       .arg(wanted.suffix());
+        if (!QDir().mkpath(wanted.path()) || !QFile::rename(file, path))
+            return false;
+    }
+    return QDir(source).removeRecursively();
 }
 
 namespace notefile {
