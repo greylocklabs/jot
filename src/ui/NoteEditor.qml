@@ -272,7 +272,13 @@ Rectangle {
                     visible: Vault.writable
                     label: qsTr("Delete")
                     armedLabel: qsTr("Move to trash?")
-                    onConfirmed: Vault.trashCurrent()
+                    // Other notes' links to its attachments are worth a question first.
+                    onConfirmed: {
+                        if (Vault.notesUsingAttachments(Vault.current).length > 0)
+                            trashConfirm.askForNote(Vault.current)
+                        else
+                            Vault.trashCurrent()
+                    }
                 }
             }
 
@@ -670,5 +676,9 @@ Rectangle {
         font.family: Theme.fontFamily
         font.pixelSize: Theme.textSm
         font.weight: Theme.weightHeavy
+    }
+
+    TrashConfirm {
+        id: trashConfirm
     }
 }

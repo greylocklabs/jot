@@ -863,14 +863,24 @@ bool VaultController::trashCurrent()
     return trashNote(m_current);
 }
 
-bool VaultController::trashNote(const QString &path)
+QStringList VaultController::notesUsingAttachments(const QString &path) const
+{
+    if (!m_index || path.isEmpty())
+        return {};
+    QStringList notes = m_index->sourcesLinkingInto(Vault::assetsFolderFor(path));
+    notes.removeAll(path);
+    notes.sort();
+    return notes;
+}
+
+bool VaultController::trashNote(const QString &path, bool keepAttachments)
 {
     if (!m_vault || path.isEmpty())
         return false;
     if (path == m_current)
         saveNow();
     QString error;
-    if (!m_vault->trashNote(path, &error)) {
+    if (!m_vault->trashNote(path, &error, keepAttachments)) {
         qCWarning(lcVault) << "could not move" << path << "to the trash:" << error;
         return false;
     }

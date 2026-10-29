@@ -63,6 +63,7 @@ private Q_SLOTS:
     void makesNewNotesInTheNotebookShown();
     void renamingRewritesLinksAndKeepsTheTitle();
     void trashesTheNoteShown();
+    void keepsAttachmentsOtherNotesUse();
     void followsLinksAndMakesMissingNotes();
     void keepsLineEndingsAndTheByteOrderMark();
     void aRenameThatFailsHalfwayShowsWhereTheNoteIs();
@@ -851,6 +852,28 @@ void TestVaultController::renamingRewritesLinksAndKeepsTheTitle()
     QVERIFY(m_vault->renameCurrent(u"Ferry"_s));
     QVERIFY(!m_vault->currentText().contains(u"title:"_s));
     QVERIFY(!m_vault->renameCurrent(u"  "_s));
+}
+
+void TestVaultController::keepsAttachmentsOtherNotesUse()
+{
+    QString error;
+    for (const auto &[path, text] : {std::pair{u"Mara.md"_s, u"![map](Mara.assets/map.png)\n"_s},
+                                     {u"Mara.assets/map.png"_s, u"png"_s},
+                                     {u"Scene.md"_s, u"![map](Mara.assets/map.png)\n"_s},
+                                     {u"Kit.md"_s, u"![cat](Kit.assets/cat.png)\n"_s},
+                                     {u"Kit.assets/cat.png"_s, u"png"_s}}) {
+        QVERIFY(QDir().mkpath(QFileInfo(m_root + u'/' + path).path()));
+        QVERIFY(notefile::write(m_root + u'/' + path, text, &error));
+    }
+    QVERIFY(m_vault->openPath(m_root));
+    QCOMPARE(m_vault->notesUsingAttachments(u"Mara.md"_s), QStringList{u"Scene.md"_s});
+    QVERIFY(m_vault->notesUsingAttachments(u"Kit.md"_s).isEmpty());
+
+    QVERIFY(m_vault->trashNote(u"Mara.md"_s, true));
+    QVERIFY(!QFileInfo::exists(m_root + u"/Mara.md"_s));
+    QVERIFY(QFileInfo::exists(m_root + u"/Mara.assets/map.png"_s));
+    QVERIFY(m_vault->trashNote(u"Kit.md"_s));
+    QVERIFY(!QFileInfo::exists(m_root + u"/Kit.assets"_s));
 }
 
 void TestVaultController::trashesTheNoteShown()
