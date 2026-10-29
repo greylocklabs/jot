@@ -56,6 +56,7 @@ private Q_SLOTS:
     void keepsPastVersionsWhileEditing();
     void restoresAPastVersion();
     void saysWhenEachVersionIsFrom();
+    void aRestoreThatCannotBeSavedChangesNothing();
     void keepsTheOtherVersionWhenBothChanged();
     void mergesOutsideEditsToOtherLines();
     void mergesKeepingLineEndingsAndTheByteOrderMark();
@@ -694,20 +695,36 @@ void TestVaultController::restoresAPastVersion()
     // Another note's versions are not restored over this one.
     m_vault->setCurrent(u"Recipes/Pancakes.md"_s);
     QVERIFY(!m_vault->restoreVersion(original));
+}
 
-    // One that cannot be written leaves the note as it was, with nothing waiting to save.
+void TestVaultController::aRestoreThatCannotBeSavedChangesNothing()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    m_vault->setSaveDelay(60000);
+    m_vault->setHistoryInterval(0);
     m_vault->setCurrent(u"Welcome.md"_s);
-    const QFile::Permissions open = QFile(m_root).permissions();
-    QVERIFY(QFile(m_root).setPermissions(QFile::ReadOwner | QFile::ExeOwner));
+    m_vault->edit(u"Rewritten\n"_s);
+    m_vault->saveNow();
+    const QString original =
+        m_vault->historyOf(u"Welcome.md"_s).first().toMap().value(u"path"_s).toString();
+
+    QFile root(m_root);
+    const QFile::Permissions open = root.permissions();
+    QVERIFY(root.setPermissions(QFile::ReadOwner | QFile::ExeOwner));
+    const auto unlock = qScopeGuard([&] { root.setPermissions(open); });
+    QFile probe(m_root + u"/probe"_s);
+    if (probe.open(QIODevice::WriteOnly))
+        QSKIP("permissions are not enforced here, as when tests run as root");
+
+    // The note stays as it was, with nothing waiting to save.
     QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"could not save"_s));
     QSignalSpy shown(m_vault.get(), &VaultController::currentChanged);
     QVERIFY(!m_vault->restoreVersion(original));
-    QVERIFY(QFile(m_root).setPermissions(open));
-    QCOMPARE(m_vault->currentText(), u"Rewritten twice\n"_s);
+    QCOMPARE(m_vault->currentText(), u"Rewritten\n"_s);
     QVERIFY(!m_vault->unsaved());
     QVERIFY(m_vault->problem().isEmpty());
     QCOMPARE(shown.size(), 0);
-    QCOMPARE(readFile(m_root + u"/Welcome.md"_s), u"Rewritten twice\n"_s);
+    QCOMPARE(readFile(m_root + u"/Welcome.md"_s), u"Rewritten\n"_s);
 }
 
 void TestVaultController::saysWhenEachVersionIsFrom()
