@@ -21,6 +21,7 @@ private Q_SLOTS:
     void init();
 
     void createRecordsTheFormat();
+    void removesEmptyAttachmentFolders();
     void listsNotebooksAndNotesInNaturalOrder();
     void leavesHiddenFilesAndAttachmentsOut();
     void ordersNamesNaturally_data();
@@ -63,6 +64,28 @@ void TestVault::write(const QString &path, const QByteArray &bytes)
     QFile out(file);
     QVERIFY(out.open(QIODevice::WriteOnly));
     out.write(bytes);
+}
+
+void TestVault::removesEmptyAttachmentFolders()
+{
+    write(u"Mara.md"_s);
+    QVERIFY(QDir().mkpath(m_vault->absolute(u"Mara.assets"_s)));
+    write(u"Ashfall/Soren.md"_s);
+    QVERIFY(QDir().mkpath(m_vault->absolute(u"Ashfall/Soren.assets"_s)));
+    write(u"Kit.md"_s);
+    write(u"Kit.assets/cat.png"_s);
+    write(u"Ines.md"_s);
+    write(u"Ines.assets/.DS_Store"_s);
+    // No note of that name, so it is a notebook, empty or not.
+    QVERIFY(QDir().mkpath(m_vault->absolute(u"Lone.assets"_s)));
+
+    QCOMPARE(m_vault->removeEmptyAttachmentFolders(), 2);
+    QVERIFY(!QFileInfo::exists(m_vault->absolute(u"Mara.assets"_s)));
+    QVERIFY(!QFileInfo::exists(m_vault->absolute(u"Ashfall/Soren.assets"_s)));
+    QVERIFY(QFileInfo::exists(m_vault->absolute(u"Kit.assets/cat.png"_s)));
+    QVERIFY(QFileInfo::exists(m_vault->absolute(u"Ines.assets/.DS_Store"_s)));
+    QVERIFY(QFileInfo::exists(m_vault->absolute(u"Lone.assets"_s)));
+    QCOMPARE(m_vault->removeEmptyAttachmentFolders(), 0);
 }
 
 void TestVault::createRecordsTheFormat()

@@ -115,6 +115,7 @@ bool VaultController::openPath(const QString &path)
     close();
     m_vault = std::move(vault);
     m_index = std::move(index);
+    m_vault->removeEmptyAttachmentFolders();
     m_index->refresh();
     m_watcher = std::make_unique<VaultWatcher>(*m_vault);
     connect(m_watcher.get(), &VaultWatcher::changed, this, &VaultController::notesChangedOnDisk);
@@ -1166,6 +1167,9 @@ void VaultController::setCurrent(const QString &path)
         return;
     saveNow();
     m_current = path;
+    // Its attachments may have been deleted elsewhere since; an empty folder for them goes.
+    if (m_vault && !path.isEmpty())
+        m_vault->removeEmptyAttachmentFolder(path);
     Q_EMIT opening();
     readCurrent();
 }

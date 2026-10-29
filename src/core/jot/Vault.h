@@ -69,6 +69,11 @@ public:
     /// that is taken. Gives its vault path.
     std::optional<QString> createFolder(const QString &parent, const QString &name,
                                         QString *error) const;
+    /// Removes the `.assets` folders of notes that have been left empty, as when their files
+    /// were deleted outside Jot. Gives how many went.
+    int removeEmptyAttachmentFolders() const;
+    /// The same for the note at `path` alone; whether its folder went.
+    bool removeEmptyAttachmentFolder(const QString &path) const;
     /// Renames or moves a notebook with everything in it. Links are the caller's job.
     bool moveFolder(const QString &from, const QString &to, QString *error) const;
 

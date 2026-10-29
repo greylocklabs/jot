@@ -174,6 +174,29 @@ void Vault::collect(const QString &folder, QList<VaultEntry> &into) const
     }
 }
 
+int Vault::removeEmptyAttachmentFolders() const
+{
+    int removed = 0;
+    for (const VaultEntry &entry : entries()) {
+        if (!entry.folder && removeEmptyAttachmentFolder(entry.path))
+            ++removed;
+    }
+    return removed;
+}
+
+bool Vault::removeEmptyAttachmentFolder(const QString &path) const
+{
+    if (!writable())
+        return false;
+    const QString folder = absolute(assetsFolderFor(path));
+    const QFileInfo info(folder);
+    // rmdir never takes a folder with anything in it, hidden files included.
+    return info.isDir() && !info.isSymLink() &&
+           QDir(folder).isEmpty(QDir::AllEntries | QDir::Hidden | QDir::System |
+                                QDir::NoDotAndDotDot) &&
+           QDir().rmdir(folder);
+}
+
 QString Vault::absolute(const QString &path) const
 {
     return path.isEmpty() ? m_root : m_root + u'/' + path;

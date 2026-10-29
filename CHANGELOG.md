@@ -53,6 +53,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   them unless you choose to trash them too. The editor's Delete asks the same.
 - A note with both Windows and Unix line endings keeps each line's own when saved, rather than
   every line taking Windows endings; new lines take the kind most of the note uses.
+- A note's attachments folder left empty, as when its files were deleted in a file manager, is
+  removed when Jot opens the notes folder or the note.
 
 ## 0.0.12 - 2026-10-27
 
