@@ -347,16 +347,27 @@ bool VaultController::restoreVersion(const QString &version)
         return false;
     }
     saveNow();
+    if (m_unsaved)
+        return false;
     if (*text == m_currentText)
         return true;
     // What is replaced becomes a version too, so a restore can be undone.
     keepHistory(m_current, m_currentText, true);
+    const QString before = m_currentText;
     m_currentText = *text;
     setUnsaved(true);
     saveNow();
+    if (m_unsaved) {
+        // Not written, so the note stays as it is on disk rather than retrying the restore.
+        m_saveTimer.stop();
+        m_currentText = before;
+        setUnsaved(false);
+        setProblem({});
+        return false;
+    }
     Q_EMIT currentChanged();
     reloadModels();
-    return !m_unsaved;
+    return true;
 }
 
 void VaultController::scheduleModelReload()

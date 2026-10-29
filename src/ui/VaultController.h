@@ -181,7 +181,7 @@ public:
     /// The text of the past version at vault path `version`.
     Q_INVOKABLE QString versionText(const QString &version) const;
     /// Makes the past version at `version` the current note's text, keeping what it replaces
-    /// as a version of its own.
+    /// as a version of its own. When it cannot be written, the note stays as it was.
     Q_INVOKABLE bool restoreVersion(const QString &version);
     /// How long typing must pause before edits are written, in ms.
     void setSaveDelay(int ms)

@@ -694,6 +694,20 @@ void TestVaultController::restoresAPastVersion()
     // Another note's versions are not restored over this one.
     m_vault->setCurrent(u"Recipes/Pancakes.md"_s);
     QVERIFY(!m_vault->restoreVersion(original));
+
+    // One that cannot be written leaves the note as it was, with nothing waiting to save.
+    m_vault->setCurrent(u"Welcome.md"_s);
+    const QFile::Permissions open = QFile(m_root).permissions();
+    QVERIFY(QFile(m_root).setPermissions(QFile::ReadOwner | QFile::ExeOwner));
+    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"could not save"_s));
+    QSignalSpy shown(m_vault.get(), &VaultController::currentChanged);
+    QVERIFY(!m_vault->restoreVersion(original));
+    QVERIFY(QFile(m_root).setPermissions(open));
+    QCOMPARE(m_vault->currentText(), u"Rewritten twice\n"_s);
+    QVERIFY(!m_vault->unsaved());
+    QVERIFY(m_vault->problem().isEmpty());
+    QCOMPARE(shown.size(), 0);
+    QCOMPARE(readFile(m_root + u"/Welcome.md"_s), u"Rewritten twice\n"_s);
 }
 
 void TestVaultController::saysWhenEachVersionIsFrom()
