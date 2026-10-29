@@ -308,9 +308,8 @@ private:
     QString m_savedText;
     bool m_unsaved = false;
     QString m_problem;
-    /// How the note on disk ends its lines and whether it starts with a byte order mark,
-    /// which the editor does not keep but the file must.
-    bool m_crlf = false;
+    /// Whether the note on disk starts with a byte order mark, which the editor does not keep
+    /// but the file must. Its line endings are kept from the text it had.
     bool m_byteOrderMark = false;
     int m_saveDelay = 500;
     int m_historyInterval = 10 * 60 * 1000;

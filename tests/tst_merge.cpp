@@ -10,6 +10,7 @@ class TestMerge : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void keepsEachLinesEnding();
     void merges_data();
     void merges();
     void givesUpOnTextTooDifferentToCompare();
@@ -100,6 +101,20 @@ void TestMerge::movesAPositionWithTheTextAroundIt()
     QCOMPARE(movedPosition(before, u"one\nTWO, too\nthree\n"_s, inTwo), 12);
     // Ahead of it taken out.
     QCOMPARE(movedPosition(before, u"two\nthree\n"_s, inTwo), 1);
+}
+
+void TestMerge::keepsEachLinesEnding()
+{
+    // Without \r\n there is nothing to keep.
+    QCOMPARE(keepLineEndings(u"a\nb\n"_s, u"a\nb\nc"_s), u"a\nb\nc"_s);
+    // All CRLF: new and changed lines take it too.
+    QCOMPARE(keepLineEndings(u"a\r\nb\r\n"_s, u"a\nB\nc\n"_s), u"a\r\nB\r\nc\r\n"_s);
+    // Mixed: kept lines keep theirs, wherever they move to; new ones take the usual one.
+    QCOMPARE(keepLineEndings(u"a\nb\r\nc\nd\n"_s, u"new\na\nb\nd\n"_s), u"new\na\nb\r\nd\n"_s);
+    QCOMPARE(keepLineEndings(u"a\r\nb\r\nc\n"_s, u"a\nb\nc\nd\n"_s), u"a\r\nb\r\nc\nd\r\n"_s);
+    // A last line with no break gets one when a line follows it, and none when it is last.
+    QCOMPARE(keepLineEndings(u"a\r\nb"_s, u"a\nb\nc"_s), u"a\r\nb\r\nc"_s);
+    QCOMPARE(keepLineEndings(u"a\r\nb\r\n"_s, u"a\nb"_s), u"a\r\nb"_s);
 }
 
 QTEST_GUILESS_MAIN(TestMerge)

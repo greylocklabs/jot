@@ -92,6 +92,57 @@ bool clash(const Hunk &a, const Hunk &b)
 
 } // namespace
 
+QString keepLineEndings(const QString &before, const QString &after)
+{
+    if (!before.contains(u'\r'))
+        return after;
+    // The lines without their breaks, and the break each had.
+    const auto split = [](const QString &text, QStringList &breaks) {
+        QStringList lines = linesOf(text);
+        for (QString &line : lines) {
+            const qsizetype cut = line.endsWith(QStringLiteral("\r\n")) ? 2
+                                  : line.endsWith(u'\n')                ? 1
+                                                                        : 0;
+            breaks.append(line.right(cut));
+            line.chop(cut);
+        }
+        return lines;
+    };
+    QStringList oldBreaks;
+    QStringList newBreaks;
+    const QStringList old = split(before, oldBreaks);
+    const QStringList lines = split(after, newBreaks);
+    const qsizetype crlf = oldBreaks.count(QStringLiteral("\r\n"));
+    const QString usual = crlf * 2 > oldBreaks.size() - oldBreaks.count(QString())
+                              ? QStringLiteral("\r\n")
+                              : QStringLiteral("\n");
+
+    // Which old line each new one is, where it is one; -1 for a new or changed line.
+    QList<qsizetype> from(lines.size(), -1);
+    if (const std::optional<QList<Hunk>> hunks = changes(old, lines)) {
+        qsizetype i = 0;
+        qsizetype j = 0;
+        for (const Hunk &hunk : *hunks) {
+            for (; i < hunk.start; ++i, ++j)
+                from[j] = i;
+            i = hunk.end;
+            j += hunk.lines.size();
+        }
+        for (; i < old.size() && j < lines.size(); ++i, ++j)
+            from[j] = i;
+    }
+    QString out;
+    out.reserve(after.size() + lines.size());
+    for (qsizetype j = 0; j < lines.size(); ++j) {
+        out += lines[j];
+        if (newBreaks[j].isEmpty())
+            continue;
+        const QString kept = from[j] >= 0 ? oldBreaks[from[j]] : QString();
+        out += kept.isEmpty() ? usual : kept;
+    }
+    return out;
+}
+
 std::optional<QString> mergeText(const QString &base, const QString &mine, const QString &theirs)
 {
     if (mine == theirs || theirs == base)

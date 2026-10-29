@@ -51,6 +51,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   any other note that links straight to one of them.
 - Moving a note to the trash asks first when other notes link to its attachments, and keeps
   them unless you choose to trash them too. The editor's Delete asks the same.
+- A note with both Windows and Unix line endings keeps each line's own when saved, rather than
+  every line taking Windows endings; new lines take the kind most of the note uses.
 
 ## 0.0.12 - 2026-10-27
 
