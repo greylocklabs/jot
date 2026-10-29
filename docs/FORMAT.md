@@ -41,8 +41,8 @@ My Notes/                    the vault: any folder
 
 - UTF-8, read and written explicitly. A byte order mark is kept if the file had one. A file that
   is not UTF-8 is not opened, so it is never written back with replacement characters.
-- Each line keeps the line ending it had. A new or changed line takes the ending most of the
-  file's lines have, and a new note uses `\n`.
+- Each line keeps the line ending it had. A line changed in place keeps the ending it had, and an
+  added line takes the ending most of the file's lines have. A new note uses `\n`.
 - Saving a note writes back exactly the bytes in the editor. Jot never reformats a note's
   Markdown or YAML on load or save.
 - Writes are atomic: a temporary file in the same folder, then a rename. A file with more than one
