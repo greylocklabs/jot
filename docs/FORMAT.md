@@ -16,6 +16,7 @@ My Notes/                    the vault: any folder
     types/                   note types (later)
     views/                   saved views (later)
     templates/
+    history/                 past versions of notes
   Inbox/
     Pancakes.md
   Ashfall/
@@ -211,6 +212,27 @@ pinned:
   notebook. Comments inside the sections it writes are not kept. A file Jot cannot read is left
   alone, and changes to it are refused until it is fixed.
 - When sync finds this file changed on both sides, Jot merges it key by key.
+
+## History
+
+Jot keeps past versions of each note as plain copies under `.jot/history/`, in a folder named
+for the note's path, and names each copy by when the note held it:
+
+```text
+.jot/history/Ashfall/Characters/Mara.md/
+  2026-10-12 091500.md
+  2026-10-28 153012.md
+  2026-10-28 153012 2.md     a second version from the same second
+```
+
+- Times are local, to the second.
+- Before Jot first writes a note it has open, it keeps the version being replaced, then at most
+  one every ten minutes while editing goes on. Ticking a to-do from a list keeps one the same way.
+- A version the same as the newest one, or an empty one, is not kept.
+- Restoring a version keeps the text it replaces as a version too, so a restore can be undone.
+- Renaming or moving a note or notebook in Jot moves its history with it. A deleted note's
+  history stays, and a note later made or moved to its path takes it on.
+- Edits made outside Jot keep no versions, and nothing is pruned yet.
 
 ## Vault settings
 

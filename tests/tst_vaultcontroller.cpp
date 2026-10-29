@@ -52,6 +52,8 @@ private Q_SLOTS:
     void followsChangesOnDisk();
     void savesShortlyAfterTypingStops();
     void savesBeforeSwitchingNotes();
+    void keepsPastVersionsWhileEditing();
+    void restoresAPastVersion();
     void keepsTheOtherVersionWhenBothChanged();
     void mergesOutsideEditsToOtherLines();
     void mergesKeepingLineEndingsAndTheByteOrderMark();
@@ -610,6 +612,76 @@ void TestVaultController::savesBeforeSwitchingNotes()
     m_vault->setCurrent(u"Recipes/Pancakes.md"_s);
     QCOMPARE(readFile(m_root + u"/Welcome.md"_s), u"Kept\n"_s);
     QVERIFY(!m_vault->unsaved());
+}
+
+void TestVaultController::keepsPastVersionsWhileEditing()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    m_vault->setSaveDelay(60000);
+    const QString welcome = readFile(m_root + u"/Welcome.md"_s);
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QVERIFY(m_vault->historyOf(u"Welcome.md"_s).isEmpty());
+
+    // The note as it was before editing is kept, then no more until the interval passes.
+    m_vault->edit(u"One\n"_s);
+    m_vault->saveNow();
+    m_vault->edit(u"Two\n"_s);
+    m_vault->saveNow();
+    QVariantList history = m_vault->historyOf(u"Welcome.md"_s);
+    QCOMPARE(history.size(), 1);
+    QCOMPARE(m_vault->versionText(history.first().toMap().value(u"path"_s).toString()), welcome);
+
+    m_vault->setHistoryInterval(0);
+    m_vault->edit(u"Three\n"_s);
+    m_vault->saveNow();
+    history = m_vault->historyOf(u"Welcome.md"_s);
+    QCOMPARE(history.size(), 2);
+    QCOMPARE(m_vault->versionText(history.first().toMap().value(u"path"_s).toString()), u"Two\n"_s);
+
+    // Ticking a to-do in a note not shown keeps its version too.
+    const QString soren = readFile(m_root + u"/Ashfall/Characters/Soren.md"_s);
+    QVERIFY(m_vault->setTaskDone(u"Ashfall/Characters/Soren.md"_s, 7, true,
+                                 u"decide what he wants by act two"_s));
+    history = m_vault->historyOf(u"Ashfall/Characters/Soren.md"_s);
+    QCOMPARE(history.size(), 1);
+    QCOMPARE(m_vault->versionText(history.first().toMap().value(u"path"_s).toString()), soren);
+
+    // Only versions can be read this way.
+    QVERIFY(m_vault->versionText(u"Welcome.md"_s).isEmpty());
+    QVERIFY(m_vault->versionText(u".jot/history/../Welcome.md"_s).isEmpty());
+}
+
+void TestVaultController::restoresAPastVersion()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    m_vault->setSaveDelay(60000);
+    m_vault->setHistoryInterval(0);
+    const QString welcome = readFile(m_root + u"/Welcome.md"_s);
+    m_vault->setCurrent(u"Welcome.md"_s);
+    m_vault->edit(u"Rewritten\n"_s);
+    m_vault->saveNow();
+    const QString original =
+        m_vault->historyOf(u"Welcome.md"_s).first().toMap().value(u"path"_s).toString();
+
+    // Typing not yet saved is part of what the restore replaces and keeps, however soon.
+    m_vault->setHistoryInterval(60 * 60 * 1000);
+    m_vault->edit(u"Rewritten twice\n"_s);
+    QSignalSpy current(m_vault.get(), &VaultController::currentChanged);
+    QVERIFY(m_vault->restoreVersion(original));
+    QCOMPARE(current.size(), 1);
+    QCOMPARE(m_vault->currentText(), welcome);
+    QCOMPARE(readFile(m_root + u"/Welcome.md"_s), welcome);
+    const QVariantList history = m_vault->historyOf(u"Welcome.md"_s);
+    QCOMPARE(m_vault->versionText(history.first().toMap().value(u"path"_s).toString()),
+             u"Rewritten twice\n"_s);
+
+    // So the restore itself can be undone.
+    QVERIFY(m_vault->restoreVersion(history.first().toMap().value(u"path"_s).toString()));
+    QCOMPARE(readFile(m_root + u"/Welcome.md"_s), u"Rewritten twice\n"_s);
+
+    // Another note's versions are not restored over this one.
+    m_vault->setCurrent(u"Recipes/Pancakes.md"_s);
+    QVERIFY(!m_vault->restoreVersion(original));
 }
 
 void TestVaultController::keepsTheOtherVersionWhenBothChanged()

@@ -6,6 +6,7 @@
 #include "jot/Layout.h"
 #include "jot/Logging.h"
 #include "jot/Merge.h"
+#include "jot/NoteHistory.h"
 #include "jot/NoteScan.h"
 #include "jot/QuickAdd.h"
 #include "jot/Rename.h"
@@ -249,6 +250,7 @@ void VaultController::saveNow()
         qCWarning(lcVault) << "not saving" << m_current << "in a vault from a newer Jot";
         return;
     }
+    keepHistory(m_current, m_savedText);
     QString error;
     if (m_watcher)
         m_watcher->expectWrite(m_current, m_currentText);
@@ -265,6 +267,66 @@ void VaultController::saveNow()
     setProblem({});
     m_index->update({m_current});
     scheduleModelReload();
+}
+
+void VaultController::keepHistory(const QString &path, const QString &before, bool now)
+{
+    const QDateTime time = QDateTime::currentDateTime();
+    const auto kept = m_historyKept.constFind(path);
+    if (!now && kept != m_historyKept.cend() && kept->msecsTo(time) < m_historyInterval)
+        return;
+    const QFileInfo file(m_vault->absolute(path));
+    QString error;
+    if (!NoteHistory(*m_vault).keep(path, before, file.exists() ? file.lastModified() : time,
+                                    &error)) {
+        qCWarning(lcVault) << "could not keep a version of" << path << error;
+        return;
+    }
+    m_historyKept.insert(path, time);
+}
+
+QVariantList VaultController::historyOf(const QString &path) const
+{
+    QVariantList list;
+    if (!m_vault)
+        return list;
+    for (const NoteHistory::Version &version : NoteHistory(*m_vault).versions(path))
+        list.append(QVariantMap{{u"path"_s, version.path}, {u"written"_s, version.written}});
+    return list;
+}
+
+QString VaultController::versionText(const QString &version) const
+{
+    if (!m_vault || QDir::cleanPath(version) != version ||
+        !version.startsWith(Vault::historyFolderFor({})))
+        return {};
+    QString error;
+    return notefile::read(m_vault->absolute(version), &error).value_or(QString());
+}
+
+bool VaultController::restoreVersion(const QString &version)
+{
+    if (!m_vault || m_current.isEmpty() || !m_vault->writable() ||
+        QDir::cleanPath(version) != version ||
+        !version.startsWith(Vault::historyFolderFor(m_current) + u'/'))
+        return false;
+    QString error;
+    const std::optional<QString> text = notefile::read(m_vault->absolute(version), &error);
+    if (!text) {
+        qCWarning(lcVault) << "could not read" << version << error;
+        return false;
+    }
+    saveNow();
+    if (*text == m_currentText)
+        return true;
+    // What is replaced becomes a version too, so a restore can be undone.
+    keepHistory(m_current, m_currentText, true);
+    m_currentText = *text;
+    setUnsaved(true);
+    saveNow();
+    Q_EMIT currentChanged();
+    reloadModels();
+    return !m_unsaved;
 }
 
 void VaultController::scheduleModelReload()
@@ -701,6 +763,7 @@ bool VaultController::rewriteNote(
     const std::optional<QString> changed = text ? change(*text) : std::nullopt;
     if (!changed)
         return false;
+    keepHistory(path, *text);
     if (m_watcher)
         m_watcher->expectWrite(path, *changed);
     if (!notefile::write(m_vault->absolute(path), *changed, &error)) {
