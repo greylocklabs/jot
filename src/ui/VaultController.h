@@ -97,8 +97,11 @@ public:
     Q_INVOKABLE bool renameCurrent(const QString &title);
     /// Moves the note shown, and its attachments, to the system trash.
     Q_INVOKABLE bool trashCurrent();
-    /// Moves the note at `path`, and its attachments, to the system trash.
-    Q_INVOKABLE bool trashNote(const QString &path);
+    /// Moves the note at `path`, and its attachments unless `keepAttachments`, to the trash.
+    Q_INVOKABLE bool trashNote(const QString &path, bool keepAttachments = false);
+    /// The other notes that link into the attachments of the note at `path`, which trashing
+    /// them with it would break.
+    Q_INVOKABLE QStringList notesUsingAttachments(const QString &path) const;
     /// Moves the notebook at `path`, and everything in it, to the system trash.
     Q_INVOKABLE bool trashNotebook(const QString &path);
     /// How many notes the notebook at `path` holds, inside notebooks within it too.

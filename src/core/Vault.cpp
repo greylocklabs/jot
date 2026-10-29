@@ -376,7 +376,7 @@ bool Vault::trashFolder(const QString &path, QString *error) const
     return true;
 }
 
-bool Vault::trashNote(const QString &path, QString *error) const
+bool Vault::trashNote(const QString &path, QString *error, bool keepAttachments) const
 {
     const QString stamp = QDateTime::currentDateTime().toString(u"yyyyMMdd-HHmmss"_s);
     const auto toTrash = [this, &stamp](const QString &relative) {
@@ -386,7 +386,8 @@ bool Vault::trashNote(const QString &path, QString *error) const
         *error = QObject::tr("could not move %1 to the trash").arg(path);
         return false;
     }
-    if (QFileInfo(absolute(assetsFolderFor(path))).isDir() && !toTrash(assetsFolderFor(path))) {
+    if (!keepAttachments && QFileInfo(absolute(assetsFolderFor(path))).isDir() &&
+        !toTrash(assetsFolderFor(path))) {
         *error = QObject::tr("could not move %1 to the trash").arg(assetsFolderFor(path));
         return false;
     }

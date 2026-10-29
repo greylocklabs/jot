@@ -49,6 +49,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 - Renaming or moving a note keeps links to its attachments working, in the note itself and in
   any other note that links straight to one of them.
+- Moving a note to the trash asks first when other notes link to its attachments, and keeps
+  them unless you choose to trash them too. The editor's Delete asks the same.
 
 ## 0.0.12 - 2026-10-27
 

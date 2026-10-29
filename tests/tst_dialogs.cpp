@@ -36,6 +36,7 @@ private Q_SLOTS:
     void themeColorsFinishHoweverClosed();
     void showsAndRestoresPastVersions();
     void importsFromTheJoplinOnThisComputer();
+    void asksBeforeTrashingSharedAttachments();
 
 private:
     QTemporaryDir m_dir;
@@ -53,6 +54,8 @@ void TestDialogs::initTestCase()
     SettingsForeign::s_instance = m_settings.get();
     m_vault = std::make_unique<VaultController>(*m_settings);
     m_vault->setIndexPath(m_dir.filePath(u"index.sqlite"_s));
+    // Nothing a test trashes goes to the desktop's trash.
+    m_vault->setSystemTrash(false);
     VaultController::setInstance(m_vault.get());
     QVERIFY(m_vault->openPath(m_dir.filePath(u"Notes"_s)));
 }
@@ -264,6 +267,49 @@ void TestDialogs::importsFromTheJoplinOnThisComputer()
     QCOMPARE(content->findChild<QQuickItem *>(u"importCounts"_s)->property("text").toString(),
              u"1 new note"_s);
     QVERIFY(content->findChild<QQuickItem *>(u"chooseExport"_s)->isVisible());
+}
+
+void TestDialogs::asksBeforeTrashingSharedAttachments()
+{
+    QTest::failOnWarning();
+    QString error;
+    const QString root = m_vault->root();
+    for (const auto &[path, text] : {std::pair{u"Ines.md"_s, u"![map](Ines.assets/map.png)\n"_s},
+                                     {u"Ines.assets/map.png"_s, u"png"_s},
+                                     {u"Atlas.md"_s, u"![map](Ines.assets/map.png)\n"_s}}) {
+        QVERIFY(QDir().mkpath(QFileInfo(root + u'/' + path).path()));
+        QVERIFY(notefile::write(root + u'/' + path, text, &error));
+    }
+    QVERIFY(m_vault->openPath(root));
+
+    QQuickWindow window;
+    window.resize(900, 700);
+    window.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&window));
+    QQmlEngine engine;
+    QQmlComponent component(&engine);
+    component.setData("import Jot.Ui\nTrashConfirm {}\n", QUrl(u"qrc:/test.qml"_s));
+    std::unique_ptr<QObject> dialog(component.create());
+    QVERIFY2(dialog, qPrintable(component.errorString()));
+    dialog->setProperty("parent", QVariant::fromValue(window.contentItem()));
+    QMetaObject::invokeMethod(dialog.get(), "askForNote", Q_ARG(QVariant, u"Ines.md"_s));
+    QTRY_VERIFY(dialog->property("opened").toBool());
+
+    auto *content = dialog->property("contentItem").value<QQuickItem *>();
+    auto *shared = content->findChild<QQuickItem *>(u"sharedAttachments"_s);
+    QVERIFY(shared && shared->isVisible());
+    QVERIFY2(shared->property("text").toString().contains(u"Atlas"_s),
+             qPrintable(shared->property("text").toString()));
+    QVERIFY(content->findChild<QQuickItem *>(u"trashAttachmentsToo"_s)->isVisible());
+
+    // Move to trash takes the note and leaves what Atlas links to.
+    auto *confirm = content->findChild<QQuickItem *>(u"confirmTrash"_s);
+    QTest::mouseClick(
+        &window, Qt::LeftButton, {},
+        confirm->mapToScene(QPointF(confirm->width() / 2, confirm->height() / 2)).toPoint());
+    QTRY_VERIFY(!dialog->property("visible").toBool());
+    QVERIFY(!QFileInfo::exists(root + u"/Ines.md"_s));
+    QVERIFY(QFileInfo::exists(root + u"/Ines.assets/map.png"_s));
 }
 
 QTEST_MAIN(TestDialogs)

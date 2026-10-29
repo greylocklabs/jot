@@ -10,22 +10,26 @@ Popup {
     /// What goes: a note's path, or a notebook's when `notebook` is set.
     property string path
     property bool notebook: false
+    /// The other notes that link into the note's attachments, which then stay unless asked.
+    property var sharing: []
 
     /// Opens it for the note at `path`.
     function askForNote(path) {
         root.path = path
         root.notebook = false
+        root.sharing = Vault.notesUsingAttachments(path)
         open()
     }
     /// Opens it for the notebook at `path`.
     function askForNotebook(path) {
         root.path = path
         root.notebook = true
+        root.sharing = []
         open()
     }
 
     anchors.centerIn: Overlay.overlay
-    width: 380
+    width: root.sharing.length > 0 ? 460 : 380
     padding: Theme.space6
     modal: true
     focus: true
@@ -76,11 +80,32 @@ Popup {
             font.weight: Theme.weightBold
         }
         Text {
+            objectName: "sharedAttachments"
+            visible: root.sharing.length > 0
+            width: parent.width
+            wrapMode: Text.Wrap
+            text: {
+                if (root.sharing.length === 0)
+                    return ""
+                const first = Vault.titleOf(root.sharing[0])
+                return root.sharing.length === 1 ? qsTr(
+                                                       "%1 links to its attachments, so they stay where they are unless you trash them too.").arg(
+                                                       first) : qsTr(
+                                                       "%1 other notes link to its attachments, %2 among them, so they stay where they are unless you trash them too.").arg(
+                                                       root.sharing.length).arg(first)
+            }
+            color: Theme.text
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.textSm
+        }
+        Text {
             width: parent.width
             wrapMode: Text.Wrap
             text: root.notebook ? qsTr(
                                       "It goes to your desktop's trash with everything in it. Where the desktop has none for this folder, it goes to the .jot/trash folder in your notes folder.") :
-                                  qsTr("It goes to your desktop's trash, with its attachments. Where the desktop has none for this folder, it goes to the .jot/trash folder in your notes folder.")
+                                  root.sharing.length > 0 ? qsTr(
+                                                                "It goes to your desktop's trash. Where the desktop has none for this folder, it goes to the .jot/trash folder in your notes folder.") :
+                                                            qsTr("It goes to your desktop's trash, with its attachments. Where the desktop has none for this folder, it goes to the .jot/trash folder in your notes folder.")
             color: Theme.textMuted
             font.family: Theme.fontFamily
             font.pixelSize: Theme.textSm
@@ -97,7 +122,17 @@ Popup {
                     if (root.notebook)
                         Vault.trashNotebook(root.path)
                     else
-                        Vault.trashNote(root.path)
+                        Vault.trashNote(root.path, root.sharing.length > 0)
+                    root.close()
+                }
+            }
+            StickerButton {
+                objectName: "trashAttachmentsToo"
+                visible: root.sharing.length > 0
+                text: qsTr("Trash attachments too")
+                destructive: true
+                onClicked: {
+                    Vault.trashNote(root.path, false)
                     root.close()
                 }
             }
