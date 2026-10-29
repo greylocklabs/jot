@@ -61,8 +61,8 @@ public:
     bool trashFolder(const QString &path, QString *error) const;
     /// Uses the vault's own trash even where the desktop has one, as tests do.
     void setSystemTrash(bool use) { m_systemTrash = use; }
-    /// Renames or moves a note, its `.assets` folder and its history. Links to it are the
-    /// index's job.
+    /// Renames or moves a note, its `.assets` folder and its history. History that cannot follow
+    /// is logged rather than failing the move. Links to it are the index's job.
     bool moveNote(const QString &from, const QString &to, QString *error) const;
 
     /// Makes a notebook called `name` in the notebook `parent`, or "name 2" and so on when
