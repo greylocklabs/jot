@@ -1,3 +1,4 @@
+#include "JoplinDatabaseBuilder.h"
 #include "SettingsForeign.h"
 #include "ThemeController.h"
 #include "VaultController.h"
@@ -34,6 +35,7 @@ private Q_SLOTS:
     void everyModalHasAClose();
     void themeColorsFinishHoweverClosed();
     void showsAndRestoresPastVersions();
+    void importsFromTheJoplinOnThisComputer();
 
 private:
     QTemporaryDir m_dir;
@@ -46,6 +48,7 @@ void TestDialogs::initTestCase()
     QQuickStyle::setStyle(u"Basic"_s);
     // The user's themes and settings are never touched.
     qputenv("XDG_CONFIG_HOME", m_dir.filePath(u"config"_s).toUtf8());
+    qputenv("HOME", m_dir.filePath(u"home"_s).toUtf8());
     m_settings = std::make_unique<Settings>(m_dir.filePath(u"settings.ini"_s));
     SettingsForeign::s_instance = m_settings.get();
     m_vault = std::make_unique<VaultController>(*m_settings);
@@ -230,6 +233,37 @@ void TestDialogs::showsAndRestoresPastVersions()
     QTRY_VERIFY(problem->isVisible());
     QVERIFY(dialog->property("visible").toBool());
     QCOMPARE(m_vault->currentText(), u"First\n"_s);
+}
+
+void TestDialogs::importsFromTheJoplinOnThisComputer()
+{
+    QTest::failOnWarning();
+    const QString database = m_dir.filePath(u"config/joplin-desktop/database.sqlite"_s);
+    QVERIFY(QDir().mkpath(QFileInfo(database).path()));
+    QCOMPARE(makeJoplinDatabase(database, {u"INSERT INTO notes (id, title) VALUES "
+                                           "('00112233445566778899aabbccddeef0', 'Desk')"_s}),
+             QString());
+
+    QQuickWindow window;
+    window.resize(900, 700);
+    window.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&window));
+    QQmlEngine engine;
+    QQmlComponent component(&engine);
+    component.setData("import Jot.Ui\nJoplinImport {}\n", QUrl(u"qrc:/test.qml"_s));
+    std::unique_ptr<QObject> dialog(component.create());
+    QVERIFY2(dialog, qPrintable(component.errorString()));
+    dialog->setProperty("parent", QVariant::fromValue(window.contentItem()));
+
+    // No file to choose: it says what importing the Joplin here would do.
+    QMetaObject::invokeMethod(dialog.get(), "start", Q_ARG(QVariant, QString()));
+    QTRY_VERIFY(dialog->property("opened").toBool());
+    auto *content = dialog->property("contentItem").value<QQuickItem *>();
+    QCOMPARE(content->findChild<QQuickItem *>(u"importSource"_s)->property("text").toString(),
+             u"From the Joplin app on this computer"_s);
+    QCOMPARE(content->findChild<QQuickItem *>(u"importCounts"_s)->property("text").toString(),
+             u"1 new note"_s);
+    QVERIFY(content->findChild<QQuickItem *>(u"chooseExport"_s)->isVisible());
 }
 
 QTEST_MAIN(TestDialogs)

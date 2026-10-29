@@ -250,7 +250,9 @@ Jot refuses to write to a vault whose `format` is newer than it understands, and
 
 ## Importing from Joplin
 
-A JEX export or Joplin's database maps onto this format as follows:
+Jot reads Joplin's own database, `database.sqlite` in the Joplin app's profile folder, with the
+attachments in `resources/` beside it, or a JEX export. The database is only read, and is best
+read while Joplin is closed. Either maps onto this format as follows:
 
 | Joplin                              | Jot                                                          |
 | ----------------------------------- | ------------------------------------------------------------ |

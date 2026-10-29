@@ -371,8 +371,13 @@ int VaultCommands::listTags(bool json)
 int VaultCommands::importJoplin(const QString &file, const QString &notebook, bool dryRun,
                                 bool json)
 {
-    if (file.isEmpty()) {
-        m_err << tr("usage: jot import joplin <export.jex> [--notebook name] [--dry-run]") << "\n";
+    // With nothing named, Joplin's own database on this computer, history and all.
+    const QString source = file.isEmpty() ? joplinProfileDatabase() : file;
+    if (source.isEmpty()) {
+        m_err << tr("jot: Joplin's database is not on this computer, so name an export: %1")
+                     .arg(tr("usage: jot import joplin [export.jex | database.sqlite | profile "
+                             "folder] [--notebook name] [--dry-run]"))
+              << "\n";
         return 2;
     }
     if (!insideVault(notebook)) {
@@ -380,9 +385,9 @@ int VaultCommands::importJoplin(const QString &file, const QString &notebook, bo
         return 2;
     }
     QString error;
-    const std::optional<JoplinExport> from = readJoplinExport(file, &error);
+    const std::optional<JoplinExport> from = readJoplin(source, &error);
     if (!from) {
-        m_err << tr("jot: could not read %1: %2").arg(file, error) << "\n";
+        m_err << tr("jot: could not read %1: %2").arg(source, error) << "\n";
         return 1;
     }
     // "." and "a/.." are the top of the vault, which the importer calls "".
