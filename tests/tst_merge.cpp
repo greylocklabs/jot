@@ -107,6 +107,9 @@ void TestMerge::keepsEachLinesEnding()
 {
     // Without \r\n there is nothing to keep.
     QCOMPARE(keepLineEndings(u"a\nb\n"_s, u"a\nb\nc"_s), u"a\nb\nc"_s);
+    // A line changed in place keeps its own; one added takes what most have.
+    QCOMPARE(keepLineEndings(u"a\nb\r\nc\n"_s, u"a\nB\nc\n"_s), u"a\nB\r\nc\n"_s);
+    QCOMPARE(keepLineEndings(u"a\nb\r\nc\n"_s, u"a\nB\nB2\nc\n"_s), u"a\nB\r\nB2\nc\n"_s);
     // All CRLF: new and changed lines take it too.
     QCOMPARE(keepLineEndings(u"a\r\nb\r\n"_s, u"a\nB\nc\n"_s), u"a\r\nB\r\nc\r\n"_s);
     // Mixed: kept lines keep theirs, wherever they move to; new ones take the usual one.
