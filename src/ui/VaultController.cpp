@@ -231,8 +231,10 @@ void VaultController::edit(const QString &edited)
     // The editor gives plain \n lines and drops a byte order mark; the file keeps its own.
     QString text = edited;
     text.replace(u"\r\n"_s, u"\n"_s);
-    if (m_crlf)
-        text.replace(u'\n', u"\r\n"_s);
+    const QString before =
+        m_byteOrderMark ? m_currentText.sliced(m_currentText.startsWith(QChar(0xfeff)) ? 1 : 0)
+                        : m_currentText;
+    text = keepLineEndings(before, text);
     if (m_byteOrderMark && !text.startsWith(QChar(0xfeff)))
         text.prepend(QChar(0xfeff));
     if (text == m_currentText)
@@ -1193,7 +1195,6 @@ void VaultController::readCurrent()
     }
     m_backlinks.reload(m_vault.get(), m_index.get(), m_current);
     m_savedText = m_currentText;
-    m_crlf = m_currentText.contains(u"\r\n"_s);
     m_byteOrderMark = m_currentText.startsWith(QChar(0xfeff));
     Q_EMIT currentChanged();
 }

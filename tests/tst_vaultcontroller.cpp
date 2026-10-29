@@ -915,6 +915,18 @@ void TestVaultController::keepsLineEndingsAndTheByteOrderMark()
     m_vault->saveNow();
     QVERIFY(file.open(QIODevice::ReadOnly));
     QCOMPARE(file.readAll(), QByteArray("\xef\xbb\xbfone\r\ntwo, three\r\n"));
+    file.close();
+
+    // Mixed, each line keeps its own, and a new one takes what most have.
+    QFile mixed(m_root + u"/Mixed.md"_s);
+    QVERIFY(mixed.open(QIODevice::WriteOnly));
+    mixed.write("one\ntwo\r\nthree\n");
+    mixed.close();
+    m_vault->setCurrent(u"Mixed.md"_s);
+    m_vault->edit(u"one\ntwo\nthree\nfour\n"_s);
+    m_vault->saveNow();
+    QVERIFY(mixed.open(QIODevice::ReadOnly));
+    QCOMPARE(mixed.readAll(), QByteArray("one\ntwo\r\nthree\nfour\n"));
 }
 
 void TestVaultController::aRenameThatFailsHalfwayShowsWhereTheNoteIs()
