@@ -154,6 +154,16 @@ void TestNoteHistory::joinsHistoryLeftWhereANoteMoves()
     QCOMPARE(texts(u"Soren.md"_s),
              (QStringList{u"Mara at ten\n"_s, u"Mara at nine\n"_s, u"old Soren\n"_s}));
     QVERIFY(!QFileInfo::exists(m_vault->absolute(u".jot/history/Mara.md"_s)));
+
+    // Both hold two versions from the same second: Ines's take the next free numbers.
+    QVERIFY(history.keep(u"Kit.md"_s, u"Kit one\n"_s, nine, &error));
+    QVERIFY(history.keep(u"Kit.md"_s, u"Kit two\n"_s, nine, &error));
+    write(u"Ines.md"_s, u"now\n"_s);
+    QVERIFY(history.keep(u"Ines.md"_s, u"Ines one\n"_s, nine, &error));
+    QVERIFY(history.keep(u"Ines.md"_s, u"Ines two\n"_s, nine, &error));
+    QVERIFY2(m_vault->moveNote(u"Ines.md"_s, u"Kit.md"_s, &error), qPrintable(error));
+    QCOMPARE(texts(u"Kit.md"_s).size(), 4);
+    QVERIFY(QFileInfo::exists(m_vault->absolute(u".jot/history/Kit.md/2026-10-28 090000 4.md"_s)));
 }
 
 QTEST_GUILESS_MAIN(TestNoteHistory)

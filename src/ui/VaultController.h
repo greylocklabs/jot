@@ -253,6 +253,9 @@ private:
     /// Keeps `before`, the text a write to the note at `path` replaces, as one of its past
     /// versions: always with `now`, otherwise once per history interval.
     void keepHistory(const QString &path, const QString &before, bool now = false);
+    /// Forgets when versions were kept of the note or notebook at `path`, which has moved or
+    /// gone, so a note later there keeps its first version.
+    void forgetHistoryKept(const QString &path);
     void setProblem(const QString &problem);
     /// After a rename that did not finish, shows whichever of the two paths now holds
     /// the note, so nothing writes to one that is gone.

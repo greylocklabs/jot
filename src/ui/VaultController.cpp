@@ -141,6 +141,7 @@ void VaultController::close()
     m_watcher.reset();
     m_index.reset();
     m_vault.reset();
+    m_historyKept.clear();
 }
 
 void VaultController::fail(const QString &error)
@@ -285,6 +286,13 @@ void VaultController::keepHistory(const QString &path, const QString &before, bo
     m_historyKept.insert(path, time);
 }
 
+void VaultController::forgetHistoryKept(const QString &path)
+{
+    m_historyKept.removeIf([&path](const auto &kept) {
+        return kept.key() == path || kept.key().startsWith(path + u'/');
+    });
+}
+
 QVariantList VaultController::historyOf(const QString &path) const
 {
     QVariantList list;
@@ -372,6 +380,7 @@ bool VaultController::renameCurrent(const QString &title)
             if (m_watcher)
                 m_watcher->expectWrite(path, text);
         };
+        forgetHistoryKept(m_current);
         if (!renameNote(*m_vault, *m_index, m_current, to, &error, expect)) {
             qCWarning(lcVault) << "could not rename" << m_current << error;
             resyncAfterRename(m_current, to);
@@ -483,6 +492,7 @@ bool VaultController::relocateNotebook(const QString &from, const QString &to)
         if (m_watcher)
             m_watcher->expectWrite(path, text);
     };
+    forgetHistoryKept(from);
     const std::optional<QStringList> written =
         jot::moveNotebook(*m_vault, *m_index, from, to, &error, expect);
     if (!written) {
@@ -539,6 +549,7 @@ bool VaultController::moveNoteTo(const QString &path, const QString &notebook)
         if (m_watcher)
             m_watcher->expectWrite(note, text);
     };
+    forgetHistoryKept(path);
     const std::optional<QStringList> written =
         renameNote(*m_vault, *m_index, path, to, &error, expect);
     if (!written) {
@@ -830,6 +841,7 @@ bool VaultController::trashNote(const QString &path)
         qCWarning(lcVault) << "could not move" << path << "to the trash:" << error;
         return false;
     }
+    forgetHistoryKept(path);
     m_index->update({path});
     if (path == m_current)
         setCurrent({});
@@ -855,6 +867,7 @@ bool VaultController::trashNotebook(const QString &path)
         setProblem(tr("Could not move the notebook to the trash: %1").arg(error));
         return false;
     }
+    forgetHistoryKept(path);
     m_index->update(notes);
     // Nothing goes on naming what is gone: the note shown, the list's notebook, the folds.
     if (inside(m_current))

@@ -6,6 +6,7 @@
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
+#include <QRegularExpression>
 #include <QSaveFile>
 #include <QStringDecoder>
 
@@ -484,11 +485,14 @@ bool Vault::moveHistory(const QString &from, const QString &to) const
         const QString file = files.next();
         const QString relativePath = QDir(source).relativeFilePath(file);
         const QFileInfo wanted(target + u'/' + relativePath);
+        // A version's name is its time and, after the first in a second, a number; a clash
+        // takes the next free number, so the name still reads as a version.
+        static const QRegularExpression numbered(u"^(\\d{4}-\\d\\d-\\d\\d \\d{6}) \\d+$"_s);
+        const QRegularExpressionMatch version = numbered.match(wanted.completeBaseName());
+        const QString base = version.hasMatch() ? version.captured(1) : wanted.completeBaseName();
         QString path = wanted.filePath();
         for (int n = 2; QFileInfo::exists(path); ++n)
-            path = u"%1/%2 %3.%4"_s.arg(wanted.path(), wanted.completeBaseName())
-                       .arg(n)
-                       .arg(wanted.suffix());
+            path = u"%1/%2 %3.%4"_s.arg(wanted.path(), base).arg(n).arg(wanted.suffix());
         if (!QDir().mkpath(wanted.path()) || !QFile::rename(file, path))
             return false;
     }
