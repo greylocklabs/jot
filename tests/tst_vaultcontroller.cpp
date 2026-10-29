@@ -147,14 +147,14 @@ void TestVaultController::opensAFolderAndRemembersIt()
     QCOMPARE(opened.size(), 1);
     QVERIFY(m_vault->isOpen());
     QCOMPARE(m_vault->name(), u"Notes"_s);
-    QCOMPARE(m_vault->noteCount(), 8);
+    QCOMPARE(m_vault->noteCount(), 9);
     QCOMPARE(m_settings->vaultPath(), m_root);
 
     VaultController again(*m_settings);
     again.setIndexPath(m_dir->filePath(u"index.sqlite"_s));
     m_vault.reset();
     QVERIFY(again.openLast());
-    QCOMPARE(again.noteCount(), 8);
+    QCOMPARE(again.noteCount(), 9);
 }
 
 void TestVaultController::refusesWhatIsNotAFolder()
@@ -225,7 +225,7 @@ void TestVaultController::listsNotebooksThatFold()
              (QStringList{QString(), u"Ashfall"_s, u"Ashfall/Characters"_s, u"Ashfall/Places"_s,
                           u"Inbox"_s, u"Recipes"_s}));
     QCOMPARE(column(notebooks, "count"),
-             (QStringList{u"8"_s, u"4"_s, u"2"_s, u"1"_s, u"1"_s, u"2"_s}));
+             (QStringList{u"9"_s, u"5"_s, u"2"_s, u"1"_s, u"1"_s, u"2"_s}));
     QCOMPARE(column(notebooks, "depth").at(2), u"1"_s);
 
     notebooks.toggle(u"Ashfall"_s);
@@ -268,7 +268,7 @@ void TestVaultController::listsNotesByNotebookTagAndSearch()
 {
     QVERIFY(m_vault->openPath(m_root));
     NoteListModel &notes = *m_vault->notes();
-    QCOMPARE(notes.rowCount(), 8);
+    QCOMPARE(notes.rowCount(), 9);
 
     notes.setNotebook(u"Ashfall/Characters"_s);
     QCOMPARE(notes.rowCount(), 2);
@@ -526,7 +526,7 @@ void TestVaultController::trashesANotebook()
     m_vault->setCurrent(u"Ashfall/Characters/Soren.md"_s);
     m_vault->notes()->setNotebook(u"Ashfall/Characters"_s);
     m_settings->setCollapsedNotebooks({u"Ashfall/Characters"_s, u"Recipes"_s});
-    QCOMPARE(m_vault->notesInNotebook(u"Ashfall"_s), 4);
+    QCOMPARE(m_vault->notesInNotebook(u"Ashfall"_s), 5);
 
     QVERIFY(m_vault->trashNotebook(u"Ashfall"_s));
     QVERIFY(!QFileInfo::exists(m_root + u"/Ashfall"_s));
@@ -547,7 +547,7 @@ void TestVaultController::switcherFindsByTitleAliasAndPath()
 {
     QVERIFY(m_vault->openPath(m_root));
     SwitcherModel &switcher = *m_vault->switcher();
-    QCOMPARE(switcher.rowCount(), 8);
+    QCOMPARE(switcher.rowCount(), 9);
 
     switcher.setQuery(u"sour"_s);
     QCOMPARE(column(switcher, "title").first(), u"Sourdough"_s);
@@ -585,7 +585,7 @@ void TestVaultController::followsChangesOnDisk()
     welcome.write("Rewritten elsewhere.\n");
     welcome.close();
 
-    QTRY_COMPARE_WITH_TIMEOUT(m_vault->noteCount(), 9, 3000);
+    QTRY_COMPARE_WITH_TIMEOUT(m_vault->noteCount(), 10, 3000);
     QVERIFY(m_vault->tags().contains(u"idea"_s));
     QTRY_VERIFY_WITH_TIMEOUT(m_vault->currentText().contains(u"Rewritten"_s), 3000);
     QVERIFY(!changed.isEmpty());
@@ -902,7 +902,7 @@ void TestVaultController::trashesTheNoteShown()
     QVERIFY(m_vault->trashCurrent());
     QVERIFY(!QFileInfo::exists(m_root + u"/Recipes/Pancakes.md"_s));
     QCOMPARE(m_vault->current(), QString());
-    QCOMPARE(m_vault->noteCount(), 7);
+    QCOMPARE(m_vault->noteCount(), 8);
 }
 
 void TestVaultController::followsLinksAndMakesMissingNotes()
@@ -916,7 +916,7 @@ void TestVaultController::followsLinksAndMakesMissingNotes()
 
     QVERIFY(m_vault->follow(u"Harbor Master#Debts"_s, true));
     QCOMPARE(m_vault->current(), u"Ashfall/Characters/Harbor Master.md"_s);
-    QCOMPARE(m_vault->noteCount(), 9);
+    QCOMPARE(m_vault->noteCount(), 10);
     // A Markdown link to nothing makes nothing.
     QVERIFY(!m_vault->follow(u"Nowhere.md"_s, false));
 }
@@ -1043,11 +1043,12 @@ void TestVaultController::listsBacklinksAndMentions()
     QVERIFY(m_vault->openPath(m_root));
     m_vault->setCurrent(u"Ashfall/Characters/Mara Vey.md"_s);
     BacklinksModel &links = *m_vault->backlinks();
-    QCOMPARE(links.linked(), 2);
-    QCOMPARE(column(links, "path").mid(0, 2),
-             (QStringList{u"Ashfall/Pitch.md"_s, u"Ashfall/Places/The Ferry.md"_s}));
+    QCOMPARE(links.linked(), 3);
+    QCOMPARE(column(links, "path").mid(0, 3),
+             (QStringList{u"Ashfall/Crossings.md"_s, u"Ashfall/Pitch.md"_s,
+                          u"Ashfall/Places/The Ferry.md"_s}));
     // Read as text, not Markdown.
-    QCOMPARE(column(links, "excerpt").first(), u"See Mara and The Ferry."_s);
+    QCOMPARE(column(links, "excerpt").first(), u"Match the ledger to Mara Vey's voice"_s);
     // Soren's note names her by her alias, without a link.
     QCOMPARE(links.unlinked(), 1);
     QCOMPARE(column(links, "path").last(), u"Ashfall/Characters/Soren.md"_s);
@@ -1057,7 +1058,7 @@ void TestVaultController::listsBacklinksAndMentions()
     QVERIFY(soren.open(QIODevice::Append));
     soren.write("\nAsks [[Mara Vey]] for the ledger.\n");
     soren.close();
-    QTRY_COMPARE_WITH_TIMEOUT(links.linked(), 3, 3000);
+    QTRY_COMPARE_WITH_TIMEOUT(links.linked(), 4, 3000);
     QCOMPARE(links.unlinked(), 0);
 
     m_vault->setCurrent(u"Recipes/Sourdough.md"_s);
@@ -1080,27 +1081,32 @@ void TestVaultController::listsAndTicksWhatIsLeftToDo()
 {
     QVERIFY(m_vault->openPath(m_root));
     TaskModel &tasks = *m_vault->tasks();
-    // The groceries were due before today, which keeps them in Today; the rest has no day.
+    // Those due before today stay in Today; the rest have no day.
     QCOMPARE(tasks.view(), u"today"_s);
-    QCOMPARE(column(tasks, "title"), QStringList{u"Groceries"_s});
-    QCOMPARE(column(tasks, "group"), QStringList{u"Overdue"_s});
-    QCOMPARE(tasks.todayCount(), 1);
+    QCOMPARE(column(tasks, "title"),
+             (QStringList{u"Groceries"_s, u"Fares for act two"_s, u"Feed the starter"_s}));
+    QCOMPARE(column(tasks, "group"), (QStringList{u"Overdue"_s, u"Overdue"_s, u"Overdue"_s}));
+    QCOMPARE(tasks.todayCount(), 3);
     tasks.setView(u"all"_s);
     QCOMPARE(m_settings->tasksView(), u"all"_s);
-    // The task note first, then the open boxes, note by note.
-    QCOMPARE(column(tasks, "kind"), (QStringList{u"note"_s, u"task"_s, u"task"_s, u"task"_s}));
-    QCOMPARE(column(tasks, "title"),
-             (QStringList{u"Groceries"_s, u"decide what he wants by act two"_s,
-                          u"watercolor paper"_s, u"oat milk"_s}));
+    // The ones with a day first, then the open boxes, note by note.
+    QCOMPARE(column(tasks, "kind"), (QStringList{u"note"_s, u"task"_s, u"task"_s, u"task"_s,
+                                                 u"task"_s, u"task"_s, u"task"_s}));
+    QCOMPARE(
+        column(tasks, "title"),
+        (QStringList{u"Groceries"_s, u"Fares for act two"_s, u"Feed the starter"_s,
+                     u"decide what he wants by act two"_s, u"Ask playtesters about the stranger"_s,
+                     u"watercolor paper"_s, u"oat milk"_s}));
     QCOMPARE(column(tasks, "note").mid(1),
-             (QStringList{u"Soren"_s, u"Groceries"_s, u"Groceries"_s}));
+             (QStringList{u"Crossings"_s, u"Sourdough"_s, u"Soren"_s, u"Crossings"_s,
+                          u"Groceries"_s, u"Groceries"_s}));
 
     const QStringList lines = column(tasks, "line");
     // A box in a note that is not shown is ticked in its file.
-    QVERIFY(m_vault->setTaskDone(u"Ashfall/Characters/Soren.md"_s, lines.at(1).toInt(), true));
+    QVERIFY(m_vault->setTaskDone(u"Ashfall/Characters/Soren.md"_s, lines.at(3).toInt(), true));
     QVERIFY(readFile(m_root + u"/Ashfall/Characters/Soren.md"_s)
                 .contains(u"- [x] decide what he wants"_s));
-    QCOMPARE(tasks.rowCount(), 3);
+    QCOMPARE(tasks.rowCount(), 6);
 
     // One in the note shown goes through the editor's text, unsaved edits and all.
     m_vault->setCurrent(u"Inbox/Groceries.md"_s);
@@ -1109,7 +1115,7 @@ void TestVaultController::listsAndTicksWhatIsLeftToDo()
     QString edited = m_vault->currentText();
     edited.insert(edited.indexOf(u"- [ ] watercolor"_s), u"Shop on Friday.\n"_s);
     m_vault->edit(edited + u"- [ ] eggs\n"_s);
-    QVERIFY(m_vault->setTaskDone(u"Inbox/Groceries.md"_s, lines.at(2).toInt(), true,
+    QVERIFY(m_vault->setTaskDone(u"Inbox/Groceries.md"_s, lines.at(5).toInt(), true,
                                  u"watercolor paper"_s));
     QVERIFY(m_vault->currentText().contains(u"- [x] watercolor paper"_s));
     QVERIFY(m_vault->currentText().contains(u"- [ ] eggs"_s));
@@ -1119,7 +1125,7 @@ void TestVaultController::listsAndTicksWhatIsLeftToDo()
     QVERIFY(m_vault->completeTask(u"Inbox/Groceries.md"_s));
     QVERIFY(m_vault->currentText().contains(u"task: done"_s));
     QVERIFY(m_vault->currentText().contains(u"\ndone: 20"_s));
-    QCOMPARE(column(tasks, "kind"), (QStringList{u"task"_s, u"task"_s}));
+    QCOMPARE(column(tasks, "kind"), QStringList(5, u"task"_s));
 
     QSignalSpy reveal(m_vault.get(), &VaultController::revealPosition);
     m_vault->openAt(u"Ashfall/Characters/Soren.md"_s, 7);
@@ -1144,11 +1150,23 @@ void TestVaultController::headsToDosByDay()
     TaskModel &tasks = *m_vault->tasks();
     const QLocale locale;
 
+    // Only the ones in Plans, as the sample vault's own are overdue too.
+    const auto plans = [&](const QByteArray &role) {
+        const QStringList notes = column(tasks, "note");
+        const QStringList values = column(tasks, role);
+        QStringList out;
+        for (qsizetype i = 0; i < notes.size(); ++i) {
+            if (notes.at(i) == u"Plans"_s)
+                out.append(values.at(i));
+        }
+        return out;
+    };
+
     tasks.setView(u"today"_s);
-    QCOMPARE(column(tasks, "group"), (QStringList{u"Overdue"_s, u"Overdue"_s, u"Today"_s}));
+    QCOMPARE(plans("group"), (QStringList{u"Overdue"_s, u"Today"_s}));
     // Under a day's heading only a time is worth saying; an overdue one says its day.
     QCOMPARE(column(tasks, "due").last(), locale.toString(QTime(14, 0), QLocale::ShortFormat));
-    QCOMPARE(column(tasks, "overdue"), (QStringList{u"true"_s, u"true"_s, u"false"_s}));
+    QCOMPARE(plans("overdue"), (QStringList{u"true"_s, u"false"_s}));
     QCOMPARE(column(tasks, "note").last(), u"Plans"_s);
 
     tasks.setView(u"upcoming"_s);
@@ -1167,7 +1185,9 @@ void TestVaultController::headsToDosByDay()
     QCOMPARE(m_vault->labels(),
              (QVariantList{QVariantMap{{u"label"_s, u"day"_s}, {u"count"_s, 1}},
                            QVariantMap{{u"label"_s, u"hours"_s}, {u"count"_s, 1}},
-                           QVariantMap{{u"label"_s, u"minutes"_s}, {u"count"_s, 2}}}));
+                           QVariantMap{{u"label"_s, u"kitchen"_s}, {u"count"_s, 1}},
+                           QVariantMap{{u"label"_s, u"minutes"_s}, {u"count"_s, 2}},
+                           QVariantMap{{u"label"_s, u"writing"_s}, {u"count"_s, 2}}}));
     tasks.setLabel(u"minutes"_s);
     tasks.setView(u"all"_s);
     QCOMPARE(column(tasks, "title"), (QStringList{u"Call Soren"_s, u"Buy rope"_s}));
