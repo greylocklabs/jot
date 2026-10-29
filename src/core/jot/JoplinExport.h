@@ -60,8 +60,11 @@ struct JoplinExport
         /// The name the file had when it was attached, which may be empty.
         QString fileName;
         QString extension;
-        /// Empty when the export left the file out.
+        /// The file's bytes, from an export; null when it left the file out.
         QByteArray data;
+        /// Where the file is, from Joplin's database, read only when it is copied in; empty
+        /// when the file is not there.
+        QString file;
     };
 
     QList<Notebook> notebooks;

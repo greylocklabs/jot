@@ -95,11 +95,8 @@ Popup {
             width: parent.width
             wrapMode: Text.Wrap
             textFormat: Text.PlainText
-            text: root.file.toString() === Vault.joplinProfile().toString() ? qsTr("From the Joplin app on this computer") :
-                                                                              qsTr("From %1").arg(
-                                                                                  root.file.toString(
-                                                                                      ).split("/").pop(
-                                                                                      ))
+            visible: text !== ""
+            text: root.summary.source ?? ""
             color: Theme.textMuted
             font.family: Theme.fontFamily
             font.pixelSize: Theme.textSm

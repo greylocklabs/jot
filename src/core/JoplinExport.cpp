@@ -241,6 +241,7 @@ std::optional<JoplinExport> readJoplinExport(const QByteArray &jex, QString *err
                 .fileName = item.props.value(u"filename"_s),
                 .extension = item.props.value(u"file_extension"_s),
                 .data = files.value(id),
+                .file = {},
             });
             break;
         case TagType: out.tags.append({.id = id, .title = item.title}); break;

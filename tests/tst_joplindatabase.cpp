@@ -121,12 +121,14 @@ void TestJoplinDatabase::readsWhatAnExportWouldHold()
     QCOMPARE(read->noteTags.value(kPacking), QStringList{kTag});
     QCOMPARE(read->tags.first().title, u"trips"_s);
 
-    // Its file is <id>.<extension>, or <id> alone without one; a file not there reads as null.
+    // Its file is <id>.<extension>, or <id> alone without one, and is not read until copied in;
+    // a file not there is none.
     QCOMPARE(read->resources.size(), 3);
-    QCOMPARE(read->resources.at(0).data, QByteArray("png bytes"));
+    QCOMPARE(read->resources.at(0).file, resources.filePath(kPhoto + u".png"_s));
+    QVERIFY(read->resources.at(0).data.isNull());
     QCOMPARE(read->resources.at(0).fileName, u"beach.png"_s);
-    QCOMPARE(read->resources.at(1).data, QByteArray("plain bytes"));
-    QVERIFY(read->resources.at(2).data.isNull());
+    QCOMPARE(read->resources.at(1).file, resources.filePath(kPlain));
+    QVERIFY(read->resources.at(2).file.isEmpty());
     QVERIFY(read->skipped.isEmpty());
 }
 
@@ -141,6 +143,9 @@ void TestJoplinDatabase::leavesOutWhatCannotBeRead()
                 .arg(kNine),
             u"INSERT INTO resources (id, title, encryption_blob_encrypted) VALUES ('%1', 'x', 1)"_s
                 .arg(kPhoto),
+            // Encrypted details and file both: one item, counted once.
+            u"INSERT INTO resources (id, title, encryption_applied, encryption_blob_encrypted) "
+            "VALUES ('%1', '', 1, 1)"_s.arg(kGone),
             u"INSERT INTO revisions (id, item_id, item_updated_time) VALUES ('r1', '%1', %2)"_s
                 .arg(kPlain)
                 .arg(kNine),
@@ -155,7 +160,7 @@ void TestJoplinDatabase::leavesOutWhatCannotBeRead()
     QCOMPARE(read->notes.size(), 1);
     QVERIFY(read->notes.first().deleted);
     QVERIFY(read->resources.isEmpty());
-    QCOMPARE(read->skipped, (QStringList{u"2 encrypted items, which Joplin has to decrypt first"_s,
+    QCOMPARE(read->skipped, (QStringList{u"3 encrypted items, which Joplin has to decrypt first"_s,
                                          u"2 note revisions"_s}));
 }
 
