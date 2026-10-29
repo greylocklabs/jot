@@ -7,6 +7,10 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ### Added
 
+- Past versions: Jot keeps earlier versions of each note, one when you start editing it and then
+  one every ten minutes while you write. Open them from a note's menu, the command palette, or
+  the leader key then h, read any of them, and restore one; what it replaces is kept too. They
+  are plain files in the vault, under `.jot/history`, so they sync and back up with your notes.
 - Reminders: a to-do notifies when it comes due, at its time, or at 9:00 on its day when it has no
   time; the morning time is in Settings. The notification opens the to-do, ticks it done, or
   snoozes it for 10 minutes. Those that came due while Jot was closed are told when it starts.

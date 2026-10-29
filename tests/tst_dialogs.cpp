@@ -9,6 +9,7 @@
 #include <QQuickItem>
 #include <QQuickStyle>
 #include <QQuickWindow>
+#include <QRegularExpression>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
@@ -215,6 +216,20 @@ void TestDialogs::showsAndRestoresPastVersions()
     QCOMPARE(
         m_vault->versionText(m_vault->historyOf(path).first().toMap().value(u"path"_s).toString()),
         u"Second\n"_s);
+    // A version gone by the time Restore is pressed says so, and the dialog stays.
+    QMetaObject::invokeMethod(dialog.get(), "open");
+    QTRY_VERIFY(dialog->property("opened").toBool());
+    auto *problem = content->findChild<QQuickItem *>(u"restoreProblem"_s);
+    QVERIFY(problem && !problem->isVisible());
+    const QString chosen = m_vault->historyOf(path).first().toMap().value(u"path"_s).toString();
+    QVERIFY(QFile::remove(m_vault->root() + u'/' + chosen));
+    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"could not read"_s));
+    QTest::mouseClick(
+        &window, Qt::LeftButton, {},
+        restore->mapToScene(QPointF(restore->width() / 2, restore->height() / 2)).toPoint());
+    QTRY_VERIFY(problem->isVisible());
+    QVERIFY(dialog->property("visible").toBool());
+    QCOMPARE(m_vault->currentText(), u"First\n"_s);
 }
 
 QTEST_MAIN(TestDialogs)

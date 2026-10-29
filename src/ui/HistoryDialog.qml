@@ -11,27 +11,8 @@ Popup {
     property var versions: []
     readonly property var chosen: list.currentIndex >= 0 ? versions[list.currentIndex] : null
 
-    /// When the version at `index` is from, to the minute, or to the second where a version
-    /// beside it is from the same minute.
-    function label(index) {
-        const at = (i, format) => {
-            const when = versions[i].written
-            const today = new Date()
-            const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1)
-            let day = when.toLocaleDateString(Qt.locale(), Locale.ShortFormat)
-            if (when.toDateString() === today.toDateString())
-                day = qsTr("Today")
-            else if (when.toDateString() === yesterday.toDateString())
-                day = qsTr("Yesterday")
-            return qsTr("%1, %2").arg(day).arg(Qt.formatTime(when, format))
-        }
-        const minutes = Qt.locale().timeFormat(Locale.ShortFormat)
-        const shown = at(index, minutes)
-        const before = index > 0 && at(index - 1, minutes) === shown
-        const after = index + 1 < versions.length && at(index + 1, minutes) === shown
-        const crowded = before || after
-        return crowded ? at(index, minutes.replace("mm", "mm:ss")) : shown
-    }
+    /// The last restore did not go through.
+    property bool failed: false
 
     anchors.centerIn: Overlay.overlay
     width: Math.min(820, (Overlay.overlay ? Overlay.overlay.width : 900) - 2 * Theme.space6)
@@ -45,6 +26,7 @@ Popup {
 
     onAboutToShow: {
         versions = Vault.historyOf(Vault.current)
+        failed = false
         list.currentIndex = versions.length > 0 ? 0 : -1
         list.forceActiveFocus()
     }
@@ -140,6 +122,7 @@ Popup {
             clip: true
             model: root.versions
             keyNavigationEnabled: true
+            onCurrentIndexChanged: root.failed = false
             Keys.onReturnPressed: restore.clicked()
             Keys.onEnterPressed: restore.clicked()
 
@@ -149,7 +132,7 @@ Popup {
 
                 width: ListView.view.width
                 current: ListView.isCurrentItem
-                text: root.label(index)
+                text: modelData.label
                 Accessible.name: qsTr("Version from %1").arg(text)
                 onClicked: list.currentIndex = index
             }
@@ -203,9 +186,29 @@ Popup {
             text: qsTr("Restore this version")
             tip: qsTr("What the note holds now is kept as a version too")
             onClicked: {
-                if (enabled && Vault.restoreVersion(root.chosen.path))
+                if (!enabled)
+                    return
+                root.failed = !Vault.restoreVersion(root.chosen.path)
+                if (!root.failed)
                     root.close()
             }
+        }
+
+        Text {
+            objectName: "restoreProblem"
+
+            anchors {
+                left: viewer.left
+                right: restore.left
+                rightMargin: Theme.space4
+                verticalCenter: restore.verticalCenter
+            }
+            visible: root.failed
+            text: qsTr("Could not restore this version, so the note is as it was.")
+            wrapMode: Text.Wrap
+            color: Theme.danger
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.textSm
         }
     }
 }
