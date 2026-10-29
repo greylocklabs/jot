@@ -130,23 +130,26 @@ std::optional<JoplinExport> readJoplinDatabase(const QString &path, QString *err
                  }) &&
             rows(u"resources"_s,
                  [&](const Row &row) {
-                     if (!readable(row) || row.flag(u"encryption_blob_encrypted"_s)) {
-                         if (row.flag(u"encryption_blob_encrypted"_s))
-                             ++encrypted;
+                     if (!readable(row))
+                         return;
+                     // Its details may be readable while the file itself is still encrypted.
+                     if (row.flag(u"encryption_blob_encrypted"_s)) {
+                         ++encrypted;
                          return;
                      }
                      const QString id = row.text(u"id"_s);
                      const QString extension = row.text(u"file_extension"_s);
                      // Stored as <id>.<extension>, or as <id> alone when it has none.
-                     QFile file(
-                         resources.filePath(extension.isEmpty() ? id : id + u'.' + extension));
+                     const QString file =
+                         resources.filePath(extension.isEmpty() ? id : id + u'.' + extension);
                      out.resources.append({
                          .id = id,
                          .title = row.text(u"title"_s),
                          .mime = row.text(u"mime"_s),
                          .fileName = row.text(u"filename"_s),
                          .extension = extension,
-                         .data = file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray(),
+                         .data = {},
+                         .file = QFileInfo(file).isFile() ? file : QString(),
                      });
                  }) &&
             rows(u"tags"_s,

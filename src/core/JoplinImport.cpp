@@ -396,7 +396,7 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
         const auto *resource = resources.value(id);
         if (!resource)
             return {};
-        if (resource->data.isNull()) {
+        if (resource->data.isNull() && resource->file.isEmpty()) {
             ++missingFiles;
             return {};
         }
@@ -412,7 +412,14 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
         if (!dryRun) {
             // The name is free, so the vault keeps it as planned.
             QString why;
-            if (!vault.addAttachment(note, QFileInfo(path).fileName(), resource->data, &why)) {
+            QByteArray bytes = resource->data;
+            bool read = !bytes.isNull();
+            if (!read) {
+                QFile file(resource->file);
+                read = file.open(QIODevice::ReadOnly);
+                bytes = file.readAll();
+            }
+            if (!read || !vault.addAttachment(note, QFileInfo(path).fileName(), bytes, &why)) {
                 ++unwritten;
                 return {};
             }

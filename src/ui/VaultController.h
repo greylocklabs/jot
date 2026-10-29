@@ -173,9 +173,9 @@ public:
     /// The database of the Joplin app on this computer, or an empty URL when there is none.
     Q_INVOKABLE QUrl joplinProfile() const;
     /// Imports the Joplin export or database at `file` into the notebook `folder`, or with
-    /// `dryRun` says what it would do. The map has `ok` and `error`, the counts `created`,
-    /// `updated`, `unchanged`, `notebooks` and `attachments`, and the lists `keptEdits` (notes
-    /// left as edited in Jot), `notBroughtBack` and `skipped`.
+    /// `dryRun` says what it would do. The map has `ok` and `error`, `source` naming where it
+    /// came from, the counts `created`, `updated`, `unchanged`, `notebooks` and `attachments`,
+    /// and the lists `keptEdits` (notes left as edited in Jot), `notBroughtBack` and `skipped`.
     Q_INVOKABLE QVariantMap importJoplin(const QUrl &file, const QString &folder, bool dryRun);
     /// The past versions of the note at `path`, newest first, each a map with `path` (the
     /// version's own vault path), `written`, and `label`, when it was written in words.

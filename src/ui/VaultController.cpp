@@ -1062,7 +1062,12 @@ QVariantMap VaultController::importJoplin(const QUrl &file, const QString &folde
         else if (note.outcome == JoplinImport::Outcome::Removed)
             notBroughtBack.append(note.path);
     }
+    const QString local = file.toLocalFile();
+    const QString source = local == joplinProfileDatabase()
+                               ? tr("From the Joplin app on this computer")
+                               : tr("From %1").arg(QFileInfo(local).fileName());
     return {{u"ok"_s, true},
+            {u"source"_s, source},
             {u"created"_s, done->count(JoplinImport::Outcome::Created)},
             {u"updated"_s, done->count(JoplinImport::Outcome::Updated)},
             {u"unchanged"_s, done->count(JoplinImport::Outcome::Unchanged)},

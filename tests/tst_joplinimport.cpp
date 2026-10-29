@@ -53,8 +53,13 @@ JoplinExport stories()
         note(u"n2"_s, u"a1"_s, u"Mara"_s, u"She takes [the ferry](:/%1)."_s.arg(jid(u"n1"_s)))};
     ex.tags = {{jid(u"t1"_s), u"travel"_s}};
     ex.noteTags.insert(jid(u"n1"_s), {jid(u"t1"_s)});
-    ex.resources = {{jid(u"r1"_s), u"map.png"_s, u"image/png"_s, u"map.png"_s, u"png"_s,
-                     QByteArray("\x89PNG", 4)}};
+    ex.resources = {{jid(u"r1"_s),
+                     u"map.png"_s,
+                     u"image/png"_s,
+                     u"map.png"_s,
+                     u"png"_s,
+                     QByteArray("\x89PNG", 4),
+                     {}}};
     return ex;
 }
 
