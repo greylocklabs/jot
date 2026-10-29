@@ -646,6 +646,16 @@ void TestVaultController::keepsPastVersionsWhileEditing()
     QCOMPARE(history.size(), 1);
     QCOMPARE(m_vault->versionText(history.first().toMap().value(u"path"_s).toString()), soren);
 
+    // A note made where one was moved from keeps its first version, though soon after.
+    m_vault->setHistoryInterval(60 * 60 * 1000);
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QVERIFY(m_vault->renameCurrent(u"Welcome back"_s));
+    QVERIFY(m_vault->historyOf(u"Welcome.md"_s).isEmpty());
+    QCOMPARE(m_vault->newNote(u"Welcome"_s), u"Welcome.md"_s);
+    m_vault->edit(u"A new welcome\n"_s);
+    m_vault->saveNow();
+    QCOMPARE(m_vault->historyOf(u"Welcome.md"_s).size(), 1);
+
     // Only versions can be read this way.
     QVERIFY(m_vault->versionText(u"Welcome.md"_s).isEmpty());
     QVERIFY(m_vault->versionText(u".jot/history/../Welcome.md"_s).isEmpty());
