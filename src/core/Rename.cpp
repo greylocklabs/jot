@@ -58,10 +58,21 @@ std::optional<QStringList> renameNote(const Vault &vault, VaultIndex &index, con
                                       const QString &to, QString *error,
                                       const BeforeWrite &beforeWrite)
 {
-    // Worked out before the move, while the index still knows where links lead.
+    // Worked out before the move, while the index still knows where links lead. The note's
+    // attachments move with it, so links into them follow too.
+    const QString assetsFrom = Vault::assetsFolderFor(from) + u'/';
+    const QString assetsTo = Vault::assetsFolderFor(to) + u'/';
+    const auto movedTo = [&](const QString &target) {
+        if (target == from)
+            return to;
+        return target.startsWith(assetsFrom) ? assetsTo + target.sliced(assetsFrom.size())
+                                             : QString();
+    };
     QSet<QString> sources;
     for (const NoteLink &link : index.backlinks(from))
         sources.insert(link.source);
+    for (const QString &source : index.sourcesLinkingInto(Vault::assetsFolderFor(from)))
+        sources.insert(source);
     sources.remove(from);
     QList<std::pair<QString, QString>> rewrites;
     for (const QString &source : std::as_const(sources)) {
@@ -70,9 +81,9 @@ std::optional<QStringList> renameNote(const Vault &vault, VaultIndex &index, con
             return std::nullopt;
         const NoteParts parts = splitFrontMatter(*text);
         const QString body = rewriteLinks(parts.body, [&](const QString &raw, bool wiki) {
-            return index.resolve(raw, source) == from
-                       ? std::optional(retarget(raw, wiki, source, to))
-                       : std::nullopt;
+            const QString moved = movedTo(index.resolve(raw, source));
+            return moved.isEmpty() ? std::nullopt
+                                   : std::optional(retarget(raw, wiki, source, moved));
         });
         rewrites.append({source, text->first(parts.body.data() - text->data()) + body});
     }
@@ -84,9 +95,11 @@ std::optional<QStringList> renameNote(const Vault &vault, VaultIndex &index, con
     const NoteParts ownParts = splitFrontMatter(*own);
     const QString ownBody = rewriteLinks(ownParts.body, [&](const QString &raw, bool wiki) {
         const QString target = index.resolve(raw, from);
-        if (target.isEmpty() || (wiki && target != from))
+        // A wikilink by name finds the note, or its own attachment, wherever they go.
+        const bool byName = !QUrl::fromPercentEncoding(raw.toUtf8()).contains(u'/');
+        if (target.isEmpty() || (wiki && (target != from && (movedTo(target).isEmpty() || byName))))
             return std::optional<QString>();
-        const QString moved = target == from ? to : target;
+        const QString moved = movedTo(target).isEmpty() ? target : movedTo(target);
         if (!wiki) {
             // Other tools read a Markdown path literally, so it must still name the file
             // from the new folder, even where Jot would find it by name.

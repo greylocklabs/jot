@@ -45,6 +45,11 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 - Callie Light's pink is deeper, with white text on it, so buttons and what is selected are
   easier to read.
 
+### Fixed
+
+- Renaming or moving a note keeps links to its attachments working, in the note itself and in
+  any other note that links straight to one of them.
+
 ## 0.0.12 - 2026-10-27
 
 ### Added

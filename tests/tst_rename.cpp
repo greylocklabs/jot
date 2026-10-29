@@ -23,6 +23,7 @@ private Q_SLOTS:
     void leavesOtherLinksAndCodeAlone();
     void keepsTheMovedNotesOwnPathsWorking();
     void reportsWhatItWrote();
+    void followsLinksIntoItsAttachments();
     void parenthesesStayInsideTheLink();
     void movesANotebookAndKeepsItsLinksWorking();
     void refusesToMoveANotebookIntoItself();
@@ -148,6 +149,35 @@ void TestRename::keepsTheMovedNotesOwnPathsWorking()
     QVERIFY(renameNote(*m_vault, *m_index, u"Mara.md"_s, u"Cast/Mara.md"_s, &error));
     QCOMPARE(read(u"Cast/Mara.md"_s),
              u"[ferry](../Places/Ferry.md), [[Ferry]], [self](Mara.md#top)\n"_s);
+    QVERIFY(m_index->unresolved().isEmpty());
+}
+
+void TestRename::followsLinksIntoItsAttachments()
+{
+    write(u"Mara.md"_s,
+          u"![sketch](Mara.assets/sketch.png) ![[sketch.png]] ![[Mara.assets/sketch.png]]\n"_s);
+    write(u"Mara.assets/sketch.png"_s, u"png"_s);
+    write(u"Places/Scene.md"_s, u"![s](../Mara.assets/sketch.png) and [[Mara]]\n"_s);
+    // Linking only the attachment, not the note.
+    write(u"Gallery.md"_s, u"![s](Mara.assets/sketch.png)\n"_s);
+    write(u"Other.md"_s, u"![x](Other.assets/x.png)\n"_s);
+    write(u"Other.assets/x.png"_s, u"png"_s);
+    open();
+
+    QString error;
+    const std::optional<QStringList> written =
+        renameNote(*m_vault, *m_index, u"Mara.md"_s, u"Cast/Mara Vell.md"_s, &error);
+    QVERIFY2(written, qPrintable(error));
+    QCOMPARE(*written, (QStringList{u"Gallery.md"_s, u"Places/Scene.md"_s}));
+    QVERIFY(QFileInfo::exists(m_vault->absolute(u"Cast/Mara Vell.assets/sketch.png"_s)));
+    // A bare name finds the note's own attachment wherever it goes, so it stays as written.
+    QCOMPARE(read(u"Cast/Mara Vell.md"_s),
+             u"![sketch](Mara%20Vell.assets/sketch.png) ![[sketch.png]] "
+             "![[Cast/Mara Vell.assets/sketch.png]]\n"_s);
+    QCOMPARE(read(u"Places/Scene.md"_s),
+             u"![s](../Cast/Mara%20Vell.assets/sketch.png) and [[Mara Vell]]\n"_s);
+    QCOMPARE(read(u"Gallery.md"_s), u"![s](Cast/Mara%20Vell.assets/sketch.png)\n"_s);
+    QCOMPARE(read(u"Other.md"_s), u"![x](Other.assets/x.png)\n"_s);
     QVERIFY(m_index->unresolved().isEmpty());
 }
 
