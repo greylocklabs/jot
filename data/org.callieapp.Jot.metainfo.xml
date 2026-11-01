@@ -35,6 +35,28 @@
   </categories>
 
   <releases>
+    <release version="0.1.0" date="2026-10-31">
+      <description>
+        <ul>
+          <li>Import from Joplin reads the Joplin app on this computer when it is there, so nothing needs exporting first; a .jex export still works. jot import joplin with no file does the same.</li>
+          <li>Joplin's note history comes across too: importing from the Joplin app brings each note's revisions in as past versions, at the times Joplin kept them.</li>
+          <li>Past versions: Jot keeps earlier versions of each note, one when you start editing it and then one every ten minutes while you write. Open them from a note's menu, the command palette, or the leader key then h, read any of them, and restore one; what it replaces is kept too. They are plain files in the vault, under .jot/history, so they sync and back up with your notes.</li>
+          <li>Reminders: a to-do notifies when it comes due, at its time, or at 9:00 on its day when it has no time; the morning time is in Settings. The notification opens the to-do, ticks it done, or snoozes it for 10 minutes. Those that came due while Jot was closed are told when it starts.</li>
+          <li>Jot keeps running in the tray when its window closes, so reminders still come, and can start when you log in. Opening Jot again brings back the window rather than a second Jot.</li>
+          <li>To-dos can repeat: 🔁 every week, every 2 weeks, every monday, every weekday and the like, or "every week" in quick add. Ticking one writes the next one, due on its next day.</li>
+          <li>Quick add: press Ctrl+Shift+A, or the + in Tasks, and type a to-do as you would say it, "call Soren tomorrow 3pm @minutes #calls" or "water the plants every week". Jot shows the day, time, repeat and labels it read, then adds a checkbox to the Inbox note, which inbox: in .jot/vault.yaml can name. jot add does the same from the command line.</li>
+          <li>Tasks has Today, Upcoming, Anytime and All views, as a to-do app does. A checkbox can say when it is due and give itself labels, in the format of Obsidian's Tasks plugin: - [ ] Call Soren @minutes 📅 2026-10-29 14:00. Labels are listed in the sidebar, and choosing one, or a tag while in Tasks, narrows the list. Task notes take labels in labels:. The badge on Tasks counts what is due today or overdue.</li>
+          <li>jot tasks takes --view, --label and --tag to match. Its JSON names a to-do's words title rather than text, and adds note, due, repeat, labels and tags.</li>
+          <li>A reading view: choose Read beside Styled and Source, or press Ctrl+Shift+R, to see the note drawn as it reads, with tables, quotes, code and images. Links, wikilinks and tags open what they lead to, and a click on a checkbox ticks it. Formatted is now called Styled, to make room.</li>
+          <li>When a note changes elsewhere while you are typing in it, such as from a sync, Jot merges the two when they touch different lines, and the cursor stays where you were. Only where both changed the same lines is the other version kept aside as a conflict copy, as before.</li>
+          <li>Callie Light's pink is deeper, with white text on it, so buttons and what is selected are easier to read.</li>
+          <li>Renaming or moving a note keeps links to its attachments working, in the note itself and in any other note that links straight to one of them.</li>
+          <li>Moving a note to the trash asks first when other notes link to its attachments, and keeps them unless you choose to trash them too. The editor's Delete asks the same.</li>
+          <li>A note with both Windows and Unix line endings keeps each line's own when saved, rather than every line taking Windows endings; new lines take the kind most of the note uses.</li>
+          <li>A note's attachments folder left empty, as when its files were deleted in a file manager, is removed when Jot opens the notes folder or the note.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.0.12" date="2026-10-27">
       <description>
         <ul>
