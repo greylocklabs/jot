@@ -226,7 +226,7 @@ bool isFence(const QString &text, qsizetype start)
 
 /// Where the code block that the line at `start` sits inside opens, or -1. Fences pair up
 /// from the top of the note, so it depends on how many come before the line, not on its
-/// neighbours alone.
+/// neighbors alone.
 qsizetype openFenceBefore(const QString &text, qsizetype start)
 {
     qsizetype open = -1;
@@ -664,7 +664,7 @@ std::optional<Edit> indentList(const QString &text, qsizetype from, qsizetype to
     for (const QString &raw : text.mid(first, end - first).split(u'\n')) {
         Line line = parse(raw);
         // Nesting inside a quote would need its indent after the marker, which the line
-        // parser does not keep, so quoted items are left to Tab's usual behaviour.
+        // parser does not keep, so quoted items are left to Tab's usual behavior.
         if ((line.kind != Line::Bullet && line.kind != Line::Numbered && line.kind != Line::Task) ||
             !line.quote.isEmpty())
             return std::nullopt;

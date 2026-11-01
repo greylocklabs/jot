@@ -125,7 +125,7 @@ Tier 2: writer mode (project = manuscript)
 Tier 3: worldbuilding and character mode (the differentiator)
 
 - Codex: any note whose type is flagged "entity" gets "aliases:" and auto-mention detection. Plain-text matches are underlined, but files are not rewritten. Optional "make explicit link" action.
-- Mentions panel and per-chapter appearance heatmap. "Scenes this character is in" uses explicit pov/characters fields plus detected mentions, labelled separately.
+- Mentions panel and per-chapter appearance heatmap. "Scenes this character is in" uses explicit pov/characters fields plus detected mentions, labeled separately.
 - Typed relationships in front matter, e.g. relationships: [{to: "[[Mara]]", kind: sister}]. Rendered as a graph and family tree (QML Shapes or a force layout).
 - Character type template with optional sections: interview questionnaire, voice samples, moodboard (image grid from a folder or list).
 - Timeline: events are notes with a "date" (custom calendars later) and entity links. Two orderings: narrative versus story-time (Aeon).

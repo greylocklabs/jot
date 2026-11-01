@@ -50,7 +50,7 @@ private:
     /// The visible menu entry reading `text`, anywhere in the window.
     QQuickItem *menuEntry(const QString &text) const;
     void click(QQuickItem *item, Qt::MouseButton button = Qt::LeftButton);
-    /// The sidebar entry labelled `label`, among those shown.
+    /// The sidebar entry labeled `label`, among those shown.
     QQuickItem *entry(const QString &label) const;
     QQuickItem *findItem(const std::function<bool(QQuickItem *)> &match,
                          QQuickItem *from = nullptr) const;
@@ -175,8 +175,8 @@ void TestLists::renamesANotebookByDoubleClick()
 {
     QQuickItem *places = entry(u"Places"_s);
     QVERIFY(places);
-    const QPoint centre = places->mapToScene({places->width() / 2, places->height() / 2}).toPoint();
-    QTest::mouseDClick(m_window.get(), Qt::LeftButton, {}, centre);
+    const QPoint center = places->mapToScene({places->width() / 2, places->height() / 2}).toPoint();
+    QTest::mouseDClick(m_window.get(), Qt::LeftButton, {}, center);
     // The name is selected, so typing replaces it.
     QTRY_VERIFY(m_sidebar->property("renamingPath").toString() == u"Ashfall/Places"_s);
     type(u"Harbor"_s);
@@ -191,8 +191,8 @@ void TestLists::renamesANotebookByDoubleClick()
 void TestLists::escapeKeepsTheOldName()
 {
     QQuickItem *places = entry(u"Places"_s);
-    const QPoint centre = places->mapToScene({places->width() / 2, places->height() / 2}).toPoint();
-    QTest::mouseDClick(m_window.get(), Qt::LeftButton, {}, centre);
+    const QPoint center = places->mapToScene({places->width() / 2, places->height() / 2}).toPoint();
+    QTest::mouseDClick(m_window.get(), Qt::LeftButton, {}, center);
     QTRY_VERIFY(!m_sidebar->property("renamingPath").toString().isEmpty());
     type(u"Nope"_s);
     QTest::keyClick(m_window.get(), Qt::Key_Escape);

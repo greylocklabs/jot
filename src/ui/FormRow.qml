@@ -1,7 +1,7 @@
 import Jot.Ui
 import QtQuick
 
-/// A labelled row of a form: the label in a column of `labelWidth`, so the
+/// A labeled row of a form: the label in a column of `labelWidth`, so the
 /// rows' controls line up, and the controls flowing on in the rest.
 Row {
     id: root
