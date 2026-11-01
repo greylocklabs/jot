@@ -107,7 +107,7 @@ class ThemeController : public QObject
     /// The grab strip along a frameless window's edges. Anything scrollable at
     /// an edge keeps its handle clear of it.
     Q_PROPERTY(int resizeBorder READ resizeBorder CONSTANT)
-    /// How far the logo sits above centre, so its face, not its binding, lines up
+    /// How far the logo sits above center, so its face, not its binding, lines up
     /// with the title beside it.
     Q_PROPERTY(int logoLift READ logoLift CONSTANT)
     /// A lighter line for glyphs with several strokes, or beside text.

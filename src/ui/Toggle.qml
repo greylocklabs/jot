@@ -2,7 +2,7 @@ import Jot.Ui
 import QtQuick
 import QtQuick.Controls
 
-/// A labelled on/off switch: a pill track whose knob slides to the accent.
+/// A labeled on/off switch: a pill track whose knob slides to the accent.
 AbstractButton {
     id: root
 

@@ -161,7 +161,7 @@ Item {
             onPaint: {
                 const ctx = getContext("2d")
                 ctx.reset()
-                // On a 24-unit grid inset by half the stroke, so nothing pokes out, centred in
+                // On a 24-unit grid inset by half the stroke, so nothing pokes out, centered in
                 // whatever box the glyph is given.
                 const size = Math.min(width, height)
                 const unit = (size - root.stroke) / 24

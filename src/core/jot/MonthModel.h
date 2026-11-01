@@ -6,7 +6,7 @@
 namespace jot {
 
 /// The days of one month as whole weeks, for the mini month: five or six rows
-/// of seven, with the neighbouring months' days marked.
+/// of seven, with the neighboring months' days marked.
 class MonthModel : public QAbstractListModel
 {
     Q_OBJECT

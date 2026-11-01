@@ -2,7 +2,7 @@ import Jot.Ui
 import QtQuick
 import QtQuick.Controls
 
-/// A labelled box to tick, in the theme's colors: an accent fill and a check when ticked.
+/// A labeled box to tick, in the theme's colors: an accent fill and a check when ticked.
 AbstractButton {
     id: root
 

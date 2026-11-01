@@ -771,7 +771,7 @@ QVariantMap VaultController::preview(const QString &target) const
         return {};
     QString error;
     const QString text = notefile::read(m_vault->absolute(path), &error).value_or(QString());
-    // Enough to recognise the note by, cut at a line so no Markdown is left half open.
+    // Enough to recognize the note by, cut at a line so no Markdown is left half open.
     QString body = splitFrontMatter(text).body.toString().trimmed();
     constexpr qsizetype kLength = 600;
     if (body.size() > kLength) {

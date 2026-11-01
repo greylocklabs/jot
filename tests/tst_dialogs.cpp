@@ -144,8 +144,8 @@ void TestDialogs::everyModalHasAClose()
     }
     QVERIFY(close);
     QTRY_VERIFY(close->isVisible() && close->width() > 0);
-    const QPointF centre = close->mapToScene(QPointF(close->width() / 2, close->height() / 2));
-    QTest::mouseClick(&window, Qt::LeftButton, {}, centre.toPoint());
+    const QPointF center = close->mapToScene(QPointF(close->width() / 2, close->height() / 2));
+    QTest::mouseClick(&window, Qt::LeftButton, {}, center.toPoint());
     QTRY_VERIFY(!popup->property("visible").toBool());
 }
 

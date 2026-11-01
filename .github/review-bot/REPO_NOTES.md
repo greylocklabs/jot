@@ -80,7 +80,7 @@ Also yours: the C++ and QML boundary, model correctness, and credential handling
   `toMarkdown` is a blocking finding: that round trip rewrites the user's syntax.
 - **Layering.** `src/core/` must not gain a QML or QtQuick dependency: the CLI links it. QML types
   belong in `src/ui/`.
-- **The `Theme` singleton is the only source of visual values.** A literal colour, spacing number,
+- **The `Theme` singleton is the only source of visual values.** A literal color, spacing number,
   radius or animation duration in a `.qml` file is a finding. Theme-driven values come from
   `core/themes/*.toml`; spacing, type sizes and metrics are constants in `ThemeController`.
 - **Themes are data.** Theme files must never be able to run code or load QML.

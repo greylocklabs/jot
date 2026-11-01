@@ -8,7 +8,7 @@ namespace jot {
 
 TaskLine readTaskLine(const QString &text)
 {
-    // Obsidian Tasks' markers: due, scheduled, start, created, done, cancelled, repeats, and
+    // Obsidian Tasks' markers: due, scheduled, start, created, done, canceled, repeats, and
     // the priorities. Each is followed by its value, up to the next marker.
     static const QRegularExpression marker(u"(📅|⏳|🛫|➕|✅|❌|🔁|⏫|🔼|🔽|🔺|⏬)\\x{FE0F}?"_s);
     static const QRegularExpression date(uR"(^\s*(\d{4}-\d{2}-\d{2})(?:[ T](\d{1,2}:\d{2}))?)"_s);
