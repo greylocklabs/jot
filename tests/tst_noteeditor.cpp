@@ -259,7 +259,9 @@ void TestNoteEditor::theTitleFollowsAnEditedTitleKey()
     QCOMPARE(m_vault->currentTitle(), u"The Ferrywoman"_s);
     QVERIFY(m_vault->currentText().contains(u"title: The Ferrywoman"_s));
 
-    // Changed on disk, as by a sync or another editor, it follows too.
+    // Changed on disk, as by a sync or another editor, it follows too, even while the title is
+    // clicked into, and leaving it then keeps the new title.
+    title->forceActiveFocus();
     QFile file(m_root + u"/Ashfall/Characters/Mara Vey.md"_s);
     QVERIFY(file.open(QIODevice::ReadOnly));
     const QByteArray saved = file.readAll();
@@ -268,6 +270,9 @@ void TestNoteEditor::theTitleFollowsAnEditedTitleKey()
     file.write(QByteArray(saved).replace("title: The Ferrywoman", "title: Mara of the Ferry"));
     file.close();
     QTRY_COMPARE_WITH_TIMEOUT(title->property("text").toString(), u"Mara of the Ferry"_s, 3000);
+    body->forceActiveFocus();
+    QCOMPARE(m_vault->currentTitle(), u"Mara of the Ferry"_s);
+    QCOMPARE(m_vault->current(), u"Ashfall/Characters/Mara Vey.md"_s);
 }
 
 void TestNoteEditor::anOutsideEditKeepsTheCursorWhereItWas()
