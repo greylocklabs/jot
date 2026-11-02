@@ -10,6 +10,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 - The task view's Today, Upcoming, Anytime and All switch lines up with the + beside it.
 - Editing a note's `title:` updates the title above it, and clicking that title no longer puts the
   old one back.
+- Holding h, l or another key with accented letters in vi normal or visual mode keeps moving,
+  rather than waiting to offer the accents.
 
 ## 0.1.0 - 2026-10-31
 

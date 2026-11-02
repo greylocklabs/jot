@@ -5,6 +5,7 @@
 #include <QClipboard>
 #include <QCoreApplication>
 #include <QGuiApplication>
+#include <QInputMethod>
 #include <QKeyEvent>
 #include <QQuickTextDocument>
 #include <QTextBlock>
@@ -82,6 +83,7 @@ void ViEditor::setEnabled(bool enabled)
         return;
     m_enabled = enabled;
     setMode(kNormal);
+    updateInputMethod();
     Q_EMIT enabledChanged();
 }
 
@@ -95,7 +97,19 @@ void ViEditor::setMode(const QString &mode)
     if (m_mode == kVisual && m_target)
         QMetaObject::invokeMethod(m_target, "deselect");
     m_mode = mode;
+    updateInputMethod();
     Q_EMIT modeChanged();
+}
+
+bool ViEditor::typing() const
+{
+    return !m_enabled || m_mode == kInsert;
+}
+
+void ViEditor::updateInputMethod()
+{
+    if (m_target && m_target->hasActiveFocus())
+        QGuiApplication::inputMethod()->update(Qt::ImEnabled);
 }
 
 void ViEditor::setPending(const QString &pending)
@@ -112,6 +126,17 @@ void ViEditor::setPending(const QString &pending)
 
 bool ViEditor::eventFilter(QObject *watched, QEvent *event)
 {
+    if (watched == m_target && event->type() == QEvent::InputMethodQuery && !typing()) {
+        // Without text input, the desktop repeats a held key instead of offering accented letters.
+        auto *query = static_cast<QInputMethodQueryEvent *>(event);
+        for (uint bit = 1; bit != 0 && bit <= query->queries(); bit <<= 1) {
+            const auto q = static_cast<Qt::InputMethodQuery>(bit);
+            if (query->queries() & q)
+                query->setValue(q, q == Qt::ImEnabled ? QVariant(false)
+                                                      : m_target->inputMethodQuery(q));
+        }
+        return true;
+    }
     if (!m_enabled || m_sending || watched != m_target || event->type() != QEvent::KeyPress)
         return QObject::eventFilter(watched, event);
     const auto *press = static_cast<QKeyEvent *>(event);

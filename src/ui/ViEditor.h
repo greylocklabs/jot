@@ -63,6 +63,9 @@ private:
     bool move(const QString &id);
     void sendKey(int key, Qt::KeyboardModifiers modifiers);
     void setPending(const QString &pending);
+    /// Whether keys type text, so the desktop's input method should see them.
+    [[nodiscard]] bool typing() const;
+    void updateInputMethod();
 
     [[nodiscard]] QTextDocument *document() const;
     [[nodiscard]] int cursor() const;
