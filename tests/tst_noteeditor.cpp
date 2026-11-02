@@ -42,6 +42,7 @@ private Q_SLOTS:
 
     void drawsTheNoteAndKeepsDrawingItAcrossSwitches();
     void opensALongNoteAtTheTop();
+    void theTitleFollowsAnEditedTitleKey();
     void typingIsDrawnAndSaved();
     void typingKeepsWindowsLineEndings();
     void anOutsideEditKeepsTheCursorWhereItWas();
@@ -234,6 +235,29 @@ void TestNoteEditor::typingKeepsWindowsLineEndings()
     QTRY_VERIFY_WITH_TIMEOUT(!m_vault->unsaved(), 2000);
     QVERIFY(file.open(QIODevice::ReadOnly));
     QCOMPARE(file.readAll(), QByteArray("one!\r\ntwo\r\n"));
+}
+
+void TestNoteEditor::theTitleFollowsAnEditedTitleKey()
+{
+    QQuickItem *title = find(u"title"_s);
+    QQuickItem *body = find(u"body"_s);
+    QCOMPARE(title->property("text").toString(), u"Mara Vey"_s);
+    // Typed into the body's front matter, as a person would.
+    body->forceActiveFocus();
+    const QString text = body->property("text").toString();
+    body->setProperty("cursorPosition", text.indexOf(u"type: character"_s));
+    for (const QChar c : u"title: The Ferrywoman"_s)
+        QTest::keyClick(m_window.get(), c.toLatin1());
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    QTRY_VERIFY_WITH_TIMEOUT(!m_vault->unsaved(), 2000);
+    QTRY_COMPARE(title->property("text").toString(), u"The Ferrywoman"_s);
+
+    // Clicking into the title and away leaves the new title, not the old one, in the file.
+    title->forceActiveFocus();
+    body->forceActiveFocus();
+    QTRY_VERIFY_WITH_TIMEOUT(!m_vault->unsaved(), 2000);
+    QCOMPARE(m_vault->currentTitle(), u"The Ferrywoman"_s);
+    QVERIFY(m_vault->currentText().contains(u"title: The Ferrywoman"_s));
 }
 
 void TestNoteEditor::anOutsideEditKeepsTheCursorWhereItWas()

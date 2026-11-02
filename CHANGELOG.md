@@ -8,6 +8,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 ### Fixed
 
 - The task view's Today, Upcoming, Anytime and All switch lines up with the + beside it.
+- Editing a note's `title:` updates the title above it, and clicking that title no longer puts the
+  old one back.
 
 ## 0.1.0 - 2026-10-31
 

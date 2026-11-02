@@ -114,6 +114,12 @@ Rectangle {
             if (root.fresh || Vault.currentText !== body.text || Vault.currentTitle !== title.text)
                 root.load()
         }
+        // As when its `title:` key is edited. Left alone while it is being typed in, so a
+        // stale title is never there to be saved back.
+        function onCurrentTitleChanged() {
+            if (!title.activeFocus)
+                title.text = Vault.currentTitle
+        }
         function onRevealPosition(position) {
             body.forceActiveFocus()
             body.cursorPosition = Math.min(position, body.length)
@@ -241,6 +247,7 @@ Rectangle {
 
                 TextInput {
                     id: title
+                    objectName: "title"
 
                     width: parent.width - trash.width - parent.spacing
                     readOnly: !Vault.writable
