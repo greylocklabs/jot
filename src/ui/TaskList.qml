@@ -31,6 +31,7 @@ Rectangle {
 
             ModeSwitch {
                 objectName: "taskViews"
+                anchors.verticalCenter: parent.verticalCenter
                 readonly property var views: ["today", "upcoming", "anytime", "all"]
 
                 options: [
@@ -56,6 +57,7 @@ Rectangle {
             }
 
             StickerButton {
+                objectName: "addTask"
                 anchors.verticalCenter: parent.verticalCenter
                 visible: Vault.writable
                 glyph: "plus"

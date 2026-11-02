@@ -45,6 +45,7 @@ private Q_SLOTS:
     void columnBordersDragToResize();
     void deleteAsksFirstForNotesAndNotebooks();
     void searchHandsTheKeysBackToTheList();
+    void taskViewsLineUpWithTheAddButton();
 
 private:
     /// The visible menu entry reading `text`, anywhere in the window.
@@ -108,6 +109,23 @@ void TestLists::init()
     notes->setSize({320, 700});
     m_window->show();
     QVERIFY(QTest::qWaitForWindowExposed(m_window.get()));
+}
+
+void TestLists::taskViewsLineUpWithTheAddButton()
+{
+    QQmlComponent component(m_engine.get());
+    component.loadFromModule("Jot.Ui", "TaskList");
+    std::unique_ptr<QObject> tasks(component.create());
+    QVERIFY2(tasks, qPrintable(component.errorString()));
+    auto *item = qobject_cast<QQuickItem *>(tasks.get());
+    item->setParentItem(m_window->contentItem());
+    item->setSize({320, 700});
+    auto *views = item->findChild<QQuickItem *>(u"taskViews"_s);
+    auto *add = item->findChild<QQuickItem *>(u"addTask"_s);
+    QVERIFY(views && add);
+    // The switch is shorter than the button beside it, so both sit on the row's middle.
+    const auto middle = [](QQuickItem *of) { return of->mapToScene({0, of->height() / 2}).y(); };
+    QTRY_COMPARE(middle(views), middle(add));
 }
 
 void TestLists::cleanup()

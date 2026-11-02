@@ -3,6 +3,12 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## Unreleased
+
+### Fixed
+
+- The task view's Today, Upcoming, Anytime and All switch lines up with the + beside it.
+
 ## 0.1.0 - 2026-10-31
 
 ### Added
