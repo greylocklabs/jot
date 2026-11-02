@@ -74,6 +74,7 @@ private Q_SLOTS:
     void previewsWhatALinkLeadsTo();
     void listsAndTicksWhatIsLeftToDo();
     void headsToDosByDay();
+    void undoesAndRedoesTicks();
     void addsToDosToTheInbox();
     void importsFromJoplinAfterSayingWhatItWouldDo();
     void anImportShowsWhatItWroteToTheNoteOpen();
@@ -1131,6 +1132,46 @@ void TestVaultController::listsAndTicksWhatIsLeftToDo()
     m_vault->openAt(u"Ashfall/Characters/Soren.md"_s, 7);
     QCOMPARE(m_vault->current(), u"Ashfall/Characters/Soren.md"_s);
     QCOMPARE(m_vault->currentText().mid(reveal.first().first().toInt(), 9), u"- [x] dec"_s);
+}
+
+void TestVaultController::undoesAndRedoesTicks()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    const QString soren = m_root + u"/Ashfall/Characters/Soren.md"_s;
+    const QString untouched = readFile(soren);
+    QVERIFY(!m_vault->canUndoTask());
+    // Soren's open box is on line 7, in a note that is not shown.
+    QVERIFY(m_vault->setTaskDone(u"Ashfall/Characters/Soren.md"_s, 7, true));
+    QVERIFY(readFile(soren).contains(u"- [x] decide what he wants"_s));
+    QVERIFY(m_vault->canUndoTask());
+
+    QVERIFY(m_vault->undoTask());
+    QCOMPARE(readFile(soren), untouched);
+    QVERIFY(!m_vault->canUndoTask());
+    QVERIFY(m_vault->canRedoTask());
+    QVERIFY(m_vault->redoTask());
+    QVERIFY(readFile(soren).contains(u"- [x] decide what he wants"_s));
+
+    // A task note's completion comes back too.
+    const QString groceries = m_root + u"/Inbox/Groceries.md"_s;
+    QVERIFY(m_vault->completeTask(u"Inbox/Groceries.md"_s));
+    QVERIFY(readFile(groceries).contains(u"task: done"_s));
+    QVERIFY(m_vault->undoTask());
+    QVERIFY(readFile(groceries).contains(u"task: open"_s));
+    QVERIFY(!readFile(groceries).contains(u"\ndone: "_s));
+
+    // Changed since, the note is left alone and the step forgotten.
+    QVERIFY(m_vault->undoTask());
+    QVERIFY(m_vault->redoTask());
+    QFile file(soren);
+    QVERIFY(file.open(QIODevice::Append));
+    file.write("\nMore about him.\n");
+    file.close();
+    const QString changed = readFile(soren);
+    QVERIFY(!m_vault->undoTask());
+    QCOMPARE(readFile(soren), changed);
+    QVERIFY(!m_vault->problem().isEmpty());
+    QVERIFY(!m_vault->canUndoTask());
 }
 
 void TestVaultController::headsToDosByDay()

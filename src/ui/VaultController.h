@@ -65,6 +65,10 @@ class VaultController : public QObject
     Q_PROPERTY(QString current READ current WRITE setCurrent NOTIFY currentChanged)
     Q_PROPERTY(QString currentTitle READ currentTitle NOTIFY currentTitleChanged)
     Q_PROPERTY(QString currentText READ currentText NOTIFY currentChanged)
+    /// Whether a to-do ticked from the task view, or a task note completed, can be undone or
+    /// redone. Ticks typed in the editor are the editor's own to undo.
+    Q_PROPERTY(bool canUndoTask READ canUndoTask NOTIFY taskHistoryChanged)
+    Q_PROPERTY(bool canRedoTask READ canRedoTask NOTIFY taskHistoryChanged)
     /// Edits not yet written to the note's file.
     Q_PROPERTY(bool unsaved READ unsaved NOTIFY unsavedChanged)
     /// What went wrong with the note shown, such as a save that failed and is being
@@ -171,6 +175,12 @@ public:
                                  const QString &text = {});
     /// Marks a note that is a task as done, with when it was.
     Q_INVOKABLE bool completeTask(const QString &path);
+    /// Takes back the last tick or completion, or does again the last one taken back. Refused,
+    /// and forgotten, when the note has changed since.
+    Q_INVOKABLE bool undoTask();
+    Q_INVOKABLE bool redoTask();
+    [[nodiscard]] bool canUndoTask() const { return !m_undoTasks.isEmpty(); }
+    [[nodiscard]] bool canRedoTask() const { return !m_redoTasks.isEmpty(); }
     /// Shows the note at `path` with the cursor on `line`.
     Q_INVOKABLE void openAt(const QString &path, int line);
     /// The database of the Joplin app on this computer, or an empty URL when there is none.
@@ -239,6 +249,10 @@ Q_SIGNALS:
     void errorChanged();
     void notesChanged();
     void currentChanged();
+    /// The note shown changed by replacing `length` characters at `start` with `text`, just
+    /// before currentChanged(), so the editor can make the same edit and keep its undo history.
+    void currentPatched(int start, int length, const QString &text);
+    void taskHistoryChanged();
     /// With every currentChanged(), and when saving changes the note's title, as editing its
     /// `title:` key does.
     void currentTitleChanged();
@@ -277,8 +291,12 @@ private:
     /// After notes were moved or rewritten: shows the note shown where it went, read again.
     void afterMove(const QString &current, const QStringList &written);
     /// Replaces the whole text of the note at `path`, through the editor's copy when shown.
+    /// With `undoable`, the change joins the task history.
     bool rewriteNote(const QString &path,
-                     const std::function<std::optional<QString>(const QString &)> &change);
+                     const std::function<std::optional<QString>(const QString &)> &change,
+                     bool undoable = false);
+    /// Puts `from` back as `to` in the note at `path`, for undo and redo.
+    bool replaceTaskText(const QString &path, const QString &from, const QString &to);
     /// Brings what another program wrote to the note shown into the edits not yet saved, or,
     /// where both changed the same lines, keeps it beside the note as a copy.
     void takeOutsideEdit(const QString &theirs);
@@ -318,6 +336,14 @@ private:
     int m_historyInterval = 10 * 60 * 1000;
     /// When a version of each note was last kept while running.
     QHash<QString, QDateTime> m_historyKept;
+    struct TaskChange
+    {
+        QString path;
+        QString before;
+        QString after;
+    };
+    QList<TaskChange> m_undoTasks;
+    QList<TaskChange> m_redoTasks;
     QTimer m_saveTimer;
     QTimer m_reloadTimer;
 };

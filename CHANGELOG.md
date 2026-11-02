@@ -12,6 +12,9 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   old one back.
 - Holding h, l or another key with accented letters in vi normal or visual mode keeps moving,
   rather than waiting to offer the accents.
+- Ctrl+Z and Ctrl+Shift+Z undo and redo a to-do ticked, or a task note completed, from the task
+  view. Ticking the note shown keeps the editor's own undo, and ticking a box in a note is one
+  step to undo.
 
 ## 0.1.0 - 2026-10-31
 

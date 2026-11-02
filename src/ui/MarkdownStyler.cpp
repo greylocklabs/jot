@@ -73,6 +73,16 @@ void MarkdownStyler::readFrontMatter()
     Q_EMIT frontMatterChanged();
 }
 
+void MarkdownStyler::replace(int start, int end, const QString &text)
+{
+    if (!m_document || !m_document->textDocument())
+        return;
+    QTextCursor cursor(m_document->textDocument());
+    cursor.setPosition(start);
+    cursor.setPosition(end, QTextCursor::KeepAnchor);
+    cursor.insertText(text);
+}
+
 QVariantMap MarkdownStyler::wikilinkAt(int position) const
 {
     if (!m_document || !m_document->textDocument())
