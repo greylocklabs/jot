@@ -97,7 +97,7 @@ Rectangle {
         body.text = Vault.currentText
         styler.document = body.textDocument
         body.cursorPosition = Math.min(cursor, body.length)
-        title.text = Vault.currentTitle
+        title.show(Vault.currentTitle)
         if (another) {
             flick.contentY = 0
             vi.mode = "normal"
@@ -114,11 +114,11 @@ Rectangle {
             if (root.fresh || Vault.currentText !== body.text || Vault.currentTitle !== title.text)
                 root.load()
         }
-        // As when its `title:` key is edited. Left alone while it is being typed in, so a
-        // stale title is never there to be saved back.
+        // As when its `title:` key is edited, here or on disk. Left alone only while something
+        // else is being typed in it, so a stale title is never there to be saved back.
         function onCurrentTitleChanged() {
-            if (!title.activeFocus)
-                title.text = Vault.currentTitle
+            if (!title.activeFocus || title.text === title.shown)
+                title.show(Vault.currentTitle)
         }
         function onRevealPosition(position) {
             body.forceActiveFocus()
@@ -249,6 +249,14 @@ Rectangle {
                     id: title
                     objectName: "title"
 
+                    /// The title as last shown, to tell one typed in from one only clicked into.
+                    property string shown
+
+                    function show(value) {
+                        text = value
+                        shown = value
+                    }
+
                     width: parent.width - trash.width - parent.spacing
                     readOnly: !Vault.writable
                     wrapMode: TextInput.Wrap
@@ -261,14 +269,14 @@ Rectangle {
                     selectByMouse: true
                     Accessible.name: qsTr("Title")
                     onEditingFinished: {
-                        if (text.trim() === "")
-                            text = Vault.currentTitle
+                        if (text.trim() === "" || text === shown)
+                            show(Vault.currentTitle)
                         else if (text !== Vault.currentTitle)
                             Vault.renameCurrent(text)
                     }
                     Keys.onReturnPressed: root.editBody()
                     Keys.onEscapePressed: {
-                        text = Vault.currentTitle
+                        show(Vault.currentTitle)
                         root.editBody()
                     }
                 }
