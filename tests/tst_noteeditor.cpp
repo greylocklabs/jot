@@ -59,6 +59,7 @@ private Q_SLOTS:
     void readsTheNoteWithLinksAndBoxesToTick();
     void tickingARepeatingToDoWritesTheNext();
     void editsInViModes();
+    void takesTextInputOnlyInInsertMode();
     void staysQuickAndStillInALongNote();
     void composesWithAnInputMethod();
 
@@ -702,6 +703,36 @@ void TestNoteEditor::editsInViModes()
     body->setProperty("cursorPosition", 0);
     type(u"j"_s);
     QCOMPARE(text(), u"jha big beta\n**z**"_s);
+}
+
+void TestNoteEditor::takesTextInputOnlyInInsertMode()
+{
+    m_settings->setViMode(true);
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    auto *vi = body->findChild<QObject *>(u"vi"_s);
+    QVERIFY(vi);
+    body->forceActiveFocus();
+    const auto takesInput = [body] {
+        QInputMethodQueryEvent query(Qt::ImEnabled | Qt::ImCursorRectangle);
+        QCoreApplication::sendEvent(body, &query);
+        // The editor still says where its cursor is.
+        if (!query.value(Qt::ImCursorRectangle).toRectF().isValid())
+            return QVariant();
+        return query.value(Qt::ImEnabled);
+    };
+
+    // A held key repeats in normal and visual mode rather than offering accented letters.
+    QCOMPARE(takesInput(), QVariant(false));
+    QTest::keyClick(m_window.get(), 'v');
+    QCOMPARE(takesInput(), QVariant(false));
+    QTest::keyClick(m_window.get(), Qt::Key_Escape);
+    QTest::keyClick(m_window.get(), 'i');
+    QCOMPARE(takesInput(), QVariant(true));
+    QTest::keyClick(m_window.get(), Qt::Key_Escape);
+    QCOMPARE(takesInput(), QVariant(false));
+    m_settings->setViMode(false);
+    QCOMPARE(takesInput(), QVariant(true));
 }
 
 void TestNoteEditor::staysQuickAndStillInALongNote()
