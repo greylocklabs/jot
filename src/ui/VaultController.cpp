@@ -155,6 +155,8 @@ void VaultController::fail(const QString &error)
 
 void VaultController::notesChangedOnDisk(const QStringList &paths)
 {
+    // The title comes from the index, which only takes the change below, after the note is read.
+    const QString title = currentTitle();
     if (paths.contains(m_current)) {
         if (m_unsaved) {
             QString error;
@@ -166,6 +168,8 @@ void VaultController::notesChangedOnDisk(const QStringList &paths)
         }
     }
     m_index->update(paths);
+    if (currentTitle() != title)
+        Q_EMIT currentTitleChanged();
     reloadModels();
     // Other notes changing is what changes what links here; saving this one does not.
     m_backlinks.reload(m_vault.get(), m_index.get(), m_current);
