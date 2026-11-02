@@ -63,7 +63,7 @@ class VaultController : public QObject
     Q_PROPERTY(jot::BacklinksModel *backlinks READ backlinks CONSTANT)
     /// The note shown, by vault path, and what it says.
     Q_PROPERTY(QString current READ current WRITE setCurrent NOTIFY currentChanged)
-    Q_PROPERTY(QString currentTitle READ currentTitle NOTIFY currentChanged)
+    Q_PROPERTY(QString currentTitle READ currentTitle NOTIFY currentTitleChanged)
     Q_PROPERTY(QString currentText READ currentText NOTIFY currentChanged)
     /// Edits not yet written to the note's file.
     Q_PROPERTY(bool unsaved READ unsaved NOTIFY unsavedChanged)
@@ -239,6 +239,9 @@ Q_SIGNALS:
     void errorChanged();
     void notesChanged();
     void currentChanged();
+    /// With every currentChanged(), and when saving changes the note's title, as editing its
+    /// `title:` key does.
+    void currentTitleChanged();
     /// Another note is about to be shown, just before currentChanged(). Not sent when the
     /// note shown is renamed or moved, which keeps it the same note.
     void opening();

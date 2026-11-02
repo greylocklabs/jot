@@ -40,6 +40,7 @@ VaultController::VaultController(Settings &settings, QObject *parent)
     m_saveTimer.setSingleShot(true);
     m_saveTimer.setInterval(m_saveDelay);
     connect(&m_saveTimer, &QTimer::timeout, this, &VaultController::saveNow);
+    connect(this, &VaultController::currentChanged, this, &VaultController::currentTitleChanged);
     // Saving changes the list's order and titles; a burst of saves reloads it once.
     m_reloadTimer.setSingleShot(true);
     m_reloadTimer.setInterval(800);
@@ -269,7 +270,10 @@ void VaultController::saveNow()
     m_savedText = m_currentText;
     setUnsaved(false);
     setProblem({});
+    const QString title = currentTitle();
     m_index->update({m_current});
+    if (currentTitle() != title)
+        Q_EMIT currentTitleChanged();
     scheduleModelReload();
 }
 
