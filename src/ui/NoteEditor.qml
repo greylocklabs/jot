@@ -120,6 +120,16 @@ Rectangle {
             if (!title.activeFocus || title.text === title.shown)
                 title.show(Vault.currentTitle)
         }
+        // A to-do ticked from the task view, made here as an edit so the editor's undo history
+        // keeps it, and what came before, instead of the whole text being swapped.
+        function onCurrentPatched(start, length, text) {
+            if (root.loading)
+                return
+            const patched = body.text.slice(0, start) + text + body.text.slice(start + length)
+            if (patched !== Vault.currentText.replace(/^\ufeff/, "").replace(/\r\n/g, "\n"))
+                return
+            styler.replace(start, start + length, text)
+        }
         function onRevealPosition(position) {
             body.forceActiveFocus()
             body.cursorPosition = Math.min(position, body.length)
@@ -622,8 +632,7 @@ Rectangle {
                         // Ticked, the whole line is written again, with the next one above it
                         // when it repeats.
                         const edit = Vault.tickedLineAt(body.text, hit.position)
-                        body.remove(edit.start, edit.end)
-                        body.insert(edit.start, edit.text)
+                        styler.replace(edit.start, edit.end, edit.text)
                     }
                 }
                 HoverHandler {

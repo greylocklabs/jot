@@ -43,6 +43,7 @@ private Q_SLOTS:
     void drawsTheNoteAndKeepsDrawingItAcrossSwitches();
     void opensALongNoteAtTheTop();
     void theTitleFollowsAnEditedTitleKey();
+    void aTickFromTheTaskViewKeepsTheEditorsUndo();
     void typingIsDrawnAndSaved();
     void typingKeepsWindowsLineEndings();
     void anOutsideEditKeepsTheCursorWhereItWas();
@@ -236,6 +237,31 @@ void TestNoteEditor::typingKeepsWindowsLineEndings()
     QTRY_VERIFY_WITH_TIMEOUT(!m_vault->unsaved(), 2000);
     QVERIFY(file.open(QIODevice::ReadOnly));
     QCOMPARE(file.readAll(), QByteArray("one!\r\ntwo\r\n"));
+}
+
+void TestNoteEditor::aTickFromTheTaskViewKeepsTheEditorsUndo()
+{
+    m_vault->setCurrent(u"Inbox/Groceries.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    body->forceActiveFocus();
+    body->setProperty("cursorPosition", body->property("text").toString().size());
+    for (const char c : QByteArrayView("- [ ] eggs"))
+        QTest::keyClick(m_window.get(), c);
+    QTRY_VERIFY_WITH_TIMEOUT(!m_vault->unsaved(), 2000);
+    const QString typed = body->property("text").toString();
+
+    // Ticked from the task view, the editor makes the same change as an edit of its own.
+    // Lines count from 1.
+    const int line = int(typed.left(typed.indexOf(u"- [ ] oat milk"_s)).count(u'\n')) + 1;
+    QVERIFY(m_vault->setTaskDone(u"Inbox/Groceries.md"_s, line, true));
+    QVERIFY(body->property("text").toString().contains(u"- [x] oat milk"_s));
+    QVERIFY(body->property("text").toString().contains(u"- [ ] eggs"_s));
+
+    // Its undo takes back the tick, then what was typed before it.
+    QMetaObject::invokeMethod(body, "undo");
+    QCOMPARE(body->property("text").toString(), typed);
+    QMetaObject::invokeMethod(body, "undo");
+    QVERIFY(!body->property("text").toString().contains(u"eggs"_s));
 }
 
 void TestNoteEditor::theTitleFollowsAnEditedTitleKey()

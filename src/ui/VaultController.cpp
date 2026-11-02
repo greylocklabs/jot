@@ -144,6 +144,9 @@ void VaultController::close()
     m_index.reset();
     m_vault.reset();
     m_historyKept.clear();
+    m_undoTasks.clear();
+    m_redoTasks.clear();
+    Q_EMIT taskHistoryChanged();
 }
 
 void VaultController::fail(const QString &error)
@@ -798,19 +801,47 @@ void VaultController::setShowingTasks(bool showing)
 }
 
 bool VaultController::rewriteNote(
-    const QString &path, const std::function<std::optional<QString>(const QString &)> &change)
+    const QString &path, const std::function<std::optional<QString>(const QString &)> &change,
+    bool undoable)
 {
     if (!m_vault || !m_vault->writable())
         return false;
+    const auto remember = [this, &path, undoable](const QString &before, const QString &after) {
+        if (!undoable || before == after)
+            return;
+        m_undoTasks.append({path, before, after});
+        m_redoTasks.clear();
+        Q_EMIT taskHistoryChanged();
+    };
     if (path == m_current) {
         const std::optional<QString> changed = change(m_currentText);
         if (!changed)
             return false;
+        const QString before = m_currentText;
         m_currentText = *changed;
         setUnsaved(true);
         saveNow();
+        // The smallest edit that makes the change, in the editor's text: plain \n lines and no
+        // byte order mark.
+        const auto shown = [](QString text) {
+            if (text.startsWith(QChar(0xfeff)))
+                text.remove(0, 1);
+            return text.replace(u"\r\n"_s, u"\n"_s);
+        };
+        const QString from = shown(before);
+        const QString to = shown(*changed);
+        qsizetype start = 0;
+        while (start < from.size() && start < to.size() && from[start] == to[start])
+            ++start;
+        qsizetype end = 0;
+        while (end < from.size() - start && end < to.size() - start &&
+               from[from.size() - 1 - end] == to[to.size() - 1 - end])
+            ++end;
+        Q_EMIT currentPatched(int(start), int(from.size() - start - end),
+                              to.mid(start, to.size() - start - end));
         Q_EMIT currentChanged();
         reloadModels();
+        remember(before, *changed);
         return true;
     }
     QString error;
@@ -827,24 +858,65 @@ bool VaultController::rewriteNote(
     }
     m_index->update({path});
     reloadModels();
+    remember(*text, *changed);
     return true;
 }
 
 bool VaultController::setTaskDone(const QString &path, int line, bool done, const QString &task)
 {
-    return rewriteNote(path, [line, done, task](const QString &text) {
-        return jot::setTaskDone(text, line, done, task);
-    });
+    return rewriteNote(
+        path,
+        [line, done, task](const QString &text) {
+            return jot::setTaskDone(text, line, done, task);
+        },
+        true);
 }
 
 bool VaultController::completeTask(const QString &path)
 {
-    return rewriteNote(path, [](const QString &text) {
-        QString changed = setFrontMatterKey(text, u"task"_s, u"done"_s);
-        changed = setFrontMatterKey(changed, u"done"_s,
-                                    QDateTime::currentDateTimeUtc().toString(Qt::ISODate));
-        return std::optional(changed);
+    return rewriteNote(
+        path,
+        [](const QString &text) {
+            QString changed = setFrontMatterKey(text, u"task"_s, u"done"_s);
+            changed = setFrontMatterKey(changed, u"done"_s,
+                                        QDateTime::currentDateTimeUtc().toString(Qt::ISODate));
+            return std::optional(changed);
+        },
+        true);
+}
+
+bool VaultController::undoTask()
+{
+    if (m_undoTasks.isEmpty())
+        return false;
+    const TaskChange change = m_undoTasks.takeLast();
+    const bool done = replaceTaskText(change.path, change.after, change.before);
+    if (done)
+        m_redoTasks.append(change);
+    Q_EMIT taskHistoryChanged();
+    return done;
+}
+
+bool VaultController::redoTask()
+{
+    if (m_redoTasks.isEmpty())
+        return false;
+    const TaskChange change = m_redoTasks.takeLast();
+    const bool done = replaceTaskText(change.path, change.before, change.after);
+    if (done)
+        m_undoTasks.append(change);
+    Q_EMIT taskHistoryChanged();
+    return done;
+}
+
+bool VaultController::replaceTaskText(const QString &path, const QString &from, const QString &to)
+{
+    const bool done = rewriteNote(path, [&from, &to](const QString &text) {
+        return text == from ? std::optional(to) : std::nullopt;
     });
+    if (!done)
+        setProblem(tr("That note has changed since, so the to-do was left as it is."));
+    return done;
 }
 
 void VaultController::openAt(const QString &path, int line)

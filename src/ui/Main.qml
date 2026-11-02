@@ -462,6 +462,10 @@ ApplicationWindow {
         case "save":
         case "tasks":
             return Vault.isOpen
+        case "undoTask":
+            return Vault.canUndoTask
+        case "redoTask":
+            return Vault.canRedoTask
         case "nextNote":
         case "previousNote":
         case "firstNote":
@@ -499,6 +503,12 @@ ApplicationWindow {
             break
         case "goTo":
             switcher.open()
+            break
+        case "undoTask":
+            Vault.undoTask()
+            break
+        case "redoTask":
+            Vault.redoTask()
             break
         case "quickAdd":
             quickAdd.open()

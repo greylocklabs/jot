@@ -58,6 +58,9 @@ QList<KeyAction> KeyRouter::actions()
         act(u"commands"_s, tr("Commands"), window, {u"Ctrl+Shift+P"_s}, {}, u"c"_s),
         act(u"search"_s, tr("Search notes"), window, {int(K::Find)}, u"/"_s),
         act(u"save"_s, tr("Save now"), window, {int(K::Save)}),
+        // Text fields keep these keys for their own undo, so these work everywhere else.
+        act(u"undoTask"_s, tr("Undo ticking a to-do"), window, {int(K::Undo)}),
+        act(u"redoTask"_s, tr("Redo ticking a to-do"), window, {int(K::Redo)}),
         act(u"tasks"_s, tr("Tasks, or back to the notes"), window, {}, {}, u"t"_s),
         act(u"settings"_s, tr("Settings"), window, {int(K::Preferences), u"Ctrl+,"_s}, {}, u"s"_s),
         act(u"help"_s, tr("Keyboard shortcuts"), window, {int(K::HelpContents)}, u"?"_s),
