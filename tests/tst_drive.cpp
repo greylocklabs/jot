@@ -212,6 +212,13 @@ void TestDrive::findsOrMakesItsFolder()
     // Another computer finds the same one.
     QCOMPARE(drive()->folderNamed(u"Jot"_s, &error), made);
     QCOMPARE(m_items.size(), 1);
+    // A folder for each vault inside it, each found again by its name.
+    const std::optional<QString> notes = transport->folderNamed(u"Notes"_s, &error, *made);
+    const std::optional<QString> work = transport->folderNamed(u"Work"_s, &error, *made);
+    QVERIFY(notes && work && *notes != *work);
+    QCOMPARE(m_items.value(*notes).parent, *made);
+    QCOMPARE(drive()->folderNamed(u"Notes"_s, &error, *made), notes);
+    QCOMPARE(m_items.size(), 3);
 }
 
 void TestDrive::keepsFilesInFoldersByTheirPaths()

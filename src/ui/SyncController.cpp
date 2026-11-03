@@ -160,11 +160,19 @@ void SyncController::connectDropbox(const QString &code, const QString &folder)
     });
 }
 
-void SyncController::connectDrive()
+void SyncController::connectDrive(const QString &folder)
 {
     if (m_root.isEmpty() || m_thread)
         return;
-    connectRemote({}, {}, [this](QString *secret, QString *remote) {
+    QString name = folder.trimmed();
+    if (name.isEmpty())
+        name = QDir(m_root).dirName();
+    if (name.contains(u'/')) {
+        m_problem = tr("Give a folder name without a slash.");
+        Q_EMIT changed();
+        return;
+    }
+    connectRemote({}, {}, [this, name](QString *secret, QString *remote) {
         jot::DriveSignIn signIn;
         const QUrl url = signIn.start(googleClientId());
         if (url.isEmpty())
@@ -177,12 +185,16 @@ void SyncController::connectDrive()
         if (!token)
             return error;
         *secret = *token;
-        // The same folder from every computer, as Jot can see only what it made.
+        // Found by its name from every computer, as Jot can see only what it made; a folder
+        // for each vault, so two vaults never share their notes.
         DriveTransport drive(googleClientId(), googleClientSecret(), *token, {});
-        const std::optional<QString> folder = drive.folderNamed(u"Jot"_s, &error);
-        if (!folder)
+        const std::optional<QString> jot = drive.folderNamed(u"Jot"_s, &error);
+        if (!jot)
             return error;
-        *remote = u"gdrive:"_s + *folder;
+        const std::optional<QString> vault = drive.folderNamed(name, &error, *jot);
+        if (!vault)
+            return error;
+        *remote = u"gdrive:"_s + *vault;
         return QString();
     });
 }
@@ -231,8 +243,8 @@ void SyncController::stop()
 {
     if (m_root.isEmpty())
         return;
-    // A bucket's key leaves the keyring with it.
-    if (remoteNeedsSecret(m_remote)) {
+    // A bucket's key leaves the keyring with it, unless another vault syncs there too.
+    if (remoteNeedsSecret(m_remote) && m_settings.syncRemoteUses(m_remote) <= 1) {
         QString error;
         if (!secrets::remove(remoteSecretKey(m_remote), &error))
             qCWarning(lcVault) << "could not take the sync key out of the keyring:" << error;

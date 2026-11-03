@@ -23,6 +23,7 @@ private Q_SLOTS:
     void keepsKeyboardChoices();
     void keepsTheTasksView();
     void keepsReminderChoices();
+    void countsTheVaultsOnARemote();
 };
 
 void TestSettings::startsWithDefaults()
@@ -209,6 +210,19 @@ void TestSettings::keepsReminderChoices()
     QVERIFY(settings.keepRunning());
     QVERIFY(!settings.quickCaptureKey());
     QCOMPARE(settings.reminderTime(), u"09:00"_s);
+}
+
+void TestSettings::countsTheVaultsOnARemote()
+{
+    QTemporaryDir dir;
+    Settings settings(dir.filePath(u"settings.ini"_s));
+    QCOMPARE(settings.syncRemoteUses(u"s3:bucket"_s), 0);
+    settings.setSyncRemote(u"/home/mara/Notes"_s, u"s3:bucket"_s);
+    settings.setSyncRemote(u"/home/mara/Work"_s, u"s3:bucket"_s);
+    settings.setSyncRemote(u"/home/mara/Other"_s, u"folder:/mnt"_s);
+    QCOMPARE(settings.syncRemoteUses(u"s3:bucket"_s), 2);
+    settings.setSyncRemote(u"/home/mara/Work"_s, {});
+    QCOMPARE(settings.syncRemoteUses(u"s3:bucket"_s), 1);
 }
 
 QTEST_GUILESS_MAIN(TestSettings)

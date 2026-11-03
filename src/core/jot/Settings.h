@@ -113,6 +113,8 @@ public:
     /// Where the vault at `vaultRoot` syncs to from this computer, as `kind:where`, such as
     /// `folder:/mnt/nas/Notes`; empty when it does not sync.
     [[nodiscard]] QString syncRemote(const QString &vaultRoot) const;
+    /// How many vaults sync with `remote`.
+    [[nodiscard]] int syncRemoteUses(const QString &remote) const;
     void setSyncRemote(const QString &vaultRoot, const QString &remote);
     [[nodiscard]] bool keepRunning() const { return m_keepRunning; }
     void setKeepRunning(bool keep);

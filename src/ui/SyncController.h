@@ -67,9 +67,10 @@ public:
     /// Syncs the vault with Jot's folder in the user's Dropbox, under `folder` there, once the
     /// code from the sign-in is traded for a lasting one, kept in the keyring.
     Q_INVOKABLE void connectDropbox(const QString &code, const QString &folder);
-    /// Signs in to Google in the browser and syncs the vault with Jot's folder in the user's
-    /// Drive, made if need be, keeping the sign-in in the keyring.
-    Q_INVOKABLE void connectDrive();
+    /// Signs in to Google in the browser and syncs the vault with the folder `folder` in Jot's
+    /// folder in the user's Drive, by default named as the vault is, made if need be, keeping
+    /// the sign-in in the keyring.
+    Q_INVOKABLE void connectDrive(const QString &folder);
     /// Stops syncing this vault, forgetting what the last sync knew; its files stay as they are,
     /// here and there.
     Q_INVOKABLE void stop();

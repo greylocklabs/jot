@@ -238,6 +238,7 @@ Popup {
                     onClicked: {
                         dropboxForm.visible = !dropboxForm.visible
                         bucketForm.visible = false
+                        driveForm.visible = false
                     }
                 }
                 StickerButton {
@@ -245,13 +246,10 @@ Popup {
                     visible: Vault.sync.driveAvailable
                     enabled: Vault.isOpen && Vault.writable && !Vault.sync.checking
                     text: qsTr("Sync with Google Drive...")
-                    tip: qsTr(
-                             "Sign in to Google in your browser; Jot keeps the notes in a folder of its own, Jot, and sees nothing else in your Drive")
                     onClicked: {
+                        driveForm.visible = !driveForm.visible
                         bucketForm.visible = false
                         dropboxForm.visible = false
-                        bucketForm.connecting = true
-                        Vault.sync.connectDrive()
                     }
                 }
                 StickerButton {
@@ -260,6 +258,7 @@ Popup {
                     text: qsTr("Sync with S3...")
                     onClicked: {
                         bucketForm.visible = !bucketForm.visible
+                        driveForm.visible = false
                         dropboxForm.visible = false
                     }
                 }
@@ -311,6 +310,43 @@ Popup {
                     onClicked: {
                         bucketForm.connecting = true
                         Vault.sync.connectDropbox(dropboxCode.text, dropboxFolder.text)
+                    }
+                }
+            }
+
+            // A folder for the vault in Jot's folder in Google Drive.
+            Column {
+                id: driveForm
+                objectName: "driveForm"
+                visible: false
+                width: parent.width
+                spacing: Theme.space2
+
+                Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    text: qsTr(
+                              "Jot keeps the notes in a folder of its own in your Drive, Jot, and sees nothing else there. Give this vault the same folder name on each computer.")
+                    color: Theme.textMuted
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.textSm
+                }
+                Field {
+                    id: driveFolder
+                    objectName: "driveFolder"
+                    width: parent.width
+                    text: Vault.name
+                    placeholderText: qsTr("Folder in Jot")
+                }
+                StickerButton {
+                    objectName: "connectDrive"
+                    accent: true
+                    enabled: !Vault.sync.checking
+                    text: Vault.sync.checking ? qsTr("Waiting for Google...") : qsTr(
+                                                    "Sign in to Google...")
+                    onClicked: {
+                        bucketForm.connecting = true
+                        Vault.sync.connectDrive(driveFolder.text)
                     }
                 }
             }
@@ -407,6 +443,7 @@ Popup {
                             dropboxCode.text = ""
                             bucketForm.visible = false
                             dropboxForm.visible = false
+                            driveForm.visible = false
                         }
                     }
                 }

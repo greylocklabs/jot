@@ -74,9 +74,10 @@ public:
                                bool *stale, QString *error) override;
     bool remove(const QString &path, const QString &expected, bool *stale, QString *error) override;
 
-    /// The id of the folder called `name` at the top of the user's Drive that Jot made, making
-    /// it when there is none.
-    std::optional<QString> folderNamed(const QString &name, QString *error);
+    /// The id of the folder called `name` that Jot made in the folder `parent`, at the top of
+    /// the user's Drive unless said, making it when there is none.
+    std::optional<QString> folderNamed(const QString &name, QString *error,
+                                       const QString &parent = QStringLiteral("root"));
 
     static constexpr auto kFolderType = "application/vnd.google-apps.folder";
 
