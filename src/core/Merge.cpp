@@ -92,6 +92,35 @@ bool clash(const Hunk &a, const Hunk &b)
 
 } // namespace
 
+std::optional<QList<DiffLine>> diffLines(const QString &before, const QString &after)
+{
+    const QStringList was = linesOf(before);
+    const QStringList now = linesOf(after);
+    const std::optional<QList<Hunk>> hunks = changes(was, now);
+    if (!hunks)
+        return std::nullopt;
+    const auto bare = [](QString line) {
+        if (line.endsWith(u'\n'))
+            line.chop(1);
+        if (line.endsWith(u'\r'))
+            line.chop(1);
+        return line;
+    };
+    QList<DiffLine> lines;
+    qsizetype at = 0;
+    for (const Hunk &hunk : *hunks) {
+        for (; at < hunk.start; ++at)
+            lines.append({DiffLine::Kind::Same, bare(was.at(at))});
+        for (; at < hunk.end; ++at)
+            lines.append({DiffLine::Kind::Removed, bare(was.at(at))});
+        for (const QString &line : hunk.lines)
+            lines.append({DiffLine::Kind::Added, bare(line)});
+    }
+    for (; at < was.size(); ++at)
+        lines.append({DiffLine::Kind::Same, bare(was.at(at))});
+    return lines;
+}
+
 QString keepLineEndings(const QString &before, const QString &after)
 {
     if (!before.contains(u'\r'))

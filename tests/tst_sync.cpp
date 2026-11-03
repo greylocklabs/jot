@@ -1,5 +1,6 @@
 #include "FakeTransport.h"
 
+#include "jot/Conflicts.h"
 #include "jot/FolderTransport.h"
 #include "jot/Sync.h"
 
@@ -36,6 +37,7 @@ private Q_SLOTS:
     void refusesARemoteThatIsNotTheOneSyncedWith();
     void syncsThroughAFolder();
     void readsRemoteSettings();
+    void readsConflictCopyNames();
     void keepsEverythingAcrossRandomEdits_data();
     void keepsEverythingAcrossRandomEdits();
 
@@ -448,6 +450,33 @@ void TestSync::readsRemoteSettings()
             jot::syncStateDir(u"/a"_s, u"folder:/y"_s));
     QVERIFY(jot::syncStateDir(u"/a"_s, u"folder:/x"_s) !=
             jot::syncStateDir(u"/b"_s, u"folder:/x"_s));
+}
+
+void TestSync::readsConflictCopyNames()
+{
+    // As sync names them, and as the editor does, with no computer.
+    const std::optional<jot::ConflictCopy> synced =
+        jot::readConflictCopy(u"Ashfall/Mara (conflict desk 2026-11-03 0930).md"_s);
+    QVERIFY(synced);
+    QCOMPARE(synced->original, u"Ashfall/Mara.md"_s);
+    QCOMPARE(synced->from, u"desk"_s);
+    QCOMPARE(synced->when, QDateTime(QDate(2026, 11, 3), QTime(9, 30)));
+    const std::optional<jot::ConflictCopy> edited =
+        jot::readConflictCopy(u"Mara Vey (conflict 2026-11-03 0930) 2.md"_s);
+    QVERIFY(edited);
+    QCOMPARE(edited->original, u"Mara Vey.md"_s);
+    QVERIFY(edited->from.isEmpty());
+    QCOMPARE(jot::readConflictCopy(u"a/sketch (conflict desk 2026-11-03 0930).png"_s)->original,
+             u"a/sketch.png"_s);
+    QVERIFY(!jot::readConflictCopy(u"Notes on conflict.md"_s));
+    QVERIFY(!jot::readConflictCopy(u"Mara (conflict of interest).md"_s));
+
+    QCOMPARE(jot::conflictCopiesOf(u"Mara.md"_s,
+                                   {u"Mara (conflict desk 2026-11-04 0930).md"_s, u"Mara.md"_s,
+                                    u"Soren (conflict desk 2026-11-01 0930).md"_s,
+                                    u"Mara (conflict laptop 2026-11-02 1200).md"_s}),
+             (QStringList{u"Mara (conflict laptop 2026-11-02 1200).md"_s,
+                          u"Mara (conflict desk 2026-11-04 0930).md"_s}));
 }
 
 void TestSync::keepsEverythingAcrossRandomEdits_data()

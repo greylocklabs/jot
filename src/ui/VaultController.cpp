@@ -1,5 +1,6 @@
 #include "VaultController.h"
 
+#include "jot/Conflicts.h"
 #include "jot/FrontMatter.h"
 #include "jot/JoplinExport.h"
 #include "jot/JoplinImport.h"
@@ -364,15 +365,20 @@ bool VaultController::restoreVersion(const QString &version)
         qCWarning(lcVault) << "could not read" << version << error;
         return false;
     }
+    return replaceCurrentText(*text);
+}
+
+bool VaultController::replaceCurrentText(const QString &text)
+{
     saveNow();
     if (m_unsaved)
         return false;
-    if (*text == m_currentText)
+    if (text == m_currentText)
         return true;
-    // What is replaced becomes a version too, so a restore can be undone.
+    // What is replaced becomes a version too, so this can be undone.
     keepHistory(m_current, m_currentText, true);
     const QString before = m_currentText;
-    m_currentText = *text;
+    m_currentText = text;
     setUnsaved(true);
     saveNow();
     if (m_unsaved) {
@@ -385,6 +391,95 @@ bool VaultController::restoreVersion(const QString &version)
     }
     Q_EMIT currentChanged();
     reloadModels();
+    return true;
+}
+
+QVariantList VaultController::currentConflicts() const
+{
+    if (!m_vault || m_current.isEmpty())
+        return {};
+    const QString folder = m_current.contains(u'/') ? m_current.section(u'/', 0, -2) : QString();
+    QStringList siblings;
+    for (const QString &name : QDir(m_vault->absolute(folder)).entryList(QDir::Files))
+        siblings.append(folder.isEmpty() ? name : folder + u'/' + name);
+    QVariantList copies;
+    const QLocale locale;
+    for (const QString &path : conflictCopiesOf(m_current, siblings)) {
+        const std::optional<ConflictCopy> copy = readConflictCopy(path);
+        copies.append(QVariantMap{
+            {u"path"_s, path},
+            {u"from"_s, copy->from},
+            {u"when"_s, copy->when.isValid()
+                            ? locale.toString(copy->when, u"MMMM d, "_s) +
+                                  locale.toString(copy->when.time(), QLocale::ShortFormat)
+                            : QString()}});
+    }
+    return copies;
+}
+
+QVariantMap VaultController::compareWith(const QString &copy) const
+{
+    if (!m_vault || readConflictCopy(copy).value_or(ConflictCopy{}).original != m_current)
+        return {};
+    QString error;
+    const std::optional<QString> theirs = notefile::read(m_vault->absolute(copy), &error);
+    if (!theirs)
+        return {{u"error"_s, error}};
+    const std::optional<QList<DiffLine>> lines = diffLines(m_currentText, *theirs);
+    if (!lines)
+        return {{u"error"_s, tr("The two are too long and different to show side by side.")}};
+    // Lines taken out and put in at the same place sit side by side as one change.
+    QVariantList rows;
+    QStringList removed;
+    QStringList added;
+    const auto flush = [&] {
+        for (qsizetype i = 0; i < std::max(removed.size(), added.size()); ++i) {
+            const bool mine = i < removed.size();
+            const bool other = i < added.size();
+            rows.append(QVariantMap{{u"mine"_s, mine ? removed.at(i) : QString()},
+                                    {u"theirs"_s, other ? added.at(i) : QString()},
+                                    {u"change"_s, mine && other ? u"changed"_s
+                                                  : mine        ? u"mine"_s
+                                                                : u"theirs"_s}});
+        }
+        removed.clear();
+        added.clear();
+    };
+    int differences = 0;
+    for (const DiffLine &line : *lines) {
+        if (line.kind == DiffLine::Kind::Same) {
+            flush();
+            rows.append(QVariantMap{
+                {u"mine"_s, line.text}, {u"theirs"_s, line.text}, {u"change"_s, u"same"_s}});
+            continue;
+        }
+        if (removed.isEmpty() && added.isEmpty())
+            ++differences;
+        (line.kind == DiffLine::Kind::Removed ? removed : added).append(line.text);
+    }
+    flush();
+    return {{u"rows"_s, rows}, {u"differences"_s, differences}};
+}
+
+bool VaultController::keepThisVersion(const QString &copy)
+{
+    if (!m_vault || readConflictCopy(copy).value_or(ConflictCopy{}).original != m_current)
+        return false;
+    const bool trashed = trashNote(copy, true);
+    Q_EMIT currentConflictsChanged();
+    return trashed;
+}
+
+bool VaultController::useOtherVersion(const QString &copy)
+{
+    if (!m_vault || readConflictCopy(copy).value_or(ConflictCopy{}).original != m_current)
+        return false;
+    QString error;
+    const std::optional<QString> theirs = notefile::read(m_vault->absolute(copy), &error);
+    if (!theirs || !replaceCurrentText(*theirs))
+        return false;
+    trashNote(copy, true);
+    Q_EMIT currentConflictsChanged();
     return true;
 }
 
@@ -1228,8 +1323,10 @@ QVariantMap VaultController::importJoplin(const QUrl &file, const QString &folde
 
 void VaultController::reloadModels()
 {
-    // Whatever changed the lists may have changed the files, so a sync follows.
+    // Whatever changed the lists may have changed the files, so a sync follows, and a conflict
+    // copy may have come or gone.
     m_sync.localChanged();
+    Q_EMIT currentConflictsChanged();
     m_notebookEmoji.clear();
     m_pinned.clear();
     if (m_vault) {
@@ -1371,6 +1468,7 @@ void VaultController::readCurrent()
     m_savedText = m_currentText;
     m_byteOrderMark = m_currentText.startsWith(QChar(0xfeff));
     Q_EMIT currentChanged();
+    Q_EMIT currentConflictsChanged();
 }
 
 } // namespace jot

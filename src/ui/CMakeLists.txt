@@ -65,6 +65,7 @@ qt_add_qml_module(jotui
         CloseButton.qml
         ColumnSplitter.qml
         CommandPalette.qml
+        ConflictResolver.qml
         DangerButton.qml
         Dropdown.qml
         EmojiPicker.qml

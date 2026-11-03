@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QList>
 #include <QString>
 
 #include <optional>
@@ -13,6 +14,23 @@ namespace jot {
 /// too long and different to compare quickly.
 [[nodiscard]] std::optional<QString> mergeText(const QString &base, const QString &mine,
                                                const QString &theirs);
+
+/// A line in a comparison of two texts: in both, only in the one before, or only in the one
+/// after.
+struct DiffLine
+{
+    enum class Kind { Same, Removed, Added };
+    Kind kind = Kind::Same;
+    /// The line, without its line break.
+    QString text;
+
+    bool operator==(const DiffLine &) const = default;
+};
+
+/// `before` and `after` line by line, in reading order, as a side-by-side view shows them: each
+/// line kept, taken out, or put in, with what was taken out before what replaced it. Nothing
+/// when the texts are too long and different to compare quickly.
+[[nodiscard]] std::optional<QList<DiffLine>> diffLines(const QString &before, const QString &after);
 
 /// `after`, which ends its lines with `\n` alone, ending them as `before` did: a line kept or
 /// changed in place keeps the break it had there, and an added one takes the break most of

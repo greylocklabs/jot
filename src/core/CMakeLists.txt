@@ -27,6 +27,8 @@ add_library(jotcore STATIC
     NoteScan.cpp
     jot/NoteTrail.h
     NoteTrail.cpp
+    jot/Conflicts.h
+    Conflicts.cpp
     jot/FolderTransport.h
     FolderTransport.cpp
     jot/Sync.h
