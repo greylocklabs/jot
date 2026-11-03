@@ -45,6 +45,7 @@ private Q_SLOTS:
     void theTitleFollowsAnEditedTitleKey();
     void aTickFromTheTaskViewKeepsTheEditorsUndo();
     void undoesATickOnTheShownNote();
+    void showsAndResolvesAConflictCopy();
     void goesBackToWhereTheCursorWas();
     void typingIsDrawnAndSaved();
     void typingKeepsWindowsLineEndings();
@@ -102,6 +103,8 @@ void TestNoteEditor::init()
     // The editor reads the Settings singleton, which would otherwise be the user's own file.
     SettingsForeign::s_instance = m_settings.get();
     m_vault = std::make_unique<VaultController>(*m_settings);
+    // What tests delete goes to the vault's own trash, never the desktop's.
+    m_vault->setSystemTrash(false);
     m_vault->setIndexPath(m_dir->filePath(u"index.sqlite"_s));
     m_vault->setSaveDelay(50);
     VaultController::setInstance(m_vault.get());
@@ -322,6 +325,29 @@ void TestNoteEditor::goesBackToWhereTheCursorWas()
     // Left untouched since going back to it, it is still where it was.
     QVERIFY(m_vault->goBack());
     QCOMPARE(body->property("cursorPosition").toInt(), 40);
+}
+
+void TestNoteEditor::showsAndResolvesAConflictCopy()
+{
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Welcome.md"_s, u"# Hello\n\nkept line\nmine\n"_s, &error));
+    QVERIFY(notefile::write(m_root + u"/Welcome (conflict desk 2026-11-03 0930).md"_s,
+                            u"# Hello\n\nkept line\ntheirs\nand more\n"_s, &error));
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *banner = find(u"conflictBanner"_s);
+    QTRY_VERIFY(banner->isVisible());
+
+    QQuickItem *compare = find(u"compareConflict"_s);
+    QMetaObject::invokeMethod(compare, "clicked");
+    auto *lines = m_editor->findChild<QQuickItem *>(u"conflictLines"_s);
+    QVERIFY(lines);
+    QTRY_VERIFY(lines->isVisible());
+    QTRY_COMPARE(lines->property("count").toInt(), 5);
+    auto *keep = m_editor->findChild<QQuickItem *>(u"keepThisVersion"_s);
+    QMetaObject::invokeMethod(keep, "clicked");
+    QTRY_VERIFY(!lines->isVisible());
+    QTRY_VERIFY(!banner->isVisible());
+    QVERIFY(!QFileInfo::exists(m_root + u"/Welcome (conflict desk 2026-11-03 0930).md"_s));
 }
 
 void TestNoteEditor::theTitleFollowsAnEditedTitleKey()

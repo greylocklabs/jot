@@ -69,6 +69,7 @@ class VaultController : public QObject
     Q_PROPERTY(QString current READ current WRITE setCurrent NOTIFY currentChanged)
     Q_PROPERTY(QString currentTitle READ currentTitle NOTIFY currentTitleChanged)
     Q_PROPERTY(QString currentText READ currentText NOTIFY currentChanged)
+    Q_PROPERTY(QVariantList currentConflicts READ currentConflicts NOTIFY currentConflictsChanged)
     /// Whether a to-do ticked from the task view, or a task note completed, can be undone or
     /// redone. Ticks typed in the editor are the editor's own to undo.
     Q_PROPERTY(bool canUndoTask READ canUndoTask NOTIFY taskHistoryChanged)
@@ -231,6 +232,18 @@ public:
     /// Makes the past version at `version` the current note's text, keeping what it replaces
     /// as a version of its own. When it cannot be written, the note stays as it was.
     Q_INVOKABLE bool restoreVersion(const QString &version);
+    /// Other versions of the note shown, kept beside it when two could not be merged, oldest
+    /// first: each a map with `path`, `from`, the computer it came from when known, and `when`.
+    [[nodiscard]] QVariantList currentConflicts() const;
+    /// The note shown beside its conflict copy at `copy`, as `rows` of `{mine, theirs, change}`,
+    /// change being "same", "changed", "mine" or "theirs" for a line in only one, and
+    /// `differences`, how many places differ; or `error`.
+    Q_INVOKABLE QVariantMap compareWith(const QString &copy) const;
+    /// Keeps the note as it is, moving the conflict copy at `copy` to the trash.
+    Q_INVOKABLE bool keepThisVersion(const QString &copy);
+    /// Replaces the note with its conflict copy at `copy`, which goes to the trash. What it
+    /// replaces is kept in the note's history, so it can be undone.
+    Q_INVOKABLE bool useOtherVersion(const QString &copy);
     /// How long typing must pause before edits are written, in ms.
     void setSaveDelay(int ms)
     {
@@ -291,6 +304,8 @@ Q_SIGNALS:
     /// With every currentChanged(), and when saving changes the note's title, as editing its
     /// `title:` key does.
     void currentTitleChanged();
+    /// The note shown gained or lost a conflict copy, or another note is shown.
+    void currentConflictsChanged();
     /// Another note is about to be shown, just before currentChanged(). Not sent when the
     /// note shown is renamed or moved, which keeps it the same note.
     void opening();
@@ -327,6 +342,8 @@ private:
     void afterMove(const QString &current, const QStringList &written);
     /// Goes back (`by` -1) or forward (1) through the notes opened.
     bool travel(int by);
+    /// Puts `text` in place of the note shown, keeping what it replaces in the note's history.
+    bool replaceCurrentText(const QString &text);
     /// Replaces the whole text of the note at `path`, through the editor's copy when shown.
     /// With `undoable`, the change joins the task history.
     bool rewriteNote(const QString &path,

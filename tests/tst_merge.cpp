@@ -15,6 +15,7 @@ private Q_SLOTS:
     void merges();
     void givesUpOnTextTooDifferentToCompare();
     void movesAPositionWithTheTextAroundIt();
+    void comparesLineByLine();
 };
 
 void TestMerge::merges_data()
@@ -118,6 +119,21 @@ void TestMerge::keepsEachLinesEnding()
     // A last line with no break gets one when a line follows it, and none when it is last.
     QCOMPARE(keepLineEndings(u"a\r\nb"_s, u"a\nb\nc"_s), u"a\r\nb\r\nc"_s);
     QCOMPARE(keepLineEndings(u"a\r\nb\r\n"_s, u"a\nb"_s), u"a\r\nb"_s);
+}
+
+void TestMerge::comparesLineByLine()
+{
+    using Kind = jot::DiffLine::Kind;
+    const std::optional<QList<jot::DiffLine>> lines =
+        jot::diffLines(u"a\nb\nc\r\nd\n"_s, u"a\nB\nc\r\nd\ne"_s);
+    QVERIFY(lines);
+    QCOMPARE(*lines, (QList<jot::DiffLine>{{Kind::Same, u"a"_s},
+                                           {Kind::Removed, u"b"_s},
+                                           {Kind::Added, u"B"_s},
+                                           {Kind::Same, u"c"_s},
+                                           {Kind::Same, u"d"_s},
+                                           {Kind::Added, u"e"_s}}));
+    QCOMPARE(jot::diffLines({}, {})->size(), 0);
 }
 
 QTEST_GUILESS_MAIN(TestMerge)

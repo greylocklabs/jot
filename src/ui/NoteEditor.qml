@@ -349,6 +349,64 @@ Rectangle {
                 }
             }
 
+            // Another version of this note was kept beside it, and waits to be looked at.
+            Rectangle {
+                id: conflictBanner
+
+                objectName: "conflictBanner"
+                readonly property var copies: Vault.currentConflicts
+                readonly property var first: copies.length > 0 ? copies[0] : null
+
+                width: parent.width - 2 * parent.padding
+                height: bannerRow.implicitHeight + 2 * Theme.space3
+                visible: first !== null
+                radius: Theme.radiusMd
+                color: Theme.tint(Theme.accent, 0.15)
+                border.color: Theme.accent
+
+                Row {
+                    id: bannerRow
+
+                    anchors {
+                        left: parent.left
+                        right: parent.right
+                        verticalCenter: parent.verticalCenter
+                        margins: Theme.space3
+                    }
+                    spacing: Theme.space3
+
+                    Text {
+                        width: parent.width - compare.width - parent.spacing
+                        anchors.verticalCenter: parent.verticalCenter
+                        wrapMode: Text.Wrap
+                        text: {
+                            const banner = conflictBanner
+                            if (!banner.first)
+                                return ""
+                            const where = [banner.first.from !== "" ? qsTr("from %1").arg(
+                                                                          banner.first.from) : "",
+                                           banner.first.when].filter(part => part !== "").join(", ")
+                            const kept = banner.copies.length === 1 ? qsTr(
+                                                                          "Another version of this note was kept beside it") :
+                                                                      qsTr("%1 other versions of this note were kept beside it").arg(
+                                                                          banner.copies.length)
+                            return where !== "" ? kept + " (" + where + ")." : kept + "."
+                        }
+                        color: Theme.text
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.textSm
+                    }
+                    StickerButton {
+                        id: compare
+
+                        objectName: "compareConflict"
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: qsTr("Compare...")
+                        onClicked: resolver.openFor(conflictBanner.first)
+                    }
+                }
+            }
+
             TaskDetails {
                 visible: Vault.writable && styler.frontMatter.task !== undefined
                 frontMatter: styler.frontMatter
@@ -744,6 +802,10 @@ Rectangle {
         font.family: Theme.fontFamily
         font.pixelSize: Theme.textSm
         font.weight: Theme.weightHeavy
+    }
+
+    ConflictResolver {
+        id: resolver
     }
 
     TaskSchedule {

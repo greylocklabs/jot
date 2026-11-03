@@ -77,6 +77,7 @@ private Q_SLOTS:
     void undoesAndRedoesTicks();
     void goesBackAndForwardThroughNotesOpened();
     void syncsWithAFolder();
+    void resolvesAConflictCopy();
     void listsAndReopensDoneToDos();
     void keepsAnUndoStepThatCouldNotBeWritten();
     void addsToDosToTheInbox();
@@ -1221,6 +1222,45 @@ void TestVaultController::syncsWithAFolder()
     QVERIFY(!QFileInfo::exists(state));
     QVERIFY(m_settings->syncRemote(m_root).isEmpty());
     QVERIFY(QFileInfo::exists(nas + u"/From the NAS.md"_s));
+}
+
+void TestVaultController::resolvesAConflictCopy()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Welcome.md"_s, u"one\ntwo\nthree\n"_s, &error));
+    QVERIFY(notefile::write(m_root + u"/Welcome (conflict desk 2026-11-03 0930).md"_s,
+                            u"one\nTWO\nthree\nfour\n"_s, &error));
+    QVERIFY(notefile::write(m_root + u"/Welcome (conflict laptop 2026-11-02 1200).md"_s,
+                            u"older\n"_s, &error));
+    m_vault->setCurrent(u"Welcome.md"_s);
+    const QVariantList copies = m_vault->currentConflicts();
+    QCOMPARE(copies.size(), 2);
+    const QVariantMap desk = copies.at(1).toMap();
+    QCOMPARE(desk.value(u"from"_s).toString(), u"desk"_s);
+    QVERIFY(desk.value(u"when"_s).toString().contains(u"November 3"_s));
+
+    // Side by side: changed lines pair up, and a line one side lacks leaves a gap.
+    const QVariantMap compared = m_vault->compareWith(desk.value(u"path"_s).toString());
+    QCOMPARE(compared.value(u"differences"_s).toInt(), 2);
+    const QVariantList rows = compared.value(u"rows"_s).toList();
+    QCOMPARE(rows.size(), 4);
+    QCOMPARE(rows.at(1).toMap().value(u"change"_s).toString(), u"changed"_s);
+    QCOMPARE(rows.at(1).toMap().value(u"mine"_s).toString(), u"two"_s);
+    QCOMPARE(rows.at(1).toMap().value(u"theirs"_s).toString(), u"TWO"_s);
+    QCOMPARE(rows.at(3).toMap().value(u"change"_s).toString(), u"theirs"_s);
+    // Only the note shown's own copies.
+    QVERIFY(m_vault->compareWith(u"Inbox/Groceries.md"_s).isEmpty());
+
+    // Using the other version replaces the note, keeps it in history, and trashes the copy.
+    QVERIFY(m_vault->useOtherVersion(desk.value(u"path"_s).toString()));
+    QCOMPARE(readFile(m_root + u"/Welcome.md"_s), u"one\nTWO\nthree\nfour\n"_s);
+    QVERIFY(!QFileInfo::exists(m_root + u"/Welcome (conflict desk 2026-11-03 0930).md"_s));
+    QVERIFY(m_vault->historyOf(u"Welcome.md"_s).size() >= 1);
+    // Keeping this one only trashes the copy.
+    QVERIFY(m_vault->keepThisVersion(copies.at(0).toMap().value(u"path"_s).toString()));
+    QCOMPARE(readFile(m_root + u"/Welcome.md"_s), u"one\nTWO\nthree\nfour\n"_s);
+    QVERIFY(m_vault->currentConflicts().isEmpty());
 }
 
 void TestVaultController::goesBackAndForwardThroughNotesOpened()
