@@ -165,11 +165,16 @@ bool SyncEngine::mergeable(const QString &path)
 std::optional<QString> SyncEngine::mergeNote(const QString &base, const QString &mine,
                                              const QString &theirs)
 {
+    // Line by line first, which keeps everything either side wrote, comments and all.
+    if (std::optional<QString> merged = mergeText(base, mine, theirs))
+        return merged;
+    // Failing that, front matter key by key, as edits to keys on lines next to each other are
+    // still separate edits.
     const Keys was = keysOf(base);
     const Keys ours = keysOf(mine);
     const Keys other = keysOf(theirs);
     if (!was.simple || !ours.simple || !other.simple)
-        return mergeText(base, mine, theirs);
+        return std::nullopt;
 
     // The keys theirs changed and ours did not, to set on ours; both changing one differently
     // is a conflict.
@@ -179,16 +184,23 @@ std::optional<QString> SyncEngine::mergeNote(const QString &base, const QString 
         for (auto it = map->cbegin(); it != map->cend(); ++it)
             names.insert(it.key());
     }
+    QString theirsAsValues = base;
     for (const QString &name : std::as_const(names)) {
         const QVariant b = was.values.value(name);
         const QVariant m = ours.values.value(name);
         const QVariant t = other.values.value(name);
+        if (t != b)
+            theirsAsValues = setFrontMatterKey(theirsAsValues, name, t);
         if (m == t || t == b)
             continue;
         if (m != b)
             return std::nullopt;
         take.insert(name, t);
     }
+    // Their front matter must be the base with their values changed and nothing else, or a
+    // comment, an order or a quoting of theirs would be lost.
+    if (splitFrontMatter(theirsAsValues).frontMatter != splitFrontMatter(theirs).frontMatter)
+        return std::nullopt;
 
     const NoteParts baseParts = splitFrontMatter(base);
     const NoteParts mineParts = splitFrontMatter(mine);
