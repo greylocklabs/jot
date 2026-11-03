@@ -63,6 +63,8 @@ private:
     QDBusConnection m_bus;
     bool m_available = false;
     bool m_wanted = false;
+    /// A session was asked for and has not come yet.
+    bool m_opening = false;
     QString m_session;
     QString m_trigger;
     int m_tokens = 0;

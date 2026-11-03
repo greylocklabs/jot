@@ -95,7 +95,7 @@ void QuickCapture::setWanted(bool wanted)
         close();
         return;
     }
-    if (bound())
+    if (bound() || m_opening)
         return;
     // An app outside a sandbox says who it is first, so the desktop can keep its key.
     QDBusMessage registry = QDBusMessage::createMethodCall(
@@ -103,7 +103,7 @@ void QuickCapture::setWanted(bool wanted)
     registry << greylock::identity::appId() << QVariantMap();
     m_bus.call(registry, QDBus::Block, 2000);
     const QString token = u"jot_session_%1"_s.arg(QRandomGenerator::global()->generate());
-    request(u"CreateSession"_s, {}, token, SLOT(sessionCreated(uint, QVariantMap)));
+    m_opening = request(u"CreateSession"_s, {}, token, SLOT(sessionCreated(uint, QVariantMap)));
 }
 
 bool QuickCapture::request(const QString &method, const QList<QVariant> &arguments,
@@ -129,6 +129,7 @@ bool QuickCapture::request(const QString &method, const QList<QVariant> &argumen
 
 void QuickCapture::sessionCreated(uint response, const QVariantMap &results)
 {
+    m_opening = false;
     if (response != 0) {
         qCWarning(lcUi) << "the desktop did not start a shortcut session:" << response;
         return;
