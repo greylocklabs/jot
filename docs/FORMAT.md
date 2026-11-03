@@ -279,8 +279,11 @@ they are, so it can be read without Jot.
 - A file deleted on one side and changed on the other is kept, changed.
 - What a sync deletes goes to `.jot/trash/<yyyy-MM-dd HHmmss>/` on that side, with its path
   kept, so it can be brought back. A folder remote has its own `.jot/trash/` for the same.
-- A folder remote that is not there, as when a drive is unplugged, is no remote at all: nothing
-  is deleted, and the sync waits for it.
+- The remote holds a `.jot-remote` file at its top, an id written by the first sync, which no
+  vault ever gets. A remote without it, or with another id than the one synced with before, is
+  taken for an unplugged drive, an unmounted share or another remote: nothing is changed, and
+  the sync waits. Stopping sync on a computer forgets what it knew, so the next sync starts
+  afresh.
 
 ## Vault settings
 

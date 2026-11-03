@@ -42,7 +42,8 @@ std::optional<QList<RemoteFile>> FolderTransport::list(QString *error)
                     QDirIterator::Subdirectories);
     while (it.hasNext()) {
         const QString path = it.next().mid(m_root.size() + 1);
-        if (SyncEngine::synced(path))
+        // What a sync deleted stays out of the listing, as it is no longer the remote's.
+        if (!path.startsWith(u".jot/trash/"_s))
             files.append({path, revOf(path), {}});
     }
     return files;
@@ -56,7 +57,13 @@ std::optional<QByteArray> FolderTransport::get(const QString &path, QString *rev
         return std::nullopt;
     }
     *rev = revOf(path);
-    return file.readAll();
+    const QByteArray data = file.readAll();
+    // A share that drops mid-read gives part of the file; that must not pass for all of it.
+    if (file.error() != QFileDevice::NoError || data.size() != file.size()) {
+        *error = file.errorString();
+        return std::nullopt;
+    }
+    return data;
 }
 
 std::optional<QString> FolderTransport::put(const QString &path, const QByteArray &data,

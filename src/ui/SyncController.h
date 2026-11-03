@@ -45,7 +45,8 @@ public:
     /// Syncs the vault with the folder at `folder` from now on, starting at once. Refused, with
     /// a problem saying why, for a folder inside the vault or holding it.
     Q_INVOKABLE bool syncWithFolder(const QUrl &folder);
-    /// Stops syncing this vault; its files stay as they are, here and there.
+    /// Stops syncing this vault, forgetting what the last sync knew; its files stay as they are,
+    /// here and there.
     Q_INVOKABLE void stop();
     Q_INVOKABLE void syncNow();
 

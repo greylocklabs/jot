@@ -107,6 +107,10 @@ struct SyncEngine::Private
                   const std::optional<Local> &seen = std::nullopt);
     void forgetBase(const QString &path);
     void collectBlobs();
+    [[nodiscard]] QString meta(const QString &key) const;
+    void setMeta(const QString &key, const QString &value);
+    /// Whether the remote is the one synced with before, marking a new one as this.
+    bool checkMarker(const QList<RemoteFile> &listed, QString *error);
 
     QHash<QString, Local> scan() const;
     [[nodiscard]] std::optional<Local> stat(const QString &path) const;
@@ -232,10 +236,71 @@ bool SyncEngine::Private::open(QString *error)
     }
     QSqlQuery query(db);
     if (!query.exec(u"CREATE TABLE IF NOT EXISTS base (path TEXT PRIMARY KEY, hash BLOB, size "
-                    u"INTEGER, mtime INTEGER, rev TEXT)"_s)) {
+                    u"INTEGER, mtime INTEGER, rev TEXT)"_s) ||
+        !query.exec(u"CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)"_s)) {
         *error = query.lastError().text();
         return false;
     }
+    return true;
+}
+
+QString SyncEngine::Private::meta(const QString &key) const
+{
+    QSqlQuery query(QSqlDatabase::database(connection));
+    query.prepare(u"SELECT value FROM meta WHERE key = ?"_s);
+    query.addBindValue(key);
+    return query.exec() && query.next() ? query.value(0).toString() : QString();
+}
+
+void SyncEngine::Private::setMeta(const QString &key, const QString &value)
+{
+    QSqlQuery query(QSqlDatabase::database(connection));
+    query.prepare(u"INSERT OR REPLACE INTO meta VALUES (?, ?)"_s);
+    query.addBindValue(key);
+    query.addBindValue(value);
+    query.exec();
+}
+
+bool SyncEngine::Private::checkMarker(const QList<RemoteFile> &listed, QString *error)
+{
+    // The marker says which remote this is. One synced with before must still have it, and the
+    // same one: without it, the remote is far likelier unplugged, unmounted or another one than
+    // emptied, and syncing would trash every file here.
+    const QString known = meta(u"remote"_s);
+    const bool marked = std::ranges::any_of(
+        listed, [](const RemoteFile &file) { return file.path == SyncEngine::kMarker; });
+    if (marked) {
+        QString rev;
+        const std::optional<QByteArray> data = remote->get(kMarker.toString(), &rev, error);
+        if (!data)
+            return false;
+        const QString id = QString::fromUtf8(*data).trimmed();
+        if (!known.isEmpty() && id != known) {
+            *error = QObject::tr("this is not the remote synced with before");
+            return false;
+        }
+        if (known.isEmpty())
+            setMeta(u"remote"_s, id);
+        return true;
+    }
+    if (!known.isEmpty() || !bases.isEmpty()) {
+        *error = QObject::tr("the remote has lost its sync marker, as when a drive is not "
+                             "mounted, so nothing was changed");
+        return false;
+    }
+    QString id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    bool stale = false;
+    if (!remote->put(kMarker.toString(), id.toUtf8() + '\n', {}, &stale, error)) {
+        if (!stale)
+            return false;
+        // Another computer marked it first: this one is theirs too.
+        QString rev;
+        const std::optional<QByteArray> theirs = remote->get(kMarker.toString(), &rev, error);
+        if (!theirs)
+            return false;
+        id = QString::fromUtf8(*theirs).trimmed();
+    }
+    setMeta(u"remote"_s, id);
     return true;
 }
 
@@ -600,6 +665,10 @@ SyncReport SyncEngine::sync(const QDateTime &now)
     d->loadBases();
     const std::optional<QList<RemoteFile>> listed = d->remote->list(&error);
     if (!listed) {
+        d->report.failure = error;
+        return d->report;
+    }
+    if (!d->checkMarker(*listed, &error)) {
         d->report.failure = error;
         return d->report;
     }
