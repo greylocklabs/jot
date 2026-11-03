@@ -468,7 +468,29 @@ void TestSync::readsConflictCopyNames()
     QVERIFY(edited->from.isEmpty());
     QCOMPARE(jot::readConflictCopy(u"a/sketch (conflict desk 2026-11-03 0930).png"_s)->original,
              u"a/sketch.png"_s);
+    // As the apps that sync folders name them.
+    const std::optional<jot::ConflictCopy> syncthing =
+        jot::readConflictCopy(u"Ashfall/Mara.sync-conflict-20261103-093012-ABCD123.md"_s);
+    QVERIFY(syncthing);
+    QCOMPARE(syncthing->original, u"Ashfall/Mara.md"_s);
+    QCOMPARE(syncthing->from, u"ABCD123"_s);
+    QCOMPARE(syncthing->when, QDateTime(QDate(2026, 11, 3), QTime(9, 30, 12)));
+    const std::optional<jot::ConflictCopy> nextcloud =
+        jot::readConflictCopy(u"Mara (conflicted copy 2026-11-03 093012).md"_s);
+    QVERIFY(nextcloud);
+    QCOMPARE(nextcloud->original, u"Mara.md"_s);
+    QCOMPARE(nextcloud->when, QDateTime(QDate(2026, 11, 3), QTime(9, 30, 12)));
+    QCOMPARE(jot::readConflictCopy(u"Mara (conflicted copy lara 2026-11-03 093012).md"_s)->from,
+             u"lara"_s);
+    QCOMPARE(jot::readConflictCopy(u"Mara_conflict-20261103-093012.md"_s)->original, u"Mara.md"_s);
+    const std::optional<jot::ConflictCopy> dropbox =
+        jot::readConflictCopy(u"Mara (Lara's laptop's conflicted copy 2026-11-03).md"_s);
+    QVERIFY(dropbox);
+    QCOMPARE(dropbox->original, u"Mara.md"_s);
+    QCOMPARE(dropbox->from, u"Lara's laptop"_s);
+    QCOMPARE(dropbox->when.date(), QDate(2026, 11, 3));
     QVERIFY(!jot::readConflictCopy(u"Notes on conflict.md"_s));
+    QVERIFY(!jot::readConflictCopy(u"Mara.sync-conflict-notes.md"_s));
     QVERIFY(!jot::readConflictCopy(u"Mara (conflict of interest).md"_s));
 
     QCOMPARE(jot::conflictCopiesOf(u"Mara.md"_s,

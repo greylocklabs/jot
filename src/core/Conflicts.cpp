@@ -15,13 +15,38 @@ std::optional<ConflictCopy> readConflictCopy(const QString &path)
     const QString folder = path.contains(u'/') ? path.section(u'/', 0, -2) + u'/' : QString();
     const QString suffix = info.suffix().isEmpty() ? QString() : u'.' + info.suffix();
     const QString stem = info.suffix().isEmpty() ? info.fileName() : info.completeBaseName();
-    static const QRegularExpression jot(
-        uR"(^(.+) \(conflict (?:(\S+) )?(\d{4}-\d{2}-\d{2} \d{4})\)(?: \d+)?$)"_s);
-    const QRegularExpressionMatch m = jot.match(stem);
-    if (!m.hasMatch())
-        return std::nullopt;
-    return ConflictCopy{folder + m.captured(1) + suffix, m.captured(2),
-                        QDateTime::fromString(m.captured(3), u"yyyy-MM-dd HHmm"_s)};
+    // Each name: the original's stem, who it came from, when, and how to read when.
+    struct Form
+    {
+        QRegularExpression pattern;
+        QString time;
+    };
+    static const QList<Form> forms = {
+        {QRegularExpression(
+             uR"(^(.+) \(conflict (?:(\S+) )?(\d{4}-\d{2}-\d{2} \d{4})\)(?: \d+)?$)"_s),
+         u"yyyy-MM-dd HHmm"_s},
+        {QRegularExpression(uR"(^(.+)\.sync-conflict-(\d{8}-\d{6})-([A-Z0-9]{7})()$)"_s),
+         u"yyyyMMdd-HHmmss"_s},
+        {QRegularExpression(
+             uR"(^(.+) \(conflicted copy (?:(.+) )?(\d{4}-\d{2}-\d{2} \d{6})\)(?: \(\d+\))?$)"_s),
+         u"yyyy-MM-dd HHmmss"_s},
+        {QRegularExpression(uR"(^(.+)_conflict-(\d{8}-\d{6})()$)"_s), u"yyyyMMdd-HHmmss"_s},
+        {QRegularExpression(
+             uR"(^(.+) \((.+)'s conflicted copy (\d{4}-\d{2}-\d{2})\)(?: \(\d+\))?$)"_s),
+         u"yyyy-MM-dd"_s},
+    };
+    for (const Form &form : forms) {
+        const QRegularExpressionMatch m = form.pattern.match(stem);
+        if (!m.hasMatch())
+            continue;
+        // Syncthing and ownCloud put the time before who; the rest after.
+        const bool timeFirst = form.time.startsWith(u"yyyyMMdd"_s);
+        const QString when = timeFirst ? m.captured(2) : m.captured(3);
+        const QString from = timeFirst ? m.captured(3) : m.captured(2);
+        return ConflictCopy{folder + m.captured(1) + suffix, from,
+                            QDateTime::fromString(when, form.time)};
+    }
+    return std::nullopt;
 }
 
 QStringList conflictCopiesOf(const QString &path, const QStringList &paths)

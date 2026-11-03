@@ -16,6 +16,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 - When another version of a note was kept beside it, as when two computers changed the same
   lines, the note says so, and Compare shows the two side by side with what differs marked, to
   keep this one or use the other. Either way, what is let go can be brought back.
+- The same goes for notes in a folder that Syncthing, Nextcloud, ownCloud or Dropbox syncs: the
+  copies they keep when two versions clash show beside the note, to compare and resolve.
 
 ## 0.1.2 - 2026-11-03
 
