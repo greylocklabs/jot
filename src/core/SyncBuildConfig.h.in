@@ -1,0 +1,6 @@
+#pragma once
+
+// Made by CMake from SyncBuildConfig.h.in, never committed: what the services sync uses know
+// this build of Jot by. Empty where the build had none, which leaves that service out.
+
+#define JOT_DROPBOX_APP_KEY "@jot_dropbox_app_key@"

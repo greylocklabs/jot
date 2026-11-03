@@ -9,6 +9,13 @@ set(jot_dropbox_app_key "${JOT_DROPBOX_APP_KEY}")
 if(jot_dropbox_app_key STREQUAL "" AND NOT "$ENV{JOT_DROPBOX_APP_KEY}" STREQUAL "")
     set(jot_dropbox_app_key "$ENV{JOT_DROPBOX_APP_KEY}")
 endif()
+# Pasted into a C++ string literal, so anything but what Dropbox's keys hold is refused.
+if(NOT jot_dropbox_app_key MATCHES "^[A-Za-z0-9]*$")
+    message(FATAL_ERROR "The Dropbox app key holds unexpected characters")
+endif()
+# In a header made here, not on the compiler's command line, which build logs print.
+configure_file(SyncBuildConfig.h.in "${CMAKE_CURRENT_BINARY_DIR}/generated/jot/SyncBuildConfig.h"
+               @ONLY)
 
 add_library(jotcore STATIC
     jot/FrontMatter.h
@@ -107,10 +114,7 @@ target_link_libraries(jotcore
     PRIVATE
         Qt6Keychain::Qt6Keychain
 )
-if(NOT jot_dropbox_app_key STREQUAL "")
-    set_source_files_properties(DropboxTransport.cpp PROPERTIES
-        COMPILE_DEFINITIONS "JOT_DROPBOX_APP_KEY=\"${jot_dropbox_app_key}\"")
-endif()
+target_include_directories(jotcore PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 
 
 # The QML module in src/ui exposes Settings as a foreign type. Its registrar
