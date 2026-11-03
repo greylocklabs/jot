@@ -3,8 +3,10 @@
 #include "jot/Vault.h"
 
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QRegularExpression>
+#include <QSet>
 
 #include <algorithm>
 
@@ -50,6 +52,37 @@ QList<NoteHistory::Version> NoteHistory::versions(const QString &note) const
     for (const auto &[version, order] : found)
         newestFirst.append(version);
     return newestFirst;
+}
+
+int NoteHistory::prune(const QString &note, const QDateTime &now) const
+{
+    // Newest first, so the first version met in each stretch of time is the one kept.
+    QSet<QString> stretches;
+    int removed = 0;
+    const QList<Version> all = versions(note);
+    for (qsizetype i = 0; i < all.size(); ++i) {
+        const Version &version = all.at(i);
+        const qint64 age = version.written.secsTo(now);
+        QString stretch;
+        if (i == 0 || age < 24 * 3600)
+            continue;
+        if (age < 7 * 24 * 3600)
+            stretch = version.written.toString(u"'h' yyyy-MM-dd HH"_s);
+        else if (age < 30 * 24 * 3600)
+            stretch = version.written.toString(u"'d' yyyy-MM-dd"_s);
+        else {
+            int year = 0;
+            const int week = version.written.date().weekNumber(&year);
+            stretch = u"w %1-%2"_s.arg(year).arg(week);
+        }
+        if (!stretches.contains(stretch)) {
+            stretches.insert(stretch);
+            continue;
+        }
+        if (QFile::remove(m_vault.absolute(version.path)))
+            ++removed;
+    }
+    return removed;
 }
 
 bool NoteHistory::keep(const QString &note, const QString &text, const QDateTime &written,

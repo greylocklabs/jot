@@ -302,6 +302,7 @@ void VaultController::keepHistory(const QString &path, const QString &before, bo
         qCWarning(lcVault) << "could not keep a version of" << path << error;
         return;
     }
+    NoteHistory(*m_vault).prune(path, time);
     m_historyKept.insert(path, time);
 }
 
@@ -351,6 +352,31 @@ QString VaultController::versionText(const QString &version) const
         return {};
     QString error;
     return notefile::read(m_vault->absolute(version), &error).value_or(QString());
+}
+
+QVariantMap VaultController::compareVersions(const QString &older, const QString &newer) const
+{
+    // Either side a version's path, or empty for the note as it is now.
+    const auto textOf = [this](const QString &version) {
+        return version.isEmpty() ? m_currentText : versionText(version);
+    };
+    const std::optional<QList<DiffLine>> lines = diffLines(textOf(older), textOf(newer));
+    if (!lines)
+        return {{u"error"_s, tr("The two are too long and different to compare.")}};
+    QVariantList rows;
+    int changes = 0;
+    bool inChange = false;
+    for (const DiffLine &line : *lines) {
+        const bool same = line.kind == DiffLine::Kind::Same;
+        if (!same && !inChange)
+            ++changes;
+        inChange = !same;
+        rows.append(QVariantMap{{u"kind"_s, same                                   ? u"same"_s
+                                            : line.kind == DiffLine::Kind::Removed ? u"removed"_s
+                                                                                   : u"added"_s},
+                                {u"text"_s, line.text}});
+    }
+    return {{u"lines"_s, rows}, {u"changes"_s, changes}};
 }
 
 bool VaultController::restoreVersion(const QString &version)

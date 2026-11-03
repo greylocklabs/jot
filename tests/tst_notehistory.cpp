@@ -24,6 +24,7 @@ private Q_SLOTS:
     void movesWithItsNote();
     void movesWithItsNotebook();
     void joinsHistoryLeftWhereANoteMoves();
+    void thinsOutVersionsAsTheyAge();
 
 private:
     void write(const QString &path, const QString &text);
@@ -174,6 +175,40 @@ void TestNoteHistory::joinsHistoryLeftWhereANoteMoves()
     QVERIFY2(m_vault->moveNote(u"Ines.md"_s, u"Kit.md"_s, &error), qPrintable(error));
     QCOMPARE(texts(u"Kit.md"_s).size(), 4);
     QVERIFY(QFileInfo::exists(m_vault->absolute(u".jot/history/Kit.md/2026-10-28 090000 4.md"_s)));
+}
+
+void TestNoteHistory::thinsOutVersionsAsTheyAge()
+{
+    const NoteHistory history(*m_vault);
+    const QDateTime now(QDate(2026, 11, 3), QTime(12, 0));
+    QString error;
+    int n = 0;
+    const auto at = [&](const QDateTime &when) {
+        QVERIFY(history.add(u"Mara.md"_s, u"v%1\n"_s.arg(++n), when, &error));
+    };
+    // Today: every one stays.
+    at(now.addSecs(-60));
+    at(now.addSecs(-3600 * 2));
+    at(now.addSecs(-3600 * 3));
+    // Two days ago: two in one hour, one in the next.
+    const QDateTime twoDays = now.addDays(-2);
+    at(twoDays.addSecs(10 * 60));
+    at(twoDays.addSecs(40 * 60));
+    at(twoDays.addSecs(70 * 60));
+    // Ten days ago: three in one day.
+    const QDateTime tenDays = now.addDays(-10);
+    for (int hour = 8; hour <= 10; ++hour)
+        at(tenDays.addSecs(hour * 3600));
+    // Two months ago: one each day of a week.
+    const QDate monday(2026, 9, 7);
+    for (int day = 0; day < 5; ++day)
+        at(QDateTime(monday.addDays(day), QTime(9, 0)));
+
+    QCOMPARE(history.prune(u"Mara.md"_s, now), 2 + 4 + 1);
+    // The newest in each stretch is the one that stays.
+    QCOMPARE(texts(u"Mara.md"_s), (QStringList{u"v1\n"_s, u"v2\n"_s, u"v3\n"_s, u"v6\n"_s,
+                                               u"v5\n"_s, u"v9\n"_s, u"v14\n"_s}));
+    QCOMPARE(history.prune(u"Mara.md"_s, now), 0);
 }
 
 QTEST_GUILESS_MAIN(TestNoteHistory)

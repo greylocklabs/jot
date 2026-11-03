@@ -232,6 +232,10 @@ public:
     /// Makes the past version at `version` the current note's text, keeping what it replaces
     /// as a version of its own. When it cannot be written, the note stays as it was.
     Q_INVOKABLE bool restoreVersion(const QString &version);
+    /// What changed from `older` to `newer`, each a version's path or empty for the note shown
+    /// as it is now: `lines` of `{kind, text}`, kind being "same", "removed" or "added", and
+    /// `changes`, how many places changed; or `error`.
+    Q_INVOKABLE QVariantMap compareVersions(const QString &older, const QString &newer) const;
     /// Other versions of the note shown, kept beside it when two could not be merged, oldest
     /// first: each a map with `path`, `from`, the computer it came from when known, and `when`.
     [[nodiscard]] QVariantList currentConflicts() const;
