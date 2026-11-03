@@ -11,6 +11,7 @@
 #include <QFile>
 #include <QGuiApplication>
 #include <QImage>
+#include <QProcess>
 #include <QRegularExpression>
 #include <QScopeGuard>
 #include <QSignalSpy>
@@ -77,6 +78,7 @@ private Q_SLOTS:
     void undoesAndRedoesTicks();
     void goesBackAndForwardThroughNotesOpened();
     void syncsWithAFolder();
+    void syncsWithAGitRepository();
     void resolvesAConflictCopy();
     void listsAndReopensDoneToDos();
     void keepsAnUndoStepThatCouldNotBeWritten();
@@ -1254,6 +1256,33 @@ void TestVaultController::syncsWithAFolder()
     QVERIFY(!QFileInfo::exists(state));
     QVERIFY(m_settings->syncRemote(m_root).isEmpty());
     QVERIFY(QFileInfo::exists(nas + u"/From the NAS.md"_s));
+}
+
+void TestVaultController::syncsWithAGitRepository()
+{
+    if (!SyncController::gitAvailable())
+        QSKIP("git is not installed");
+    QVERIFY(m_vault->openPath(m_root));
+    const QString bare = m_dir->filePath(u"notes.git"_s);
+    QCOMPARE(QProcess::execute(u"git"_s, {u"init"_s, u"-q"_s, u"--bare"_s, bare}), 0);
+    SyncController *sync = m_vault->sync();
+    QSignalSpy finished(sync, &SyncController::finished);
+    // A repository that is not there is refused before anything is set.
+    sync->connectGit(m_dir->filePath(u"missing.git"_s), {});
+    QTRY_VERIFY_WITH_TIMEOUT(!sync->checking(), 30000);
+    QVERIFY(!sync->problem().isEmpty());
+    QVERIFY(!sync->configured());
+    sync->connectGit(bare, {});
+    QVERIFY(finished.wait(30000));
+    QVERIFY2(sync->problem().isEmpty(), qPrintable(sync->problem()));
+    QCOMPARE(m_settings->syncRemote(m_root), u"git:"_s + bare + u"#main"_s);
+    QCOMPARE(sync->remote(), bare);
+    QProcess git;
+    git.start(u"git"_s, {u"--git-dir="_s + bare, u"show"_s, u"main:Inbox/Groceries.md"_s});
+    QVERIFY(git.waitForFinished());
+    QCOMPARE(QString::fromUtf8(git.readAllStandardOutput()),
+             readFile(m_root + u"/Inbox/Groceries.md"_s));
+    sync->stop();
 }
 
 void TestVaultController::resolvesAConflictCopy()

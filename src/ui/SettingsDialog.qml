@@ -250,6 +250,19 @@ Popup {
                         driveForm.visible = !driveForm.visible
                         bucketForm.visible = false
                         dropboxForm.visible = false
+                        gitForm.visible = false
+                    }
+                }
+                StickerButton {
+                    objectName: "syncWithGit"
+                    visible: Vault.sync.gitAvailable
+                    enabled: Vault.isOpen && Vault.writable
+                    text: qsTr("Sync with git...")
+                    onClicked: {
+                        gitForm.visible = !gitForm.visible
+                        bucketForm.visible = false
+                        dropboxForm.visible = false
+                        driveForm.visible = false
                     }
                 }
                 StickerButton {
@@ -268,6 +281,48 @@ Popup {
                     onClicked: Vault.sync.stop()
                 }
             }
+            // A git repository anywhere, reached as git reaches it from a terminal.
+            Column {
+                id: gitForm
+
+                objectName: "gitForm"
+                visible: false
+                width: parent.width
+                spacing: Theme.space2
+
+                Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    text: qsTr(
+                              "A git repository on GitHub, GitLab, Codeberg, your own server or a NAS. Jot reaches it as git does from a terminal, with your SSH keys or saved logins, and keeps large files in Git LFS. Each sync is a commit.")
+                    color: Theme.textMuted
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.textSm
+                }
+                Field {
+                    id: gitUrl
+                    objectName: "gitUrl"
+                    width: parent.width
+                    placeholderText: qsTr("Address, such as git@github.com:you/notes.git")
+                }
+                Field {
+                    id: gitBranch
+                    objectName: "gitBranch"
+                    width: parent.width
+                    placeholderText: qsTr("Branch (main)")
+                }
+                StickerButton {
+                    objectName: "connectGit"
+                    accent: true
+                    enabled: !Vault.sync.checking && gitUrl.text.trim() !== ""
+                    text: Vault.sync.checking ? qsTr("Checking...") : qsTr("Connect")
+                    onClicked: {
+                        bucketForm.connecting = true
+                        Vault.sync.connectGit(gitUrl.text, gitBranch.text)
+                    }
+                }
+            }
+
             // Jot's own folder in the user's Dropbox, let in by a code pasted back.
             Column {
                 id: dropboxForm
@@ -444,6 +499,7 @@ Popup {
                             bucketForm.visible = false
                             dropboxForm.visible = false
                             driveForm.visible = false
+                            gitForm.visible = false
                         }
                     }
                 }

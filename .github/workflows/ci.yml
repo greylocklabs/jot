@@ -136,7 +136,7 @@ jobs:
           dnf install -y --setopt=install_weak_deps=False
           git gcc-c++ cmake ninja-build make
           qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtquickcontrols2-devel
-          tomlplusplus-devel kf6-syntax-highlighting-devel qtkeychain-qt6-devel
+          tomlplusplus-devel kf6-syntax-highlighting-devel qtkeychain-qt6-devel git-lfs
 
       - name: Install build dependencies (Debian and Ubuntu)
         if: matrix.name != 'fedora'
@@ -148,7 +148,7 @@ jobs:
             qml6-module-qtquick-controls qml6-module-qtquick-templates \
             qml6-module-qtquick-effects qml6-module-qtquick-dialogs \
             libtomlplusplus-dev libqt6sql6-sqlite libkf6syntaxhighlighting-dev \
-            qtkeychain-qt6-dev
+            qtkeychain-qt6-dev git-lfs
 
       - uses: actions/checkout@v7
         with:

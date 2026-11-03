@@ -27,6 +27,11 @@ struct ConflictCopy
 /// <yyyy-MM-dd>)`, each with the file's extension after.
 [[nodiscard]] std::optional<ConflictCopy> readConflictCopy(const QString &path);
 
+/// Where to keep the other version of the file at `path`, from `device` at `when`, in the vault
+/// at `root`: beside it, named as readConflictCopy() reads it, and free.
+[[nodiscard]] QString conflictCopyPath(const QString &root, const QString &path,
+                                       const QString &device, const QDateTime &when);
+
 /// The conflict copies of the file at `path` among `paths`, oldest first.
 [[nodiscard]] QStringList conflictCopiesOf(const QString &path, const QStringList &paths);
 

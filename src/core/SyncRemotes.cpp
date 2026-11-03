@@ -1,6 +1,7 @@
 #include "jot/DriveTransport.h"
 #include "jot/DropboxTransport.h"
 #include "jot/FolderTransport.h"
+#include "jot/GitSync.h"
 #include "jot/S3Transport.h"
 #include "jot/Sync.h"
 
@@ -56,6 +57,32 @@ std::unique_ptr<Transport> transportFor(const QString &remote, const QString &se
     return nullptr;
 }
 
+std::pair<QString, QString> gitRemote(const QString &remote)
+{
+    const QString rest = remote.mid(4);
+    const qsizetype hash = rest.lastIndexOf(u'#');
+    if (hash < 0)
+        return {rest, u"main"_s};
+    return {rest.left(hash), rest.mid(hash + 1)};
+}
+
+SyncReport syncVault(const QString &root, const QString &remote, const QString &secret,
+                     const QString &stateDir, const QString &device)
+{
+    if (remote.startsWith(u"git:"_s)) {
+        const auto [url, branch] = gitRemote(remote);
+        return GitSync(root, url, branch, stateDir + u"/git"_s, device).sync();
+    }
+    QString error;
+    std::unique_ptr<Transport> transport = transportFor(remote, secret, &error);
+    if (!transport) {
+        SyncReport report;
+        report.failure = error;
+        return report;
+    }
+    return SyncEngine(root, std::move(transport), stateDir, device).sync();
+}
+
 bool remoteNeedsSecret(const QString &remote)
 {
     return remote.startsWith(u"s3:"_s) || remote.startsWith(u"dropbox:"_s) ||
@@ -69,6 +96,8 @@ QString remoteSecretKey(const QString &remote)
 
 QString remoteLabel(const QString &remote)
 {
+    if (remote.startsWith(u"git:"_s))
+        return gitRemote(remote).first;
     if (remote.startsWith(u"gdrive:"_s))
         return u"Google Drive"_s;
     if (remote.startsWith(u"dropbox:"_s))
