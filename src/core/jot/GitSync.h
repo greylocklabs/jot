@@ -17,7 +17,9 @@ class GitSync
 {
 public:
     /// Syncs the vault at `root` with the repository at `url`, on `branch`. The repository's own
-    /// files live in `gitDir`, outside the vault, unless the vault has a `.git` of its own.
+    /// files live in `gitDir`, outside the vault, unless the vault has a `.git` of its own: that
+    /// one is used as it is set up, so it must already have `url` as its origin and `branch`
+    /// checked out, and its large files go to LFS only as it says.
     /// `device` names this computer in commits and conflict copies.
     GitSync(QString root, QString url, QString branch, QString gitDir, QString device);
 
@@ -62,6 +64,8 @@ private:
     QString m_gitDir;
     QString m_device;
     QDateTime m_now;
+    /// The vault is a repository of its own, which Jot uses as it is.
+    bool m_own = false;
 };
 
 } // namespace jot

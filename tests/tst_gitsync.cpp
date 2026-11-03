@@ -26,6 +26,9 @@ private Q_SLOTS:
     void joinsTwoVaultsThatStartedApart();
     void leavesHiddenFilesAndTheTrashHere();
     void keepsLargeFilesInLfs();
+    void keepsBothPicturesWhenBothChanged();
+    void failsWhenTheRepositoryRefusesThePush();
+    void usesTheVaultsOwnRepositoryAsItIs();
     void failsPlainlyWithoutTheRepository();
 
 private:
@@ -43,6 +46,7 @@ private:
     /// The files a computer holds, but for hidden ones.
     static QMap<QString, QByteArray> notes(const Computer &on);
     QByteArray inRemote(const QString &path) const;
+    static QByteArray run(const QString &directory, const QStringList &arguments);
 
     std::unique_ptr<QTemporaryDir> m_dir;
     QString m_remote;
@@ -106,6 +110,15 @@ QByteArray TestGitSync::inRemote(const QString &path) const
     git.start(u"git"_s, {u"--git-dir="_s + m_remote, u"show"_s, u"main:"_s + path});
     git.waitForFinished();
     return git.exitCode() == 0 ? git.readAllStandardOutput() : QByteArray();
+}
+
+QByteArray TestGitSync::run(const QString &directory, const QStringList &arguments)
+{
+    QProcess git;
+    git.setWorkingDirectory(directory);
+    git.start(u"git"_s, arguments);
+    git.waitForFinished();
+    return git.readAllStandardOutput().trimmed();
 }
 
 void TestGitSync::sendsAndBringsNotes()
@@ -246,6 +259,72 @@ void TestGitSync::keepsLargeFilesInLfs()
     QVERIFY(inRemote(u".gitattributes"_s).contains("*.png filter=lfs"));
     QVERIFY2(sync(desk).failure.isEmpty(), "desk");
     QCOMPARE(read(desk, u"Mara.assets/sketch.png"_s), picture);
+}
+
+void TestGitSync::keepsBothPicturesWhenBothChanged()
+{
+    if (!GitSync::lfsAvailable())
+        QSKIP("Git LFS is not installed");
+    const Computer laptop = computer(u"laptop"_s);
+    const Computer desk = computer(u"desk"_s);
+    const QByteArray png("\x89PNG\r\n\x1a\n", 8);
+    write(laptop, u"sketch.png"_s, png + "first");
+    sync(laptop);
+    sync(desk);
+    write(laptop, u"sketch.png"_s, png + "laptop's");
+    write(desk, u"sketch.png"_s, png + "desk's");
+    sync(laptop);
+    const SyncReport report = sync(desk);
+    QVERIFY2(report.failure.isEmpty(), qPrintable(report.failure));
+    QCOMPARE(report.conflicts, QStringList{u"sketch (conflict desk 2026-11-03 0930).png"_s});
+    // The pictures themselves, not the pointers LFS keeps in the repository.
+    QCOMPARE(read(desk, u"sketch.png"_s), png + "desk's");
+    QCOMPARE(read(desk, report.conflicts.first()), png + "laptop's");
+}
+
+void TestGitSync::failsWhenTheRepositoryRefusesThePush()
+{
+    const QString hook = m_remote + u"/hooks/pre-receive"_s;
+    QFile file(hook);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write("#!/bin/sh\necho protected >&2\nexit 1\n");
+    file.close();
+    QVERIFY(file.setPermissions(file.permissions() | QFile::ExeOwner));
+    const Computer laptop = computer(u"laptop"_s);
+    write(laptop, u"Mara.md"_s, "x\n");
+    const SyncReport report = sync(laptop);
+    QVERIFY(report.failure.contains(u"protected"_s));
+    QVERIFY(report.pushed.isEmpty());
+}
+
+void TestGitSync::usesTheVaultsOwnRepositoryAsItIs()
+{
+    const Computer laptop = computer(u"laptop"_s);
+    run(laptop.root, {u"init"_s, u"-q"_s, u"-b"_s, u"main"_s});
+    run(laptop.root, {u"remote"_s, u"add"_s, u"origin"_s, m_remote});
+    run(laptop.root, {u"config"_s, u"user.name"_s, u"Mara"_s});
+    run(laptop.root, {u"config"_s, u"user.email"_s, u"mara@example.org"_s});
+    write(laptop, u".obsidian/app.json"_s, "{}\n");
+    write(laptop, u"Mara.md"_s, "# Mara\n");
+    const SyncReport report = sync(laptop);
+    QVERIFY2(report.failure.isEmpty(), qPrintable(report.failure));
+    QCOMPARE(inRemote(u"Mara.md"_s), QByteArray("# Mara\n"));
+    // Its own git dir, not Jot's, and its settings as the person left them.
+    QVERIFY(!QFileInfo::exists(laptop.gitDir));
+    QCOMPARE(run(laptop.root, {u"log"_s, u"-1"_s, u"--format=%ae"_s}),
+             QByteArray("mara@example.org"));
+    write(laptop, u".jot/trash/2026-11-03 093000/Old.md"_s, "old\n");
+    QVERIFY(sync(laptop).failure.isEmpty());
+    QCOMPARE(inRemote(u".obsidian/app.json"_s), QByteArray("{}\n"));
+    QVERIFY(inRemote(u".jot/trash/2026-11-03 093000/Old.md"_s).isEmpty());
+    QVERIFY(!QFileInfo::exists(laptop.root + u"/.gitattributes"_s));
+
+    GitSync elsewhere(laptop.root, m_dir->filePath(u"other.git"_s), u"main"_s, laptop.gitDir,
+                      laptop.name);
+    QVERIFY(elsewhere.sync().failure.contains(u"origin"_s));
+    GitSync otherBranch(laptop.root, m_remote, u"notes"_s, laptop.gitDir, laptop.name);
+    QVERIFY(otherBranch.sync().failure.contains(u"notes"_s));
+    QCOMPARE(run(laptop.root, {u"remote"_s, u"get-url"_s, u"origin"_s}), m_remote.toUtf8());
 }
 
 void TestGitSync::failsPlainlyWithoutTheRepository()

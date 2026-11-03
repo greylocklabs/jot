@@ -1272,6 +1272,10 @@ void TestVaultController::syncsWithAGitRepository()
     QTRY_VERIFY_WITH_TIMEOUT(!sync->checking(), 30000);
     QVERIFY(!sync->problem().isEmpty());
     QVERIFY(!sync->configured());
+    // Nor is an address with a password in it, which would be kept in plain text.
+    sync->connectGit(u"https://mara:s3cret@example.org/notes.git"_s, {});
+    QVERIFY(sync->problem().contains(u"password"_s));
+    QVERIFY(!sync->configured());
     sync->connectGit(bare, {});
     QVERIFY(finished.wait(30000));
     QVERIFY2(sync->problem().isEmpty(), qPrintable(sync->problem()));

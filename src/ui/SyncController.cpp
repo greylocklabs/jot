@@ -221,6 +221,13 @@ void SyncController::connectGit(const QString &url, const QString &branch)
         Q_EMIT changed();
         return;
     }
+    // A password in the address would sit in Jot's settings in plain text.
+    if (!QUrl(repository).password().isEmpty()) {
+        m_problem = tr("Give the address without a password or token in it; use an SSH key or "
+                       "git's credential helper to sign in.");
+        Q_EMIT changed();
+        return;
+    }
     connectRemote(u"git:"_s + repository + u'#' + on, {}, [repository](QString *, QString *) {
         QString error;
         GitSync::reachable(repository, &error);
