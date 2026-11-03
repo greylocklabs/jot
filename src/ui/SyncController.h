@@ -35,6 +35,8 @@ class SyncController : public QObject
     Q_PROPERTY(QString problem READ problem NOTIFY changed)
     /// This build can sync with Dropbox, having an app key for it.
     Q_PROPERTY(bool dropboxAvailable READ dropboxAvailable CONSTANT)
+    /// The git command is installed, so the vault can sync with a git repository.
+    Q_PROPERTY(bool gitAvailable READ gitAvailable CONSTANT)
     /// This build can sync with Google Drive, having a client for it.
     Q_PROPERTY(bool driveAvailable READ driveAvailable CONSTANT)
     /// A bucket is being checked before it is synced with.
@@ -71,6 +73,9 @@ public:
     /// folder in the user's Drive, by default named as the vault is, made if need be, keeping
     /// the sign-in in the keyring.
     Q_INVOKABLE void connectDrive(const QString &folder);
+    /// Syncs the vault with the git repository at `url`, on `branch` (`main` when empty), once
+    /// it answers with the keys and settings this computer has for git; Jot keeps none.
+    Q_INVOKABLE void connectGit(const QString &url, const QString &branch);
     /// Stops syncing this vault, forgetting what the last sync knew; its files stay as they are,
     /// here and there.
     Q_INVOKABLE void stop();
@@ -82,6 +87,7 @@ public:
     [[nodiscard]] bool checking() const { return m_checking; }
     [[nodiscard]] static bool dropboxAvailable() { return !dropboxAppKey().isEmpty(); }
     [[nodiscard]] static bool driveAvailable() { return !googleClientId().isEmpty(); }
+    [[nodiscard]] static bool gitAvailable();
     /// How long a sign-in in the browser may take.
     static constexpr int kSignInMs = 5 * 60 * 1000;
     [[nodiscard]] QDateTime lastSynced() const { return m_lastSynced; }

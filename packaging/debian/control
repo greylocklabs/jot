@@ -28,7 +28,9 @@ Depends: ${shlibs:Depends}, ${misc:Depends},
          qml6-module-qtquick-controls,
          qml6-module-qtquick-effects,
          qml6-module-qtquick-dialogs,
-         qml6-module-qtquick-templates
+         qml6-module-qtquick-templates,
+         git,
+         git-lfs
 Description: plain-file notes for Linux
  Jot is a Markdown notes app for Linux. Notes are plain files in a folder
  you choose, and sync is optional. It shares its look and its themes with

@@ -49,6 +49,21 @@ std::optional<ConflictCopy> readConflictCopy(const QString &path)
     return std::nullopt;
 }
 
+QString conflictCopyPath(const QString &root, const QString &path, const QString &device,
+                         const QDateTime &when)
+{
+    const QFileInfo info(path);
+    const QString folder = path.contains(u'/') ? path.section(u'/', 0, -2) + u'/' : QString();
+    const QString suffix = info.suffix().isEmpty() ? QString() : u'.' + info.suffix();
+    const QString stem = info.suffix().isEmpty() ? info.fileName() : info.completeBaseName();
+    const QString label =
+        u"%1 (conflict %2 %3)"_s.arg(stem, device, when.toString(u"yyyy-MM-dd HHmm"_s));
+    QString candidate = folder + label + suffix;
+    for (int n = 2; QFileInfo::exists(root + u'/' + candidate); ++n)
+        candidate = folder + label + u' ' + QString::number(n) + suffix;
+    return candidate;
+}
+
 QStringList conflictCopiesOf(const QString &path, const QStringList &paths)
 {
     QList<std::pair<QDateTime, QString>> found;

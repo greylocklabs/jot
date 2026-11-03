@@ -75,6 +75,8 @@ add_library(jotcore STATIC
     DropboxTransport.cpp
     jot/DriveTransport.h
     DriveTransport.cpp
+    jot/GitSync.h
+    GitSync.cpp
     SyncRemotes.cpp
     jot/TaskLine.h
     TaskLine.cpp

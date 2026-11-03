@@ -113,6 +113,15 @@ private:
 /// under remoteSecretKey(); or nothing, with `error` saying why, for one Jot does not know.
 [[nodiscard]] std::unique_ptr<Transport> transportFor(const QString &remote, const QString &secret,
                                                       QString *error);
+/// Syncs the vault at `root` once with `remote`, whichever kind it is: a git repository through
+/// GitSync, the rest through SyncEngine. `stateDir` is syncStateDir()'s for the pair.
+[[nodiscard]] SyncReport syncVault(const QString &root, const QString &remote,
+                                   const QString &secret, const QString &stateDir,
+                                   const QString &device);
+/// A git remote's repository and branch, from a setting written `git:<url>[#<branch>]`; the
+/// branch is `main` when it is not given.
+[[nodiscard]] std::pair<QString, QString> gitRemote(const QString &remote);
+
 /// Whether a remote needs a secret from the keyring, as a bucket's access key or Dropbox's
 /// refresh token.
 [[nodiscard]] bool remoteNeedsSecret(const QString &remote);

@@ -280,6 +280,11 @@ they are, so it can be read without Jot.
   kept beside the file as `<file name> (conflict <computer> <yyyy-MM-dd HHmm>).<extension>`, on
   both sides.
 - A file deleted on one side and changed on the other is kept, changed.
+- A git remote is a repository the vault is committed to, a commit for each sync. Git's own
+  files live in Jot's state folder, not the vault, unless the vault already is a repository. Jot
+  writes `.gitattributes` to keep pictures, PDFs, audio, video and archives in Git LFS. Where
+  git cannot merge a note, Jot merges it as for the other remotes, or keeps the other version as
+  a conflict copy; it never leaves conflict markers in a file.
 - A Dropbox remote holds the files in Jot's own app folder, `Apps/Jot`, by their paths. Dropbox
   keeps what a sync deletes for a while, as its own trash.
 - A Google Drive remote holds the files in a folder for the vault, named as the vault is unless

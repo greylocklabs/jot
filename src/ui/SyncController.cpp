@@ -2,6 +2,7 @@
 
 #include "jot/DriveTransport.h"
 #include "jot/DropboxTransport.h"
+#include "jot/GitSync.h"
 #include "jot/Logging.h"
 #include "jot/S3Transport.h"
 #include "jot/Secrets.h"
@@ -205,6 +206,28 @@ void SyncController::connectDrive(const QString &folder)
     });
 }
 
+bool SyncController::gitAvailable()
+{
+    static const bool available = GitSync::available();
+    return available;
+}
+
+void SyncController::connectGit(const QString &url, const QString &branch)
+{
+    const QString repository = url.trimmed();
+    const QString on = branch.trimmed().isEmpty() ? u"main"_s : branch.trimmed();
+    if (m_root.isEmpty() || m_thread || repository.isEmpty()) {
+        m_problem = tr("Give the repository's address.");
+        Q_EMIT changed();
+        return;
+    }
+    connectRemote(u"git:"_s + repository + u'#' + on, {}, [repository](QString *, QString *) {
+        QString error;
+        GitSync::reachable(repository, &error);
+        return error;
+    });
+}
+
 void SyncController::connectRemote(const QString &remote, const QString &secret,
                                    std::function<QString(QString *secret, QString *remote)> check)
 {
@@ -231,7 +254,8 @@ void SyncController::connectRemote(const QString &remote, const QString &secret,
                 if (problem.isEmpty() && takenByAnotherVault(remote))
                     problem = tr("Another vault on this computer syncs there; give this one "
                                  "another folder.");
-                if (problem.isEmpty() && !secrets::write(remoteSecretKey(remote), kept, &problem))
+                if (problem.isEmpty() && remoteNeedsSecret(remote) &&
+                    !secrets::write(remoteSecretKey(remote), kept, &problem))
                     problem = tr("Could not keep the key in the keyring: %1").arg(problem);
                 if (!problem.isEmpty()) {
                     m_problem = problem;
@@ -304,14 +328,7 @@ void SyncController::start()
     const QString state = syncStateDir(root, remote);
     const QString device = QSysInfo::machineHostName();
     m_thread = QThread::create([this, root, remote, secret, state, device] {
-        SyncReport report;
-        QString error;
-        if (std::unique_ptr<Transport> transport = transportFor(remote, secret, &error)) {
-            SyncEngine engine(root, std::move(transport), state, device);
-            report = engine.sync();
-        } else {
-            report.failure = error;
-        }
+        const SyncReport report = syncVault(root, remote, secret, state, device);
         QMetaObject::invokeMethod(this, [this, report] { done(report); }, Qt::QueuedConnection);
     });
     connect(m_thread, &QThread::finished, m_thread, &QObject::deleteLater);

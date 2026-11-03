@@ -364,14 +364,9 @@ int VaultCommands::sync(const QString &remote, bool json)
         }
         secret = *kept;
     }
-    std::unique_ptr<Transport> transport = transportFor(remote, secret, &error);
-    if (!transport) {
-        m_err << u"jot: "_s << error << "\n";
-        return 1;
-    }
-    SyncEngine engine(m_vault.root(), std::move(transport), syncStateDir(m_vault.root(), remote),
-                      QSysInfo::machineHostName());
-    const SyncReport report = engine.sync();
+    const SyncReport report =
+        syncVault(m_vault.root(), remote, secret, syncStateDir(m_vault.root(), remote),
+                  QSysInfo::machineHostName());
     if (!report.failure.isEmpty()) {
         m_err << tr("jot: could not sync: %1").arg(report.failure) << "\n";
         return 1;

@@ -1,5 +1,6 @@
 #include "jot/Sync.h"
 
+#include "jot/Conflicts.h"
 #include "jot/FrontMatter.h"
 #include "jot/Merge.h"
 
@@ -436,16 +437,7 @@ bool SyncEngine::Private::trashLocal(const QString &path, QString *error) const
 
 QString SyncEngine::Private::conflictPath(const QString &path) const
 {
-    const QFileInfo info(path);
-    const QString folder = path.contains(u'/') ? path.section(u'/', 0, -2) + u'/' : QString();
-    const QString suffix = info.suffix().isEmpty() ? QString() : u'.' + info.suffix();
-    const QString stem = info.suffix().isEmpty() ? info.fileName() : info.completeBaseName();
-    const QString label =
-        u"%1 (conflict %2 %3)"_s.arg(stem, device, now.toString(u"yyyy-MM-dd HHmm"_s));
-    QString candidate = folder + label + suffix;
-    for (int n = 2; QFileInfo::exists(absolute(candidate)); ++n)
-        candidate = folder + label + u' ' + QString::number(n) + suffix;
-    return candidate;
+    return conflictCopyPath(root, path, device, now);
 }
 
 void SyncEngine::Private::fail(const QString &path, const QString &what)
