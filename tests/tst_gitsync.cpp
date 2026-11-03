@@ -28,6 +28,7 @@ private Q_SLOTS:
     void keepsLargeFilesInLfs();
     void keepsBothPicturesWhenBothChanged();
     void failsWhenTheRepositoryRefusesThePush();
+    void runsSshAsThePersonChose();
     void startsOverAMergeLeftHalfDone();
     void usesTheVaultsOwnRepositoryAsItIs();
     void failsPlainlyWithoutTheRepository();
@@ -257,7 +258,12 @@ void TestGitSync::keepsLargeFilesInLfs()
     QVERIFY2(report.failure.isEmpty(), qPrintable(report.failure));
     // The repository holds a pointer; LFS holds the picture.
     QVERIFY(inRemote(u"Mara.assets/sketch.png"_s).startsWith("version https://git-lfs"));
-    QVERIFY(inRemote(u".gitattributes"_s).contains("*.png filter=lfs"));
+    QVERIFY(inRemote(u".gitattributes"_s).contains("*.[Pp][Nn][Gg] filter=lfs"));
+    QCOMPARE(GitSync::largeFilePattern(u"7z"_s), QByteArray("*.7[Zz]"));
+    // Either case, as a camera writes it.
+    write(laptop, u"Mara.assets/IMG_0001.JPG"_s, picture);
+    QVERIFY(sync(laptop).failure.isEmpty());
+    QVERIFY(inRemote(u"Mara.assets/IMG_0001.JPG"_s).startsWith("version https://git-lfs"));
     QVERIFY2(sync(desk).failure.isEmpty(), "desk");
     QCOMPARE(read(desk, u"Mara.assets/sketch.png"_s), picture);
 }
@@ -296,6 +302,29 @@ void TestGitSync::failsWhenTheRepositoryRefusesThePush()
     const SyncReport report = sync(laptop);
     QVERIFY(report.failure.contains(u"protected"_s));
     QVERIFY(report.pushed.isEmpty());
+}
+
+void TestGitSync::runsSshAsThePersonChose()
+{
+    // An SSH command from the person's git settings, as for a key of their choosing, is used.
+    const QString marker = m_dir->filePath(u"ran"_s);
+    const QString script = m_dir->filePath(u"ssh.sh"_s);
+    QFile file(script);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write("#!/bin/sh\ntouch '" + marker.toUtf8() + "'\nexit 1\n");
+    file.close();
+    QVERIFY(file.setPermissions(file.permissions() | QFile::ExeOwner));
+    const QString config = m_dir->filePath(u"gitconfig"_s);
+    QFile settings(config);
+    QVERIFY(settings.open(QIODevice::WriteOnly));
+    settings.write("[core]\n\tsshCommand = " + script.toUtf8() + "\n");
+    settings.close();
+    qputenv("GIT_CONFIG_GLOBAL", config.toUtf8());
+    QString error;
+    const bool reached = GitSync::reachable(u"ssh://example.invalid/notes.git"_s, &error);
+    qunsetenv("GIT_CONFIG_GLOBAL");
+    QVERIFY(!reached);
+    QVERIFY(QFileInfo::exists(marker));
 }
 
 void TestGitSync::startsOverAMergeLeftHalfDone()

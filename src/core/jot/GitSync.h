@@ -5,6 +5,8 @@
 #include <QDateTime>
 #include <QStringList>
 
+#include <optional>
+
 namespace jot {
 
 /// Syncs a vault with a git repository through the `git` command, so SSH and HTTPS reach any host
@@ -35,7 +37,9 @@ public:
 
     /// Files kept in Git LFS, by their extensions.
     static const QStringList kLargeFiles;
-    /// How long a fetch or push may take.
+    /// The `.gitattributes` pattern for files with `extension`, in either case.
+    [[nodiscard]] static QByteArray largeFilePattern(const QString &extension);
+    /// How long a fetch, a push, or a step that may fetch or filter large files, may take.
     static constexpr int kNetworkMs = 5 * 60 * 1000;
 
 private:
@@ -46,8 +50,13 @@ private:
         QByteArray err;
         [[nodiscard]] bool ok() const { return code == 0; }
     };
-    Run git(const QStringList &arguments, int timeoutMs = 60 * 1000) const;
-    static Run command(const QStringList &arguments, const QString &directory, int timeoutMs);
+    Run git(const QStringList &arguments, int timeoutMs = kNetworkMs) const;
+    /// Runs git; `batchSsh` keeps SSH from asking anything.
+    static Run command(const QStringList &arguments, const QString &directory, int timeoutMs,
+                       bool batchSsh = true);
+    /// Whether the person chose how git runs SSH, in the environment or git's settings as
+    /// `gitArguments` find them.
+    static bool sshChosen(const QStringList &gitArguments);
     bool prepare(QString *error);
     /// Commits what changed here; gives the paths.
     std::optional<QStringList> commit(QString *error);
@@ -66,6 +75,8 @@ private:
     QDateTime m_now;
     /// The vault is a repository of its own, which Jot uses as it is.
     bool m_own = false;
+    /// Whether to keep SSH from asking anything, found out at the first git run.
+    mutable std::optional<bool> m_batchSsh;
 };
 
 } // namespace jot
