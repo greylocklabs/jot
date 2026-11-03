@@ -75,6 +75,7 @@ private Q_SLOTS:
     void listsAndTicksWhatIsLeftToDo();
     void headsToDosByDay();
     void undoesAndRedoesTicks();
+    void keepsAnUndoStepThatCouldNotBeWritten();
     void addsToDosToTheInbox();
     void importsFromJoplinAfterSayingWhatItWouldDo();
     void anImportShowsWhatItWroteToTheNoteOpen();
@@ -1160,19 +1161,6 @@ void TestVaultController::undoesAndRedoesTicks()
     QVERIFY(readFile(groceries).contains(u"task: open"_s));
     QVERIFY(!readFile(groceries).contains(u"\ndone: "_s));
 
-    // A write that fails keeps the step, to try again.
-    QFile folder(m_root + u"/Ashfall/Characters"_s);
-    const QFile::Permissions open = folder.permissions();
-    QVERIFY(folder.setPermissions(QFile::ReadOwner | QFile::ExeOwner));
-    auto unlock = qScopeGuard([&] { folder.setPermissions(open); });
-    const QString ticked = readFile(soren);
-    QVERIFY(!m_vault->undoTask());
-    QCOMPARE(readFile(soren), ticked);
-    QVERIFY(m_vault->problem().contains(u"Could not change"_s));
-    QVERIFY(m_vault->canUndoTask());
-    unlock.dismiss();
-    QVERIFY(folder.setPermissions(open));
-
     // Changed since, the note is left alone and the step forgotten.
     QVERIFY(m_vault->undoTask());
     QVERIFY(m_vault->redoTask());
@@ -1194,6 +1182,32 @@ void TestVaultController::undoesAndRedoesTicks()
     QVERIFY(m_vault->undoTask());
     QVERIFY(readFile(groceries).contains(u"task: open"_s));
     QVERIFY(!m_vault->canUndoTask());
+}
+
+void TestVaultController::keepsAnUndoStepThatCouldNotBeWritten()
+{
+    // Root writes anywhere, as in CI's containers, so there the failure cannot be made.
+    if (geteuid() == 0)
+        QSKIP("root can write in any folder");
+    QVERIFY(m_vault->openPath(m_root));
+    const QString soren = m_root + u"/Ashfall/Characters/Soren.md"_s;
+    QVERIFY(m_vault->setTaskDone(u"Ashfall/Characters/Soren.md"_s, 7, true));
+    const QString ticked = readFile(soren);
+    QFile folder(m_root + u"/Ashfall/Characters"_s);
+    const QFile::Permissions open = folder.permissions();
+    QVERIFY(folder.setPermissions(QFile::ReadOwner | QFile::ExeOwner));
+    auto unlock = qScopeGuard([&] { folder.setPermissions(open); });
+
+    QVERIFY(!m_vault->undoTask());
+    QCOMPARE(readFile(soren), ticked);
+    QVERIFY(m_vault->problem().contains(u"Could not change"_s));
+    QVERIFY(m_vault->canUndoTask());
+
+    // Once it can be written, the same step undoes.
+    unlock.dismiss();
+    QVERIFY(folder.setPermissions(open));
+    QVERIFY(m_vault->undoTask());
+    QVERIFY(readFile(soren).contains(u"- [ ] decide what he wants"_s));
 }
 
 void TestVaultController::headsToDosByDay()
