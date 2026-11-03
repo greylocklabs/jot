@@ -10,7 +10,8 @@
   <description>
     <p>
       Jot is a Markdown notes app for Linux. Notes are plain files in a folder you choose, and
-      sync is optional: none, a folder another tool already syncs, S3, Dropbox or Google Drive.
+      sync is optional: none, a folder another tool already syncs, another folder, S3 or a git
+      repository.
     </p>
     <p>
       Jot is at an early stage. It shares its look and its themes with Callie, the calendar from
