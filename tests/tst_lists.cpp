@@ -3,6 +3,7 @@
 #include "VaultController.h"
 
 #include "jot/Settings.h"
+#include "jot/Vault.h"
 
 #include <QDirIterator>
 #include <QMimeData>
@@ -47,6 +48,7 @@ private Q_SLOTS:
     void searchHandsTheKeysBackToTheList();
     void taskViewsLineUpWithTheAddButton();
     void taskViewsFitANarrowColumn();
+    void untickingInDoneOpensItAgain();
 
 private:
     /// The visible menu entry reading `text`, anywhere in the window.
@@ -171,6 +173,35 @@ void TestLists::taskViewsFitANarrowColumn()
     m_vault->tasks()->setProperty("view", u"anytime"_s);
     QCOMPARE(menu->property("currentValue").toString(), u"anytime"_s);
     QCOMPARE(brief->property("current").toInt(), 2);
+}
+
+void TestLists::untickingInDoneOpensItAgain()
+{
+    QVERIFY(m_vault->setTaskDone(u"Ashfall/Characters/Soren.md"_s, 7, true));
+    m_vault->tasks()->setView(u"done"_s);
+    QQmlComponent component(m_engine.get());
+    component.loadFromModule("Jot.Ui", "TaskList");
+    std::unique_ptr<QObject> tasks(component.create());
+    QVERIFY2(tasks, qPrintable(component.errorString()));
+    auto *item = qobject_cast<QQuickItem *>(tasks.get());
+    item->setParentItem(m_window->contentItem());
+    item->setSize({480, 700});
+    QQuickItem *box = nullptr;
+    QTRY_VERIFY((box = findItem(
+                     [](QQuickItem *each) {
+                         const QQuickItem *row =
+                             each->parentItem() ? each->parentItem()->parentItem() : nullptr;
+                         return each->isVisible() && each->objectName() == u"taskBox"_s && row &&
+                                row->property("path").toString() ==
+                                    u"Ashfall/Characters/Soren.md"_s;
+                     },
+                     item)));
+    const int count = m_vault->tasks()->rowCount();
+    QVERIFY(QMetaObject::invokeMethod(box, "clicked"));
+    QTRY_COMPARE(m_vault->tasks()->rowCount(), count - 1);
+    QString error;
+    QVERIFY(notefile::read(m_root + u"/Ashfall/Characters/Soren.md"_s, &error)
+                ->contains(u"- [ ] decide what he wants"_s));
 }
 
 void TestLists::cleanup()

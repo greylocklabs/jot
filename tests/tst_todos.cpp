@@ -3,6 +3,7 @@
 #include <QDir>
 #include <QTemporaryDir>
 #include <QTest>
+#include <QTimeZone>
 
 using namespace jot;
 using namespace Qt::StringLiterals;
@@ -15,6 +16,7 @@ private Q_SLOTS:
     void init();
     void cleanup();
     void showsEachView();
+    void listsDoneOnesMostRecentFirst();
     void filtersByLabelAndTag();
     void remindsAtTheTimeOrInTheMorning();
 
@@ -47,6 +49,10 @@ void TestToDos::init()
     write(u"Fence.md"_s, u"---\ntask: open\n---\n"_s);
     // A time written with a space, as YAML allows, sorts by the clock too.
     write(u"Dentist.md"_s, u"---\ntask: open\ndue: 2026-10-28 09:00\n---\n"_s);
+    write(u"Done.md"_s, u"- [x] Pay rent @hours ✅ 2026-10-26\n"
+                        "- [x] Water plants ✅ 2026-10-27\n"
+                        "- [X] Old one, no day\n"_s);
+    write(u"Garage.md"_s, u"---\ntask: done\ndone: 2026-10-27T15:30:00Z\nlabels: [days]\n---\n"_s);
     m_index = std::make_unique<VaultIndex>(*m_vault, m_dir->filePath(u"index.sqlite"_s));
     QString error;
     QVERIFY2(m_index->open(&error), qPrintable(error));
@@ -86,6 +92,26 @@ void TestToDos::showsEachView()
     QCOMPARE(call.tags, QStringList{u"calls"_s});
     QCOMPARE(toDoView(u"upcoming"_s), ToDoView::Upcoming);
     QVERIFY(!toDoView(u"later"_s));
+}
+
+void TestToDos::listsDoneOnesMostRecentFirst()
+{
+    // By when they were done, a moment before a bare day's midnight on the same day; those with
+    // no day written last.
+    QCOMPARE(titles(ToDoView::Done), (QStringList{u"Garage"_s, u"Water plants"_s, u"Pay rent"_s,
+                                                  u"Old one, no day"_s, u"Done already"_s}));
+    QCOMPARE(titles(ToDoView::Done, u"days"_s), QStringList{u"Garage"_s});
+    QCOMPARE(titles(ToDoView::Done, u"hours"_s), QStringList{u"Pay rent"_s});
+    const ToDo garage = toDos(*m_index, ToDoView::Done, m_today).first();
+    QCOMPARE(garage.kind, u"note"_s);
+    QCOMPARE(garage.doneAt(),
+             QDateTime(QDate(2026, 10, 27), QTime(15, 30), QTimeZone::UTC).toLocalTime());
+    QCOMPARE(toDos(*m_index, ToDoView::Done, m_today).at(1).doneAt(),
+             QDateTime(QDate(2026, 10, 27), QTime(0, 0)));
+    // Done ones stay out of the other views.
+    QVERIFY(!titles(ToDoView::All).contains(u"Garage"_s));
+    QVERIFY(!titles(ToDoView::All).contains(u"Pay rent"_s));
+    QCOMPARE(toDoView(u"done"_s), std::optional(ToDoView::Done));
 }
 
 void TestToDos::filtersByLabelAndTag()

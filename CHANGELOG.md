@@ -10,6 +10,14 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 - Vi mode's f, F, t and T go along the line to the next character typed, ; repeats the last one,
   and a comma repeats it the other way when the leader is another key. They select in visual
   mode, and d or c before them cuts or changes up to that character.
+- A Done view in Tasks lists the to-dos ticked off and the task notes completed, most recently
+  first, under the day they were done; unticking one there opens it again.
+  `jot tasks --view done` lists them too.
+
+### Changed
+
+- Ticking a to-do writes the day it was done after it, as `✅ 2026-11-02`, as Obsidian Tasks
+  does, and unticking it takes that away.
 
 ### Fixed
 

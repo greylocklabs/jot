@@ -116,28 +116,28 @@ QString completedTaskLine(const QString &line, const QDate &today)
     if (!m.hasMatch())
         return line;
     const QString text = m.captured(3);
-    const QString done = m.captured(1) + u'x' + m.captured(2) + text;
+    static const QRegularExpression doneMark(u"\\s*✅\\x{FE0F}?\\s*\\d{4}-\\d{2}-\\d{2}"_s);
+    // Ticked with the day it was done, in place of any it said before.
+    QString completed = m.captured(1) + u'x' + m.captured(2) + text;
+    completed.remove(doneMark);
+    while (completed.endsWith(u' '))
+        completed.chop(1);
+    completed += u" ✅ "_s + today.toString(Qt::ISODate);
+    const QString ending = m.captured(4);
     const TaskLine parts = readTaskLine(text);
     const QDate was = QDate::fromString(parts.due.left(10), Qt::ISODate);
     QDate next = nextOccurrence(parts.repeat, was);
-    if (!next.isValid())
-        return done + m.captured(4);
     // Done late, it comes round again after today rather than on a day already gone.
     while (next.isValid() && next <= today)
         next = nextOccurrence(parts.repeat, next);
     if (!next.isValid())
-        return done + m.captured(4);
+        return completed + ending;
     QString again = text;
     const QRegularExpressionMatch day = due.match(again);
     again.replace(day.capturedStart(1), day.capturedLength(1), next.toString(Qt::ISODate));
     // The next one carries no done date of its own.
-    static const QRegularExpression doneMark(u"\\s*✅\\x{FE0F}?\\s*\\d{4}-\\d{2}-\\d{2}"_s);
     again.remove(doneMark);
-    QString completed = done;
-    completed.remove(doneMark);
-    const QString ending = m.captured(4);
-    return m.captured(1) + u' ' + m.captured(2) + again + ending + u'\n' + completed + u" ✅ "_s +
-           today.toString(Qt::ISODate) + ending;
+    return m.captured(1) + u' ' + m.captured(2) + again + ending + u'\n' + completed + ending;
 }
 
 } // namespace jot

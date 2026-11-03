@@ -43,6 +43,18 @@ QDateTime reminderAt(const ToDo &todo, const QTime &allDay)
     return QDateTime(day, time.isValid() ? time : allDay);
 }
 
+QDateTime ToDo::doneAt() const
+{
+    if (done.isEmpty())
+        return {};
+    // A moment as written in `done:`, "2026-10-29T14:00:00Z", or a day as after ✅.
+    const QDateTime exact = QDateTime::fromString(done.trimmed(), Qt::ISODate);
+    if (exact.isValid() && done.size() > 10)
+        return exact.toLocalTime();
+    const QDate day = QDate::fromString(done.left(10), Qt::ISODate);
+    return day.isValid() ? QDateTime(day, QTime(0, 0)) : QDateTime();
+}
+
 std::optional<ToDoView> toDoView(const QString &name)
 {
     if (name == u"today")
@@ -53,14 +65,17 @@ std::optional<ToDoView> toDoView(const QString &name)
         return ToDoView::Anytime;
     if (name == u"all")
         return ToDoView::All;
+    if (name == u"done")
+        return ToDoView::Done;
     return std::nullopt;
 }
 
 QList<ToDo> toDos(const VaultIndex &index, ToDoView view, const QDate &today, const QString &label,
                   const QString &tag)
 {
+    const bool done = view == ToDoView::Done;
     QList<ToDo> all;
-    for (const NoteInfo &note : index.openTaskNotes())
+    for (const NoteInfo &note : done ? index.doneTaskNotes() : index.openTaskNotes())
         all.append({u"note"_s,
                     note.path,
                     0,
@@ -70,22 +85,23 @@ QList<ToDo> toDos(const VaultIndex &index, ToDoView view, const QDate &today, co
                     {},
                     note.labels,
                     note.tags,
-                    {}});
+                    {},
+                    note.done.trimmed()});
     QHash<QString, QString> titles;
-    for (const NoteTask &task : index.openTasks()) {
+    for (const NoteTask &task : done ? index.doneTasks() : index.openTasks()) {
         if (!titles.contains(task.path)) {
             const std::optional<NoteInfo> info = index.note(task.path);
             titles.insert(task.path, info ? info->title : task.path);
         }
         all.append({u"task"_s, task.path, task.line, task.parts.title, titles.value(task.path),
                     task.parts.due, task.parts.repeat, task.parts.labels,
-                    scanNote(task.parts.title).tags, task.text});
+                    scanNote(task.parts.title).tags, task.text, task.parts.done});
     }
 
     QList<ToDo> shown;
     for (const ToDo &each : std::as_const(all)) {
         const QDate due = each.dueDate();
-        const bool wanted = view == ToDoView::All ||
+        const bool wanted = view == ToDoView::All || done ||
                             (view == ToDoView::Today && due.isValid() && due <= today) ||
                             (view == ToDoView::Upcoming && due.isValid() && due > today) ||
                             (view == ToDoView::Anytime && !due.isValid());
@@ -96,6 +112,16 @@ QList<ToDo> toDos(const VaultIndex &index, ToDoView view, const QDate &today, co
         if (!tag.isEmpty() && !hasTag(each.tags, tag))
             continue;
         shown.append(each);
+    }
+    if (done) {
+        std::ranges::stable_sort(shown, [](const ToDo &a, const ToDo &b) {
+            const QDateTime aAt = a.doneAt();
+            const QDateTime bAt = b.doneAt();
+            if (aAt.isValid() != bAt.isValid())
+                return aAt.isValid();
+            return aAt > bAt;
+        });
+        return shown;
     }
     // Dated ones by day, then by the clock whether written "T14:00" or " 14:00"; the rest keep
     // the index's order.

@@ -10,7 +10,7 @@
 
 namespace jot {
 
-/// A to-do still open: a checkbox in a note, or a note that is a task.
+/// A to-do: a checkbox in a note, or a note that is a task.
 struct ToDo
 {
     /// "note" for a task note, "task" for a checkbox.
@@ -32,9 +32,15 @@ struct ToDo
     /// A checkbox's text as written, markers and all, which ticking it looks for; empty for a
     /// task note.
     QString text;
+    /// When it was done, from a checkbox's ✅ or a task note's `done:`; empty when it is open or
+    /// that was not written.
+    QString done;
 
     /// The day it is due, invalid when it is not.
     [[nodiscard]] QDate dueDate() const;
+    /// When it was done, here; invalid when it is open or that was not written. A day alone is
+    /// that day's midnight.
+    [[nodiscard]] QDateTime doneAt() const;
 
     bool operator==(const ToDo &) const = default;
 };
@@ -49,18 +55,22 @@ enum class ToDoView {
     Anytime,
     /// All of them.
     All,
+    /// Those done, most recently first.
+    Done,
 };
 
 /// When a reminder about `todo` comes: when it is due, or at `allDay` on its day when it is due
 /// on a day without a time. Invalid when it is not due.
 [[nodiscard]] QDateTime reminderAt(const ToDo &todo, const QTime &allDay);
 
-/// The view a name gives, "today", "upcoming", "anytime" or "all", or nothing for another.
+/// The view a name gives, "today", "upcoming", "anytime", "all" or "done", or nothing for
+/// another.
 [[nodiscard]] std::optional<ToDoView> toDoView(const QString &name);
 
-/// The open to-dos in `view` as of `today`, with `label` and with `tag` or one nested in it
-/// when those are given. Dated ones come soonest first, a day's untimed ones before its timed
-/// ones; undated ones come task notes first, then by note.
+/// The to-dos in `view` as of `today`, with `label` and with `tag` or one nested in it when those
+/// are given. Open ones that are dated come soonest first, a day's untimed ones before its
+/// timed ones; undated ones come task notes first, then by note. Done ones come most recently
+/// done first, then those with no day written.
 [[nodiscard]] QList<ToDo> toDos(const VaultIndex &index, ToDoView view, const QDate &today,
                                 const QString &label = {}, const QString &tag = {});
 

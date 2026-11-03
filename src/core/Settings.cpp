@@ -124,7 +124,7 @@ void Settings::setNoteSort(const QString &sort)
 
 QStringList Settings::toDoViews()
 {
-    return {u"today"_s, u"upcoming"_s, u"anytime"_s, u"all"_s};
+    return {u"today"_s, u"upcoming"_s, u"anytime"_s, u"all"_s, u"done"_s};
 }
 
 void Settings::setTasksView(const QString &view)

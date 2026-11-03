@@ -107,13 +107,18 @@ void TestNoteScan::countsLinesFromTheTopOfTheFile()
 
 void TestNoteScan::ticksATaskAndNothingElse()
 {
-    const QString note = u"---\na: 1\n---\n- [ ] one\r\n  * [X] two\nplain\n3. [ ] three"_s;
-    QCOMPARE(setTaskDone(note, 4, true),
-             std::optional(u"---\na: 1\n---\n- [x] one\r\n  * [X] two\nplain\n3. [ ] three"_s));
-    QCOMPARE(setTaskDone(note, 5, false),
+    const QString note =
+        u"---\na: 1\n---\n- [ ] one\r\n  * [X] two ✅ 2026-10-01\nplain\n3. [ ] three"_s;
+    const QDate today(2026, 10, 28);
+    // Ticked, a box says the day; unticked, it no longer does.
+    QCOMPARE(setTaskDone(note, 4, true, {}, today),
+             std::optional(u"---\na: 1\n---\n- [x] one ✅ 2026-10-28\r\n  * [X] two ✅ 2026-10-01\n"
+                           "plain\n3. [ ] three"_s));
+    QCOMPARE(setTaskDone(note, 5, false, {}, today),
              std::optional(u"---\na: 1\n---\n- [ ] one\r\n  * [ ] two\nplain\n3. [ ] three"_s));
-    QCOMPARE(setTaskDone(note, 7, true),
-             std::optional(u"---\na: 1\n---\n- [ ] one\r\n  * [X] two\nplain\n3. [x] three"_s));
+    QCOMPARE(setTaskDone(note, 7, true, {}, today),
+             std::optional(u"---\na: 1\n---\n- [ ] one\r\n  * [X] two ✅ 2026-10-01\nplain\n"
+                           "3. [x] three ✅ 2026-10-28"_s));
     QVERIFY(!setTaskDone(note, 6, true));
     QVERIFY(!setTaskDone(note, 99, true));
 }
@@ -122,13 +127,15 @@ void TestNoteScan::findsATaskThatMoved()
 {
     // Read when "- [ ] buy" was line 1; a line has since gone in above it.
     const QString note = u"new line\n- [ ] buy\n- [ ] sell\n"_s;
-    QCOMPARE(setTaskDone(note, 1, true, u"buy"_s),
-             std::optional(u"new line\n- [x] buy\n- [ ] sell\n"_s));
+    const QDate today(2026, 10, 28);
+    QCOMPARE(setTaskDone(note, 1, true, u"buy"_s, today),
+             std::optional(u"new line\n- [x] buy ✅ 2026-10-28\n- [ ] sell\n"_s));
     // The line it names says something else, and nothing says "buy": nothing changes.
     QVERIFY(!setTaskDone(u"- [ ] sell\n"_s, 1, true, u"buy"_s));
     // Two tasks say it, so which one moved cannot be told.
     QVERIFY(!setTaskDone(u"x\n- [ ] buy\n- [ ] buy\n"_s, 1, true, u"buy"_s));
-    QCOMPARE(setTaskDone(u"- [ ] buy\n"_s, 1, true, u"buy"_s), std::optional(u"- [x] buy\n"_s));
+    QCOMPARE(setTaskDone(u"- [ ] buy\n"_s, 1, true, u"buy"_s, today),
+             std::optional(u"- [x] buy ✅ 2026-10-28\n"_s));
 }
 
 void TestNoteScan::findsWhereLinesStart()
@@ -172,10 +179,10 @@ void TestNoteScan::tickingARepeatingTaskWritesTheNext()
     QCOMPARE(edit.start, note.indexOf(u"- [ ] Water"_s));
     QCOMPARE(edit.end, note.indexOf(u"\n- [ ] Sweep"_s));
     QVERIFY(edit.text.startsWith(u"- [ ] Water 🔁 every week 📅 2026-11-04\n- [x] Water"_s));
-    // Unticking only unticks.
+    // Unticking only unticks, and takes away the day it was done.
     QCOMPARE(*setTaskDone(*ticked, 4, false, {}, QDate(2026, 10, 28)),
              u"# Chores\n\n- [ ] Water 🔁 every week 📅 2026-11-04\n"
-             "- [ ] Water 🔁 every week 📅 2026-10-28 ✅ 2026-10-28\n- [ ] Sweep\n"_s);
+             "- [ ] Water 🔁 every week 📅 2026-10-28\n- [ ] Sweep\n"_s);
 }
 
 QTEST_GUILESS_MAIN(TestNoteScan)

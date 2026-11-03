@@ -280,7 +280,7 @@ int VaultCommands::listTasks(bool json, const QString &view, const QString &labe
 {
     const std::optional<ToDoView> shown = toDoView(view.isEmpty() ? u"all"_s : view);
     if (!shown) {
-        m_err << tr("usage: jot tasks [--view today|upcoming|anytime|all] [--label name] "
+        m_err << tr("usage: jot tasks [--view today|upcoming|anytime|all|done] [--label name] "
                     "[--tag name]")
               << "\n";
         return 2;
@@ -301,19 +301,25 @@ int VaultCommands::listTasks(bool json, const QString &view, const QString &labe
                                      {u"due"_s, each.due},
                                      {u"repeat"_s, each.repeat},
                                      {u"labels"_s, QJsonArray::fromStringList(each.labels)},
-                                     {u"tags"_s, QJsonArray::fromStringList(each.tags)}});
+                                     {u"tags"_s, QJsonArray::fromStringList(each.tags)},
+                                     {u"done"_s, each.done}});
         print(m_out, array);
         return 0;
     }
-    // Under the day it is due, or the note it is in, as the app lists them.
+    // Under the day it is due, or the note it is in, as the app lists them; done ones under the
+    // day they were done.
+    const bool done = *shown == ToDoView::Done;
     QString last;
     for (const ToDo &each : list) {
         const QDate due = each.dueDate();
-        const QString group = due.isValid() && due < today ? tr("Overdue")
-                              : due == today               ? tr("Today")
-                              : due.isValid()              ? due.toString(Qt::ISODate)
-                              : each.kind == u"note"       ? tr("Task notes")
-                                                           : each.path;
+        const QDate doneOn = each.doneAt().date();
+        const QString group =
+            done ? (doneOn.isValid() ? doneOn.toString(Qt::ISODate) : tr("No day written"))
+            : due.isValid() && due < today ? tr("Overdue")
+            : due == today                 ? tr("Today")
+            : due.isValid()                ? due.toString(Qt::ISODate)
+            : each.kind == u"note"         ? tr("Task notes")
+                                           : each.path;
         if (group != last) {
             m_out << m_paint.dim(group) << "\n";
             last = group;
@@ -323,15 +329,16 @@ int VaultCommands::listTasks(bool json, const QString &view, const QString &labe
             extra << u'@' + each;
         if (!each.repeat.isEmpty())
             extra << each.repeat;
-        if (due.isValid() && due != today)
+        if (!done && due.isValid() && due != today)
             extra << (due < today ? m_paint.danger(each.due) : each.due);
-        else if (due.isValid() && each.due.size() > 10)
+        else if (!done && due.isValid() && each.due.size() > 10)
             extra << each.due.mid(11);
-        m_out << "  [ ] " << (each.kind == u"note" ? m_paint.bold(each.title) : each.title)
+        m_out << (done ? "  [x] " : "  [ ] ")
+              << (each.kind == u"note" ? m_paint.bold(each.title) : each.title)
               << (extra.isEmpty() ? QString() : u"  "_s + m_paint.dim(extra.join(u"  "_s))) << "\n";
     }
     if (list.isEmpty())
-        m_err << tr("Nothing left to do.") << "\n";
+        m_err << (done ? tr("Nothing done yet.") : tr("Nothing left to do.")) << "\n";
     return 0;
 }
 

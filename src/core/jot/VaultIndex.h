@@ -27,6 +27,8 @@ struct NoteInfo
     QString due;
     QString created;
     QString type;
+    /// When a task note was done, from `done:`; empty when it is not said.
+    QString done;
     /// When the file last changed, in nanoseconds since 1970.
     qint64 modified = 0;
 };
@@ -94,7 +96,7 @@ class VaultIndex
 {
 public:
     /// Raised whenever what the index stores changes shape; an older index is rebuilt.
-    static constexpr int kSchema = 4;
+    static constexpr int kSchema = 5;
 
     explicit VaultIndex(Vault vault, QString databasePath = {});
     ~VaultIndex();
@@ -148,6 +150,10 @@ public:
     [[nodiscard]] QList<NoteTask> openTasks() const;
     /// Notes whose front matter makes them tasks that are still open, soonest due first.
     [[nodiscard]] QList<NoteInfo> openTaskNotes() const;
+    /// Ticked checkboxes across the vault, note by note.
+    [[nodiscard]] QList<NoteTask> doneTasks() const;
+    /// Notes whose front matter makes them tasks that are done, by title.
+    [[nodiscard]] QList<NoteInfo> doneTaskNotes() const;
 
 private:
     bool createSchema(QString *error);

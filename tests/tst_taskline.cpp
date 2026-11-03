@@ -86,9 +86,12 @@ void TestTaskLine::findsTheNextDay()
 void TestTaskLine::writesTheNextOneWhenDone()
 {
     const QDate today(2026, 10, 28);
-    // One that does not repeat is only ticked.
+    // One that does not repeat is ticked and says when.
     QCOMPARE(completedTaskLine(u"- [ ] Buy rope 📅 2026-10-28"_s, today),
-             u"- [x] Buy rope 📅 2026-10-28"_s);
+             u"- [x] Buy rope 📅 2026-10-28 ✅ 2026-10-28"_s);
+    // Ticked again, as when typed back, it says only the latest day.
+    QCOMPARE(completedTaskLine(u"- [ ] Buy rope ✅ 2026-10-01 "_s, today),
+             u"- [x] Buy rope ✅ 2026-10-28"_s);
     // One that does gets its next one above it, at the same time of day.
     QCOMPARE(completedTaskLine(u"  - [ ] Water @day 🔁 every week 📅 2026-10-28 09:00"_s, today),
              u"  - [ ] Water @day 🔁 every week 📅 2026-11-04 09:00\n"
@@ -97,15 +100,17 @@ void TestTaskLine::writesTheNextOneWhenDone()
     QCOMPARE(completedTaskLine(u"- [ ] Stretch 🔁 every day 📅 2026-10-20"_s, today),
              u"- [ ] Stretch 🔁 every day 📅 2026-10-29\n"
              "- [x] Stretch 🔁 every day 📅 2026-10-20 ✅ 2026-10-28"_s);
-    // Windows line breaks stay, and one with no day, or a rule Jot cannot read, is only ticked.
+    // Windows line breaks stay, and one with no day, or a rule Jot cannot read, is only ticked
+    // with its day.
     QCOMPARE(
         completedTaskLine(u"- [ ] Pay 🔁 every month 📅 2026-10-28\r"_s, today),
         u"- [ ] Pay 🔁 every month 📅 2026-11-28\r\n- [x] Pay 🔁 every month 📅 2026-10-28 ✅ 2026-10-28\r"_s);
-    QCOMPARE(completedTaskLine(u"- [ ] Pay 🔁 every week"_s, today), u"- [x] Pay 🔁 every week"_s);
+    QCOMPARE(completedTaskLine(u"- [ ] Pay 🔁 every week"_s, today),
+             u"- [x] Pay 🔁 every week ✅ 2026-10-28"_s);
     QCOMPARE(completedTaskLine(u"- [ ] Huge 🔁 every 400000000 weeks 📅 2000-01-01"_s, today),
-             u"- [x] Huge 🔁 every 400000000 weeks 📅 2000-01-01"_s);
+             u"- [x] Huge 🔁 every 400000000 weeks 📅 2000-01-01 ✅ 2026-10-28"_s);
     QCOMPARE(completedTaskLine(u"- [ ] Moon 🔁 every full moon 📅 2026-10-28"_s, today),
-             u"- [x] Moon 🔁 every full moon 📅 2026-10-28"_s);
+             u"- [x] Moon 🔁 every full moon 📅 2026-10-28 ✅ 2026-10-28"_s);
 }
 
 QTEST_GUILESS_MAIN(TestTaskLine)

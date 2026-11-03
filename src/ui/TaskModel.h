@@ -9,7 +9,7 @@
 
 namespace jot {
 
-/// The to-dos Tasks shows: one view of them, Today, Upcoming, Anytime or All, with a label
+/// The to-dos Tasks shows: one view of them, Today, Upcoming, Anytime, All or Done, with a label
 /// or a tag to narrow it, under headings for the day or the note they are in.
 class TaskModel : public QAbstractListModel
 {
@@ -17,7 +17,7 @@ class TaskModel : public QAbstractListModel
     QML_ELEMENT
     QML_UNCREATABLE("Given by Vault")
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
-    /// "today", "upcoming", "anytime" or "all".
+    /// "today", "upcoming", "anytime", "all" or "done".
     Q_PROPERTY(QString view READ view WRITE setView NOTIFY filterChanged)
     /// Only to-dos with this @label, when set.
     Q_PROPERTY(QString label READ label WRITE setLabel NOTIFY filterChanged)
@@ -45,6 +45,8 @@ public:
         RepeatsRole,
         /// The heading it is listed under: a day, or the note it is in.
         GroupRole,
+        /// It is done.
+        DoneRole,
     };
 
     explicit TaskModel(QObject *parent = nullptr);

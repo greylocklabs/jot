@@ -72,6 +72,7 @@ QVariant TaskModel::data(const QModelIndex &index, int role) const
     const ToDo &row = m_rows.at(index.row());
     const QDate due = row.dueDate();
     const QLocale locale;
+    const bool done = m_view == u"done";
     switch (role) {
     case KindRole: return row.kind;
     case PathRole: return row.path;
@@ -79,7 +80,7 @@ QVariant TaskModel::data(const QModelIndex &index, int role) const
     case NoteRole: return row.note;
     case LineRole: return row.line;
     case DueRole: {
-        if (!due.isValid())
+        if (done || !due.isValid())
             return QString();
         const QTime time = QTime::fromString(row.due.mid(11, 5), u"HH:mm"_s);
         // Under a day's heading the day goes without saying, and only a time is worth adding.
@@ -88,10 +89,22 @@ QVariant TaskModel::data(const QModelIndex &index, int role) const
         const QString day = locale.toString(due, u"MMM d"_s);
         return time.isValid() ? day + u' ' + locale.toString(time, QLocale::ShortFormat) : day;
     }
-    case OverdueRole: return due.isValid() && due < m_today;
+    case OverdueRole: return !done && due.isValid() && due < m_today;
     case LabelsRole: return row.labels;
     case RepeatsRole: return !row.repeat.isEmpty();
+    case DoneRole: return done;
     case GroupRole:
+        if (done) {
+            const QDate on = row.doneAt().date();
+            if (!on.isValid())
+                return tr("No day written");
+            if (on == m_today)
+                return tr("Today");
+            if (on == m_today.addDays(-1))
+                return tr("Yesterday");
+            return locale.toString(on, on.year() == m_today.year() ? u"dddd, MMMM d"_s
+                                                                   : u"dddd, MMMM d, yyyy"_s);
+        }
         if (due.isValid() && due < m_today)
             return tr("Overdue");
         if (due == m_today)
@@ -111,7 +124,7 @@ QHash<int, QByteArray> TaskModel::roleNames() const
     return {{KindRole, "kind"},       {PathRole, "path"},     {TitleRole, "title"},
             {NoteRole, "note"},       {LineRole, "line"},     {DueRole, "due"},
             {OverdueRole, "overdue"}, {LabelsRole, "labels"}, {RepeatsRole, "repeats"},
-            {GroupRole, "group"}};
+            {GroupRole, "group"},     {DoneRole, "done"}};
 }
 
 } // namespace jot

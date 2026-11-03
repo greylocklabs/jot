@@ -175,6 +175,8 @@ public:
                                  const QString &text = {});
     /// Marks a note that is a task as done, with when it was.
     Q_INVOKABLE bool completeTask(const QString &path);
+    /// Marks a note that is a done task as open again, forgetting when it was done.
+    Q_INVOKABLE bool reopenTask(const QString &path);
     /// Takes back the last tick or completion, or does again the last one taken back. Refused,
     /// and forgotten, when the note has changed since.
     Q_INVOKABLE bool undoTask();
