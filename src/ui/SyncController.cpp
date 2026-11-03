@@ -41,7 +41,9 @@ SyncController::SyncController(Settings &settings, QObject *parent)
 
 SyncController::~SyncController()
 {
-    // A sync under way finishes its file and its base, then the app goes.
+    // A sync under way finishes its file and its base, then the app goes; a sign-in waiting
+    // for the browser stops waiting.
+    m_quitting = true;
     if (m_thread)
         m_thread->wait();
 }
@@ -171,7 +173,7 @@ void SyncController::connectDrive()
             this, [url] { QDesktopServices::openUrl(url); }, Qt::QueuedConnection);
         QString error;
         const std::optional<QString> token =
-            signIn.finish(googleClientId(), googleClientSecret(), kSignInMs, &error);
+            signIn.finish(googleClientId(), googleClientSecret(), kSignInMs, &error, &m_quitting);
         if (!token)
             return error;
         *secret = *token;
@@ -191,16 +193,22 @@ void SyncController::connectRemote(const QString &remote, const QString &secret,
     m_checking = true;
     m_problem.clear();
     Q_EMIT changed();
-    m_thread = QThread::create([this, remote, secret, check] {
+    const QString root = m_root;
+    m_thread = QThread::create([this, root, remote, secret, check] {
         QString kept = secret;
         QString named = remote;
         const QString error = check(&kept, &named);
         QMetaObject::invokeMethod(
             this,
-            [this, remote = named, kept, error] {
+            [this, root, remote = named, kept, error] {
                 m_thread->wait();
                 m_thread = nullptr;
                 m_checking = false;
+                // Another vault opened meanwhile: this one was not asked to sync with it.
+                if (m_root != root) {
+                    Q_EMIT changed();
+                    return;
+                }
                 QString problem = error;
                 if (problem.isEmpty() && !secrets::write(remoteSecretKey(remote), kept, &problem))
                     problem = tr("Could not keep the key in the keyring: %1").arg(problem);

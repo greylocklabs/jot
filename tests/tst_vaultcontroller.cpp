@@ -1222,6 +1222,24 @@ void TestVaultController::syncsWithAFolder()
     QVERIFY(!sync->checking());
     QCOMPARE(m_settings->syncRemote(m_root), u"folder:"_s + nas);
 
+    // A connect that finishes after another vault opened is let go, attaching neither.
+    const QString other = m_dir->filePath(u"Other"_s);
+    QVERIFY(QDir().mkpath(other));
+    sync->stop();
+    sync->syncWithBucket(u"http://127.0.0.1:9"_s, u"us-east-1"_s, u"notes"_s, {}, u"id"_s,
+                         u"secret"_s);
+    QVERIFY(sync->checking());
+    QVERIFY(m_vault->openPath(other));
+    QTRY_VERIFY_WITH_TIMEOUT(!sync->checking(), 10000);
+    // Not even its problem shows on the vault now open.
+    QVERIFY(sync->problem().isEmpty());
+    QVERIFY(m_settings->syncRemote(m_root).isEmpty());
+    QVERIFY(m_settings->syncRemote(other).isEmpty());
+    QVERIFY(!sync->configured());
+    QVERIFY(m_vault->openPath(m_root));
+    QVERIFY(sync->syncWithFolder(QUrl::fromLocalFile(nas)));
+    QVERIFY(finished.wait(10000));
+
     // Stopped, it forgets where and what it knew, and leaves both as they are.
     const QString state = jot::syncStateDir(m_root, u"folder:"_s + nas);
     QVERIFY(QFileInfo::exists(state));

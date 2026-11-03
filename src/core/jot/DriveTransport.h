@@ -7,6 +7,7 @@
 #include <QMap>
 #include <QUrl>
 
+#include <atomic>
 #include <memory>
 
 class QNetworkAccessManager;
@@ -37,10 +38,12 @@ public:
 
     /// Starts listening, and gives where to send the user; empty when nothing can listen.
     QUrl start(const QString &clientId);
-    /// Waits for the browser to come back, up to `timeoutMs`, and trades its code for a refresh
-    /// token, which lasts until revoked; or nothing, with `error` saying why.
+    /// Waits for the browser to come back, up to `timeoutMs` or until `cancel` is set, and
+    /// trades its code for a refresh token, which lasts until revoked; or nothing, with `error`
+    /// saying why.
     std::optional<QString> finish(const QString &clientId, const QString &clientSecret,
-                                  int timeoutMs, QString *error);
+                                  int timeoutMs, QString *error,
+                                  const std::atomic<bool> *cancel = nullptr);
 
 private:
     DriveApi m_api;
