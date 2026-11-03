@@ -310,6 +310,25 @@ std::optional<QString> DriveTransport::versionOf(const QString &id, QString *err
                                              : file.value(u"version"_s).toVariant().toString();
 }
 
+std::optional<QString> DriveTransport::childNamed(const QString &parent, const QString &name,
+                                                  bool folder, QString *error)
+{
+    const QString type = u"mimeType "_s + (folder ? u"="_s : u"!="_s) + u" '"_s +
+                         QLatin1StringView(kFolderType) + u"'"_s;
+    const Reply reply =
+        call("GET", apiUrl(u"/drive/v3/files"_s,
+                           {{u"q"_s, u"name = "_s + quoted(name) + u" and "_s + quoted(parent) +
+                                         u" in parents and "_s + type + u" and trashed = false"_s},
+                            {u"fields"_s, u"files(id)"_s}}));
+    if (reply.status != 200) {
+        *error = problem(reply);
+        return std::nullopt;
+    }
+    const QJsonArray files =
+        QJsonDocument::fromJson(reply.body).object().value(u"files"_s).toArray();
+    return files.isEmpty() ? QString() : files.first().toObject().value(u"id"_s).toString();
+}
+
 std::optional<QString> DriveTransport::folderFor(const QString &path, QString *error)
 {
     const QString folder = path.contains(u'/') ? path.section(u'/', 0, -2) : QString();
@@ -318,6 +337,14 @@ std::optional<QString> DriveTransport::folderFor(const QString &path, QString *e
     const std::optional<QString> parent = folderFor(folder, error);
     if (!parent)
         return std::nullopt;
+    // Another computer may have made it since the listing; two of one name would split it.
+    const std::optional<QString> there = childNamed(*parent, folder.section(u'/', -1), true, error);
+    if (!there)
+        return std::nullopt;
+    if (!there->isEmpty()) {
+        m_folders.insert(folder, *there);
+        return *there;
+    }
     const QJsonObject metadata{{u"name"_s, folder.section(u'/', -1)},
                                {u"mimeType"_s, QLatin1StringView(kFolderType)},
                                {u"parents"_s, QJsonArray{*parent}}};
@@ -386,6 +413,16 @@ std::optional<QString> DriveTransport::put(const QString &path, const QByteArray
         const std::optional<QString> parent = folderFor(path, error);
         if (!parent)
             return std::nullopt;
+        // Nothing there at the listing does not mean nothing there now: another computer may
+        // have made it since, and Drive would keep both under one name.
+        const std::optional<QString> there =
+            childNamed(*parent, path.section(u'/', -1), false, error);
+        if (!there)
+            return std::nullopt;
+        if (!there->isEmpty()) {
+            *stale = true;
+            return std::nullopt;
+        }
         // A new file: its name and folder, then its bytes, in one multipart request.
         const QByteArray boundary = "jot-" + randomText(12);
         const QJsonObject metadata{{u"name"_s, path.section(u'/', -1)},
