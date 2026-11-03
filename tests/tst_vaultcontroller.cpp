@@ -1214,6 +1214,14 @@ void TestVaultController::syncsWithAFolder()
     QCOMPARE(readFile(m_root + u"/From the NAS.md"_s), u"written elsewhere\n"_s);
     QTRY_VERIFY(m_vault->index()->note(u"From the NAS.md"_s));
 
+    // A bucket needs its address, region, name and key before it is even checked.
+    sync->syncWithBucket(u"not a url"_s, u"us-east-1"_s, u"notes"_s, {}, u"id"_s, u"secret"_s);
+    QVERIFY(!sync->checking());
+    QVERIFY(!sync->problem().isEmpty());
+    sync->syncWithBucket(u"https://s3.example.com"_s, {}, u"notes"_s, {}, u"id"_s, u"secret"_s);
+    QVERIFY(!sync->checking());
+    QCOMPARE(m_settings->syncRemote(m_root), u"folder:"_s + nas);
+
     // Stopped, it forgets where and what it knew, and leaves both as they are.
     const QString state = jot::syncStateDir(m_root, u"folder:"_s + nas);
     QVERIFY(QFileInfo::exists(state));

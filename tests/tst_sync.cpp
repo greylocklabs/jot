@@ -441,9 +441,9 @@ void TestSync::syncsThroughAFolder()
 void TestSync::readsRemoteSettings()
 {
     QString error;
-    QVERIFY(jot::transportFor(u"folder:/mnt/nas/Notes"_s, &error));
+    QVERIFY(jot::transportFor(u"folder:/mnt/nas/Notes"_s, {}, &error));
     QCOMPARE(jot::remoteLabel(u"folder:/mnt/nas/Notes"_s), u"/mnt/nas/Notes"_s);
-    QVERIFY(!jot::transportFor(u"carrier-pigeon:coop"_s, &error));
+    QVERIFY(!jot::transportFor(u"carrier-pigeon:coop"_s, {}, &error));
     QVERIFY(error.contains(u"carrier-pigeon"_s));
     // One base for each vault and remote.
     QVERIFY(jot::syncStateDir(u"/a"_s, u"folder:/x"_s) !=

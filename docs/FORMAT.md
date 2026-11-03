@@ -280,6 +280,10 @@ they are, so it can be read without Jot.
   kept beside the file as `<file name> (conflict <computer> <yyyy-MM-dd HHmm>).<extension>`, on
   both sides.
 - A file deleted on one side and changed on the other is kept, changed.
+- An S3 remote holds each file as an object named by its path, under the folder given in the
+  bucket. The store must support conditional writes (`If-Match` and `If-None-Match`), which Jot
+  checks before syncing with it, so two computers never overwrite each other unseen. The access
+  key is kept in the desktop's keyring, not in Jot's settings.
 - What a sync deletes goes to `.jot/trash/<yyyy-MM-dd HHmmss>/` on that side, with its path
   kept, so it can be brought back. A folder remote has its own `.jot/trash/` for the same.
 - The remote holds a `.jot-remote` file at its top, an id written by the first sync, which no

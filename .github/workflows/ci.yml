@@ -70,6 +70,41 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           ./core/tooling/format.sh check
 
+  s3:
+    # Sync against a real S3-compatible store: MinIO, beside a Fedora build on one network.
+    name: sync with S3
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Start MinIO
+        run: |
+          docker network create jot
+          docker run -d --name minio --network jot \
+            -e MINIO_ROOT_USER=jottest -e MINIO_ROOT_PASSWORD=jottestsecret \
+            quay.io/minio/minio:latest server /data
+
+      - name: Build and test against it
+        run: |
+          docker run --rm --network jot -v "$PWD:/src" -w /src \
+            -e JOT_TEST_S3="s3:http://minio:9000/jot-test?region=us-east-1" \
+            -e JOT_TEST_S3_KEY="jottest:jottestsecret" \
+            fedora:44 bash -ec '
+              dnf install -y --setopt=install_weak_deps=False curl gcc-c++ cmake ninja-build \
+                make qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtquickcontrols2-devel \
+                tomlplusplus-devel kf6-syntax-highlighting-devel qtkeychain-qt6-devel
+              for try in $(seq 30); do
+                curl -sf http://minio:9000/minio/health/live && break
+                sleep 1
+              done
+              curl -sf --aws-sigv4 "aws:amz:us-east-1:s3" --user jottest:jottestsecret \
+                -X PUT http://minio:9000/jot-test
+              cmake --preset ci
+              cmake --build --preset ci --target tst_s3
+              QT_QPA_PLATFORM=offscreen build/ci/tests/tst_s3'
+
   build:
     strategy:
       fail-fast: false
@@ -92,7 +127,7 @@ jobs:
           dnf install -y --setopt=install_weak_deps=False
           git gcc-c++ cmake ninja-build make
           qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtquickcontrols2-devel
-          tomlplusplus-devel kf6-syntax-highlighting-devel
+          tomlplusplus-devel kf6-syntax-highlighting-devel qtkeychain-qt6-devel
 
       - name: Install build dependencies (Debian and Ubuntu)
         if: matrix.name != 'fedora'
@@ -103,7 +138,8 @@ jobs:
             qt6-base-dev qt6-declarative-dev qt6-declarative-dev-tools ca-certificates \
             qml6-module-qtquick-controls qml6-module-qtquick-templates \
             qml6-module-qtquick-effects qml6-module-qtquick-dialogs \
-            libtomlplusplus-dev libqt6sql6-sqlite libkf6syntaxhighlighting-dev
+            libtomlplusplus-dev libqt6sql6-sqlite libkf6syntaxhighlighting-dev \
+            qtkeychain-qt6-dev
 
       - uses: actions/checkout@v7
         with:

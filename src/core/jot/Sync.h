@@ -108,9 +108,15 @@ private:
     std::unique_ptr<Private> d;
 };
 
-/// The remote a sync setting names, written `kind:where`, such as `folder:/mnt/nas/Notes`; or
-/// nothing, with `error` saying why, for one Jot does not know.
-[[nodiscard]] std::unique_ptr<Transport> transportFor(const QString &remote, QString *error);
+/// The remote a sync setting names, written `kind:where`, such as `folder:/mnt/nas/Notes` or
+/// `s3:https://s3.example.com/bucket?region=auto`, with `secret`, what the keyring keeps for it
+/// under remoteSecretKey(); or nothing, with `error` saying why, for one Jot does not know.
+[[nodiscard]] std::unique_ptr<Transport> transportFor(const QString &remote, const QString &secret,
+                                                      QString *error);
+/// Whether a remote needs a secret from the keyring, as a bucket's access key.
+[[nodiscard]] bool remoteNeedsSecret(const QString &remote);
+/// The keyring entry a remote's secret is kept under.
+[[nodiscard]] QString remoteSecretKey(const QString &remote);
 /// Where a remote is, in words for the app: a folder's path.
 [[nodiscard]] QString remoteLabel(const QString &remote);
 /// The folder that keeps the base of the vault at `vaultRoot` with `remote`: one for each pair,

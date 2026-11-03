@@ -31,8 +31,14 @@ add_library(jotcore STATIC
     Conflicts.cpp
     jot/FolderTransport.h
     FolderTransport.cpp
+    jot/Secrets.h
+    Secrets.cpp
+    jot/SigV4.h
+    SigV4.cpp
     jot/Sync.h
     Sync.cpp
+    jot/S3Transport.h
+    S3Transport.cpp
     SyncRemotes.cpp
     jot/TaskLine.h
     TaskLine.cpp
@@ -87,6 +93,8 @@ target_link_libraries(jotcore
         greylock::core
         Qt6::Network
         Qt6::Sql
+    PRIVATE
+        Qt6Keychain::Qt6Keychain
 )
 
 
