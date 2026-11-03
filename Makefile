@@ -20,3 +20,9 @@ DEBIAN_DEPS := build-essential cmake ninja-build qt6-base-dev qt6-declarative-de
 	libqt6sql6-sqlite clang-format entr nodejs npm
 
 include core/tooling/common.mk
+
+site-screenshots: ## Render the website's screenshots into www/screenshots from a release build
+	@$(GENTLY) cmake --preset release >/dev/null
+	@$(GENTLY) cmake --build --preset release --target $(GUI_TARGET)
+	@$(GENTLY) tools/site-screenshots.sh build/release/src/gui/$(GUI_TARGET)
+.PHONY: site-screenshots
