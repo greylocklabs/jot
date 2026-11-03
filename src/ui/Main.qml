@@ -115,6 +115,34 @@ ApplicationWindow {
                 }
             }
 
+            // Back and forward through the notes opened, as a browser's arrows.
+            Row {
+                anchors {
+                    right: newButton.left
+                    rightMargin: Theme.space3
+                    verticalCenter: parent.verticalCenter
+                }
+                visible: Vault.isOpen
+                spacing: Theme.space1
+
+                StickerButton {
+                    objectName: "goBack"
+                    enabled: Vault.canGoBack
+                    glyph: "chevron-left"
+                    Accessible.name: qsTr("Back")
+                    tip: qsTr("Back to the note before (Alt+Left)")
+                    onClicked: Vault.goBack()
+                }
+                StickerButton {
+                    objectName: "goForward"
+                    enabled: Vault.canGoForward
+                    glyph: "chevron-right"
+                    Accessible.name: qsTr("Forward")
+                    tip: qsTr("Forward to the note after (Alt+Right)")
+                    onClicked: Vault.goForward()
+                }
+            }
+
             StickerButton {
                 id: newButton
 
@@ -462,6 +490,10 @@ ApplicationWindow {
         case "save":
         case "tasks":
             return Vault.isOpen
+        case "goBack":
+            return Vault.canGoBack
+        case "goForward":
+            return Vault.canGoForward
         case "undoTask":
             return Vault.canUndoTask
         case "redoTask":
@@ -503,6 +535,12 @@ ApplicationWindow {
             break
         case "goTo":
             switcher.open()
+            break
+        case "goBack":
+            Vault.goBack()
+            break
+        case "goForward":
+            Vault.goForward()
             break
         case "undoTask":
             Vault.undoTask()

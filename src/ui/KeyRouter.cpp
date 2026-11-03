@@ -64,6 +64,9 @@ QList<KeyAction> KeyRouter::actions()
         act(u"tasks"_s, tr("Tasks, or back to the notes"), window, {}, {}, u"t"_s),
         act(u"settings"_s, tr("Settings"), window, {int(K::Preferences), u"Ctrl+,"_s}, {}, u"s"_s),
         act(u"help"_s, tr("Keyboard shortcuts"), window, {int(K::HelpContents)}, u"?"_s),
+        act(u"goBack"_s, tr("Back to the note before"), window, {int(K::Back)}, u"Ctrl+O"_s),
+        act(u"goForward"_s, tr("Forward to the note after"), window, {int(K::Forward)},
+            u"Ctrl+I"_s),
         act(u"nextNote"_s, tr("Next note in the list"), window, {}, u"j"_s),
         act(u"previousNote"_s, tr("Previous note in the list"), window, {}, u"k"_s),
         act(u"firstNote"_s, tr("First note in the list"), window, {}, u"gg"_s),
@@ -240,6 +243,14 @@ void KeyRouter::setWindow(QQuickWindow *window)
     Q_EMIT windowChanged();
 }
 
+QString KeyRouter::viControlAction(const QKeyEvent *event)
+{
+    const Qt::KeyboardModifiers modifiers = event->modifiers() & ~Qt::KeypadModifier;
+    if (modifiers != Qt::ControlModifier || event->key() < Qt::Key_A || event->key() > Qt::Key_Z)
+        return {};
+    return viAction(u"window"_s, u"Ctrl+"_s + QChar(event->key()));
+}
+
 bool KeyRouter::press(const QString &text)
 {
     if (!m_viMode || text.isEmpty())
@@ -298,6 +309,14 @@ void KeyRouter::setPending(const QString &pending)
 
 bool KeyRouter::eventFilter(QObject *watched, QEvent *event)
 {
+    // A mouse's back and forward buttons, anywhere, as in a browser.
+    if (event->type() == QEvent::MouseButtonPress) {
+        const auto *press = static_cast<QMouseEvent *>(event);
+        if (press->button() != Qt::BackButton && press->button() != Qt::ForwardButton)
+            return QObject::eventFilter(watched, event);
+        Q_EMIT triggered(press->button() == Qt::BackButton ? u"goBack"_s : u"goForward"_s);
+        return true;
+    }
     if (event->type() != QEvent::KeyPress || !m_viMode || keysTaken(m_window))
         return QObject::eventFilter(watched, event);
     const auto *key = static_cast<QKeyEvent *>(event);
@@ -305,10 +324,16 @@ bool KeyRouter::eventFilter(QObject *watched, QEvent *event)
         cancel();
         return true;
     }
-    // Shortcuts with Ctrl or Alt are QML's, and Space presses a focused button unless a
-    // command is under way.
-    if (key->modifiers() & ~(Qt::ShiftModifier | Qt::KeypadModifier))
-        return QObject::eventFilter(watched, event);
+    // Shortcuts with Ctrl or Alt are QML's, but for vi's own, and Space presses a focused button
+    // unless a command is under way.
+    if (key->modifiers() & ~(Qt::ShiftModifier | Qt::KeypadModifier)) {
+        const QString id = viControlAction(key);
+        if (id.isEmpty())
+            return QObject::eventFilter(watched, event);
+        cancel();
+        Q_EMIT triggered(id);
+        return true;
+    }
     const QQuickItem *focus = m_window ? m_window->activeFocusItem() : nullptr;
     if (key->key() == Qt::Key_Space && m_pending.isEmpty() && focus &&
         focus->inherits("QQuickAbstractButton"))
