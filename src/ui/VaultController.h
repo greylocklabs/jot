@@ -7,6 +7,7 @@
 #include "TagModel.h"
 #include "TaskModel.h"
 
+#include "jot/NoteTrail.h"
 #include "jot/Vault.h"
 #include "jot/VaultIndex.h"
 #include "jot/VaultWatcher.h"
@@ -69,6 +70,14 @@ class VaultController : public QObject
     /// redone. Ticks typed in the editor are the editor's own to undo.
     Q_PROPERTY(bool canUndoTask READ canUndoTask NOTIFY taskHistoryChanged)
     Q_PROPERTY(bool canRedoTask READ canRedoTask NOTIFY taskHistoryChanged)
+    /// Whether there is a note opened before or after this one to go back or forward to.
+    Q_PROPERTY(bool canGoBack READ canGoBack NOTIFY trailChanged)
+    Q_PROPERTY(bool canGoForward READ canGoForward NOTIFY trailChanged)
+    /// Where the editor has its cursor, which going back to the note later returns to.
+    Q_PROPERTY(int cursorPosition MEMBER m_cursorPosition NOTIFY cursorPositionChanged)
+    /// Where the cursor goes in the note just opened: where it was, for one gone back or
+    /// forward to, and its start otherwise.
+    Q_PROPERTY(int openingCursor READ openingCursor NOTIFY currentChanged)
     /// Edits not yet written to the note's file.
     Q_PROPERTY(bool unsaved READ unsaved NOTIFY unsavedChanged)
     /// What went wrong with the note shown, such as a save that failed and is being
@@ -183,6 +192,12 @@ public:
     Q_INVOKABLE bool redoTask();
     [[nodiscard]] bool canUndoTask() const { return !m_undoTasks.isEmpty(); }
     [[nodiscard]] bool canRedoTask() const { return !m_redoTasks.isEmpty(); }
+    /// Shows the note opened before this one, or after it once gone back, as a browser does.
+    Q_INVOKABLE bool goBack();
+    Q_INVOKABLE bool goForward();
+    [[nodiscard]] bool canGoBack() const { return m_trail.canGoBack(); }
+    [[nodiscard]] bool canGoForward() const { return m_trail.canGoForward(); }
+    [[nodiscard]] int openingCursor() const { return m_openingCursor; }
     /// Shows the note at `path` with the cursor on `line`.
     Q_INVOKABLE void openAt(const QString &path, int line);
     /// The database of the Joplin app on this computer, or an empty URL when there is none.
@@ -255,6 +270,8 @@ Q_SIGNALS:
     /// before currentChanged(), so the editor can make the same edit and keep its undo history.
     void currentPatched(int start, int length, const QString &text);
     void taskHistoryChanged();
+    void trailChanged();
+    void cursorPositionChanged();
     /// With every currentChanged(), and when saving changes the note's title, as editing its
     /// `title:` key does.
     void currentTitleChanged();
@@ -292,6 +309,8 @@ private:
     void followNotebook(const QString &from, const QString &to, const QStringList &written);
     /// After notes were moved or rewritten: shows the note shown where it went, read again.
     void afterMove(const QString &current, const QStringList &written);
+    /// Goes back (`by` -1) or forward (1) through the notes opened.
+    bool travel(int by);
     /// Replaces the whole text of the note at `path`, through the editor's copy when shown.
     /// With `undoable`, the change joins the task history.
     bool rewriteNote(const QString &path,
@@ -347,6 +366,11 @@ private:
     };
     QList<TaskChange> m_undoTasks;
     QList<TaskChange> m_redoTasks;
+    NoteTrail m_trail;
+    /// Going back or forward, which is no new visit.
+    bool m_travelling = false;
+    int m_cursorPosition = 0;
+    int m_openingCursor = 0;
     QTimer m_saveTimer;
     QTimer m_reloadTimer;
 };

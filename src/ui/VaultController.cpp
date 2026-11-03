@@ -147,6 +147,8 @@ void VaultController::close()
     m_undoTasks.clear();
     m_redoTasks.clear();
     Q_EMIT taskHistoryChanged();
+    m_trail.clear();
+    Q_EMIT trailChanged();
 }
 
 void VaultController::fail(const QString &error)
@@ -434,6 +436,7 @@ bool VaultController::renameCurrent(const QString &title)
             setProblem(tr("Could not rename the note: %1").arg(error));
             return false;
         }
+        m_trail.moved(m_current, to);
         m_current = to;
         readCurrent();
     }
@@ -577,6 +580,7 @@ void VaultController::followNotebook(const QString &from, const QString &to,
     collapsed.sort();
     m_settings.setCollapsedNotebooks(collapsed);
     m_notes.setNotebook(follow(m_notes.notebook()));
+    m_trail.moved(from, to);
     if (m_watcher)
         m_watcher->start();
     afterMove(follow(m_current), written);
@@ -605,6 +609,7 @@ bool VaultController::moveNoteTo(const QString &path, const QString &notebook)
         setProblem(tr("Could not move the note: %1").arg(error));
         return false;
     }
+    m_trail.moved(path, to);
     afterMove(m_current == path ? to : m_current, *written);
     return true;
 }
@@ -952,6 +957,7 @@ void VaultController::openAt(const QString &path, int line)
 void VaultController::resyncAfterRename(const QString &from, const QString &to)
 {
     if (!QFileInfo::exists(m_vault->absolute(from)) && QFileInfo::exists(m_vault->absolute(to))) {
+        m_trail.moved(from, to);
         m_current = to;
         readCurrent();
     }
@@ -1264,12 +1270,46 @@ void VaultController::setCurrent(const QString &path)
     if (m_current == path)
         return;
     saveNow();
+    if (!m_travelling) {
+        m_trail.visit(path, m_cursorPosition);
+        m_openingCursor = 0;
+        Q_EMIT trailChanged();
+    }
     m_current = path;
     // Its attachments may have been deleted elsewhere since; an empty folder for them goes.
     if (m_vault && !path.isEmpty())
         m_vault->removeEmptyAttachmentFolder(path);
     Q_EMIT opening();
     readCurrent();
+}
+
+bool VaultController::goBack()
+{
+    return travel(-1);
+}
+
+bool VaultController::goForward()
+{
+    return travel(1);
+}
+
+bool VaultController::travel(int by)
+{
+    if (!m_vault)
+        return false;
+    const auto exists = [this](const QString &path) {
+        return QFileInfo::exists(m_vault->absolute(path));
+    };
+    const std::optional<NoteTrail::Visit> to =
+        by < 0 ? m_trail.back(m_cursorPosition, exists) : m_trail.forward(m_cursorPosition, exists);
+    Q_EMIT trailChanged();
+    if (!to)
+        return false;
+    m_openingCursor = to->cursor;
+    m_travelling = true;
+    setCurrent(to->path);
+    m_travelling = false;
+    return true;
 }
 
 QString VaultController::currentTitle() const

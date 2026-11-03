@@ -13,6 +13,10 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 - A Done view in Tasks lists the to-dos ticked off and the task notes completed, most recently
   first, under the day they were done; unticking one there opens it again.
   `jot tasks --view done` lists them too.
+- Back and forward through the notes opened, as in a browser: Alt+Left and Alt+Right, a mouse's
+  back and forward buttons, the arrows in the title bar, or Ctrl+O and Ctrl+I in vi mode. Going
+  back returns to where the cursor was, and the way follows notes renamed or moved and passes
+  over those trashed.
 
 ### Changed
 

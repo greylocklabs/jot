@@ -75,6 +75,7 @@ private Q_SLOTS:
     void listsAndTicksWhatIsLeftToDo();
     void headsToDosByDay();
     void undoesAndRedoesTicks();
+    void goesBackAndForwardThroughNotesOpened();
     void listsAndReopensDoneToDos();
     void keepsAnUndoStepThatCouldNotBeWritten();
     void addsToDosToTheInbox();
@@ -1171,6 +1172,46 @@ void TestVaultController::listsAndReopensDoneToDos()
     // Reopening is undone like a tick.
     QVERIFY(m_vault->undoTask());
     QVERIFY(readFile(m_root + u"/Inbox/Groceries.md"_s).contains(u"task: done"_s));
+}
+
+void TestVaultController::goesBackAndForwardThroughNotesOpened()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    QVERIFY(!m_vault->canGoBack());
+    m_vault->setCurrent(u"Welcome.md"_s);
+    m_vault->setProperty("cursorPosition", 9);
+    m_vault->setCurrent(u"Inbox/Groceries.md"_s);
+    QCOMPARE(m_vault->openingCursor(), 0);
+    m_vault->setProperty("cursorPosition", 4);
+    m_vault->openAt(u"Ashfall/Characters/Soren.md"_s, 7);
+    QVERIFY(m_vault->canGoBack());
+    QVERIFY(!m_vault->canGoForward());
+
+    // Back to each, where the cursor was left in it.
+    QVERIFY(m_vault->goBack());
+    QCOMPARE(m_vault->current(), u"Inbox/Groceries.md"_s);
+    QCOMPARE(m_vault->openingCursor(), 4);
+    QVERIFY(m_vault->goBack());
+    QCOMPARE(m_vault->current(), u"Welcome.md"_s);
+    QCOMPARE(m_vault->openingCursor(), 9);
+    QVERIFY(!m_vault->goBack());
+    QVERIFY(m_vault->goForward());
+    QCOMPARE(m_vault->current(), u"Inbox/Groceries.md"_s);
+
+    // A note renamed since is followed; one trashed since is passed over.
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QVERIFY(m_vault->moveNoteTo(u"Inbox/Groceries.md"_s, u"Recipes"_s));
+    m_vault->setCurrent(u"Ashfall/Characters/Soren.md"_s);
+    QVERIFY(m_vault->trashNote(u"Welcome.md"_s, true));
+    QVERIFY(m_vault->goBack());
+    QCOMPARE(m_vault->current(), u"Recipes/Groceries.md"_s);
+    QVERIFY(m_vault->goForward());
+    QCOMPARE(m_vault->current(), u"Ashfall/Characters/Soren.md"_s);
+
+    // Opening the vault again starts with none.
+    QVERIFY(m_vault->openPath(m_root));
+    QVERIFY(!m_vault->canGoBack());
+    QVERIFY(!m_vault->canGoForward());
 }
 
 void TestVaultController::undoesAndRedoesTicks()

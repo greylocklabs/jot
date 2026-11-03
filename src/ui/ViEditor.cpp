@@ -176,6 +176,14 @@ bool ViEditor::key(const QKeyEvent *event)
         m_router->press(name);
         return true;
     }
+    // The window's own, such as Ctrl+O to go back, work from normal and visual mode too.
+    if (m_router && m_router->viMode() && m_pending.isEmpty()) {
+        const QString id = KeyRouter::viControlAction(event);
+        if (!id.isEmpty()) {
+            Q_EMIT m_router->triggered(id);
+            return true;
+        }
+    }
     if (name == u"Esc" && !m_pending.isEmpty()) {
         setPending({});
         return true;

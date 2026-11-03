@@ -45,6 +45,7 @@ private Q_SLOTS:
     void theTitleFollowsAnEditedTitleKey();
     void aTickFromTheTaskViewKeepsTheEditorsUndo();
     void undoesATickOnTheShownNote();
+    void goesBackToWhereTheCursorWas();
     void typingIsDrawnAndSaved();
     void typingKeepsWindowsLineEndings();
     void anOutsideEditKeepsTheCursorWhereItWas();
@@ -301,6 +302,25 @@ void TestNoteEditor::undoesATickOnTheShownNote()
     QCOMPARE(text(), ticked);
     QTRY_VERIFY_WITH_TIMEOUT(!m_vault->unsaved(), 2000);
     QCOMPARE(saved(), QString(ticked).replace(u"\n"_s, u"\r\n"_s).toUtf8());
+}
+
+void TestNoteEditor::goesBackToWhereTheCursorWas()
+{
+    m_vault->setCurrent(u"Ashfall/Characters/Mara Vey.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    body->forceActiveFocus();
+    body->setProperty("cursorPosition", 40);
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QCOMPARE(body->property("cursorPosition").toInt(), 0);
+    body->setProperty("cursorPosition", 12);
+
+    QVERIFY(m_vault->goBack());
+    QCOMPARE(body->property("cursorPosition").toInt(), 40);
+    QVERIFY(m_vault->goForward());
+    QCOMPARE(body->property("cursorPosition").toInt(), 12);
+    // Left untouched since going back to it, it is still where it was.
+    QVERIFY(m_vault->goBack());
+    QCOMPARE(body->property("cursorPosition").toInt(), 40);
 }
 
 void TestNoteEditor::theTitleFollowsAnEditedTitleKey()

@@ -86,10 +86,12 @@ Rectangle {
 
     function load() {
         loading = true
-        // Another note starts at its top; the same one, reloaded, stays where it was.
+        // Another note starts at its top, or where it was left when gone back to; the same one,
+        // reloaded, stays where it was.
         const another = fresh
         fresh = false
-        const cursor = another ? 0 : Vault.movedCursor(body.text, body.cursorPosition)
+        const cursor = another ? Vault.openingCursor : Vault.movedCursor(body.text,
+                                                                         body.cursorPosition)
 
         // Swapping a whole note in under a live highlighter leaves the TextEdit blank, so
         // the styling comes off for the swap and goes back on after.
@@ -101,7 +103,10 @@ Rectangle {
         if (another) {
             flick.contentY = 0
             vi.mode = "normal"
+            if (body.cursorPosition > 0)
+                Qt.callLater(() => flick.reveal(body.cursorRectangle))
         }
+        Vault.cursorPosition = body.cursorPosition
         loading = false
     }
 
@@ -239,7 +244,12 @@ Rectangle {
         /// Scrolls so the cursor stays in view while typing. Not before the editor has a
         /// height, when every line would count as out of view.
         function follow(rect) {
-            if (height <= 0 || !body.activeFocus)
+            if (body.activeFocus)
+                reveal(rect)
+        }
+        /// Scrolls so `rect`, in the body, is in view.
+        function reveal(rect) {
+            if (height <= 0)
                 return
             const top = page.y + body.y + rect.y
             const bottom = top + rect.height
@@ -478,6 +488,8 @@ Rectangle {
 
                 // Moving out of the link being typed puts its notes away.
                 onCursorPositionChanged: {
+                    if (!root.loading)
+                        Vault.cursorPosition = cursorPosition
                     if (linkPopup.items.length > 0 && styler.wikilinkAt(cursorPosition).start
                             !== linkStart)
                         linkPopup.items = []

@@ -16,6 +16,7 @@ class TestKeyRouter : public QObject
 private Q_SLOTS:
     void init();
     void singleKeysAct();
+    void goesBackWithCtrlOAndTheMouse();
     void gStartsATwoKeyCommand();
     void leaderTakesTheNextKey();
     void leaderGivesUpAfterItsTimeout();
@@ -52,6 +53,31 @@ void TestKeyRouter::singleKeysAct()
     // The note's own keys are not the window's.
     QVERIFY(!m_router->press(u"x"_s));
     QCOMPARE(triggered(), (QStringList{u"nextNote"_s, u"lastNote"_s, u"help"_s}));
+}
+
+void TestKeyRouter::goesBackWithCtrlOAndTheMouse()
+{
+    QQuickWindow window;
+    m_router->setWindow(&window);
+    // What the window's events meet before anything in it.
+    QObject *filter = m_router.get();
+    // In vi mode, Ctrl+O and Ctrl+I go back and forward, as vim's jump list does.
+    QKeyEvent back(QEvent::KeyPress, Qt::Key_O, Qt::ControlModifier, u"\x0f"_s);
+    QVERIFY(filter->eventFilter(&window, &back));
+    QKeyEvent forward(QEvent::KeyPress, Qt::Key_I, Qt::ControlModifier, u"\t"_s);
+    QVERIFY(filter->eventFilter(&window, &forward));
+    // Other Ctrl keys are left to the shortcuts.
+    QKeyEvent bold(QEvent::KeyPress, Qt::Key_B, Qt::ControlModifier, u"\x02"_s);
+    QVERIFY(!filter->eventFilter(&window, &bold));
+    // A mouse's back and forward buttons, vi mode or not.
+    m_router->setProperty("viMode", false);
+    QVERIFY(!filter->eventFilter(&window, &back));
+    for (const Qt::MouseButton button : {Qt::BackButton, Qt::ForwardButton, Qt::LeftButton}) {
+        QMouseEvent press(QEvent::MouseButtonPress, QPointF(5, 5), QPointF(5, 5), button, button,
+                          Qt::NoModifier);
+        QCOMPARE(filter->eventFilter(&window, &press), button != Qt::LeftButton);
+    }
+    QCOMPARE(triggered(), (QStringList{u"goBack"_s, u"goForward"_s, u"goBack"_s, u"goForward"_s}));
 }
 
 void TestKeyRouter::gStartsATwoKeyCommand()

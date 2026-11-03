@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QKeyEvent>
 #include <QKeySequence>
 #include <QObject>
 #include <QPointer>
@@ -56,6 +57,8 @@ public:
     /// `keys` begins a longer one.
     [[nodiscard]] static QString viAction(const QString &scope, const QString &keys,
                                           bool *partial = nullptr);
+    /// The window's vi action for Ctrl and a letter, such as Ctrl+O to go back, or empty.
+    [[nodiscard]] static QString viControlAction(const QKeyEvent *event);
 
     [[nodiscard]] QQuickWindow *window() const { return m_window; }
     void setWindow(QQuickWindow *window);
