@@ -1,6 +1,8 @@
 #include "SyncController.h"
 
 #include "jot/Logging.h"
+#include "jot/S3Transport.h"
+#include "jot/Secrets.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -46,6 +48,7 @@ void SyncController::setVault(const QString &root, std::function<void()> save)
     m_root = root;
     m_save = std::move(save);
     m_remote = root.isEmpty() ? QString() : m_settings.syncRemote(root);
+    m_secret.clear();
     m_problem.clear();
     m_lastSynced = {};
     m_soon.stop();
@@ -84,10 +87,72 @@ bool SyncController::syncWithFolder(const QUrl &folder)
     return true;
 }
 
+void SyncController::syncWithBucket(const QString &endpoint, const QString &region,
+                                    const QString &bucket, const QString &folder,
+                                    const QString &keyId, const QString &secret)
+{
+    const QUrl url(endpoint.trimmed());
+    if (m_root.isEmpty() || m_thread || !url.isValid() || url.host().isEmpty() ||
+        (url.scheme() != u"https" && url.scheme() != u"http") || region.trimmed().isEmpty() ||
+        bucket.trimmed().isEmpty() || keyId.trimmed().isEmpty() || secret.isEmpty()) {
+        m_problem = tr("Give the bucket's address, region, name and access key.");
+        Q_EMIT changed();
+        return;
+    }
+    S3Location location;
+    location.endpoint = url.adjusted(QUrl::RemovePath | QUrl::RemoveQuery);
+    location.region = region.trimmed();
+    location.bucket = bucket.trimmed();
+    QString prefix = folder.trimmed();
+    while (prefix.startsWith(u'/'))
+        prefix.remove(0, 1);
+    while (prefix.endsWith(u'/'))
+        prefix.chop(1);
+    location.prefix = prefix;
+    // AWS's own addresses take the bucket in the host name; the rest take it in the path.
+    location.pathStyle = !location.endpoint.host().endsWith(u".amazonaws.com"_s);
+    const QString credentials = keyId.trimmed() + u':' + secret;
+    m_checking = true;
+    m_problem.clear();
+    Q_EMIT changed();
+    m_thread = QThread::create([this, location, credentials] {
+        QString error;
+        S3Transport bucket(location, credentials);
+        const bool ok = bucket.verify(&error);
+        QMetaObject::invokeMethod(
+            this,
+            [this, location, credentials, ok, error] {
+                m_thread->wait();
+                m_thread = nullptr;
+                m_checking = false;
+                QString problem = error;
+                const QString remote = location.remote();
+                if (ok && !secrets::write(remoteSecretKey(remote), credentials, &problem))
+                    problem = tr("Could not keep the key in the keyring: %1").arg(problem);
+                if (!problem.isEmpty()) {
+                    m_problem = problem;
+                    Q_EMIT changed();
+                    return;
+                }
+                m_settings.setSyncRemote(m_root, remote);
+                setVault(m_root, m_save);
+            },
+            Qt::QueuedConnection);
+    });
+    connect(m_thread, &QThread::finished, m_thread, &QObject::deleteLater);
+    m_thread->start(QThread::LowPriority);
+}
+
 void SyncController::stop()
 {
     if (m_root.isEmpty())
         return;
+    // A bucket's key leaves the keyring with it.
+    if (remoteNeedsSecret(m_remote)) {
+        QString error;
+        if (!secrets::remove(remoteSecretKey(m_remote), &error))
+            qCWarning(lcVault) << "could not take the sync key out of the keyring:" << error;
+    }
     // What the last sync knew goes too, so choosing the same remote again starts afresh.
     if (configured() && !m_thread)
         QDir(syncStateDir(m_root, m_remote)).removeRecursively();
@@ -111,14 +176,26 @@ void SyncController::start()
     }
     if (m_save)
         m_save();
+    // The key is read once from the keyring, here, as the keyring may ask to be unlocked.
+    if (remoteNeedsSecret(m_remote) && m_secret.isEmpty()) {
+        QString error;
+        const std::optional<QString> secret = secrets::read(remoteSecretKey(m_remote), &error);
+        if (!secret) {
+            m_problem = tr("The key for %1 is not in the keyring: %2").arg(remote(), error);
+            Q_EMIT changed();
+            return;
+        }
+        m_secret = *secret;
+    }
     const QString root = m_root;
     const QString remote = m_remote;
+    const QString secret = m_secret;
     const QString state = syncStateDir(root, remote);
     const QString device = QSysInfo::machineHostName();
-    m_thread = QThread::create([this, root, remote, state, device] {
+    m_thread = QThread::create([this, root, remote, secret, state, device] {
         SyncReport report;
         QString error;
-        if (std::unique_ptr<Transport> transport = transportFor(remote, &error)) {
+        if (std::unique_ptr<Transport> transport = transportFor(remote, secret, &error)) {
             SyncEngine engine(root, std::move(transport), state, device);
             report = engine.sync();
         } else {
@@ -164,6 +241,8 @@ void SyncController::done(const SyncReport &report)
 
 QString SyncController::summary() const
 {
+    if (m_checking)
+        return tr("Checking the bucket...");
     if (!configured())
         return tr("Not syncing");
     if (syncing())

@@ -12,6 +12,9 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   write, and every few minutes; the title bar shows how it stands, and a click syncs now. Edits
   made on both sides are merged, front matter key by key, or both versions kept; a delete never
   wins over an edit, and what a sync deletes goes to the vault's trash.
+- Sync with an S3-compatible bucket too, such as on AWS, Cloudflare R2, Backblaze B2, Wasabi or
+  MinIO: Settings, Sync, Sync with S3. Jot checks the bucket first, and keeps the key in your
+  desktop's keyring.
 - `jot sync` syncs the vault once from the command line.
 - When another version of a note was kept beside it, as when two computers changed the same
   lines, the note says so, and Compare shows the two side by side with what differs marked, to

@@ -29,6 +29,8 @@ class SyncController : public QObject
     Q_PROPERTY(QDateTime lastSynced READ lastSynced NOTIFY changed)
     /// What went wrong with the last sync; empty when it went well.
     Q_PROPERTY(QString problem READ problem NOTIFY changed)
+    /// A bucket is being checked before it is synced with.
+    Q_PROPERTY(bool checking READ checking NOTIFY changed)
     /// How sync stands, in a few words: "Synced 3 minutes ago", "Syncing...".
     Q_PROPERTY(QString summary READ summary NOTIFY changed)
 
@@ -45,6 +47,12 @@ public:
     /// Syncs the vault with the folder at `folder` from now on, starting at once. Refused, with
     /// a problem saying why, for a folder inside the vault or holding it.
     Q_INVOKABLE bool syncWithFolder(const QUrl &folder);
+    /// Syncs the vault with an S3-compatible bucket from now on, once it is checked: it must be
+    /// reachable with this key and refuse writes over objects it was not told of. The key goes
+    /// in the keyring. Says why not in `problem` otherwise.
+    Q_INVOKABLE void syncWithBucket(const QString &endpoint, const QString &region,
+                                    const QString &bucket, const QString &folder,
+                                    const QString &keyId, const QString &secret);
     /// Stops syncing this vault, forgetting what the last sync knew; its files stay as they are,
     /// here and there.
     Q_INVOKABLE void stop();
@@ -52,7 +60,8 @@ public:
 
     [[nodiscard]] bool configured() const { return !m_remote.isEmpty(); }
     [[nodiscard]] QString remote() const { return remoteLabel(m_remote); }
-    [[nodiscard]] bool syncing() const { return m_thread != nullptr; }
+    [[nodiscard]] bool syncing() const { return m_thread != nullptr && !m_checking; }
+    [[nodiscard]] bool checking() const { return m_checking; }
     [[nodiscard]] QDateTime lastSynced() const { return m_lastSynced; }
     [[nodiscard]] QString problem() const { return m_problem; }
     [[nodiscard]] QString summary() const;
@@ -73,9 +82,12 @@ private:
     Settings &m_settings;
     QString m_root;
     QString m_remote;
+    /// The remote's key, read from the keyring when first needed.
+    QString m_secret;
     std::function<void()> m_save;
     QPointer<QThread> m_thread;
     bool m_again = false;
+    bool m_checking = false;
     QDateTime m_lastSynced;
     QString m_problem;
     QTimer m_soon;

@@ -178,7 +178,7 @@ Popup {
                 width: parent.width
                 wrapMode: Text.Wrap
                 text: qsTr(
-                          "Keep these notes the same as a copy in another folder, such as a NAS, a USB drive or a network share, and so on other computers syncing with it. Jot syncs when it opens, shortly after you write, and every few minutes. Where both copies changed, it merges them, or keeps both.")
+                          "Keep these notes the same as a copy elsewhere, in another folder, such as a NAS, a USB drive or a network share, or in an S3 bucket, and so on other computers syncing with it. Jot syncs when it opens, shortly after you write, and every few minutes. Where both copies changed, it merges them, or keeps both.")
                 color: Theme.textMuted
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.textSm
@@ -226,9 +226,15 @@ Popup {
                 }
                 StickerButton {
                     enabled: Vault.isOpen && Vault.writable
-                    text: Vault.sync.configured ? qsTr("Change folder...") : qsTr(
+                    text: Vault.sync.configured ? qsTr("Sync with a folder instead...") : qsTr(
                                                       "Sync with a folder...")
                     onClicked: syncFolderDialog.open()
+                }
+                StickerButton {
+                    objectName: "syncWithBucket"
+                    enabled: Vault.isOpen && Vault.writable
+                    text: qsTr("Sync with S3...")
+                    onClicked: bucketForm.visible = !bucketForm.visible
                 }
                 StickerButton {
                     visible: Vault.sync.configured
@@ -236,6 +242,90 @@ Popup {
                     onClicked: Vault.sync.stop()
                 }
             }
+            // An S3-compatible bucket: AWS, Cloudflare R2, Backblaze B2, MinIO, Wasabi.
+            Column {
+                id: bucketForm
+
+                objectName: "bucketForm"
+                visible: false
+                width: parent.width
+                spacing: Theme.space2
+
+                Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    text: qsTr(
+                              "An S3-compatible bucket, such as on AWS, Cloudflare R2, Backblaze B2, Wasabi or MinIO. The store must refuse writes over objects it was not told of, which Jot checks first. The key goes in your desktop's keyring.")
+                    color: Theme.textMuted
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.textSm
+                }
+                Field {
+                    id: bucketEndpoint
+                    objectName: "bucketEndpoint"
+                    width: parent.width
+                    placeholderText: qsTr("Address, such as https://s3.us-east-1.amazonaws.com")
+                }
+                Row {
+                    width: parent.width
+                    spacing: Theme.space2
+
+                    Field {
+                        id: bucketRegion
+                        objectName: "bucketRegion"
+                        width: (parent.width - parent.spacing) / 3
+                        placeholderText: qsTr("Region, or auto")
+                    }
+                    Field {
+                        id: bucketName
+                        objectName: "bucketName"
+                        width: (parent.width - parent.spacing) * 2 / 3
+                        placeholderText: qsTr("Bucket")
+                    }
+                }
+                Field {
+                    id: bucketFolder
+                    objectName: "bucketFolder"
+                    width: parent.width
+                    placeholderText: qsTr("Folder in the bucket (optional)")
+                }
+                Field {
+                    id: bucketKey
+                    objectName: "bucketKey"
+                    width: parent.width
+                    placeholderText: qsTr("Access key ID")
+                }
+                Field {
+                    id: bucketSecret
+                    objectName: "bucketSecret"
+                    width: parent.width
+                    placeholderText: qsTr("Secret access key")
+                    echoMode: TextInput.Password
+                }
+                StickerButton {
+                    objectName: "connectBucket"
+                    accent: true
+                    enabled: !Vault.sync.checking && bucketEndpoint.text !== ""
+                             && bucketRegion.text !== "" && bucketName.text !== ""
+                             && bucketKey.text !== "" && bucketSecret.text !== ""
+                    text: Vault.sync.checking ? qsTr("Checking...") : qsTr("Connect")
+                    onClicked: Vault.sync.syncWithBucket(bucketEndpoint.text, bucketRegion.text,
+                                                         bucketName.text, bucketFolder.text,
+                                                         bucketKey.text, bucketSecret.text)
+                }
+                Connections {
+                    target: Vault.sync
+                    function onChanged() {
+                        // Connected: the form, and the secret typed into it, go.
+                        if (Vault.sync.configured && !Vault.sync.checking && bucketForm.visible
+                                && Vault.sync.problem === "") {
+                            bucketSecret.text = ""
+                            bucketForm.visible = false
+                        }
+                    }
+                }
+            }
+
             Text {
                 visible: !Vault.sync.configured && Vault.sync.problem !== ""
                 width: parent.width

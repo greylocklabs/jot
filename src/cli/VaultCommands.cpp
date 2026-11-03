@@ -5,6 +5,7 @@
 #include "jot/JoplinImport.h"
 #include "jot/Layout.h"
 #include "jot/QuickAdd.h"
+#include "jot/Secrets.h"
 #include "jot/Settings.h"
 #include "jot/Sync.h"
 #include "jot/ToDos.h"
@@ -352,7 +353,18 @@ int VaultCommands::sync(const QString &remote, bool json)
         return 1;
     }
     QString error;
-    std::unique_ptr<Transport> transport = transportFor(remote, &error);
+    QString secret;
+    if (remoteNeedsSecret(remote)) {
+        const std::optional<QString> kept = secrets::read(remoteSecretKey(remote), &error);
+        if (!kept) {
+            m_err << tr("jot: could not read the key for %1 from the keyring: %2")
+                         .arg(remoteLabel(remote), error)
+                  << "\n";
+            return 1;
+        }
+        secret = *kept;
+    }
+    std::unique_ptr<Transport> transport = transportFor(remote, secret, &error);
     if (!transport) {
         m_err << u"jot: "_s << error << "\n";
         return 1;
