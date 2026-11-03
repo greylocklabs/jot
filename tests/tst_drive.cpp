@@ -4,6 +4,7 @@
 #include "jot/Sync.h"
 
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -185,6 +186,15 @@ void TestDrive::signsInThroughTheBrowser()
     late.start(u"id"_s);
     QVERIFY(!late.finish(u"id"_s, u"secret"_s, 100, &error));
     QVERIFY(!error.isEmpty());
+    // Nor when the app quits meanwhile: it stops at once, not when the wait runs out.
+    jot::DriveSignIn quitting(api());
+    quitting.start(u"id"_s);
+    std::atomic<bool> cancel = false;
+    QTimer::singleShot(50, [&cancel] { cancel = true; });
+    QElapsedTimer took;
+    took.start();
+    QVERIFY(!quitting.finish(u"id"_s, u"secret"_s, 60000, &error, &cancel));
+    QVERIFY(took.elapsed() < 5000);
 }
 
 void TestDrive::findsOrMakesItsFolder()

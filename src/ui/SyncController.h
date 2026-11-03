@@ -13,6 +13,8 @@
 #include <QTimer>
 #include <QUrl>
 
+#include <atomic>
+
 namespace jot {
 
 /// Keeps the open vault in step with where it syncs to: when it opens, shortly after each
@@ -113,6 +115,8 @@ private:
     std::function<void()> m_save;
     QPointer<QThread> m_thread;
     bool m_again = false;
+    /// The app is going: a sign-in waiting for the browser gives up.
+    std::atomic<bool> m_quitting = false;
     bool m_checking = false;
     QDateTime m_lastSynced;
     QString m_problem;

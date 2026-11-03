@@ -103,7 +103,8 @@ QUrl DriveSignIn::start(const QString &clientId)
 }
 
 std::optional<QString> DriveSignIn::finish(const QString &clientId, const QString &clientSecret,
-                                           int timeoutMs, QString *error)
+                                           int timeoutMs, QString *error,
+                                           const std::atomic<bool> *cancel)
 {
     if (!m_server) {
         *error = QObject::tr("the sign-in was not started");
@@ -114,6 +115,13 @@ std::optional<QString> DriveSignIn::finish(const QString &clientId, const QStrin
     QString refused;
     QEventLoop loop;
     QTimer::singleShot(timeoutMs, &loop, &QEventLoop::quit);
+    // Looked at now and then, so quitting the app need not wait for the browser.
+    QTimer watch;
+    QObject::connect(&watch, &QTimer::timeout, &loop, [&] {
+        if (cancel && cancel->load())
+            loop.quit();
+    });
+    watch.start(100);
     QObject::connect(m_server.get(), &QTcpServer::newConnection, &loop, [&] {
         QTcpSocket *socket = m_server->nextPendingConnection();
         QObject::connect(socket, &QTcpSocket::readyRead, &loop, [&, socket] {
