@@ -184,6 +184,16 @@ Popup {
                 font.pixelSize: Theme.textSm
             }
             Text {
+                visible: !Vault.sync.configured
+                width: parent.width
+                wrapMode: Text.Wrap
+                text: qsTr(
+                          "Notes in a folder that Syncthing, Nextcloud or Dropbox already syncs need nothing set up here: when those apps keep two versions of a note, Jot shows both to compare.")
+                color: Theme.textMuted
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.textSm
+            }
+            Text {
                 visible: Vault.sync.configured
                 width: parent.width
                 text: Vault.sync.remote

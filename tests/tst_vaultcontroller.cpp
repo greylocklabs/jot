@@ -1257,6 +1257,13 @@ void TestVaultController::resolvesAConflictCopy()
     QCOMPARE(readFile(m_root + u"/Welcome.md"_s), u"one\nTWO\nthree\nfour\n"_s);
     QVERIFY(!QFileInfo::exists(m_root + u"/Welcome (conflict desk 2026-11-03 0930).md"_s));
     QVERIFY(m_vault->historyOf(u"Welcome.md"_s).size() >= 1);
+    // One that Syncthing leaves while the note is open shows too.
+    QSignalSpy conflicts(m_vault.get(), &VaultController::currentConflictsChanged);
+    QVERIFY(notefile::write(m_root + u"/Welcome.sync-conflict-20261103-093012-ABCD123.md"_s,
+                            u"from syncthing\n"_s, &error));
+    QTRY_VERIFY_WITH_TIMEOUT(!conflicts.isEmpty(), 5000);
+    QCOMPARE(m_vault->currentConflicts().size(), 2);
+    QVERIFY(m_vault->keepThisVersion(u"Welcome.sync-conflict-20261103-093012-ABCD123.md"_s));
     // Keeping this one only trashes the copy.
     QVERIFY(m_vault->keepThisVersion(copies.at(0).toMap().value(u"path"_s).toString()));
     QCOMPARE(readFile(m_root + u"/Welcome.md"_s), u"one\nTWO\nthree\nfour\n"_s);

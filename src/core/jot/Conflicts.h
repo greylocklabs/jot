@@ -20,7 +20,11 @@ struct ConflictCopy
 };
 
 /// What the name of the file at `path` says, when it is a conflict copy: Jot's own,
-/// `<name> (conflict [<computer>] <yyyy-MM-dd HHmm>)[ <n>].<extension>`.
+/// `<name> (conflict [<computer>] <yyyy-MM-dd HHmm>)[ <n>].<extension>`, or one left by the app
+/// that syncs the folder: Syncthing's `<name>.sync-conflict-<yyyyMMdd>-<HHmmss>-<device>`,
+/// Nextcloud's `<name> (conflicted copy [<user>] <yyyy-MM-dd HHmmss>)`, ownCloud's
+/// `<name>_conflict-<yyyyMMdd>-<HHmmss>` and Dropbox's `<name> (<computer>'s conflicted copy
+/// <yyyy-MM-dd>)`, each with the file's extension after.
 [[nodiscard]] std::optional<ConflictCopy> readConflictCopy(const QString &path);
 
 /// The conflict copies of the file at `path` among `paths`, oldest first.
