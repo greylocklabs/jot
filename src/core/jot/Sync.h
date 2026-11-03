@@ -30,7 +30,7 @@ class Transport
 public:
     virtual ~Transport() = default;
 
-    /// Every file the remote holds.
+    /// Every file the remote holds, hidden ones included.
     virtual std::optional<QList<RemoteFile>> list(QString *error) = 0;
     /// The bytes of the file at `path`, and its `rev`.
     virtual std::optional<QByteArray> get(const QString &path, QString *rev, QString *error) = 0;
@@ -92,6 +92,9 @@ public:
     /// Whether `path`, from the vault's root, is synced: notes, attachments and `.jot/` are;
     /// other hidden files and `.jot/trash/` are not.
     [[nodiscard]] static bool synced(const QString &path);
+    /// The file at a remote's top that says which remote it is, so an unmounted drive or another
+    /// remote is never taken for an emptied one. Hidden, so it never syncs into a vault.
+    static constexpr QStringView kMarker = u".jot-remote";
     /// Whether a file at `path` is merged line by line when both sides changed it.
     [[nodiscard]] static bool mergeable(const QString &path);
 

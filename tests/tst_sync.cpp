@@ -33,6 +33,7 @@ private Q_SLOTS:
     void triesAgainWhenTheRemoteChangesMeanwhile();
     void sendsAnEditMadeDuringAnUpload();
     void doesNothingWhenTheRemoteIsDown();
+    void refusesARemoteThatIsNotTheOneSyncedWith();
     void syncsThroughAFolder();
     void readsRemoteSettings();
     void keepsEverythingAcrossRandomEdits_data();
@@ -51,6 +52,13 @@ private:
     static bool exists(const Device &device, const QString &path);
     /// Every synced file and its bytes; `trash` gives what syncs moved to the trash instead.
     static QMap<QString, QByteArray> files(const Device &device, bool trash = false);
+    /// What the remote holds, but for its marker.
+    QStringList remoteFiles() const
+    {
+        QStringList paths = m_remote->files.keys();
+        paths.removeAll(SyncEngine::kMarker.toString());
+        return paths;
+    }
     /// Syncs each device in turn until a round changes nothing.
     void settle(QList<Device *> devices);
 
@@ -137,7 +145,7 @@ void TestSync::sendsAndBringsNewFiles()
     settle({&laptop, &desk});
     QCOMPARE(read(desk, u"Ashfall/Mara.md"_s), QByteArray("# Mara\n"));
     QCOMPARE(read(laptop, u"Inbox.md"_s), QByteArray("- [ ] rope\n"));
-    QCOMPARE(m_remote->files.size(), 2);
+    QCOMPARE(remoteFiles().size(), 2);
 
     // The same new file on both, before either synced, is no conflict.
     write(laptop, u"Same.md"_s, "same\n");
@@ -156,7 +164,7 @@ void TestSync::deletesGoToTheTrash()
     QVERIFY(QFile::remove(laptop.root + u"/Old.md"_s));
     settle({&laptop, &desk});
     QVERIFY(!exists(desk, u"Old.md"_s));
-    QVERIFY(m_remote->files.isEmpty());
+    QVERIFY(remoteFiles().isEmpty());
     // Kept in the trash here and there, not gone.
     QCOMPARE(files(desk, true).values(), QList<QByteArray>{"old\n"});
     QVERIFY(files(desk, true).firstKey().endsWith(u"/Old.md"_s));
@@ -274,7 +282,7 @@ void TestSync::syncsOnlyTheVaultsOwnFiles()
     write(laptop, u".git/HEAD"_s, "ref\n");
     write(laptop, u".jot/vault.yaml"_s, "format: 1\n");
     laptop.engine->sync();
-    QCOMPARE(m_remote->files.keys(), QStringList{u".jot/vault.yaml"_s});
+    QCOMPARE(remoteFiles(), QStringList{u".jot/vault.yaml"_s});
 }
 
 void TestSync::triesAgainWhenTheRemoteChangesMeanwhile()
@@ -303,7 +311,10 @@ void TestSync::sendsAnEditMadeDuringAnUpload()
     Device laptop = device(u"laptop"_s);
     write(laptop, u"Mara.md"_s, "one\n");
     // Saved again while the first version is on its way, with the same length.
-    m_remote->beforePut = [&laptop](const QString &) { write(laptop, u"Mara.md"_s, "two\n"); };
+    m_remote->beforePut = [&laptop](const QString &path) {
+        if (path == u"Mara.md")
+            write(laptop, u"Mara.md"_s, "two\n");
+    };
     QCOMPARE(laptop.engine->sync().pushed, QStringList{u"Mara.md"_s});
     m_remote->beforePut = nullptr;
     QCOMPARE(m_remote->files.value(u"Mara.md"_s).data, QByteArray("one\n"));
@@ -321,7 +332,9 @@ void TestSync::sendsAnEditMadeDuringAnUpload()
     };
     write(laptop, u"Soren.md"_s, "one\n");
     age(u"Soren.md"_s, 3);
-    m_remote->beforePut = [&](const QString &) {
+    m_remote->beforePut = [&](const QString &path) {
+        if (path != u"Soren.md")
+            return;
         write(laptop, u"Soren.md"_s, "two\n");
         age(u"Soren.md"_s, 2);
     };
@@ -341,6 +354,34 @@ void TestSync::doesNothingWhenTheRemoteIsDown()
     QVERIFY(report.pushed.isEmpty());
     m_remote->down = false;
     QCOMPARE(laptop.engine->sync().pushed, QStringList{u"Mara.md"_s});
+}
+
+void TestSync::refusesARemoteThatIsNotTheOneSyncedWith()
+{
+    Device laptop = device(u"laptop"_s);
+    Device desk = device(u"desk"_s);
+    write(laptop, u"Mara.md"_s, "one\n");
+    settle({&laptop, &desk});
+    QVERIFY(m_remote->files.contains(SyncEngine::kMarker.toString()));
+    // Deleting the last note empties the remote but keeps its mark, and goes through.
+    QVERIFY(QFile::remove(laptop.root + u"/Mara.md"_s));
+    settle({&laptop, &desk});
+    QVERIFY(!exists(desk, u"Mara.md"_s));
+    write(desk, u"Soren.md"_s, "two\n");
+    settle({&laptop, &desk});
+
+    // Without its mark, as an empty mount point, or with another's, nothing changes here.
+    const FakeRemote::File mark = m_remote->files.take(SyncEngine::kMarker.toString());
+    const QMap<QString, FakeRemote::File> held = m_remote->files;
+    m_remote->files.clear();
+    QVERIFY(!laptop.engine->sync().failure.isEmpty());
+    QVERIFY(exists(laptop, u"Soren.md"_s));
+    m_remote->files.insert(SyncEngine::kMarker.toString(), {"someone else's\n", u"x"_s});
+    QVERIFY(laptop.engine->sync().failure.contains(u"not the remote"_s));
+    QVERIFY(exists(laptop, u"Soren.md"_s));
+    m_remote->files = held;
+    m_remote->files.insert(SyncEngine::kMarker.toString(), mark);
+    QVERIFY(laptop.engine->sync().failure.isEmpty());
 }
 
 void TestSync::syncsThroughAFolder()
@@ -374,6 +415,16 @@ void TestSync::syncsThroughAFolder()
     QVERIFY(!QFileInfo::exists(shared + u"/Gone.md"_s));
     QVERIFY(QDir(shared + u"/.jot/trash"_s).exists());
     QCOMPARE(files(laptop), files(desk));
+
+    // An unmounted share whose mount point stays behind, empty, changes nothing either.
+    const QMap<QString, QByteArray> before = files(laptop);
+    const QString aside = m_dir->filePath(u"aside"_s);
+    QVERIFY(QDir().rename(shared, aside));
+    QVERIFY(QDir().mkpath(shared));
+    QVERIFY(!laptop.engine->sync().failure.isEmpty());
+    QCOMPARE(files(laptop), before);
+    QVERIFY(QDir(shared).removeRecursively());
+    QVERIFY(QDir().rename(aside, shared));
 
     // An unmounted share is no remote at all, not one where everything was deleted.
     QVERIFY(QDir(shared).removeRecursively());

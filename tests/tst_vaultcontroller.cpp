@@ -1213,9 +1213,12 @@ void TestVaultController::syncsWithAFolder()
     QCOMPARE(readFile(m_root + u"/From the NAS.md"_s), u"written elsewhere\n"_s);
     QTRY_VERIFY(m_vault->index()->note(u"From the NAS.md"_s));
 
-    // Stopped, it forgets where, and leaves both as they are.
+    // Stopped, it forgets where and what it knew, and leaves both as they are.
+    const QString state = jot::syncStateDir(m_root, u"folder:"_s + nas);
+    QVERIFY(QFileInfo::exists(state));
     sync->stop();
     QVERIFY(!sync->configured());
+    QVERIFY(!QFileInfo::exists(state));
     QVERIFY(m_settings->syncRemote(m_root).isEmpty());
     QVERIFY(QFileInfo::exists(nas + u"/From the NAS.md"_s));
 }

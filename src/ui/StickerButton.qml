@@ -85,10 +85,10 @@ AbstractButton {
                 stroke: root.glyphStroke
 
                 RotationAnimator on rotation {
-                    running: root.spinning
+                    running: root.spinning && Theme.durSlow > 0
                     from: 0
                     to: 360
-                    duration: 1200
+                    duration: Theme.durSlow * 3
                     loops: Animation.Infinite
                     onRunningChanged: if (!running)
                                           target.rotation = 0

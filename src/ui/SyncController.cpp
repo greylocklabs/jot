@@ -88,6 +88,9 @@ void SyncController::stop()
 {
     if (m_root.isEmpty())
         return;
+    // What the last sync knew goes too, so choosing the same remote again starts afresh.
+    if (configured() && !m_thread)
+        QDir(syncStateDir(m_root, m_remote)).removeRecursively();
     m_settings.setSyncRemote(m_root, {});
     setVault(m_root, m_save);
 }
