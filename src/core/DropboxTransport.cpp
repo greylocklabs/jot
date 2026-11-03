@@ -1,4 +1,5 @@
 #include "jot/DropboxTransport.h"
+#include "jot/SyncBuildConfig.h"
 
 #include <QCryptographicHash>
 #include <QEventLoop>
@@ -41,11 +42,7 @@ QByteArray base64url(const QByteArray &data)
 
 QString dropboxAppKey()
 {
-#ifdef JOT_DROPBOX_APP_KEY
     return QStringLiteral(JOT_DROPBOX_APP_KEY);
-#else
-    return {};
-#endif
 }
 
 DropboxSignIn DropboxSignIn::start(const QString &appKey, const DropboxApi &api)
