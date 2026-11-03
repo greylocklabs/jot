@@ -36,6 +36,7 @@ PickerButton {
 
     MenuCard {
         id: menu
+        objectName: "dropdownMenu"
         minimumWidth: root.width
 
         Repeater {
