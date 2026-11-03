@@ -420,6 +420,9 @@ std::optional<QString> DriveTransport::put(const QString &path, const QByteArray
         if (!there)
             return std::nullopt;
         if (!there->isEmpty()) {
+            // Known from now on, so the get that follows a stale write finds it.
+            if (const std::optional<QString> version = versionOf(*there, error))
+                m_files.insert(path, {*there, *version});
             *stale = true;
             return std::nullopt;
         }
