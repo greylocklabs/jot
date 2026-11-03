@@ -117,8 +117,11 @@ and the goal of each.
   move off Joplin for local use. Vault and notebooks, the live-preview editor, links and
   backlinks, tags, tasks, search, outside edits, Joplin import, the CLI and the website.
 - **[0.2: Sync](https://github.com/greylocklabs/jot/milestone/2):** the same vault on a laptop and a
-  desktop through a cloud the user picks. Jot's own three-way engine, then folder, S3, Dropbox
-  and Google Drive transports, and note history. Versions 0.2 to 0.4 as transports land.
+  desktop through a cloud the user picks. Jot's own three-way engine, syncing with a folder,
+  conflict handling, note history and quick capture in 0.2.0; S3, Dropbox and Google Drive
+  follow as 0.2.x releases as each lands.
+- **[0.3: Data files](https://github.com/greylocklabs/jot/milestone/11):** JSON, CSV and YAML in
+  the vault, edited as tables or as text, and checked against a schema.
 - **[0.5: Writer basics](https://github.com/greylocklabs/jot/milestone/3):** pleasant for daily
   writing, not just notes. Focus mode, counts and targets, templates, export, spellcheck, math,
   diagrams and audio.

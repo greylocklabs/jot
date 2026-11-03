@@ -1,0 +1,367 @@
+#include "FakeTransport.h"
+
+#include "jot/Sync.h"
+
+#include <QDir>
+#include <QDirIterator>
+#include <QFile>
+#include <QRandomGenerator>
+#include <QSet>
+#include <QTemporaryDir>
+#include <QTest>
+
+using namespace Qt::StringLiterals;
+using jot::SyncEngine;
+using jot::SyncReport;
+
+class TestSync : public QObject
+{
+    Q_OBJECT
+
+private Q_SLOTS:
+    void init();
+    void cleanup();
+    void sendsAndBringsNewFiles();
+    void deletesGoToTheTrash();
+    void anEditBeatsADelete();
+    void mergesEditsToDifferentLines();
+    void mergesFrontMatterKeyByKey();
+    void keepsAConflictCopyWhenEditsClash();
+    void keepsBothVersionsOfAnAttachment();
+    void syncsOnlyTheVaultsOwnFiles();
+    void triesAgainWhenTheRemoteChangesMeanwhile();
+    void doesNothingWhenTheRemoteIsDown();
+    void keepsEverythingAcrossRandomEdits_data();
+    void keepsEverythingAcrossRandomEdits();
+
+private:
+    /// A computer with its own copy of the vault, syncing with the shared remote.
+    struct Device
+    {
+        QString root;
+        std::unique_ptr<SyncEngine> engine;
+    };
+    Device device(const QString &name);
+    static void write(const Device &device, const QString &path, const QByteArray &data);
+    static QByteArray read(const Device &device, const QString &path);
+    static bool exists(const Device &device, const QString &path);
+    /// Every synced file and its bytes; `trash` gives what syncs moved to the trash instead.
+    static QMap<QString, QByteArray> files(const Device &device, bool trash = false);
+    /// Syncs each device in turn until a round changes nothing.
+    void settle(QList<Device *> devices);
+
+    std::unique_ptr<QTemporaryDir> m_dir;
+    std::shared_ptr<FakeRemote> m_remote;
+};
+
+TestSync::Device TestSync::device(const QString &name)
+{
+    const QString root = m_dir->filePath(name + u"/vault"_s);
+    QDir().mkpath(root);
+    return {root, std::make_unique<SyncEngine>(root, std::make_unique<FakeTransport>(m_remote),
+                                               m_dir->filePath(name + u"/state"_s), name)};
+}
+
+void TestSync::write(const Device &device, const QString &path, const QByteArray &data)
+{
+    const QString file = device.root + u'/' + path;
+    QDir().mkpath(QFileInfo(file).path());
+    QFile out(file);
+    QVERIFY(out.open(QIODevice::WriteOnly));
+    out.write(data);
+}
+
+QByteArray TestSync::read(const Device &device, const QString &path)
+{
+    QFile in(device.root + u'/' + path);
+    return in.open(QIODevice::ReadOnly) ? in.readAll() : QByteArray();
+}
+
+bool TestSync::exists(const Device &device, const QString &path)
+{
+    return QFileInfo::exists(device.root + u'/' + path);
+}
+
+QMap<QString, QByteArray> TestSync::files(const Device &device, bool trash)
+{
+    QMap<QString, QByteArray> found;
+    QDirIterator it(device.root, QDir::Files | QDir::Hidden, QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        const QString path = it.next().mid(device.root.size() + 1);
+        const bool trashed = path.startsWith(u".jot/trash/"_s);
+        if (trashed == trash && (trash || SyncEngine::synced(path)))
+            found.insert(path, read(device, path));
+    }
+    return found;
+}
+
+void TestSync::settle(QList<Device *> devices)
+{
+    for (int round = 0; round < 6; ++round) {
+        bool quiet = true;
+        for (Device *each : devices) {
+            const SyncReport report = each->engine->sync();
+            QVERIFY2(report.failure.isEmpty(), qPrintable(report.failure));
+            QVERIFY2(report.errors.isEmpty(), qPrintable(report.errors.join(u"; ")));
+            quiet = quiet && report.pushed.isEmpty() && report.pulled.isEmpty() &&
+                    report.merged.isEmpty() && report.conflicts.isEmpty();
+        }
+        if (quiet && round > 0)
+            return;
+    }
+    QFAIL("the devices did not settle");
+}
+
+void TestSync::init()
+{
+    m_dir = std::make_unique<QTemporaryDir>();
+    m_remote = std::make_shared<FakeRemote>();
+}
+
+void TestSync::cleanup()
+{
+    m_remote.reset();
+    m_dir.reset();
+}
+
+void TestSync::sendsAndBringsNewFiles()
+{
+    Device laptop = device(u"laptop"_s);
+    Device desk = device(u"desk"_s);
+    write(laptop, u"Ashfall/Mara.md"_s, "# Mara\n");
+    write(desk, u"Inbox.md"_s, "- [ ] rope\n");
+    settle({&laptop, &desk});
+    QCOMPARE(read(desk, u"Ashfall/Mara.md"_s), QByteArray("# Mara\n"));
+    QCOMPARE(read(laptop, u"Inbox.md"_s), QByteArray("- [ ] rope\n"));
+    QCOMPARE(m_remote->files.size(), 2);
+
+    // The same new file on both, before either synced, is no conflict.
+    write(laptop, u"Same.md"_s, "same\n");
+    write(desk, u"Same.md"_s, "same\n");
+    settle({&laptop, &desk});
+    QCOMPARE(files(laptop), files(desk));
+    QCOMPARE(files(laptop).size(), 3);
+}
+
+void TestSync::deletesGoToTheTrash()
+{
+    Device laptop = device(u"laptop"_s);
+    Device desk = device(u"desk"_s);
+    write(laptop, u"Old.md"_s, "old\n");
+    settle({&laptop, &desk});
+    QVERIFY(QFile::remove(laptop.root + u"/Old.md"_s));
+    settle({&laptop, &desk});
+    QVERIFY(!exists(desk, u"Old.md"_s));
+    QVERIFY(m_remote->files.isEmpty());
+    // Kept in the trash here and there, not gone.
+    QCOMPARE(files(desk, true).values(), QList<QByteArray>{"old\n"});
+    QVERIFY(files(desk, true).firstKey().endsWith(u"/Old.md"_s));
+    QCOMPARE(m_remote->trash.value(u"Old.md"_s), QByteArray("old\n"));
+}
+
+void TestSync::anEditBeatsADelete()
+{
+    Device laptop = device(u"laptop"_s);
+    Device desk = device(u"desk"_s);
+    write(laptop, u"Mara.md"_s, "one\n");
+    write(laptop, u"Soren.md"_s, "one\n");
+    settle({&laptop, &desk});
+    // Deleted here and edited there, either way round.
+    QVERIFY(QFile::remove(laptop.root + u"/Mara.md"_s));
+    write(desk, u"Mara.md"_s, "one\ntwo\n");
+    write(laptop, u"Soren.md"_s, "one\nthree\n");
+    QVERIFY(QFile::remove(desk.root + u"/Soren.md"_s));
+    settle({&laptop, &desk});
+    QCOMPARE(read(laptop, u"Mara.md"_s), QByteArray("one\ntwo\n"));
+    QCOMPARE(read(desk, u"Soren.md"_s), QByteArray("one\nthree\n"));
+    QCOMPARE(files(laptop), files(desk));
+}
+
+void TestSync::mergesEditsToDifferentLines()
+{
+    Device laptop = device(u"laptop"_s);
+    Device desk = device(u"desk"_s);
+    write(laptop, u"Mara.md"_s, "# Mara\n\nfirst\n\nmiddle\n\nlast\n");
+    settle({&laptop, &desk});
+    write(laptop, u"Mara.md"_s, "# Mara\n\nFIRST\n\nmiddle\n\nlast\n");
+    write(desk, u"Mara.md"_s, "# Mara\n\nfirst\n\nmiddle\n\nLAST\n");
+    QCOMPARE(laptop.engine->sync().pushed, QStringList{u"Mara.md"_s});
+    QCOMPARE(desk.engine->sync().merged, QStringList{u"Mara.md"_s});
+    settle({&laptop, &desk});
+    QCOMPARE(read(laptop, u"Mara.md"_s), QByteArray("# Mara\n\nFIRST\n\nmiddle\n\nLAST\n"));
+    QCOMPARE(files(laptop), files(desk));
+}
+
+void TestSync::mergesFrontMatterKeyByKey()
+{
+    // Lines next to each other changed on both sides: a line merge gives up, keys do not.
+    const QString base = u"---\ntitle: Mara\ntask: open\ndue: 2026-11-02\n---\nBody\n"_s;
+    const QString mine = u"---\ntitle: Mara\ntask: done\ndue: 2026-11-02\n---\nBody\n"_s;
+    const QString theirs = u"---\ntitle: Mara\ntask: open\ndue: 2026-11-05\n---\nBody\nMore\n"_s;
+    QCOMPARE(SyncEngine::mergeNote(base, mine, theirs),
+             std::optional(u"---\ntitle: Mara\ntask: done\ndue: 2026-11-05\n---\nBody\nMore\n"_s));
+    // A key added on one side, and one taken away on the other.
+    QCOMPARE(SyncEngine::mergeNote(u"---\na: 1\nb: 2\n---\n"_s, u"---\na: 1\nb: 2\nc: 3\n---\n"_s,
+                                   u"---\na: 1\n---\n"_s),
+             std::optional(u"---\na: 1\nc: 3\n---\n"_s));
+    // The same key changed differently is a conflict.
+    QCOMPARE(SyncEngine::mergeNote(base, mine,
+                                   u"---\ntitle: Mara\ntask: cancelled\ndue: 2026-11-02\n---\n"
+                                   "Body\n"_s),
+             std::nullopt);
+}
+
+void TestSync::keepsAConflictCopyWhenEditsClash()
+{
+    Device laptop = device(u"laptop"_s);
+    Device desk = device(u"desk"_s);
+    write(laptop, u"Ashfall/Mara.md"_s, "line\n");
+    settle({&laptop, &desk});
+    write(laptop, u"Ashfall/Mara.md"_s, "laptop's line\n");
+    write(desk, u"Ashfall/Mara.md"_s, "desk's line\n");
+    laptop.engine->sync();
+    const SyncReport report = desk.engine->sync(QDateTime(QDate(2026, 11, 3), QTime(9, 30)));
+    QCOMPARE(report.conflicts, QStringList{u"Ashfall/Mara (conflict desk 2026-11-03 0930).md"_s});
+    settle({&laptop, &desk});
+    // Each side keeps its own at the note and the other beside it.
+    QCOMPARE(read(desk, u"Ashfall/Mara.md"_s), QByteArray("desk's line\n"));
+    QCOMPARE(read(desk, report.conflicts.first()), QByteArray("laptop's line\n"));
+    QCOMPARE(files(laptop), files(desk));
+}
+
+void TestSync::keepsBothVersionsOfAnAttachment()
+{
+    Device laptop = device(u"laptop"_s);
+    Device desk = device(u"desk"_s);
+    write(laptop, u"Mara.assets/sketch.png"_s, QByteArray("\x89PNG one", 8));
+    settle({&laptop, &desk});
+    write(laptop, u"Mara.assets/sketch.png"_s, QByteArray("\x89PNG two", 8));
+    write(desk, u"Mara.assets/sketch.png"_s, QByteArray("\x89PNG three", 10));
+    settle({&laptop, &desk});
+    const QMap<QString, QByteArray> all = files(laptop);
+    QCOMPARE(all.size(), 2);
+    QVERIFY(all.values().contains(QByteArray("\x89PNG two", 8)));
+    QVERIFY(all.values().contains(QByteArray("\x89PNG three", 10)));
+    QVERIFY(all.lastKey().endsWith(u").png"_s) || all.firstKey().endsWith(u").png"_s));
+    QCOMPARE(files(desk), all);
+}
+
+void TestSync::syncsOnlyTheVaultsOwnFiles()
+{
+    QVERIFY(SyncEngine::synced(u"Mara.md"_s));
+    QVERIFY(SyncEngine::synced(u".jot/layout.yaml"_s));
+    QVERIFY(SyncEngine::synced(u".jot/history/Mara.md/2026-11-03 093000.md"_s));
+    QVERIFY(!SyncEngine::synced(u".jot/trash/2026-11-03 093000/Mara.md"_s));
+    QVERIFY(!SyncEngine::synced(u".git/config"_s));
+    QVERIFY(!SyncEngine::synced(u"Ashfall/.DS_Store"_s));
+    QVERIFY(!SyncEngine::synced(u"Ashfall/.hidden/x.md"_s));
+
+    Device laptop = device(u"laptop"_s);
+    write(laptop, u".git/HEAD"_s, "ref\n");
+    write(laptop, u".jot/vault.yaml"_s, "format: 1\n");
+    laptop.engine->sync();
+    QCOMPARE(m_remote->files.keys(), QStringList{u".jot/vault.yaml"_s});
+}
+
+void TestSync::triesAgainWhenTheRemoteChangesMeanwhile()
+{
+    Device laptop = device(u"laptop"_s);
+    Device desk = device(u"desk"_s);
+    write(laptop, u"Mara.md"_s, "one\n");
+    settle({&laptop, &desk});
+    write(laptop, u"Mara.md"_s, "one\nlaptop\n");
+    // Another device writes just before this one does.
+    m_remote->beforePut = [this](const QString &path) {
+        m_remote->beforePut = nullptr;
+        m_remote->files.insert(path, {"elsewhere\none\n", m_remote->nextRev()});
+    };
+    const SyncReport report = laptop.engine->sync();
+    QCOMPARE(report.errors.size(), 1);
+    QVERIFY(report.pushed.isEmpty());
+    // The next sync sees the other write and merges with it.
+    settle({&laptop, &desk});
+    QCOMPARE(read(laptop, u"Mara.md"_s), QByteArray("elsewhere\none\nlaptop\n"));
+    QCOMPARE(files(laptop), files(desk));
+}
+
+void TestSync::doesNothingWhenTheRemoteIsDown()
+{
+    Device laptop = device(u"laptop"_s);
+    write(laptop, u"Mara.md"_s, "one\n");
+    m_remote->down = true;
+    const SyncReport report = laptop.engine->sync();
+    QCOMPARE(report.failure, u"unreachable"_s);
+    QVERIFY(report.pushed.isEmpty());
+    m_remote->down = false;
+    QCOMPARE(laptop.engine->sync().pushed, QStringList{u"Mara.md"_s});
+}
+
+void TestSync::keepsEverythingAcrossRandomEdits_data()
+{
+    QTest::addColumn<quint32>("seed");
+    for (quint32 seed = 1; seed <= 150; ++seed)
+        QTest::newRow(qPrintable(QString::number(seed))) << seed;
+}
+
+void TestSync::keepsEverythingAcrossRandomEdits()
+{
+    // Two devices make random edits, each line a token of its own, and sync now and then. At
+    // the end both hold the same, and every token is still somewhere unless a person deleted
+    // the file it was in.
+    QFETCH(quint32, seed);
+    QRandomGenerator random(seed);
+    Device a = device(u"a"_s);
+    Device b = device(u"b"_s);
+    const QStringList paths = {u"one.md"_s, u"two.md"_s, u"n/three.md"_s, u"blob.bin"_s,
+                               u".jot/layout.yaml"_s};
+    QSet<QByteArray> made;
+    QSet<QByteArray> deleted;
+    int next = 0;
+    for (int step = 0; step < 40; ++step) {
+        Device &on = random.bounded(2) == 0 ? a : b;
+        const QString path = paths.at(random.bounded(int(paths.size())));
+        switch (random.bounded(5)) {
+        case 0:
+        case 1: {
+            // Write a new line at the top or the bottom.
+            const QByteArray token = "t" + QByteArray::number(++next) + "\n";
+            made.insert(token.trimmed());
+            const QByteArray was = read(on, path);
+            write(on, path, random.bounded(2) == 0 ? token + was : was + token);
+            break;
+        }
+        case 2:
+            if (exists(on, path)) {
+                for (const QByteArray &line : read(on, path).split('\n'))
+                    deleted.insert(line);
+                QFile::remove(on.root + u'/' + path);
+            }
+            break;
+        default: {
+            const SyncReport report = on.engine->sync();
+            QVERIFY(report.failure.isEmpty());
+        }
+        }
+    }
+    settle({&a, &b});
+    QCOMPARE(files(a), files(b));
+
+    QSet<QByteArray> kept;
+    for (const Device *each : {&a, &b}) {
+        for (const QMap<QString, QByteArray> &set : {files(*each), files(*each, true)}) {
+            for (const QByteArray &data : set) {
+                for (const QByteArray &line : data.split('\n'))
+                    kept.insert(line);
+            }
+        }
+    }
+    for (const QByteArray &data : std::as_const(m_remote->trash)) {
+        for (const QByteArray &line : data.split('\n'))
+            kept.insert(line);
+    }
+    for (const QByteArray &token : std::as_const(made))
+        QVERIFY2(kept.contains(token) || deleted.contains(token), token.constData());
+}
+
+QTEST_GUILESS_MAIN(TestSync)
+#include "tst_sync.moc"
