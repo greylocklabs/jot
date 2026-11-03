@@ -3,16 +3,42 @@ import Jot.Ui
 import QtQuick
 import QtQuick.Controls
 
-/// The past versions of the note shown, newest first, each readable beside the list and
-/// restorable over the note.
+/// The past versions of the note shown, newest first, each readable beside the list, or shown as
+/// what changed between it and the note now or another version, and restorable over the note.
 Popup {
     id: root
 
     property var versions: []
     readonly property var chosen: list.currentIndex >= 0 ? versions[list.currentIndex] : null
 
+    /// How the comparison came out, in a sentence over it.
+    function changesSummary() {
+        if (comparison.error !== undefined)
+            return comparison.error
+        if (comparison.changes === 0)
+            return qsTr("No changes.")
+        if (comparison.changes === 1)
+            return qsTr("Changed in one place: what went is marked -, what came +.")
+        return qsTr("Changed in %1 places: what went is marked -, what came +.").arg(
+                    comparison.changes)
+    }
+
     /// The last restore did not go through.
     property bool failed: false
+    /// The chosen version shown as what changed, rather than as its text.
+    property bool showChanges: true
+    /// What the chosen version is compared with: another version's path, or empty for now.
+    property string against: ""
+    // Older first: the list is newest first, so the one further down it.
+    readonly property int againstIndex: versions.findIndex(version => version.path === against)
+    readonly property var comparison: !chosen || !showChanges ? ({}) : against === ""
+                                                                ? Vault.compareVersions(chosen.path,
+                                                                                        "") : againstIndex
+                                                                  > list.currentIndex
+                                                                  ? Vault.compareVersions(against,
+                                                                                          chosen.path) :
+                                                                    Vault.compareVersions(
+                                                                        chosen.path, against)
 
     anchors.centerIn: Overlay.overlay
     width: Math.min(820, (Overlay.overlay ? Overlay.overlay.width : 900) - 2 * Theme.space6)
@@ -27,6 +53,7 @@ Popup {
     onAboutToShow: {
         versions = Vault.historyOf(Vault.current)
         failed = false
+        against = ""
         list.currentIndex = versions.length > 0 ? 0 : -1
         list.forceActiveFocus()
     }
@@ -138,8 +165,8 @@ Popup {
             }
         }
 
-        ScrollView {
-            id: viewer
+        Row {
+            id: controls
 
             anchors {
                 top: header.bottom
@@ -147,10 +174,116 @@ Popup {
                 left: list.right
                 leftMargin: Theme.space4
                 right: parent.right
+            }
+            visible: root.versions.length > 0
+            spacing: Theme.space3
+
+            ModeSwitch {
+                objectName: "historyMode"
+                anchors.verticalCenter: parent.verticalCenter
+                options: [
+                    {
+                        "label": qsTr("Changes"),
+                        "tip": qsTr("What differs from the version compared with")
+                    },
+                    {
+                        "label": qsTr("Text"),
+                        "tip": qsTr("The version as it was")
+                    }
+                ]
+                current: root.showChanges ? 0 : 1
+                onPicked: index => root.showChanges = index === 0
+            }
+            Dropdown {
+                objectName: "historyAgainst"
+                anchors.verticalCenter: parent.verticalCenter
+                visible: root.showChanges
+                minimumWidth: 0
+                maximumWidth: controls.width - x
+                model: [
+                    {
+                        "id": "",
+                        "name": qsTr("Compared with the note now")
+                    }
+                ].concat(root.versions.filter(version => !root.chosen || version.path
+                                                         !== root.chosen.path).map(version => ({
+                                                             "id": version.path,
+                                                             "name": qsTr("Compared with %1").arg(
+                                                                         version.label)
+                                                         })))
+                currentValue: root.against
+                onActivated: value => root.against = value
+            }
+        }
+
+        ListView {
+            id: changes
+
+            objectName: "versionChanges"
+            anchors {
+                top: controls.bottom
+                topMargin: Theme.space3
+                left: list.right
+                leftMargin: Theme.space4
+                right: parent.right
                 bottom: restore.top
                 bottomMargin: Theme.space4
             }
-            visible: root.versions.length > 0
+            visible: root.versions.length > 0 && root.showChanges
+            clip: true
+            model: root.comparison.lines !== undefined ? root.comparison.lines : []
+            ScrollBar.vertical: ScrollBar {}
+
+            header: Text {
+                width: ListView.view.width
+                bottomPadding: Theme.space2
+                wrapMode: Text.Wrap
+                text: root.changesSummary()
+                color: Theme.textMuted
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.textSm
+            }
+
+            delegate: Rectangle {
+                required property var modelData
+
+                width: ListView.view.width
+                height: lineText.implicitHeight
+                color: modelData.kind === "same" ? "transparent" : Theme.tint(modelData.kind
+                                                                              === "removed"
+                                                                              ? Theme.danger :
+                                                                                Theme.accent, 0.16)
+
+                Text {
+                    id: lineText
+                    width: parent.width
+                    leftPadding: Theme.space2
+                    rightPadding: Theme.space2
+                    text: (parent.modelData.kind === "removed" ? "- " : parent.modelData.kind === "added"
+                                                                 ? "+ " : "  ")
+                          + parent.modelData.text
+                    textFormat: Text.PlainText
+                    wrapMode: Text.WrapAnywhere
+                    color: parent.modelData.kind === "same" ? Theme.textMuted : Theme.text
+                    font.family: Theme.monoFontFamily
+                    font.pixelSize: Theme.textSm
+                }
+            }
+        }
+
+        ScrollView {
+            id: viewer
+
+            anchors {
+                top: controls.bottom
+                topMargin: Theme.space3
+                left: list.right
+                leftMargin: Theme.space4
+                right: parent.right
+                bottom: restore.top
+                bottomMargin: Theme.space4
+            }
+            visible: root.versions.length > 0 && !root.showChanges
             clip: true
 
             TextArea {

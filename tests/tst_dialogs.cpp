@@ -213,6 +213,24 @@ void TestDialogs::showsAndRestoresPastVersions()
     // The note as made, then "First", newest first.
     QCOMPARE(versions->property("count").toInt(), 2);
     QCOMPARE(text->property("text").toString(), u"First\n"_s);
+    // It opens on what changed since, against the note now: "First" went, "Second" came.
+    auto *changes = content->findChild<QQuickItem *>(u"versionChanges"_s);
+    QVERIFY(changes && changes->isVisible() && !text->isVisible());
+    const auto lines = [dialog = dialog.get()] {
+        QStringList found;
+        for (const QVariant &line :
+             dialog->property("comparison").toMap().value(u"lines"_s).toList())
+            found << line.toMap().value(u"kind"_s).toString() + u' ' +
+                         line.toMap().value(u"text"_s).toString();
+        return found;
+    };
+    QCOMPARE(lines(), (QStringList{u"removed First"_s, u"added Second"_s}));
+    // Against the version before it, the note as made, "First" is what came.
+    const QString older = m_vault->historyOf(path).last().toMap().value(u"path"_s).toString();
+    dialog->setProperty("against", older);
+    QVERIFY(lines().contains(u"added First"_s));
+    QVERIFY(!lines().contains(u"added Second"_s));
+    dialog->setProperty("against", QString());
 
     QTest::mouseClick(
         &window, Qt::LeftButton, {},

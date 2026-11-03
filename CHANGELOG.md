@@ -18,6 +18,9 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   keep this one or use the other. Either way, what is let go can be brought back.
 - The same goes for notes in a folder that Syncthing, Nextcloud, ownCloud or Dropbox syncs: the
   copies they keep when two versions clash show beside the note, to compare and resolve.
+- Past versions show what changed, line by line, against the note now or any other version,
+  with the whole text a click away. Old versions thin out as they age: all from the last day,
+  then one an hour for a week, one a day for a month, and one a week after.
 
 ## 0.1.2 - 2026-11-03
 

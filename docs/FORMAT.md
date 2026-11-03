@@ -259,7 +259,10 @@ for the note's path, and names each copy by when the note held it:
 - Restoring a version keeps the text it replaces as a version too, so a restore can be undone.
 - Renaming or moving a note or notebook in Jot moves its history with it. A deleted note's
   history stays, and a note later made or moved to its path takes it on.
-- Edits made outside Jot keep no versions, and nothing is pruned yet.
+- Edits made outside Jot keep no versions.
+- Versions thin out as they age, whenever Jot keeps a new one: every version from the last day
+  stays, then the newest in each hour for a week, in each day for a month, and in each week
+  after that. The newest version always stays.
 
 ## Sync
 

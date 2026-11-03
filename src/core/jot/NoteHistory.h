@@ -32,6 +32,10 @@ public:
     /// Keeps `text` as the version of `note` written at `written`, whatever versions it has.
     bool add(const QString &note, const QString &text, const QDateTime &written,
              QString *error) const;
+    /// Thins `note`'s versions out as they age, as of `now`: every one from the last day, then
+    /// the newest in each hour for a week, in each day for a month, and in each week after. The
+    /// newest is always kept. Gives how many went.
+    int prune(const QString &note, const QDateTime &now) const;
 
 private:
     const Vault &m_vault;
