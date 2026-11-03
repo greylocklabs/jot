@@ -119,6 +119,10 @@ void TestQuickAdd::keepsARepeatRuleAsWritten()
              std::optional(u"water 🔁 every month 📅 2026-10-30"_s));
     QCOMPARE(scheduledAs(water, {}, now), std::optional(u"water"_s));
     QCOMPARE(scheduledAs(water, u"soon"_s, now), std::nullopt);
+    // A rule that only starts with the one written is a new rule.
+    const std::optional<QString> weekdays =
+        scheduledAs(u"sweep 🔁 every week"_s, u"every weekday"_s, now);
+    QVERIFY(weekdays && weekdays->contains(u"🔁 every weekday"_s));
 }
 
 QTEST_GUILESS_MAIN(TestQuickAdd)
