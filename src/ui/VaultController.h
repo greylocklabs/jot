@@ -296,7 +296,7 @@ private:
                      const std::function<std::optional<QString>(const QString &)> &change,
                      bool undoable = false);
     /// Changes the note at `path` from `from` to `to`, for undo and redo. `stale` says whether it
-    /// failed because the note no longer reads `from`, so the step can never apply.
+    /// failed because the note is gone or no longer reads `from`, so the step can never apply.
     bool replaceTaskText(const QString &path, const QString &from, const QString &to, bool *stale);
     /// Brings what another program wrote to the note shown into the edits not yet saved, or,
     /// where both changed the same lines, keeps it beside the note as a copy.
