@@ -4,3 +4,5 @@
 // this build of Jot by. Empty where the build had none, which leaves that service out.
 
 #define JOT_DROPBOX_APP_KEY "@jot_dropbox_app_key@"
+#define JOT_GOOGLE_CLIENT_ID "@jot_google_client_id@"
+#define JOT_GOOGLE_CLIENT_SECRET "@jot_google_client_secret@"

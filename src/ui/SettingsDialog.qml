@@ -241,6 +241,20 @@ Popup {
                     }
                 }
                 StickerButton {
+                    objectName: "syncWithDrive"
+                    visible: Vault.sync.driveAvailable
+                    enabled: Vault.isOpen && Vault.writable && !Vault.sync.checking
+                    text: qsTr("Sync with Google Drive...")
+                    tip: qsTr(
+                             "Sign in to Google in your browser; Jot keeps the notes in a folder of its own, Jot, and sees nothing else in your Drive")
+                    onClicked: {
+                        bucketForm.visible = false
+                        dropboxForm.visible = false
+                        bucketForm.connecting = true
+                        Vault.sync.connectDrive()
+                    }
+                }
+                StickerButton {
                     objectName: "syncWithBucket"
                     enabled: Vault.isOpen && Vault.writable
                     text: qsTr("Sync with S3...")

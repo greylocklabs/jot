@@ -13,6 +13,22 @@ endif()
 if(NOT jot_dropbox_app_key MATCHES "^[A-Za-z0-9]*$")
     message(FATAL_ERROR "The Dropbox app key holds unexpected characters")
 endif()
+
+# Google's OAuth client for Jot, for syncing with Google Drive, found as the Dropbox key is.
+set(JOT_GOOGLE_CLIENT_ID "" CACHE STRING "Google OAuth client id")
+set(JOT_GOOGLE_CLIENT_SECRET "" CACHE STRING "Google OAuth client secret")
+set(jot_google_client_id "${JOT_GOOGLE_CLIENT_ID}")
+set(jot_google_client_secret "${JOT_GOOGLE_CLIENT_SECRET}")
+if(jot_google_client_id STREQUAL "" AND NOT "$ENV{JOT_GOOGLE_CLIENT_ID}" STREQUAL "")
+    set(jot_google_client_id "$ENV{JOT_GOOGLE_CLIENT_ID}")
+    set(jot_google_client_secret "$ENV{JOT_GOOGLE_CLIENT_SECRET}")
+endif()
+
+foreach(value IN ITEMS "${jot_google_client_id}" "${jot_google_client_secret}")
+    if(NOT value MATCHES "^[A-Za-z0-9._-]*$")
+        message(FATAL_ERROR "The Google OAuth client id or secret holds unexpected characters")
+    endif()
+endforeach()
 # In a header made here, not on the compiler's command line, which build logs print.
 configure_file(SyncBuildConfig.h.in "${CMAKE_CURRENT_BINARY_DIR}/generated/jot/SyncBuildConfig.h"
                @ONLY)
@@ -57,6 +73,8 @@ add_library(jotcore STATIC
     S3Transport.cpp
     jot/DropboxTransport.h
     DropboxTransport.cpp
+    jot/DriveTransport.h
+    DriveTransport.cpp
     SyncRemotes.cpp
     jot/TaskLine.h
     TaskLine.cpp

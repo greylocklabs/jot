@@ -73,8 +73,10 @@ jobs:
 
       - name: Build the package
         env:
-          # Lets the package sync with Dropbox; without it the build leaves Dropbox out.
+          # Let the package sync with Dropbox and Google Drive; without them the build leaves those out.
           JOT_DROPBOX_APP_KEY: ${{ secrets.JOT_DROPBOX_APP_KEY }}
+          JOT_GOOGLE_CLIENT_ID: ${{ secrets.JOT_GOOGLE_CLIENT_ID }}
+          JOT_GOOGLE_CLIENT_SECRET: ${{ secrets.JOT_GOOGLE_CLIENT_SECRET }}
         run: |
           version="${{ needs.source.outputs.version }}"
           dnf install -y --setopt=install_weak_deps=False rpm-build dnf-plugins-core xz tar
@@ -103,8 +105,10 @@ jobs:
 
       - name: Build the package
         env:
-          # Lets the package sync with Dropbox; without it the build leaves Dropbox out.
+          # Let the package sync with Dropbox and Google Drive; without them the build leaves those out.
           JOT_DROPBOX_APP_KEY: ${{ secrets.JOT_DROPBOX_APP_KEY }}
+          JOT_GOOGLE_CLIENT_ID: ${{ secrets.JOT_GOOGLE_CLIENT_ID }}
+          JOT_GOOGLE_CLIENT_SECRET: ${{ secrets.JOT_GOOGLE_CLIENT_SECRET }}
         run: |
           version="${{ needs.source.outputs.version }}"
           apt-get update -qq
