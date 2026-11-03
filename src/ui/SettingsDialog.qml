@@ -441,6 +441,32 @@ Popup {
         }
 
         Section {
+            title: qsTr("Quick capture")
+            visible: root.tab === "keyboard"
+
+            Toggle {
+                objectName: "quickCaptureKey"
+                width: parent.width
+                visible: QuickCapture.available
+                text: QuickCapture.trigger !== "" ? qsTr("Add a to-do from anywhere with %1").arg(
+                                                        QuickCapture.trigger) : qsTr(
+                                                        "Add a to-do from anywhere with a key of its own")
+                checked: Settings.quickCaptureKey
+                onToggled: Settings.quickCaptureKey = checked
+            }
+            Text {
+                width: parent.width
+                wrapMode: Text.Wrap
+                text: QuickCapture.available ? qsTr(
+                                                   "Your desktop asks to allow it the first time, and lets you choose another key in its own shortcut settings. Or bind any key to jot-gui --quick-add there.") :
+                                               qsTr("Bind a key to jot-gui --quick-add in your desktop's shortcut settings to add a to-do from anywhere.")
+                color: Theme.textMuted
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.textSm
+            }
+        }
+
+        Section {
             title: qsTr("Vi mode")
             visible: root.tab === "keyboard"
 

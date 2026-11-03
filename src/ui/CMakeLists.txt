@@ -38,6 +38,8 @@ qt_add_qml_module(jotui
         TagModel.cpp
         TaskModel.h
         TaskModel.cpp
+        QuickCapture.h
+        QuickCapture.cpp
         SyncController.h
         SyncController.cpp
         ToDoReminders.h
@@ -128,5 +130,5 @@ qt_add_resources(jotui "jot_emoji"
 
 target_include_directories(jotui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-target_link_libraries(jotui PUBLIC Qt6::Quick Qt6::QuickControls2 jotcore)
+target_link_libraries(jotui PUBLIC Qt6::Quick Qt6::QuickControls2 Qt6::DBus jotcore)
 target_link_libraries(jotui PRIVATE KF6::SyntaxHighlighting)

@@ -27,6 +27,7 @@ const QString kCheckForUpdates = u"updates/check"_s;
 const QString kLastSeenVersion = u"app/lastSeenVersion"_s;
 const QString kKeepRunning = u"app/keepRunning"_s;
 const QString kRemindersOn = u"reminders/on"_s;
+const QString kQuickCaptureKey = u"app/quickCaptureKey"_s;
 const QString kReminderTime = u"reminders/time"_s;
 const QString kLastReminderCheck = u"reminders/lastCheck"_s;
 const QString kSourceMode = u"editor/sourceMode"_s;
@@ -67,6 +68,7 @@ Settings::Settings(const QString &path, QObject *parent)
     m_lastSeenVersion = m_store.value(kLastSeenVersion).toString();
     m_keepRunning = m_store.value(kKeepRunning, true).toBool();
     m_remindersOn = m_store.value(kRemindersOn, true).toBool();
+    m_quickCaptureKey = m_store.value(kQuickCaptureKey, false).toBool();
     if (const QTime time = QTime::fromString(m_store.value(kReminderTime).toString(), u"HH:mm"_s);
         time.isValid())
         m_reminderTime = time.toString(u"HH:mm"_s);
@@ -226,6 +228,15 @@ void Settings::setRemindersOn(bool on)
     Q_EMIT remindersChanged();
 }
 
+void Settings::setQuickCaptureKey(bool on)
+{
+    if (m_quickCaptureKey == on)
+        return;
+    m_quickCaptureKey = on;
+    m_store.setValue(kQuickCaptureKey, on);
+    Q_EMIT quickCaptureKeyChanged();
+}
+
 void Settings::setReminderTime(const QString &time)
 {
     QTime read = QTime::fromString(time.trimmed(), u"H:mm"_s);
@@ -353,6 +364,7 @@ void Settings::reset()
     setTasksView(u"today"_s);
     setKeepRunning(true);
     setRemindersOn(true);
+    setQuickCaptureKey(false);
     setReminderTime(u"09:00"_s);
     setNoteFont({});
     resetSidebarWidth();

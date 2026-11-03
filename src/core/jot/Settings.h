@@ -50,6 +50,9 @@ class Settings : public QObject
     Q_PROPERTY(bool keepRunning READ keepRunning WRITE setKeepRunning NOTIFY remindersChanged)
     /// Notify when a to-do comes due.
     Q_PROPERTY(bool remindersOn READ remindersOn WRITE setRemindersOn NOTIFY remindersChanged)
+    /// A system-wide key opens quick add, from anywhere on the desktop.
+    Q_PROPERTY(bool quickCaptureKey READ quickCaptureKey WRITE setQuickCaptureKey NOTIFY
+                   quickCaptureKeyChanged)
     /// When, as "HH:mm" local time, a to-do due on a day with no time of its own reminds.
     Q_PROPERTY(QString reminderTime READ reminderTime WRITE setReminderTime NOTIFY remindersChanged)
     /// The version that ran last, so a new one can say what changed.
@@ -115,6 +118,8 @@ public:
     void setKeepRunning(bool keep);
     [[nodiscard]] bool remindersOn() const { return m_remindersOn; }
     void setRemindersOn(bool on);
+    [[nodiscard]] bool quickCaptureKey() const { return m_quickCaptureKey; }
+    void setQuickCaptureKey(bool on);
     [[nodiscard]] QString reminderTime() const { return m_reminderTime; }
     /// Takes "H:mm" or "HH:mm"; anything else is ignored.
     void setReminderTime(const QString &time);
@@ -144,6 +149,7 @@ Q_SIGNALS:
     void lastSeenVersionChanged();
     void syncRemoteChanged();
     void remindersChanged();
+    void quickCaptureKeyChanged();
 
 private:
     QSettings m_store;
@@ -165,6 +171,7 @@ private:
     QString m_lastSeenVersion;
     bool m_keepRunning = true;
     bool m_remindersOn = true;
+    bool m_quickCaptureKey = false;
     QString m_reminderTime = QStringLiteral("09:00");
     QDateTime m_lastReminderCheck;
 };
