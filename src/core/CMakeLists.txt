@@ -27,6 +27,8 @@ add_library(jotcore STATIC
     NoteScan.cpp
     jot/NoteTrail.h
     NoteTrail.cpp
+    jot/Sync.h
+    Sync.cpp
     jot/TaskLine.h
     TaskLine.cpp
     jot/ToDos.h
