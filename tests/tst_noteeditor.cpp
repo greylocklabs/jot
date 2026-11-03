@@ -61,6 +61,7 @@ private Q_SLOTS:
     void readsTheNoteWithLinksAndBoxesToTick();
     void tickingARepeatingToDoWritesTheNext();
     void editsInViModes();
+    void jumpsAlongALineInVi();
     void takesTextInputOnlyInInsertMode();
     void staysQuickAndStillInALongNote();
     void composesWithAnInputMethod();
@@ -795,6 +796,70 @@ void TestNoteEditor::takesTextInputOnlyInInsertMode()
     QCOMPARE(takesInput(), QVariant(false));
     m_settings->setViMode(false);
     QCOMPARE(takesInput(), QVariant(true));
+}
+
+void TestNoteEditor::jumpsAlongALineInVi()
+{
+    m_settings->setViMode(true);
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    auto *vi = body->findChild<QObject *>(u"vi"_s);
+    QVERIFY(vi);
+    body->forceActiveFocus();
+    body->setProperty("text", u"one, two, three\nfour"_s);
+    body->setProperty("cursorPosition", 0);
+    const auto text = [body] { return body->property("text").toString(); };
+    const auto at = [body] { return body->property("cursorPosition").toInt(); };
+    const auto type = [this](const QString &keys) {
+        for (const QChar c : keys)
+            QTest::keyClick(m_window.get(), c.toLatin1());
+    };
+
+    // f and t go along the line to a character, F and T back; ; and , repeat either way.
+    type(u"ft"_s);
+    QCOMPARE(at(), 5);
+    type(u";"_s);
+    QCOMPARE(at(), 10);
+    type(u","_s);
+    QCOMPARE(at(), 5);
+    type(u";"_s);
+    QCOMPARE(at(), 10);
+    type(u"Fo"_s);
+    QCOMPARE(at(), 7);
+    type(u"t,"_s);
+    QCOMPARE(at(), 7);
+    type(u";"_s);
+    QCOMPARE(at(), 7);
+    type(u"0te"_s);
+    QCOMPARE(at(), 1);
+    type(u";"_s);
+    QCOMPARE(at(), 12);
+    type(u"Tn"_s);
+    QCOMPARE(at(), 2);
+    // Nothing to find on the line, or past its end, leaves the cursor where it was.
+    type(u"fz"_s);
+    QCOMPARE(at(), 2);
+    type(u"$fr"_s);
+    QCOMPARE(at(), 15);
+    QCOMPARE(text(), u"one, two, three\nfour"_s);
+
+    // d and c cut up to it, the character too going forward; c then types.
+    type(u"0dt,"_s);
+    QCOMPARE(text(), u", two, three\nfour"_s);
+    // $ is past the line's last character, so back from there takes all of "three".
+    type(u"$dFt"_s);
+    QCOMPARE(text(), u", two, \nfour"_s);
+    type(u"0cfwnew"_s);
+    QCOMPARE(vi->property("mode").toString(), u"insert"_s);
+    QCOMPARE(text(), u"newo, \nfour"_s);
+    QTest::keyClick(m_window.get(), Qt::Key_Escape);
+
+    // In visual mode, they select as they go.
+    type(u"0vf,"_s);
+    QCOMPARE(body->property("selectedText").toString(), u"newo"_s);
+    type(u"d"_s);
+    QCOMPARE(text(), u", \nfour"_s);
+    m_settings->setViMode(false);
 }
 
 void TestNoteEditor::staysQuickAndStillInALongNote()

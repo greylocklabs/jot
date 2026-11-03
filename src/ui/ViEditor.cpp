@@ -182,6 +182,37 @@ bool ViEditor::key(const QKeyEvent *event)
     }
 
     const QString keys = m_pending + name;
+    static const QString kFinds = u"fFtT"_s;
+    const bool visual = m_mode == kVisual;
+    // After f, F, t or T, any key is the character to go to.
+    if (!m_pending.isEmpty() && kFinds.contains(m_pending.back())) {
+        const QChar op = m_pending.size() > 1 ? m_pending.front() : QChar();
+        const QChar kind = m_pending.back();
+        setPending({});
+        if (name.size() != 1)
+            return true;
+        m_findKind = kind;
+        m_findTarget = name.front();
+        return find(op, kind, m_findTarget, false);
+    }
+    const bool operated =
+        !visual && keys.size() == 2 && (keys.front() == u'd' || keys.front() == u'c');
+    const QChar last = keys.back();
+    if ((keys.size() == 1 || operated) && kFinds.contains(last)) {
+        setPending(keys);
+        // Unlike other keys begun, the character to find is waited for.
+        m_timeout.stop();
+        return true;
+    }
+    if ((keys.size() == 1 || operated) && (last == u';' || last == u',')) {
+        setPending({});
+        if (m_findKind.isNull())
+            return true;
+        static const QHash<QChar, QChar> kOther = {
+            {u'f', u'F'}, {u'F', u'f'}, {u't', u'T'}, {u'T', u't'}};
+        const QChar kind = last == u';' ? m_findKind : kOther.value(m_findKind);
+        return find(operated ? keys.front() : QChar(), kind, m_findTarget, true);
+    }
     if (m_mode == kVisual) {
         const QString id = KeyRouter::viAction(kVisual, keys);
         if (!id.isEmpty()) {
@@ -220,6 +251,47 @@ bool ViEditor::move(const QString &id)
     const Qt::KeyboardModifiers modifiers =
         key->second | (m_mode == kVisual ? Qt::ShiftModifier : Qt::NoModifier);
     sendKey(key->first, modifiers);
+    return true;
+}
+
+bool ViEditor::find(QChar op, QChar kind, QChar target, bool repeat)
+{
+    QTextDocument *doc = document();
+    if (!doc)
+        return true;
+    const int from = std::min(cursor(), doc->characterCount() - 1);
+    const QTextBlock block = doc->findBlock(from);
+    const QString line = block.text();
+    const int at = from - block.position();
+    const bool forward = kind == u'f' || kind == u't';
+    const bool till = kind == u't' || kind == u'T';
+    const int skip = repeat && till ? 2 : 1;
+    const qsizetype found = forward         ? line.indexOf(target, at + skip)
+                            : at - skip < 0 ? -1
+                                            : line.lastIndexOf(target, at - skip);
+    if (found < 0)
+        return true;
+    const int to = block.position() + int(found) + (till ? (forward ? -1 : 1) : 0);
+    if (op.isNull()) {
+        if (m_mode == kVisual)
+            QMetaObject::invokeMethod(m_target, "moveCursorSelection", Q_ARG(int, to));
+        else
+            setCursor(to);
+        return true;
+    }
+    if (!writable())
+        return true;
+    // Forward, the character gone to goes too, as in vi.
+    const int start = forward ? from : to;
+    const int end = forward ? to + 1 : from;
+    QTextCursor edit(doc);
+    edit.setPosition(start);
+    edit.setPosition(end, QTextCursor::KeepAnchor);
+    keep(edit.selectedText(), false);
+    edit.removeSelectedText();
+    setCursor(start);
+    if (op == u'c')
+        setMode(kInsert);
     return true;
 }
 
