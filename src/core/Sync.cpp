@@ -100,7 +100,11 @@ struct SyncEngine::Private
 
     bool open(QString *error);
     void loadBases();
-    void keepBase(const QString &path, const QByteArray &data, const QString &rev);
+    /// Records `data` as what both sides hold at `path`, the remote as `rev`. `seen` is the
+    /// file's size and time when `data` was read from it; without it, `data` was just written
+    /// here.
+    void keepBase(const QString &path, const QByteArray &data, const QString &rev,
+                  const std::optional<Local> &seen = std::nullopt);
     void forgetBase(const QString &path);
     void collectBlobs();
 
@@ -234,10 +238,25 @@ void SyncEngine::Private::loadBases()
                       query.value(3).toLongLong(), query.value(4).toString()});
 }
 
-void SyncEngine::Private::keepBase(const QString &path, const QByteArray &data, const QString &rev)
+void SyncEngine::Private::keepBase(const QString &path, const QByteArray &data, const QString &rev,
+                                   const std::optional<Local> &seen)
 {
+    // The file's size and time stand for `data` only while it is as it was when read, or still
+    // holds what was written, and was written long enough ago that a later write would show in
+    // its time. Otherwise the base keeps a time of 0, and the next sync reads the file rather
+    // than trust it, as after an edit during a slow upload.
+    const QByteArray hash = sha256(data);
     const std::optional<Local> here = stat(path);
-    const Base base{sha256(data), here ? here->size : data.size(), here ? here->mtime : 0, rev};
+    bool vouched = false;
+    if (here && here->mtime >= QDateTime::currentMSecsSinceEpoch() - kRacyMs) {
+        // So recent, another write could share its time: no proof either way.
+    } else if (here && seen) {
+        vouched = here->size == seen->size && here->mtime == seen->mtime;
+    } else if (here) {
+        const std::optional<QByteArray> back = readLocal(path);
+        vouched = back && sha256(*back) == hash;
+    }
+    const Base base{hash, vouched ? here->size : data.size(), vouched ? here->mtime : 0, rev};
     // A text file's base is what the next merge starts from.
     if (mergeable(path)) {
         QSaveFile blob(blobPath(base.hash));
@@ -359,6 +378,7 @@ void SyncEngine::Private::fail(const QString &path, const QString &what)
 
 void SyncEngine::Private::push(const QString &path, const QString &expected)
 {
+    const std::optional<Local> seen = stat(path);
     const std::optional<QByteArray> data = readLocal(path);
     if (!data) {
         fail(path, QObject::tr("could not read it"));
@@ -371,7 +391,7 @@ void SyncEngine::Private::push(const QString &path, const QString &expected)
         fail(path, stale ? QObject::tr("it changed on the remote meanwhile") : error);
         return;
     }
-    keepBase(path, *data, *rev);
+    keepBase(path, *data, *rev, seen);
     report.pushed << path;
 }
 
@@ -404,13 +424,14 @@ void SyncEngine::Private::bothChanged(const QString &path, const std::optional<L
     QString error;
     QString rev;
     const std::optional<QByteArray> theirs = remote->get(path, &rev, &error);
+    const std::optional<Local> seen = stat(path);
     const std::optional<QByteArray> mine = readLocal(path);
     if (!theirs || !mine) {
         fail(path, theirs ? QObject::tr("could not read it") : error);
         return;
     }
     if (sha256(*theirs) == sha256(*mine)) {
-        keepBase(path, *mine, rev);
+        keepBase(path, *mine, rev, seen);
         return;
     }
 
@@ -466,7 +487,7 @@ void SyncEngine::Private::bothChanged(const QString &path, const std::optional<L
         fail(path, stale ? QObject::tr("it changed on the remote meanwhile") : error);
         return;
     }
-    keepBase(path, *mine, *newRev);
+    keepBase(path, *mine, *newRev, seen);
 }
 
 void SyncEngine::Private::syncPath(const QString &path, const std::optional<Local> &local,
@@ -499,20 +520,23 @@ void SyncEngine::Private::syncPath(const QString &path, const std::optional<Loca
         localSame = local->size == base->size && local->mtime == base->mtime &&
                     local->mtime < now.toMSecsSinceEpoch() - kRacyMs;
         if (!localSame) {
+            const std::optional<Local> seen = stat(path);
             const std::optional<QByteArray> data = readLocal(path);
             localSame = data && sha256(*data) == base->hash;
             // Touched but not changed: the base takes the new time, so it is not read again.
             if (localSame)
-                keepBase(path, *data, base->rev);
+                keepBase(path, *data, base->rev, seen);
         }
     }
     bool remoteSame = false;
     if (remoteFile) {
         remoteSame = remoteFile->rev == base->rev ||
                      (!remoteFile->hash.isEmpty() && remoteFile->hash == base->hash);
-        if (remoteSame && remoteFile->rev != base->rev) {
-            if (const std::optional<QByteArray> data = readLocal(path); data && localSame)
-                keepBase(path, *data, remoteFile->rev);
+        if (remoteSame && remoteFile->rev != base->rev && localSame) {
+            const std::optional<Local> seen = stat(path);
+            if (const std::optional<QByteArray> data = readLocal(path);
+                data && sha256(*data) == base->hash)
+                keepBase(path, *data, remoteFile->rev, seen);
         }
     }
 

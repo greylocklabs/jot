@@ -30,6 +30,7 @@ private Q_SLOTS:
     void keepsBothVersionsOfAnAttachment();
     void syncsOnlyTheVaultsOwnFiles();
     void triesAgainWhenTheRemoteChangesMeanwhile();
+    void sendsAnEditMadeDuringAnUpload();
     void doesNothingWhenTheRemoteIsDown();
     void keepsEverythingAcrossRandomEdits_data();
     void keepsEverythingAcrossRandomEdits();
@@ -282,6 +283,39 @@ void TestSync::triesAgainWhenTheRemoteChangesMeanwhile()
     settle({&laptop, &desk});
     QCOMPARE(read(laptop, u"Mara.md"_s), QByteArray("elsewhere\none\nlaptop\n"));
     QCOMPARE(files(laptop), files(desk));
+}
+
+void TestSync::sendsAnEditMadeDuringAnUpload()
+{
+    Device laptop = device(u"laptop"_s);
+    write(laptop, u"Mara.md"_s, "one\n");
+    // Saved again while the first version is on its way, with the same length.
+    m_remote->beforePut = [&laptop](const QString &) { write(laptop, u"Mara.md"_s, "two\n"); };
+    QCOMPARE(laptop.engine->sync().pushed, QStringList{u"Mara.md"_s});
+    m_remote->beforePut = nullptr;
+    QCOMPARE(m_remote->files.value(u"Mara.md"_s).data, QByteArray("one\n"));
+    // Later, when a file's time alone would pass for unchanged, the edit still goes.
+    const QDateTime later = QDateTime::currentDateTime().addSecs(60);
+    QCOMPARE(laptop.engine->sync(later).pushed, QStringList{u"Mara.md"_s});
+    QCOMPARE(m_remote->files.value(u"Mara.md"_s).data, QByteArray("two\n"));
+
+    // The same with times long past, where only the time changing tells the edit.
+    const auto age = [&laptop](const QString &path, int days) {
+        QFile file(laptop.root + u'/' + path);
+        QVERIFY(file.open(QIODevice::ReadWrite));
+        QVERIFY(file.setFileTime(QDateTime::currentDateTime().addDays(-days),
+                                 QFileDevice::FileModificationTime));
+    };
+    write(laptop, u"Soren.md"_s, "one\n");
+    age(u"Soren.md"_s, 3);
+    m_remote->beforePut = [&](const QString &) {
+        write(laptop, u"Soren.md"_s, "two\n");
+        age(u"Soren.md"_s, 2);
+    };
+    QCOMPARE(laptop.engine->sync().pushed, QStringList{u"Soren.md"_s});
+    m_remote->beforePut = nullptr;
+    QCOMPARE(laptop.engine->sync(later).pushed, QStringList{u"Soren.md"_s});
+    QCOMPARE(m_remote->files.value(u"Soren.md"_s).data, QByteArray("two\n"));
 }
 
 void TestSync::doesNothingWhenTheRemoteIsDown()
