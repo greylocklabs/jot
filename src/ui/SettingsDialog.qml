@@ -239,6 +239,7 @@ Popup {
                         dropboxForm.visible = !dropboxForm.visible
                         bucketForm.visible = false
                         driveForm.visible = false
+                        gitForm.visible = false
                     }
                 }
                 StickerButton {
@@ -273,6 +274,7 @@ Popup {
                         bucketForm.visible = !bucketForm.visible
                         driveForm.visible = false
                         dropboxForm.visible = false
+                        gitForm.visible = false
                     }
                 }
                 StickerButton {
