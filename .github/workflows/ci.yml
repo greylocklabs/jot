@@ -71,39 +71,48 @@ jobs:
           ./core/tooling/format.sh check
 
   s3:
-    # Sync against a real S3-compatible store: MinIO, beside a Fedora build on one network.
+    # Sync against a real S3-compatible store. MinIO publishes no images any more, so its
+    # server is built from source and run beside the tests in one container.
     name: sync with S3
     runs-on: ubuntu-latest
+    container: fedora:44
     steps:
+      - name: Install build dependencies
+        run: >-
+          dnf install -y --setopt=install_weak_deps=False
+          git gcc-c++ cmake ninja-build make golang curl
+          qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtquickcontrols2-devel
+          tomlplusplus-devel kf6-syntax-highlighting-devel qtkeychain-qt6-devel
+
       - uses: actions/checkout@v7
         with:
           submodules: true
 
-      - name: Start MinIO
+      - name: Build and start MinIO
+        env:
+          MINIO_ROOT_USER: jottest
+          MINIO_ROOT_PASSWORD: jottestsecret
         run: |
-          docker network create jot
-          docker run -d --name minio --network jot \
-            -e MINIO_ROOT_USER=jottest -e MINIO_ROOT_PASSWORD=jottestsecret \
-            minio/minio:latest server /data
+          GOBIN="$PWD/.minio" go install github.com/minio/minio@latest
+          mkdir -p /tmp/minio
+          .minio/minio server /tmp/minio --address 127.0.0.1:9000 > /tmp/minio.log 2>&1 &
+          for try in $(seq 60); do
+            curl -sf http://127.0.0.1:9000/minio/health/live && break
+            sleep 1
+          done
+          curl -sf --aws-sigv4 "aws:amz:us-east-1:s3" --user jottest:jottestsecret \
+            -X PUT http://127.0.0.1:9000/jot-test
 
       - name: Build and test against it
+        env:
+          JOT_TEST_S3: "s3:http://127.0.0.1:9000/jot-test?region=us-east-1"
+          JOT_TEST_S3_KEY: "jottest:jottestsecret"
+          QT_QPA_PLATFORM: offscreen
         run: |
-          docker run --rm --network jot -v "$PWD:/src" -w /src \
-            -e JOT_TEST_S3="s3:http://minio:9000/jot-test?region=us-east-1" \
-            -e JOT_TEST_S3_KEY="jottest:jottestsecret" \
-            fedora:44 bash -ec '
-              dnf install -y --setopt=install_weak_deps=False curl gcc-c++ cmake ninja-build \
-                make qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtquickcontrols2-devel \
-                tomlplusplus-devel kf6-syntax-highlighting-devel qtkeychain-qt6-devel
-              for try in $(seq 30); do
-                curl -sf http://minio:9000/minio/health/live && break
-                sleep 1
-              done
-              curl -sf --aws-sigv4 "aws:amz:us-east-1:s3" --user jottest:jottestsecret \
-                -X PUT http://minio:9000/jot-test
-              cmake --preset ci
-              cmake --build --preset ci --target tst_s3
-              QT_QPA_PLATFORM=offscreen build/ci/tests/tst_s3'
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          cmake --preset ci
+          cmake --build --preset ci --target tst_s3
+          build/ci/tests/tst_s3
 
   build:
     strategy:
