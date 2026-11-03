@@ -1,6 +1,7 @@
 #include "jot/QuickAdd.h"
 
 #include "jot/FrontMatter.h"
+#include "jot/TaskLine.h"
 #include "jot/Vault.h"
 
 #include <QHash>
@@ -195,6 +196,71 @@ QuickTask readQuickTask(const QString &typed, const QDateTime &now)
         task.line += u" 📅 "_s + day.toString(Qt::ISODate) +
                      (time.isValid() ? u' ' + time.toString(u"HH:mm"_s) : QString());
     return task;
+}
+
+namespace {
+
+// Obsidian Tasks' markers, which end a to-do's own words.
+const QRegularExpression &taskMarker()
+{
+    static const QRegularExpression marker(u"(?:📅|⏳|🛫|➕|✅|❌|🔁|⏫|🔼|🔽|🔺|⏬)\\x{FE0F}?"_s);
+    return marker;
+}
+
+} // namespace
+
+QString withTaskSchedule(const QString &text, const QString &due, const QString &repeat)
+{
+    // The words, and each marker with what follows it up to the next; the day and repeat go.
+    QList<QRegularExpressionMatch> found;
+    for (const QRegularExpressionMatch &m : taskMarker().globalMatch(text))
+        found.append(m);
+    QString words = (found.isEmpty() ? text : text.first(found.first().capturedStart())).trimmed();
+    QStringList kept;
+    for (qsizetype i = 0; i < found.size(); ++i) {
+        const QRegularExpressionMatch &m = found.at(i);
+        const qsizetype end = i + 1 < found.size() ? found.at(i + 1).capturedStart() : text.size();
+        const QString marker = text.sliced(m.capturedStart(), end - m.capturedStart()).trimmed();
+        if (marker.startsWith(u"🔁"_s)) {
+            // A label or a tag after the rule is the to-do's own.
+            for (const QString &word : marker.split(u' ', Qt::SkipEmptyParts)) {
+                if (word.startsWith(u'@') || word.startsWith(u'#'))
+                    words += u' ' + word;
+            }
+            continue;
+        }
+        if (!marker.startsWith(u"📅"_s)) {
+            kept << marker;
+            continue;
+        }
+        // Words after the day, such as a tag, are the to-do's own too.
+        static const QRegularExpression day(
+            uR"(^📅\x{FE0F}?\s*\d{4}-\d{2}-\d{2}(?:[ T]\d{1,2}:\d{2})?)"_s);
+        const QString after = marker.sliced(day.match(marker).capturedLength()).trimmed();
+        if (!after.isEmpty())
+            words += u' ' + after;
+    }
+    QString line = words;
+    if (!repeat.isEmpty())
+        line += u" 🔁 "_s + repeat;
+    if (!due.isEmpty())
+        line += u" 📅 "_s + QString(due).replace(u'T', u' ');
+    for (const QString &marker : std::as_const(kept))
+        line += u' ' + marker;
+    return line;
+}
+
+std::optional<QString> scheduledFromWords(const QString &text, const QDateTime &now)
+{
+    const QRegularExpressionMatch first = taskMarker().match(text);
+    const QString words = first.hasMatch() ? text.first(first.capturedStart()) : text;
+    const QuickTask said = readQuickTask(words, now);
+    if (said.due.isEmpty() && said.repeat.isEmpty())
+        return std::nullopt;
+    const TaskLine was = readTaskLine(text);
+    const QString rest = first.hasMatch() ? text.sliced(first.capturedStart()) : QString();
+    return withTaskSchedule(said.title + u' ' + rest, said.due.isEmpty() ? was.due : said.due,
+                            said.repeat.isEmpty() ? was.repeat : said.repeat);
 }
 
 QString inboxPath(const Vault &vault)
