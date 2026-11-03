@@ -44,6 +44,7 @@ private Q_SLOTS:
     void opensALongNoteAtTheTop();
     void theTitleFollowsAnEditedTitleKey();
     void aTickFromTheTaskViewKeepsTheEditorsUndo();
+    void undoesATickOnTheShownNote();
     void typingIsDrawnAndSaved();
     void typingKeepsWindowsLineEndings();
     void anOutsideEditKeepsTheCursorWhereItWas();
@@ -262,6 +263,41 @@ void TestNoteEditor::aTickFromTheTaskViewKeepsTheEditorsUndo()
     QCOMPARE(body->property("text").toString(), typed);
     QMetaObject::invokeMethod(body, "undo");
     QVERIFY(!body->property("text").toString().contains(u"eggs"_s));
+}
+
+void TestNoteEditor::undoesATickOnTheShownNote()
+{
+    // Windows line endings, which the editor shows as plain lines, and a byte order mark.
+    QFile file(m_root + u"/Windows.md"_s);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    const QByteArray untouched = "\xef\xbb\xbfone\r\n- [ ] two\r\nthree\r\n";
+    file.write(untouched);
+    file.close();
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Windows.md"_s), 3000);
+    m_vault->setCurrent(u"Windows.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    const auto text = [body] { return body->property("text").toString(); };
+    const auto saved = [&file] {
+        file.open(QIODevice::ReadOnly);
+        const QByteArray bytes = file.readAll();
+        file.close();
+        return bytes;
+    };
+    QCOMPARE(text(), u"\ufeffone\n- [ ] two\nthree\n"_s);
+    QVERIFY(!body->property("canUndo").toBool());
+
+    // Each step is an edit in the editor, not a reload, so the editor's own undo keeps it.
+    QVERIFY(m_vault->setTaskDone(u"Windows.md"_s, 2, true));
+    QCOMPARE(text(), u"\ufeffone\n- [x] two\nthree\n"_s);
+    QVERIFY(body->property("canUndo").toBool());
+    QVERIFY(m_vault->undoTask());
+    QCOMPARE(text(), u"\ufeffone\n- [ ] two\nthree\n"_s);
+    QTRY_VERIFY_WITH_TIMEOUT(!m_vault->unsaved(), 2000);
+    QCOMPARE(saved(), untouched);
+    QVERIFY(m_vault->redoTask());
+    QCOMPARE(text(), u"\ufeffone\n- [x] two\nthree\n"_s);
+    QTRY_VERIFY_WITH_TIMEOUT(!m_vault->unsaved(), 2000);
+    QCOMPARE(saved(), QByteArray("\xef\xbb\xbfone\r\n- [x] two\r\nthree\r\n"));
 }
 
 void TestNoteEditor::theTitleFollowsAnEditedTitleKey()

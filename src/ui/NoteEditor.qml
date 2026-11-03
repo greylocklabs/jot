@@ -105,13 +105,19 @@ Rectangle {
         loading = false
     }
 
+    // The note's text as the editor holds it, which turns \r\n into plain lines.
+    function shown(text) {
+        return text.replace(/\r\n/g, "\n")
+    }
+
     Connections {
         target: Vault
         function onOpening() {
             root.fresh = true
         }
         function onCurrentChanged() {
-            if (root.fresh || Vault.currentText !== body.text || Vault.currentTitle !== title.text)
+            if (root.fresh || root.shown(Vault.currentText) !== body.text || Vault.currentTitle
+                    !== title.text)
                 root.load()
         }
         // As when its `title:` key is edited, here or on disk. Left alone only while something
@@ -126,7 +132,7 @@ Rectangle {
             if (root.loading)
                 return
             const patched = body.text.slice(0, start) + text + body.text.slice(start + length)
-            if (patched !== Vault.currentText.replace(/^\ufeff/, "").replace(/\r\n/g, "\n"))
+            if (patched !== root.shown(Vault.currentText))
                 return
             styler.replace(start, start + length, text)
         }
