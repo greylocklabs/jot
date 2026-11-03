@@ -1,5 +1,6 @@
 #pragma once
 
+#include "jot/DropboxTransport.h"
 #include "jot/Settings.h"
 #include "jot/Sync.h"
 
@@ -29,6 +30,8 @@ class SyncController : public QObject
     Q_PROPERTY(QDateTime lastSynced READ lastSynced NOTIFY changed)
     /// What went wrong with the last sync; empty when it went well.
     Q_PROPERTY(QString problem READ problem NOTIFY changed)
+    /// This build can sync with Dropbox, having an app key for it.
+    Q_PROPERTY(bool dropboxAvailable READ dropboxAvailable CONSTANT)
     /// A bucket is being checked before it is synced with.
     Q_PROPERTY(bool checking READ checking NOTIFY changed)
     /// How sync stands, in a few words: "Synced 3 minutes ago", "Syncing...".
@@ -53,6 +56,12 @@ public:
     Q_INVOKABLE void syncWithBucket(const QString &endpoint, const QString &region,
                                     const QString &bucket, const QString &folder,
                                     const QString &keyId, const QString &secret);
+    /// Where to send the user to let Jot into its folder in their Dropbox; the code Dropbox
+    /// then shows goes to connectDropbox().
+    Q_INVOKABLE QUrl startDropbox();
+    /// Syncs the vault with Jot's folder in the user's Dropbox, under `folder` there, once the
+    /// code from the sign-in is traded for a lasting one, kept in the keyring.
+    Q_INVOKABLE void connectDropbox(const QString &code, const QString &folder);
     /// Stops syncing this vault, forgetting what the last sync knew; its files stay as they are,
     /// here and there.
     Q_INVOKABLE void stop();
@@ -62,6 +71,7 @@ public:
     [[nodiscard]] QString remote() const { return remoteLabel(m_remote); }
     [[nodiscard]] bool syncing() const { return m_thread != nullptr && !m_checking; }
     [[nodiscard]] bool checking() const { return m_checking; }
+    [[nodiscard]] static bool dropboxAvailable() { return !dropboxAppKey().isEmpty(); }
     [[nodiscard]] QDateTime lastSynced() const { return m_lastSynced; }
     [[nodiscard]] QString problem() const { return m_problem; }
     [[nodiscard]] QString summary() const;
@@ -78,12 +88,18 @@ Q_SIGNALS:
 private:
     void start();
     void done(const SyncReport &report);
+    /// Checks a new remote on a thread of its own with `check`, then keeps `secret` for it in
+    /// the keyring and syncs with it; or says what went wrong.
+    void connectRemote(const QString &remote, const QString &secret,
+                       std::function<QString(QString *secret)> check);
 
     Settings &m_settings;
     QString m_root;
     QString m_remote;
     /// The remote's key, read from the keyring when first needed.
     QString m_secret;
+    /// The Dropbox sign-in under way, until its code comes back.
+    QString m_dropboxVerifier;
     std::function<void()> m_save;
     QPointer<QThread> m_thread;
     bool m_again = false;

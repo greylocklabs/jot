@@ -1,5 +1,6 @@
 #include "SyncController.h"
 
+#include "jot/DropboxTransport.h"
 #include "jot/Logging.h"
 #include "jot/S3Transport.h"
 #include "jot/Secrets.h"
@@ -112,28 +113,73 @@ void SyncController::syncWithBucket(const QString &endpoint, const QString &regi
     // AWS's own addresses take the bucket in the host name; the rest take it in the path.
     location.pathStyle = !location.endpoint.host().endsWith(u".amazonaws.com"_s);
     const QString credentials = keyId.trimmed() + u':' + secret;
+    connectRemote(location.remote(), credentials, [location](QString *secret) {
+        QString error;
+        S3Transport bucket(location, *secret);
+        bucket.verify(&error);
+        return error;
+    });
+}
+
+QUrl SyncController::startDropbox()
+{
+    const DropboxSignIn signIn = DropboxSignIn::start(dropboxAppKey());
+    m_dropboxVerifier = signIn.verifier;
+    return signIn.url;
+}
+
+void SyncController::connectDropbox(const QString &code, const QString &folder)
+{
+    if (m_root.isEmpty() || m_thread || m_dropboxVerifier.isEmpty() || code.trimmed().isEmpty()) {
+        m_problem = tr("Open Dropbox to let Jot in, then paste the code it shows.");
+        Q_EMIT changed();
+        return;
+    }
+    QString where = folder.trimmed();
+    while (where.endsWith(u'/'))
+        where.chop(1);
+    if (!where.isEmpty() && !where.startsWith(u'/'))
+        where.prepend(u'/');
+    const QString verifier = m_dropboxVerifier;
+    // The code is traded for a lasting token on the thread, which then is the secret kept.
+    connectRemote(u"dropbox:"_s + where, code, [verifier, where](QString *secret) {
+        QString error;
+        DropboxSignIn signIn;
+        signIn.verifier = verifier;
+        const std::optional<QString> token = signIn.finish(dropboxAppKey(), *secret, &error);
+        if (!token)
+            return error;
+        *secret = *token;
+        DropboxTransport dropbox(dropboxAppKey(), *token, where);
+        dropbox.list(&error);
+        return error;
+    });
+}
+
+void SyncController::connectRemote(const QString &remote, const QString &secret,
+                                   std::function<QString(QString *secret)> check)
+{
     m_checking = true;
     m_problem.clear();
     Q_EMIT changed();
-    m_thread = QThread::create([this, location, credentials] {
-        QString error;
-        S3Transport bucket(location, credentials);
-        const bool ok = bucket.verify(&error);
+    m_thread = QThread::create([this, remote, secret, check] {
+        QString kept = secret;
+        const QString error = check(&kept);
         QMetaObject::invokeMethod(
             this,
-            [this, location, credentials, ok, error] {
+            [this, remote, kept, error] {
                 m_thread->wait();
                 m_thread = nullptr;
                 m_checking = false;
                 QString problem = error;
-                const QString remote = location.remote();
-                if (ok && !secrets::write(remoteSecretKey(remote), credentials, &problem))
+                if (problem.isEmpty() && !secrets::write(remoteSecretKey(remote), kept, &problem))
                     problem = tr("Could not keep the key in the keyring: %1").arg(problem);
                 if (!problem.isEmpty()) {
                     m_problem = problem;
                     Q_EMIT changed();
                     return;
                 }
+                m_dropboxVerifier.clear();
                 m_settings.setSyncRemote(m_root, remote);
                 setVault(m_root, m_save);
             },
@@ -242,7 +288,7 @@ void SyncController::done(const SyncReport &report)
 QString SyncController::summary() const
 {
     if (m_checking)
-        return tr("Checking the bucket...");
+        return tr("Checking...");
     if (!configured())
         return tr("Not syncing");
     if (syncing())

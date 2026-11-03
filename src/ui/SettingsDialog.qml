@@ -231,10 +231,23 @@ Popup {
                     onClicked: syncFolderDialog.open()
                 }
                 StickerButton {
+                    objectName: "syncWithDropbox"
+                    visible: Vault.sync.dropboxAvailable
+                    enabled: Vault.isOpen && Vault.writable
+                    text: qsTr("Sync with Dropbox...")
+                    onClicked: {
+                        dropboxForm.visible = !dropboxForm.visible
+                        bucketForm.visible = false
+                    }
+                }
+                StickerButton {
                     objectName: "syncWithBucket"
                     enabled: Vault.isOpen && Vault.writable
                     text: qsTr("Sync with S3...")
-                    onClicked: bucketForm.visible = !bucketForm.visible
+                    onClicked: {
+                        bucketForm.visible = !bucketForm.visible
+                        dropboxForm.visible = false
+                    }
                 }
                 StickerButton {
                     visible: Vault.sync.configured
@@ -242,13 +255,60 @@ Popup {
                     onClicked: Vault.sync.stop()
                 }
             }
+            // Jot's own folder in the user's Dropbox, let in by a code pasted back.
+            Column {
+                id: dropboxForm
+
+                objectName: "dropboxForm"
+                visible: false
+                width: parent.width
+                spacing: Theme.space2
+
+                Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    text: qsTr(
+                              "Jot keeps the notes in a folder of its own in your Dropbox, Apps/Jot, and sees nothing else there. Open Dropbox to let it in, then paste the code Dropbox shows.")
+                    color: Theme.textMuted
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.textSm
+                }
+                StickerButton {
+                    text: qsTr("Open Dropbox...")
+                    onClicked: Qt.openUrlExternally(Vault.sync.startDropbox())
+                }
+                Field {
+                    id: dropboxCode
+                    objectName: "dropboxCode"
+                    width: parent.width
+                    placeholderText: qsTr("The code Dropbox shows")
+                }
+                Field {
+                    id: dropboxFolder
+                    objectName: "dropboxFolder"
+                    width: parent.width
+                    placeholderText: qsTr("Folder in Apps/Jot (optional)")
+                }
+                StickerButton {
+                    objectName: "connectDropbox"
+                    accent: true
+                    enabled: !Vault.sync.checking && dropboxCode.text.trim() !== ""
+                    text: Vault.sync.checking ? qsTr("Checking...") : qsTr("Connect")
+                    onClicked: {
+                        bucketForm.connecting = true
+                        Vault.sync.connectDropbox(dropboxCode.text, dropboxFolder.text)
+                    }
+                }
+            }
+
             // An S3-compatible bucket: AWS, Cloudflare R2, Backblaze B2, MinIO, Wasabi.
             Column {
                 id: bucketForm
 
                 objectName: "bucketForm"
 
-                /// Connect was pressed, and the check it started has not finished.
+                /// Connect was pressed, here or for Dropbox, and the check it started has not
+                /// finished.
                 property bool connecting: false
 
                 visible: false
@@ -330,7 +390,9 @@ Popup {
                         bucketForm.connecting = false
                         if (Vault.sync.problem === "") {
                             bucketSecret.text = ""
+                            dropboxCode.text = ""
                             bucketForm.visible = false
+                            dropboxForm.visible = false
                         }
                     }
                 }

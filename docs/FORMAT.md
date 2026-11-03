@@ -280,6 +280,8 @@ they are, so it can be read without Jot.
   kept beside the file as `<file name> (conflict <computer> <yyyy-MM-dd HHmm>).<extension>`, on
   both sides.
 - A file deleted on one side and changed on the other is kept, changed.
+- A Dropbox remote holds the files in Jot's own app folder, `Apps/Jot`, by their paths. Dropbox
+  keeps what a sync deletes for a while, as its own trash.
 - An S3 remote holds each file as an object named by its path, under the folder given in the
   bucket. The store must support conditional writes (`If-Match` and `If-None-Match`), which Jot
   checks before syncing with it, so two computers never overwrite each other unseen. The access
