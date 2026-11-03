@@ -1185,6 +1185,15 @@ void TestVaultController::undoesAndRedoesTicks()
     QCOMPARE(readFile(soren), changed);
     QVERIFY(!m_vault->problem().isEmpty());
     QVERIFY(!m_vault->canUndoTask());
+
+    // A note renamed since has its step dropped, and the one before it still undoes.
+    QVERIFY(m_vault->completeTask(u"Inbox/Groceries.md"_s));
+    QVERIFY(m_vault->setTaskDone(u"Ashfall/Characters/Soren.md"_s, 7, false));
+    QVERIFY(QFile::rename(soren, m_root + u"/Ashfall/Characters/Soren Vale.md"_s));
+    QVERIFY(!m_vault->undoTask());
+    QVERIFY(m_vault->undoTask());
+    QVERIFY(readFile(groceries).contains(u"task: open"_s));
+    QVERIFY(!m_vault->canUndoTask());
 }
 
 void TestVaultController::headsToDosByDay()

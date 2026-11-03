@@ -913,7 +913,8 @@ bool VaultController::redoTask()
 bool VaultController::replaceTaskText(const QString &path, const QString &from, const QString &to,
                                       bool *stale)
 {
-    *stale = false;
+    // A note that cannot be read, as when it was renamed or deleted, has changed for good.
+    *stale = true;
     const bool done = rewriteNote(path, [&from, &to, stale](const QString &text) {
         *stale = text != from;
         return *stale ? std::nullopt : std::optional(to);
