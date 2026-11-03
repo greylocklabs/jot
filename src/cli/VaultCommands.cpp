@@ -6,6 +6,7 @@
 #include "jot/Layout.h"
 #include "jot/QuickAdd.h"
 #include "jot/Settings.h"
+#include "jot/Sync.h"
 #include "jot/ToDos.h"
 
 #include <QDateTime>
@@ -15,6 +16,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QRegularExpression>
+#include <QSysInfo>
 
 #include <algorithm>
 
@@ -340,6 +342,49 @@ int VaultCommands::listTasks(bool json, const QString &view, const QString &labe
     if (list.isEmpty())
         m_err << (done ? tr("Nothing done yet.") : tr("Nothing left to do.")) << "\n";
     return 0;
+}
+
+int VaultCommands::sync(const QString &remote, bool json)
+{
+    if (remote.isEmpty()) {
+        m_err << tr("jot: this vault does not sync; choose where in the app, under Settings, Sync")
+              << "\n";
+        return 1;
+    }
+    QString error;
+    std::unique_ptr<Transport> transport = transportFor(remote, &error);
+    if (!transport) {
+        m_err << u"jot: "_s << error << "\n";
+        return 1;
+    }
+    SyncEngine engine(m_vault.root(), std::move(transport), syncStateDir(m_vault.root(), remote),
+                      QSysInfo::machineHostName());
+    const SyncReport report = engine.sync();
+    if (!report.failure.isEmpty()) {
+        m_err << tr("jot: could not sync: %1").arg(report.failure) << "\n";
+        return 1;
+    }
+    m_index.update(report.pulled + report.merged + report.conflicts);
+    for (const QString &each : report.errors)
+        m_err << tr("jot: did not sync %1").arg(each) << "\n";
+    if (json) {
+        print(m_out, QJsonObject{{u"remote"_s, remoteLabel(remote)},
+                                 {u"pulled"_s, QJsonArray::fromStringList(report.pulled)},
+                                 {u"pushed"_s, QJsonArray::fromStringList(report.pushed)},
+                                 {u"merged"_s, QJsonArray::fromStringList(report.merged)},
+                                 {u"conflicts"_s, QJsonArray::fromStringList(report.conflicts)},
+                                 {u"errors"_s, QJsonArray::fromStringList(report.errors)}});
+    } else {
+        m_out << tr("Synced with %1: %2 brought here, %3 sent, %4 merged")
+                     .arg(remoteLabel(remote))
+                     .arg(report.pulled.size())
+                     .arg(report.pushed.size())
+                     .arg(report.merged.size())
+              << "\n";
+        for (const QString &each : report.conflicts)
+            m_out << tr("Kept both versions; the other is %1").arg(each) << "\n";
+    }
+    return report.errors.isEmpty() ? 0 : 1;
 }
 
 int VaultCommands::open(const QString &name, const QString &program, const Launcher &launch)

@@ -131,12 +131,14 @@ bool VaultController::openPath(const QString &path)
     }
     reloadModels();
     Q_EMIT openChanged();
+    m_sync.setVault(m_vault->root(), [this] { saveNow(); });
     return true;
 }
 
 void VaultController::close()
 {
     saveNow();
+    m_sync.setVault({}, {});
     // Clears the editor and any problem with the note, which belonged to this vault.
     m_current.clear();
     readCurrent();
@@ -1226,6 +1228,8 @@ QVariantMap VaultController::importJoplin(const QUrl &file, const QString &folde
 
 void VaultController::reloadModels()
 {
+    // Whatever changed the lists may have changed the files, so a sync follows.
+    m_sync.localChanged();
     m_notebookEmoji.clear();
     m_pinned.clear();
     if (m_vault) {

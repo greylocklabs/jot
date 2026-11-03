@@ -15,7 +15,7 @@ My Notes/                    the vault: any folder
     layout.yaml              notebook emoji and pinned notes
     history/                 past versions of notes
     joplin.yaml              what imports from Joplin brought, once there has been one
-    trash/                   what was deleted, where the drive has no trash
+    trash/                   what was deleted, where the drive has no trash, and by sync
   Inbox.md                   where quick add puts to-dos
   Recipes/
     Pancakes.md
@@ -260,6 +260,27 @@ for the note's path, and names each copy by when the note held it:
 - Renaming or moving a note or notebook in Jot moves its history with it. A deleted note's
   history stays, and a note later made or moved to its path takes it on.
 - Edits made outside Jot keep no versions, and nothing is pruned yet.
+
+## Sync
+
+A vault can sync with a remote, such as another folder. The remote holds the vault's files as
+they are, so it can be read without Jot.
+
+- Everything in the vault syncs but hidden files and folders, which stay on each computer, and
+  `.jot/trash/`. Jot's own `.jot/` folder does sync, history included.
+- Where to sync is a setting of each computer, not of the vault. What Jot knows of the last sync,
+  to tell an edit from a delete, is kept under `$XDG_STATE_HOME/jot/sync/`, never in the vault.
+  Deleting it loses nothing: the next sync compares the two sides afresh, keeping both versions
+  of any file that differs.
+- A file changed on both sides since the last sync is merged line by line, its front matter key
+  by key. Where the two changed the same thing differently, the version from the other side is
+  kept beside the file as `<file name> (conflict <computer> <yyyy-MM-dd HHmm>).<extension>`, on
+  both sides.
+- A file deleted on one side and changed on the other is kept, changed.
+- What a sync deletes goes to `.jot/trash/<yyyy-MM-dd HHmmss>/` on that side, with its path
+  kept, so it can be brought back. A folder remote has its own `.jot/trash/` for the same.
+- A folder remote that is not there, as when a drive is unplugged, is no remote at all: nothing
+  is deleted, and the sync waits for it.
 
 ## Vault settings
 

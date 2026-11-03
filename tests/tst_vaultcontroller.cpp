@@ -76,6 +76,7 @@ private Q_SLOTS:
     void headsToDosByDay();
     void undoesAndRedoesTicks();
     void goesBackAndForwardThroughNotesOpened();
+    void syncsWithAFolder();
     void listsAndReopensDoneToDos();
     void keepsAnUndoStepThatCouldNotBeWritten();
     void addsToDosToTheInbox();
@@ -106,6 +107,8 @@ QString readFile(const QString &path)
 void TestVaultController::init()
 {
     m_dir = std::make_unique<QTemporaryDir>();
+    // Sync keeps its base in the state folder, which must never be the real one.
+    qputenv("XDG_STATE_HOME", m_dir->filePath(u"state"_s).toUtf8());
     m_root = m_dir->filePath(u"Notes"_s);
     const QString sample = QStringLiteral(JOT_SAMPLE_VAULT);
     QDirIterator files(sample, QDir::Files, QDirIterator::Subdirectories);
@@ -1172,6 +1175,49 @@ void TestVaultController::listsAndReopensDoneToDos()
     // Reopening is undone like a tick.
     QVERIFY(m_vault->undoTask());
     QVERIFY(readFile(m_root + u"/Inbox/Groceries.md"_s).contains(u"task: done"_s));
+}
+
+void TestVaultController::syncsWithAFolder()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    SyncController *sync = m_vault->sync();
+    QVERIFY(!sync->configured());
+    QCOMPARE(sync->summary(), u"Not syncing"_s);
+
+    // Not into the vault, nor a folder holding it.
+    QVERIFY(!sync->syncWithFolder(QUrl::fromLocalFile(m_root + u"/Inbox"_s)));
+    QVERIFY(!sync->syncWithFolder(QUrl::fromLocalFile(m_dir->path())));
+    QVERIFY(!sync->problem().isEmpty());
+    QVERIFY(!sync->configured());
+
+    const QString nas = m_dir->filePath(u"nas"_s);
+    QVERIFY(QDir().mkpath(nas));
+    QSignalSpy finished(sync, &SyncController::finished);
+    QVERIFY(sync->syncWithFolder(QUrl::fromLocalFile(nas)));
+    QVERIFY(sync->configured());
+    QCOMPARE(sync->remote(), nas);
+    QCOMPARE(m_settings->syncRemote(m_root), u"folder:"_s + nas);
+    // It syncs at once, sending the vault there.
+    QVERIFY(finished.wait(10000));
+    QVERIFY(sync->problem().isEmpty());
+    QCOMPARE(sync->summary(), u"Synced just now"_s);
+    QCOMPARE(readFile(nas + u"/Inbox/Groceries.md"_s), readFile(m_root + u"/Inbox/Groceries.md"_s));
+
+    // A note written there comes here, and into the lists.
+    QFile there(nas + u"/From the NAS.md"_s);
+    QVERIFY(there.open(QIODevice::WriteOnly));
+    there.write("written elsewhere\n");
+    there.close();
+    sync->syncNow();
+    QVERIFY(finished.wait(10000));
+    QCOMPARE(readFile(m_root + u"/From the NAS.md"_s), u"written elsewhere\n"_s);
+    QTRY_VERIFY(m_vault->index()->note(u"From the NAS.md"_s));
+
+    // Stopped, it forgets where, and leaves both as they are.
+    sync->stop();
+    QVERIFY(!sync->configured());
+    QVERIFY(m_settings->syncRemote(m_root).isEmpty());
+    QVERIFY(QFileInfo::exists(nas + u"/From the NAS.md"_s));
 }
 
 void TestVaultController::goesBackAndForwardThroughNotesOpened()

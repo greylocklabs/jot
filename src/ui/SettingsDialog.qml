@@ -90,6 +90,10 @@ Popup {
                         "label": qsTr("General")
                     },
                     {
+                        "id": "sync",
+                        "label": qsTr("Sync")
+                    },
+                    {
                         "id": "appearance",
                         "label": qsTr("Theme")
                     },
@@ -160,6 +164,73 @@ Popup {
                 width: parent.width
                 text: Vault.error
                 wrapMode: Text.Wrap
+                color: Theme.danger
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.textSm
+            }
+        }
+
+        Section {
+            title: qsTr("Sync")
+            visible: root.tab === "sync"
+
+            Text {
+                width: parent.width
+                wrapMode: Text.Wrap
+                text: qsTr(
+                          "Keep these notes the same as a copy in another folder, such as a NAS, a USB drive or a network share, and so on other computers syncing with it. Jot syncs when it opens, shortly after you write, and every few minutes. Where both copies changed, it merges them, or keeps both.")
+                color: Theme.textMuted
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.textSm
+            }
+            Text {
+                visible: Vault.sync.configured
+                width: parent.width
+                text: Vault.sync.remote
+                textFormat: Text.PlainText
+                elide: Text.ElideMiddle
+                color: Theme.text
+                font.family: Theme.monoFontFamily
+                font.pixelSize: Theme.textSm
+            }
+            Text {
+                objectName: "syncSummary"
+                visible: Vault.sync.configured
+                width: parent.width
+                wrapMode: Text.Wrap
+                text: Vault.sync.summary
+                color: Vault.sync.problem !== "" ? Theme.danger : Theme.textMuted
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.textSm
+            }
+            Flow {
+                width: parent.width
+                spacing: Theme.space2
+
+                StickerButton {
+                    visible: Vault.sync.configured
+                    enabled: !Vault.sync.syncing
+                    accent: true
+                    text: qsTr("Sync now")
+                    onClicked: Vault.sync.syncNow()
+                }
+                StickerButton {
+                    enabled: Vault.isOpen && Vault.writable
+                    text: Vault.sync.configured ? qsTr("Change folder...") : qsTr(
+                                                      "Sync with a folder...")
+                    onClicked: syncFolderDialog.open()
+                }
+                StickerButton {
+                    visible: Vault.sync.configured
+                    text: qsTr("Stop syncing")
+                    onClicked: Vault.sync.stop()
+                }
+            }
+            Text {
+                visible: !Vault.sync.configured && Vault.sync.problem !== ""
+                width: parent.width
+                wrapMode: Text.Wrap
+                text: Vault.sync.problem
                 color: Theme.danger
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.textSm
@@ -518,6 +589,12 @@ Popup {
         title: qsTr("Choose a folder for your notes")
         currentFolder: Vault.rootUrl
         onAccepted: Vault.openFolder(selectedFolder)
+    }
+
+    FolderDialog {
+        id: syncFolderDialog
+        title: qsTr("Choose a folder to sync with")
+        onAccepted: Vault.sync.syncWithFolder(selectedFolder)
     }
 
     FileDialog {

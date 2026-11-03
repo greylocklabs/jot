@@ -27,8 +27,11 @@ add_library(jotcore STATIC
     NoteScan.cpp
     jot/NoteTrail.h
     NoteTrail.cpp
+    jot/FolderTransport.h
+    FolderTransport.cpp
     jot/Sync.h
     Sync.cpp
+    SyncRemotes.cpp
     jot/TaskLine.h
     TaskLine.cpp
     jot/ToDos.h

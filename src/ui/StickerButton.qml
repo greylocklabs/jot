@@ -15,6 +15,8 @@ AbstractButton {
     property string tip
     /// Line weight of the glyph; busy glyphs such as settings read better thinner.
     property real glyphStroke: 2.2
+    /// Turns the glyph round and round, for something under way.
+    property bool spinning: false
     property bool accent: false
     property bool destructive: false
     property bool armed: false
@@ -81,6 +83,16 @@ AbstractButton {
                 name: root.glyph
                 color: root.ink
                 stroke: root.glyphStroke
+
+                RotationAnimator on rotation {
+                    running: root.spinning
+                    from: 0
+                    to: 360
+                    duration: 1200
+                    loops: Animation.Infinite
+                    onRunningChanged: if (!running)
+                                          target.rotation = 0
+                }
             }
             Text {
                 id: label

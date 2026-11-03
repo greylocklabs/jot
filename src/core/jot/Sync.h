@@ -105,4 +105,13 @@ private:
     std::unique_ptr<Private> d;
 };
 
+/// The remote a sync setting names, written `kind:where`, such as `folder:/mnt/nas/Notes`; or
+/// nothing, with `error` saying why, for one Jot does not know.
+[[nodiscard]] std::unique_ptr<Transport> transportFor(const QString &remote, QString *error);
+/// Where a remote is, in words for the app: a folder's path.
+[[nodiscard]] QString remoteLabel(const QString &remote);
+/// The folder that keeps the base of the vault at `vaultRoot` with `remote`: one for each pair,
+/// in this computer's state folder, never in the vault.
+[[nodiscard]] QString syncStateDir(const QString &vaultRoot, const QString &remote);
+
 } // namespace jot

@@ -107,6 +107,10 @@ public:
                                                    QStringLiteral(" ")};
     [[nodiscard]] QString lastSeenVersion() const { return m_lastSeenVersion; }
     void setLastSeenVersion(const QString &version);
+    /// Where the vault at `vaultRoot` syncs to from this computer, as `kind:where`, such as
+    /// `folder:/mnt/nas/Notes`; empty when it does not sync.
+    [[nodiscard]] QString syncRemote(const QString &vaultRoot) const;
+    void setSyncRemote(const QString &vaultRoot, const QString &remote);
     [[nodiscard]] bool keepRunning() const { return m_keepRunning; }
     void setKeepRunning(bool keep);
     [[nodiscard]] bool remindersOn() const { return m_remindersOn; }
@@ -138,6 +142,7 @@ Q_SIGNALS:
     void readModeChanged();
     void keyboardChanged();
     void lastSeenVersionChanged();
+    void syncRemoteChanged();
     void remindersChanged();
 
 private:

@@ -2,6 +2,8 @@
 
 #include "greylock/Identity.h"
 
+#include <QCryptographicHash>
+#include <QDir>
 #include <QStandardPaths>
 #include <QTime>
 
@@ -170,6 +172,40 @@ void Settings::setLastSeenVersion(const QString &version)
     m_lastSeenVersion = version;
     m_store.setValue(kLastSeenVersion, version);
     Q_EMIT lastSeenVersionChanged();
+}
+
+namespace {
+
+/// The settings group for a vault: its path hashed, as paths cannot be keys.
+QString syncGroup(const QString &vaultRoot)
+{
+    return u"sync/"_s +
+           QString::fromLatin1(QCryptographicHash::hash(QDir(vaultRoot).absolutePath().toUtf8(),
+                                                        QCryptographicHash::Sha256)
+                                   .toHex()
+                                   .left(16));
+}
+
+} // namespace
+
+QString Settings::syncRemote(const QString &vaultRoot) const
+{
+    return m_store.value(syncGroup(vaultRoot) + u"/remote"_s).toString();
+}
+
+void Settings::setSyncRemote(const QString &vaultRoot, const QString &remote)
+{
+    if (syncRemote(vaultRoot) == remote)
+        return;
+    const QString group = syncGroup(vaultRoot);
+    if (remote.isEmpty()) {
+        m_store.remove(group);
+    } else {
+        // The vault's own path too, for whoever reads the file.
+        m_store.setValue(group + u"/vault"_s, QDir(vaultRoot).absolutePath());
+        m_store.setValue(group + u"/remote"_s, remote);
+    }
+    Q_EMIT syncRemoteChanged();
 }
 
 void Settings::setKeepRunning(bool keep)
