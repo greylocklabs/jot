@@ -105,6 +105,8 @@ private:
     /// says what went wrong.
     void connectRemote(const QString &remote, const QString &secret,
                        std::function<QString(QString *secret, QString *remote)> check);
+    /// Whether another vault on this computer syncs with `remote`, which would mix the two.
+    [[nodiscard]] bool takenByAnotherVault(const QString &remote) const;
 
     Settings &m_settings;
     QString m_root;
