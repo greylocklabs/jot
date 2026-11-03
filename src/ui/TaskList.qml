@@ -25,40 +25,87 @@ Rectangle {
         }
         spacing: Theme.space3
 
-        Row {
+        // The views as a switch with full labels, with short ones when the column is narrow,
+        // or as a menu when even those do not fit.
+        Item {
+            id: viewsRow
+
+            readonly property var views: ["today", "upcoming", "anytime", "all"]
+            readonly property var options: [
+                {
+                    "label": qsTr("Today"),
+                    "short": qsTr("Today"),
+                    "tip": qsTr("Overdue, and due today")
+                },
+                {
+                    "label": qsTr("Upcoming"),
+                    "short": qsTr("Soon"),
+                    "tip": qsTr("Due after today, soonest first")
+                },
+                {
+                    "label": qsTr("Anytime"),
+                    "short": qsTr("Any"),
+                    "tip": qsTr("Not due on any day")
+                },
+                {
+                    "label": qsTr("All"),
+                    "short": qsTr("All"),
+                    "tip": qsTr("Everything left to do")
+                }
+            ]
+            readonly property int current: Math.max(0, views.indexOf(Vault.tasks.view))
+            readonly property real room: width - (addTask.visible ? addTask.width + Theme.space3 :
+                                                                    0)
+
             width: parent.width
-            spacing: Theme.space3
+            height: Math.max(viewSwitch.height, addTask.height)
 
             ModeSwitch {
+                id: viewSwitch
+
                 objectName: "taskViews"
                 anchors.verticalCenter: parent.verticalCenter
-                readonly property var views: ["today", "upcoming", "anytime", "all"]
-
-                options: [
-                    {
-                        "label": qsTr("Today"),
-                        "tip": qsTr("Overdue, and due today")
-                    },
-                    {
-                        "label": qsTr("Upcoming"),
-                        "tip": qsTr("Due after today, soonest first")
-                    },
-                    {
-                        "label": qsTr("Anytime"),
-                        "tip": qsTr("Not due on any day")
-                    },
-                    {
-                        "label": qsTr("All"),
-                        "tip": qsTr("Everything left to do")
-                    }
-                ]
-                current: Math.max(0, views.indexOf(Vault.tasks.view))
-                onPicked: index => Vault.tasks.view = views[index]
+                visible: implicitWidth <= viewsRow.room
+                options: viewsRow.options
+                current: viewsRow.current
+                onPicked: index => Vault.tasks.view = viewsRow.views[index]
             }
+            ModeSwitch {
+                id: shortSwitch
 
+                objectName: "taskViewsShort"
+                anchors.verticalCenter: parent.verticalCenter
+                visible: !viewSwitch.visible && implicitWidth <= viewsRow.room
+                options: viewsRow.options.map(option => ({
+                    "label": option.short,
+                    "tip": option.label + ": " + option.tip
+                }))
+                current: viewsRow.current
+                onPicked: index => Vault.tasks.view = viewsRow.views[index]
+            }
+            Dropdown {
+                id: viewsMenu
+
+                objectName: "taskViewsMenu"
+                anchors.verticalCenter: parent.verticalCenter
+                visible: !viewSwitch.visible && !shortSwitch.visible
+                minimumWidth: 0
+                maximumWidth: viewsRow.room
+                model: viewsRow.views.map((view, index) => ({
+                    "id": view,
+                    "name": viewsRow.options[index].label
+                }))
+                currentValue: viewsRow.views[viewsRow.current]
+                onActivated: value => Vault.tasks.view = value
+            }
             StickerButton {
+                id: addTask
+
                 objectName: "addTask"
                 anchors.verticalCenter: parent.verticalCenter
+                x: (viewSwitch.visible ? viewSwitch.width : shortSwitch.visible ? shortSwitch.width :
+                                                                                  viewsMenu.width)
+                   + Theme.space3
                 visible: Vault.writable
                 glyph: "plus"
                 Accessible.name: qsTr("Add a to-do")
@@ -72,7 +119,11 @@ Rectangle {
             spacing: Theme.space3
 
             Text {
+                width: Math.min(implicitWidth, parent.width - (taskFilter.visible ? taskFilter.width
+                                                                                    + parent.spacing :
+                                                                                    0))
                 anchors.verticalCenter: parent.verticalCenter
+                elide: Text.ElideRight
                 text: Vault.tasks.count === 0 ? qsTr("Nothing here.") : Vault.tasks.count === 1 ? qsTr(
                                                                                                       "1 thing to do") :
                                                                                                   qsTr("%1 things to do").arg(
@@ -84,6 +135,8 @@ Rectangle {
             }
             // What the list is narrowed to, with a way to see it all again.
             PillButton {
+                id: taskFilter
+
                 objectName: "taskFilter"
                 anchors.verticalCenter: parent.verticalCenter
                 visible: Vault.tasks.label !== "" || Vault.tasks.tag !== ""

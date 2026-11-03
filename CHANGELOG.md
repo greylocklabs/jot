@@ -3,6 +3,13 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## Unreleased
+
+### Fixed
+
+- The task view's switch and + fit a narrow middle column: the switch takes shorter labels, and
+  at its narrowest becomes a menu, rather than being cut off.
+
 ## 0.1.1 - 2026-11-02
 
 ### Fixed
