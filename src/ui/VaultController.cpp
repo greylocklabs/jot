@@ -370,6 +370,8 @@ bool VaultController::restoreVersion(const QString &version)
 
 bool VaultController::replaceCurrentText(const QString &text)
 {
+    if (!m_vault || !m_vault->writable())
+        return false;
     saveNow();
     if (m_unsaved)
         return false;
@@ -463,7 +465,8 @@ QVariantMap VaultController::compareWith(const QString &copy) const
 
 bool VaultController::keepThisVersion(const QString &copy)
 {
-    if (!m_vault || readConflictCopy(copy).value_or(ConflictCopy{}).original != m_current)
+    if (!m_vault || !m_vault->writable() ||
+        readConflictCopy(copy).value_or(ConflictCopy{}).original != m_current)
         return false;
     const bool trashed = trashNote(copy, true);
     Q_EMIT currentConflictsChanged();
@@ -472,7 +475,8 @@ bool VaultController::keepThisVersion(const QString &copy)
 
 bool VaultController::useOtherVersion(const QString &copy)
 {
-    if (!m_vault || readConflictCopy(copy).value_or(ConflictCopy{}).original != m_current)
+    if (!m_vault || !m_vault->writable() ||
+        readConflictCopy(copy).value_or(ConflictCopy{}).original != m_current)
         return false;
     QString error;
     const std::optional<QString> theirs = notefile::read(m_vault->absolute(copy), &error);

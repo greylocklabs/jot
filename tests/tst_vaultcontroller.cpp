@@ -1261,6 +1261,19 @@ void TestVaultController::resolvesAConflictCopy()
     QVERIFY(m_vault->keepThisVersion(copies.at(0).toMap().value(u"path"_s).toString()));
     QCOMPARE(readFile(m_root + u"/Welcome.md"_s), u"one\nTWO\nthree\nfour\n"_s);
     QVERIFY(m_vault->currentConflicts().isEmpty());
+
+    // A vault from a newer Jot is only read: neither way touches it.
+    const QString copy = u"Welcome (conflict desk 2026-11-04 0930).md"_s;
+    QVERIFY(notefile::write(m_root + u'/' + copy, u"newer\n"_s, &error));
+    QVERIFY(notefile::write(m_root + u"/.jot/vault.yaml"_s, u"format: 99\n"_s, &error));
+    QVERIFY(m_vault->openPath(m_root));
+    m_vault->setCurrent(u"Welcome.md"_s);
+    const int versions = int(m_vault->historyOf(u"Welcome.md"_s).size());
+    QVERIFY(!m_vault->keepThisVersion(copy));
+    QVERIFY(!m_vault->useOtherVersion(copy));
+    QVERIFY(QFileInfo::exists(m_root + u'/' + copy));
+    QCOMPARE(readFile(m_root + u"/Welcome.md"_s), u"one\nTWO\nthree\nfour\n"_s);
+    QCOMPARE(m_vault->historyOf(u"Welcome.md"_s).size(), versions);
 }
 
 void TestVaultController::goesBackAndForwardThroughNotesOpened()
