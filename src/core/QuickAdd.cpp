@@ -263,6 +263,19 @@ std::optional<QString> scheduledFromWords(const QString &text, const QDateTime &
                             said.repeat.isEmpty() ? was.repeat : said.repeat);
 }
 
+std::optional<QString> scheduledAs(const QString &text, const QString &when, const QDateTime &now)
+{
+    if (when.trimmed().isEmpty())
+        return withTaskSchedule(text, {}, {});
+    const QuickTask said = readQuickTask(when, now);
+    const QString was = readTaskLine(text).repeat;
+    const QString repeat =
+        !was.isEmpty() && when.contains(was, Qt::CaseInsensitive) ? was : said.repeat;
+    if (said.due.isEmpty() && repeat.isEmpty())
+        return std::nullopt;
+    return withTaskSchedule(text, said.due, repeat);
+}
+
 QString inboxPath(const Vault &vault)
 {
     QString ignored;

@@ -14,6 +14,7 @@ private Q_SLOTS:
     void reads();
     void schedulesACheckboxFromItsWords();
     void setsAndClearsTheDayAndRepeat();
+    void keepsARepeatRuleAsWritten();
 };
 
 void TestQuickAdd::reads_data()
@@ -104,6 +105,20 @@ void TestQuickAdd::setsAndClearsTheDayAndRepeat()
     // Cleared, labels and tags after the rule stay with the to-do, and other markers stay.
     QCOMPARE(withTaskSchedule(u"water 🔁 every day @home 📅 2026-11-02 ⏫"_s, {}, {}),
              u"water @home ⏫"_s);
+}
+
+void TestQuickAdd::keepsARepeatRuleAsWritten()
+{
+    const QDateTime now(QDate(2026, 10, 28), QTime(10, 0));
+    const QString water = u"water 🔁 every week when done 📅 2026-10-28"_s;
+    // Its rule kept in the words, only the day changes, the rule as it was.
+    QCOMPARE(scheduledAs(water, u"2026-11-04 every week when done"_s, now),
+             std::optional(u"water 🔁 every week when done 📅 2026-11-04"_s));
+    // A new rule replaces it; no words at all clear both; words of neither do nothing.
+    QCOMPARE(scheduledAs(water, u"friday every month"_s, now),
+             std::optional(u"water 🔁 every month 📅 2026-10-30"_s));
+    QCOMPARE(scheduledAs(water, {}, now), std::optional(u"water"_s));
+    QCOMPARE(scheduledAs(water, u"soon"_s, now), std::nullopt);
 }
 
 QTEST_GUILESS_MAIN(TestQuickAdd)
