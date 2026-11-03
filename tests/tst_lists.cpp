@@ -46,6 +46,7 @@ private Q_SLOTS:
     void deleteAsksFirstForNotesAndNotebooks();
     void searchHandsTheKeysBackToTheList();
     void taskViewsLineUpWithTheAddButton();
+    void taskViewsFitANarrowColumn();
 
 private:
     /// The visible menu entry reading `text`, anywhere in the window.
@@ -126,6 +127,50 @@ void TestLists::taskViewsLineUpWithTheAddButton()
     // The switch is shorter than the button beside it, so both sit on the row's middle.
     const auto middle = [](QQuickItem *of) { return of->mapToScene({0, of->height() / 2}).y(); };
     QTRY_COMPARE(middle(views), middle(add));
+}
+
+void TestLists::taskViewsFitANarrowColumn()
+{
+    QQmlComponent component(m_engine.get());
+    component.loadFromModule("Jot.Ui", "TaskList");
+    std::unique_ptr<QObject> tasks(component.create());
+    QVERIFY2(tasks, qPrintable(component.errorString()));
+    auto *item = qobject_cast<QQuickItem *>(tasks.get());
+    item->setParentItem(m_window->contentItem());
+    auto *full = item->findChild<QQuickItem *>(u"taskViews"_s);
+    auto *brief = item->findChild<QQuickItem *>(u"taskViewsShort"_s);
+    auto *menu = item->findChild<QQuickItem *>(u"taskViewsMenu"_s);
+    auto *add = item->findChild<QQuickItem *>(u"addTask"_s);
+    QVERIFY(full && brief && menu && add);
+    // Which of the three shows, with the + still in the column beside it.
+    const auto shown = [&] {
+        QList<QQuickItem *> visible;
+        for (QQuickItem *views : {full, brief, menu}) {
+            if (views->isVisible())
+                visible.append(views);
+        }
+        if (visible.size() != 1 || !add->isVisible())
+            return static_cast<QQuickItem *>(nullptr);
+        const qreal right = add->mapToItem(item, {add->width(), 0}).x();
+        const qreal views = visible.first()->mapToItem(item, {visible.first()->width(), 0}).x();
+        return right <= item->width() && views < add->mapToItem(item, {0, 0}).x() ? visible.first()
+                                                                                  : nullptr;
+    };
+    const qreal margins = 2 * 16 + 8 + add->width();
+
+    item->setSize({full->implicitWidth() + margins, 700});
+    QTRY_COMPARE(shown(), full);
+    item->setSize({brief->implicitWidth() + margins, 700});
+    QTRY_COMPARE(shown(), brief);
+    item->setSize({brief->implicitWidth() + margins - 1, 700});
+    QTRY_COMPARE(shown(), menu);
+    item->setSize({140, 700});
+    QTRY_COMPARE(shown(), menu);
+
+    // The menu shows and sets the same view as the switches.
+    m_vault->tasks()->setProperty("view", u"anytime"_s);
+    QCOMPARE(menu->property("currentValue").toString(), u"anytime"_s);
+    QCOMPARE(brief->property("current").toInt(), 2);
 }
 
 void TestLists::cleanup()
