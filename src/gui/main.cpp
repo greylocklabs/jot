@@ -1,4 +1,5 @@
 #include "LiveQml.h"
+#include "QuickCapture.h"
 #include "ReleaseInfo.h"
 #include "SettingsForeign.h"
 #include "ThemeController.h"
@@ -65,6 +66,11 @@ int main(int argc, char *argv[])
         QString::fromLatin1(greylock::Autostart::kBackgroundOption),
         u"Start without showing the window, as when started at login."_s);
     parser.addOption(backgroundOption);
+    QCommandLineOption quickAddOption(
+        u"quick-add"_s,
+        u"Open quick add to add a to-do, in the Jot already running if there is one. Bind a key "
+        u"to this in the desktop's settings to add to-dos from anywhere."_s);
+    parser.addOption(quickAddOption);
 #ifdef JOT_LIVE_QML
     QCommandLineOption liveOption(
         u"live-qml"_s,
@@ -87,7 +93,9 @@ int main(int argc, char *argv[])
     // else hands over to that one, so reminders never come twice.
     const bool standalone = parser.isSet(vaultOption);
     greylock::SingleInstance single(greylock::identity::appId(), QDBusConnection::sessionBus());
-    if (!standalone && !single.claim())
+    const QString kQuickAdd = u"jot:quick-add"_s;
+    if (!standalone &&
+        !single.claim(parser.isSet(quickAddOption) ? QStringList{kQuickAdd} : QStringList()))
         return 0;
 
     // A vault given for one run, as for screenshots, leaves the user's settings alone.
@@ -95,6 +103,8 @@ int main(int argc, char *argv[])
     jot::Settings settings(parser.isSet(vaultOption) ? scratch.filePath(u"settings.ini"_s)
                                                      : jot::Settings::defaultPath());
     jot::SettingsForeign::s_instance = &settings;
+    jot::QuickCapture capture;
+    jot::QuickCapture::s_instance = &capture;
     jot::VaultController vault(settings);
     jot::VaultController::setInstance(&vault);
 
@@ -196,6 +206,21 @@ int main(int argc, char *argv[])
             QMetaObject::invokeMethod(root, "run", Q_ARG(QVariant, command));
     };
     QObject::connect(&single, &greylock::SingleInstance::activated, &engine, [&] { showWindow(); });
+    // Quick add from anywhere: the desktop's key, or a key bound to jot-gui --quick-add.
+    QObject::connect(&single, &greylock::SingleInstance::opened, &engine,
+                     [&](const QStringList &uris) {
+                         if (uris.contains(kQuickAdd))
+                             showWindow(u"quickAdd"_s);
+                     });
+    QObject::connect(&capture, &jot::QuickCapture::activated, &engine,
+                     [&] { showWindow(u"quickAdd"_s); });
+    if (!standalone) {
+        capture.setWanted(settings.quickCaptureKey());
+        QObject::connect(&settings, &jot::Settings::quickCaptureKeyChanged, &capture,
+                         [&] { capture.setWanted(settings.quickCaptureKey()); });
+    }
+    if (parser.isSet(quickAddOption))
+        QTimer::singleShot(0, &engine, [&] { showWindow(u"quickAdd"_s); });
     QObject::connect(&reminders, &jot::ToDoReminders::openRequested, &engine,
                      [&](const QString &path, int line) {
                          vault.setShowingTasks(false);

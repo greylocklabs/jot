@@ -189,10 +189,12 @@ void TestSettings::keepsReminderChoices()
         Settings settings(path);
         QVERIFY(settings.keepRunning());
         QVERIFY(settings.remindersOn());
+        QVERIFY(!settings.quickCaptureKey());
         QCOMPARE(settings.reminderTime(), u"09:00"_s);
         QVERIFY(!settings.lastReminderCheck().isValid());
         settings.setKeepRunning(false);
         settings.setRemindersOn(false);
+        settings.setQuickCaptureKey(true);
         settings.setReminderTime(u"7:30"_s);
         settings.setReminderTime(u"25:00"_s);
         settings.setLastReminderCheck(QDateTime(QDate(2026, 10, 28), QTime(8, 0)));
@@ -200,10 +202,12 @@ void TestSettings::keepsReminderChoices()
     Settings settings(path);
     QVERIFY(!settings.keepRunning());
     QVERIFY(!settings.remindersOn());
+    QVERIFY(settings.quickCaptureKey());
     QCOMPARE(settings.reminderTime(), u"07:30"_s);
     QCOMPARE(settings.lastReminderCheck(), QDateTime(QDate(2026, 10, 28), QTime(8, 0)));
     settings.reset();
     QVERIFY(settings.keepRunning());
+    QVERIFY(!settings.quickCaptureKey());
     QCOMPARE(settings.reminderTime(), u"09:00"_s);
 }
 

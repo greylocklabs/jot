@@ -21,6 +21,9 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 - Past versions show what changed, line by line, against the note now or any other version,
   with the whole text a click away. Old versions thin out as they age: all from the last day,
   then one an hour for a week, one a day for a month, and one a week after.
+- Add a to-do from anywhere: turn on Settings, Keyboard, Quick capture, and a system-wide key
+  (Ctrl+Alt+J unless your desktop gives another) opens quick add, even with Jot's window
+  closed. Or bind any key to `jot-gui --quick-add` in your desktop's shortcut settings.
 
 ## 0.1.2 - 2026-11-03
 
