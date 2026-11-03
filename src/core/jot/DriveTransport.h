@@ -101,6 +101,10 @@ private:
     bool known(QString *error);
     /// The version Drive holds of the file with `id` now.
     std::optional<QString> versionOf(const QString &id, QString *error);
+    /// The id of what Drive holds called `name` in the folder `parent`, a folder or a file as
+    /// `folder` says; empty when there is none.
+    std::optional<QString> childNamed(const QString &parent, const QString &name, bool folder,
+                                      QString *error);
     /// The id of the folder at `path` from the vault's root, making the folders on the way.
     std::optional<QString> folderFor(const QString &path, QString *error);
     [[nodiscard]] static QString problem(const Reply &reply);

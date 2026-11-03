@@ -33,6 +33,7 @@ private Q_SLOTS:
     void keepsFilesInFoldersByTheirPaths();
     void writesOnlyOverTheVersionExpected();
     void syncsTwoComputers();
+    void makesNothingTwiceUnderOneName();
 
 private:
     struct Item
@@ -106,7 +107,10 @@ FakeHttpServer::Reply TestDrive::answer(const FakeHttpServer::Request &request)
         const QString name = nameIs.match(q).captured(1);
         QJsonArray files;
         for (auto it = m_items.cbegin(); it != m_items.cend(); ++it) {
-            if (it->parent == parent && !it->trashed && (name.isEmpty() || it->name == name))
+            const bool kind = !q.contains(u"mimeType"_s) ||
+                              (q.contains(u"mimeType != "_s) ? !it->folder : it->folder);
+            if (it->parent == parent && !it->trashed && kind &&
+                (name.isEmpty() || it->name == name))
                 files.append(described(it.key()));
         }
         return {200, json(QJsonObject{{u"files"_s, files}})};
@@ -283,6 +287,30 @@ void TestDrive::syncsTwoComputers()
     QFile there(dir.filePath(u"desk/vault/Ashfall/Mara.md"_s));
     QVERIFY(there.open(QIODevice::ReadOnly));
     QCOMPARE(there.readAll(), QByteArray("# Mara\n"));
+}
+
+void TestDrive::makesNothingTwiceUnderOneName()
+{
+    // One computer lists; another then makes a note, and a folder with one in it.
+    const std::unique_ptr<DriveTransport> first = drive();
+    const std::unique_ptr<DriveTransport> second = drive();
+    QString error;
+    QVERIFY(first->list(&error));
+    bool stale = false;
+    QVERIFY(second->put(u"Mara.md"_s, "theirs\n", {}, &stale, &error));
+    QVERIFY(second->put(u"Ashfall/Pitch.md"_s, "pitch\n", {}, &stale, &error));
+    // The first does not make the note again beside it, nor a second Ashfall.
+    QVERIFY(!first->put(u"Mara.md"_s, "mine\n", {}, &stale, &error));
+    QVERIFY(stale);
+    QVERIFY(first->put(u"Ashfall/Crossings.md"_s, "x\n", {}, &stale, &error));
+    int maras = 0;
+    int ashfalls = 0;
+    for (const Item &item : std::as_const(m_items)) {
+        maras += item.name == u"Mara.md";
+        ashfalls += item.folder && item.name == u"Ashfall";
+    }
+    QCOMPARE(maras, 1);
+    QCOMPARE(ashfalls, 1);
 }
 
 QTEST_GUILESS_MAIN(TestDrive)
