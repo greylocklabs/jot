@@ -65,6 +65,8 @@ private:
     bool merge(SyncReport &report, QString *error);
     bool resolve(const QString &path, SyncReport &report, QString *error);
     [[nodiscard]] QString remoteBranch() const;
+    /// Whether the repository keeps files in Git LFS, which is not installed; says so if it does.
+    bool lfsMissing(QString *error) const;
     bool writeFile(const QString &path, const QByteArray &data, QString *error) const;
 
     QString m_root;

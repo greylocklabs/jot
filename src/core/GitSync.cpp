@@ -70,6 +70,21 @@ GitSync::GitSync(QString root, QString url, QString branch, QString gitDir, QStr
     }
 }
 
+bool GitSync::lfsMissing(QString *error) const
+{
+    if (lfsAvailable())
+        return false;
+    // Without it, git would take LFS's pointers for the files, here and in the repository.
+    QFile attributes(m_root + u"/.gitattributes"_s);
+    const QByteArray here =
+        attributes.open(QIODevice::ReadOnly) ? attributes.readAll() : QByteArray();
+    const QByteArray there = git({u"show"_s, remoteBranch() + u":.gitattributes"_s}).out;
+    if (!here.contains("filter=lfs") && !there.contains("filter=lfs"))
+        return false;
+    *error = QObject::tr("Git LFS is not installed, and this repository keeps files in it");
+    return true;
+}
+
 QString GitSync::remoteBranch() const
 {
     return u"refs/remotes/origin/"_s + m_branch;
@@ -144,7 +159,8 @@ bool GitSync::available()
 
 bool GitSync::lfsAvailable()
 {
-    return command({u"lfs"_s, u"version"_s}, {}, 10000).ok();
+    // Never a guess at another command when git-lfs is missing, as help.autocorrect would make.
+    return command({u"-c"_s, u"help.autocorrect=0"_s, u"lfs"_s, u"version"_s}, {}, 10000).ok();
 }
 
 bool GitSync::reachable(const QString &url, QString *error)
@@ -402,6 +418,10 @@ SyncReport GitSync::sync(const QDateTime &now)
             return report;
         }
     }
+    if (lfsMissing(&error)) {
+        report.failure = error;
+        return report;
+    }
     const std::optional<QStringList> committed = commit(&error);
     if (!committed) {
         report.failure = error;
@@ -412,6 +432,10 @@ SyncReport GitSync::sync(const QDateTime &now)
         const Run fetched = git({u"fetch"_s, u"-q"_s, u"origin"_s}, kNetworkMs);
         if (!fetched.ok()) {
             report.failure = QString::fromUtf8(fetched.err).trimmed();
+            return report;
+        }
+        if (lfsMissing(&error)) {
+            report.failure = error;
             return report;
         }
         if (!merge(report, &error)) {

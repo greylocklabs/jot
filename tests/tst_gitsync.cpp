@@ -4,6 +4,7 @@
 #include <QDirIterator>
 #include <QFile>
 #include <QProcess>
+#include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QTest>
 
@@ -27,6 +28,7 @@ private Q_SLOTS:
     void leavesHiddenFilesAndTheTrashHere();
     void keepsLargeFilesInLfs();
     void keepsBothPicturesWhenBothChanged();
+    void refusesAnLfsRepositoryWithoutLfs();
     void failsWhenTheRepositoryRefusesThePush();
     void runsSshAsThePersonChose();
     void startsOverAMergeLeftHalfDone();
@@ -287,6 +289,30 @@ void TestGitSync::keepsBothPicturesWhenBothChanged()
     // The pictures themselves, not the pointers LFS keeps in the repository.
     QCOMPARE(read(desk, u"sketch.png"_s), png + "desk's");
     QCOMPARE(read(desk, report.conflicts.first()), png + "laptop's");
+}
+
+void TestGitSync::refusesAnLfsRepositoryWithoutLfs()
+{
+    if (!GitSync::lfsAvailable())
+        QSKIP("Git LFS is not installed");
+    const Computer laptop = computer(u"laptop"_s);
+    const Computer desk = computer(u"desk"_s);
+    write(laptop, u"sketch.png"_s, QByteArray("\x89PNG\r\n\x1a\n", 8) + "picture");
+    QVERIFY(sync(laptop).failure.isEmpty());
+    write(desk, u"Mara.md"_s, "x\n");
+    // A computer with git alone, without git-lfs.
+    const QString bin = m_dir->filePath(u"bin"_s);
+    QDir().mkpath(bin);
+    QVERIFY(QFile::link(QStandardPaths::findExecutable(u"git"_s), bin + u"/git"_s));
+    const QByteArray path = qgetenv("PATH");
+    qputenv("PATH", bin.toUtf8());
+    const bool without = !GitSync::lfsAvailable();
+    const SyncReport report = sync(desk);
+    qputenv("PATH", path);
+    QVERIFY(without);
+    QVERIFY(report.failure.contains(u"Git LFS"_s));
+    QVERIFY(!exists(desk, u"sketch.png"_s));
+    QVERIFY(inRemote(u"Mara.md"_s).isEmpty());
 }
 
 void TestGitSync::failsWhenTheRepositoryRefusesThePush()
