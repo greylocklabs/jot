@@ -8,9 +8,9 @@
 ---
 
 Jot is a Markdown notes app for Linux, from the makers of [Callie](https://callieapp.org). Notes
-are plain files in a folder you choose. Jot does not sync them itself yet: keep the folder in
-Syncthing, Nextcloud or Dropbox to have it on more than one computer, and Jot picks up the changes.
-Its own sync, to S3, Dropbox or Google Drive, is planned. It is built for everyday notes first, and
+are plain files in a folder you choose. Jot syncs them itself with another folder, an S3 bucket
+or a git repository, or keep the folder in Syncthing, Nextcloud or Dropbox and Jot picks up the
+changes. Sync with Dropbox and Google Drive is coming. It is built for everyday notes first, and
 for writers and worldbuilders next.
 
 Jot is at the very start. [jotwriter.org](https://jotwriter.org/) shows what it does so

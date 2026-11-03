@@ -15,9 +15,6 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 - Sync with an S3-compatible bucket too, such as on AWS, Cloudflare R2, Backblaze B2, Wasabi or
   MinIO: Settings, Sync, Sync with S3. Jot checks the bucket first, and keeps the key in your
   desktop's keyring.
-- Sync with Dropbox, in a folder of Jot's own there: Settings, Sync, Sync with Dropbox.
-- Sync with Google Drive, each vault in a folder of its own in a folder called Jot at the top of
-  your Drive: Settings, Sync, Sync with Google Drive. Jot sees only what it made there.
 - Sync with a git repository, on GitHub, GitLab, Codeberg, your own server or a NAS over SSH:
   Settings, Sync, Sync with git. Jot reaches it as git does from a terminal, with your SSH keys
   or saved logins, commits each sync, and keeps pictures, PDFs, audio and video in Git LFS.

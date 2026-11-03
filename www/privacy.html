@@ -22,25 +22,35 @@
 </header>
 
 <h1>Privacy Policy</h1>
-<p class="meta">Last updated: 17 October 2026</p>
+<p class="meta">Last updated: 3 November 2026</p>
 
 <h2>Summary</h2>
 <p>
   Jot is a desktop application that runs entirely on your computer. It has no servers, no
   accounts, and no analytics. It does not collect, transmit, or sell your notes or anything
   else about you. Your notes are files in a folder you choose, and they go nowhere unless you
-  send them. On its own, Jot reaches the internet for one thing, which you can turn off: a
-  daily check with GitHub for a newer release. Installed with its installer, your system's
-  package manager also checks Jot's package repository for updates. A problem report goes
-  out only when you send one.
+  send them, as by turning on sync. On its own, Jot reaches the internet for one thing, which
+  you can turn off: a daily check with GitHub for a newer release. Installed with its
+  installer, your system's package manager also checks Jot's package repository for updates.
+  A problem report goes out only when you send one.
 </p>
 
 <h2>Your notes</h2>
 <p>
   Jot reads and writes the Markdown files in the folder you open, and the pictures and other
-  files kept beside them. It does not upload them anywhere. If that folder is inside a sync
-  service such as Syncthing, Nextcloud or Dropbox, that service carries your notes, under its
-  own terms; Jot only works with the files on your computer.
+  files kept beside them. It does not upload them anywhere unless you turn on sync. If that
+  folder is inside a sync service such as Syncthing, Nextcloud or Dropbox, that service carries
+  your notes, under its own terms.
+</p>
+
+<h2>Sync</h2>
+<p>
+  If you turn on sync for a vault, Jot copies its notes straight to the place you chose and
+  back: another folder, an S3-compatible bucket, or a git repository. Nothing passes through
+  Greylock Labs. The bucket's provider or the git host keeps your notes under its own terms. A
+  bucket's access key is kept in your desktop's keyring, not in Jot's settings; a git
+  repository is reached with your own SSH keys or git's saved logins, which Jot never sees.
+  Turning sync off leaves your notes where they are, here and there.
 </p>
 
 <h2>Update checks</h2>
