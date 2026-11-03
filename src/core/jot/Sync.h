@@ -113,7 +113,8 @@ private:
 /// under remoteSecretKey(); or nothing, with `error` saying why, for one Jot does not know.
 [[nodiscard]] std::unique_ptr<Transport> transportFor(const QString &remote, const QString &secret,
                                                       QString *error);
-/// Whether a remote needs a secret from the keyring, as a bucket's access key.
+/// Whether a remote needs a secret from the keyring, as a bucket's access key or Dropbox's
+/// refresh token.
 [[nodiscard]] bool remoteNeedsSecret(const QString &remote);
 /// The keyring entry a remote's secret is kept under.
 [[nodiscard]] QString remoteSecretKey(const QString &remote);

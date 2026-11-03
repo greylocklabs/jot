@@ -15,6 +15,7 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 - Sync with an S3-compatible bucket too, such as on AWS, Cloudflare R2, Backblaze B2, Wasabi or
   MinIO: Settings, Sync, Sync with S3. Jot checks the bucket first, and keeps the key in your
   desktop's keyring.
+- Sync with Dropbox, in a folder of Jot's own there: Settings, Sync, Sync with Dropbox.
 - `jot sync` syncs the vault once from the command line.
 - When another version of a note was kept beside it, as when two computers changed the same
   lines, the note says so, and Compare shows the two side by side with what differs marked, to

@@ -1,6 +1,15 @@
 # Deliberately not a QML module. The CLI links this, and pulling QtQml in would
 # cost it startup time for no benefit. QML exposure happens in src/ui.
 
+# The app key Dropbox knows Jot by, for syncing with it. An explicit value wins, then the
+# JOT_DROPBOX_APP_KEY environment variable, as the release workflow sets it. Without one, Dropbox
+# is left out of the build.
+set(JOT_DROPBOX_APP_KEY "" CACHE STRING "Dropbox app key")
+set(jot_dropbox_app_key "${JOT_DROPBOX_APP_KEY}")
+if(jot_dropbox_app_key STREQUAL "" AND NOT "$ENV{JOT_DROPBOX_APP_KEY}" STREQUAL "")
+    set(jot_dropbox_app_key "$ENV{JOT_DROPBOX_APP_KEY}")
+endif()
+
 add_library(jotcore STATIC
     jot/FrontMatter.h
     FrontMatter.cpp
@@ -39,6 +48,8 @@ add_library(jotcore STATIC
     Sync.cpp
     jot/S3Transport.h
     S3Transport.cpp
+    jot/DropboxTransport.h
+    DropboxTransport.cpp
     SyncRemotes.cpp
     jot/TaskLine.h
     TaskLine.cpp
@@ -96,6 +107,10 @@ target_link_libraries(jotcore
     PRIVATE
         Qt6Keychain::Qt6Keychain
 )
+if(NOT jot_dropbox_app_key STREQUAL "")
+    set_source_files_properties(DropboxTransport.cpp PROPERTIES
+        COMPILE_DEFINITIONS "JOT_DROPBOX_APP_KEY=\"${jot_dropbox_app_key}\"")
+endif()
 
 
 # The QML module in src/ui exposes Settings as a foreign type. Its registrar

@@ -72,6 +72,9 @@ jobs:
           name: source
 
       - name: Build the package
+        env:
+          # Lets the package sync with Dropbox; without it the build leaves Dropbox out.
+          JOT_DROPBOX_APP_KEY: ${{ secrets.JOT_DROPBOX_APP_KEY }}
         run: |
           version="${{ needs.source.outputs.version }}"
           dnf install -y --setopt=install_weak_deps=False rpm-build dnf-plugins-core xz tar
@@ -99,6 +102,9 @@ jobs:
           name: source
 
       - name: Build the package
+        env:
+          # Lets the package sync with Dropbox; without it the build leaves Dropbox out.
+          JOT_DROPBOX_APP_KEY: ${{ secrets.JOT_DROPBOX_APP_KEY }}
         run: |
           version="${{ needs.source.outputs.version }}"
           apt-get update -qq
