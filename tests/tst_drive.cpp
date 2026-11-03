@@ -302,6 +302,9 @@ void TestDrive::makesNothingTwiceUnderOneName()
     // The first does not make the note again beside it, nor a second Ashfall.
     QVERIFY(!first->put(u"Mara.md"_s, "mine\n", {}, &stale, &error));
     QVERIFY(stale);
+    // What is there instead can be read at once, as a marker made first elsewhere is.
+    QString rev;
+    QCOMPARE(first->get(u"Mara.md"_s, &rev, &error), std::optional(QByteArray("theirs\n")));
     QVERIFY(first->put(u"Ashfall/Crossings.md"_s, "x\n", {}, &stale, &error));
     int maras = 0;
     int ashfalls = 0;
