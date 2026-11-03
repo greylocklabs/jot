@@ -36,6 +36,21 @@
   </categories>
 
   <releases>
+    <release version="0.2.0" date="2026-11-03">
+      <description>
+        <ul>
+          <li>Sync a vault with another folder, such as a NAS, a USB drive or a network share, and so with other computers syncing with it: Settings, Sync. Jot syncs when it opens, shortly after you write, and every few minutes; the title bar shows how it stands, and a click syncs now. Edits made on both sides are merged, front matter key by key, or both versions kept; a delete never wins over an edit, and what a sync deletes goes to the vault's trash.</li>
+          <li>Sync with an S3-compatible bucket too, such as on AWS, Cloudflare R2, Backblaze B2, Wasabi or MinIO: Settings, Sync, Sync with S3. Jot checks the bucket first, and keeps the key in your desktop's keyring.</li>
+          <li>Sync with a git repository, on GitHub, GitLab, Codeberg, your own server or a NAS over SSH: Settings, Sync, Sync with git. Jot reaches it as git does from a terminal, with your SSH keys or saved logins, commits each sync, and keeps pictures, PDFs, audio and video in Git LFS. Edits clashing in a note are merged or kept as a conflict copy, never left as conflict markers.</li>
+          <li>jot sync syncs the vault once from the command line.</li>
+          <li>When another version of a note was kept beside it, as when two computers changed the same lines, the note says so, and Compare shows the two side by side with what differs marked, to keep this one or use the other. Either way, what is let go can be brought back.</li>
+          <li>The same goes for notes in a folder that Syncthing, Nextcloud, ownCloud or Dropbox syncs: the copies they keep when two versions clash show beside the note, to compare and resolve.</li>
+          <li>Past versions show what changed, line by line, against the note now or any other version, with the whole text a click away. Old versions thin out as they age: all from the last day, then one an hour for a week, one a day for a month, and one a week after.</li>
+          <li>Add a to-do from anywhere: turn on Settings, Keyboard, Quick capture, and a system-wide key (Ctrl+Alt+J unless your desktop gives another) opens quick add, even with Jot's window closed. Or bind any key to jot-gui --quick-add in your desktop's shortcut settings.</li>
+          <li>Menus are as wide as their entries need, so the task view's menu in a narrow column shows Today, Upcoming and the rest rather than blank or cut-short entries.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.2" date="2026-11-03">
       <description>
         <ul>
