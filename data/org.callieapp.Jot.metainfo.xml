@@ -35,6 +35,16 @@
   </categories>
 
   <releases>
+    <release version="0.1.1" date="2026-11-02">
+      <description>
+        <ul>
+          <li>The task view's Today, Upcoming, Anytime and All switch lines up with the + beside it.</li>
+          <li>Editing a note's title: updates the title above it, and clicking that title no longer puts the old one back.</li>
+          <li>Holding h, l or another key with accented letters in vi normal or visual mode keeps moving, rather than waiting to offer the accents.</li>
+          <li>Ctrl+Z and Ctrl+Shift+Z undo and redo a to-do ticked, or a task note completed, from the task view. Ticking the note shown keeps the editor's own undo, and ticking a box in a note is one step to undo.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-10-31">
       <description>
         <ul>
