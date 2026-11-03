@@ -96,6 +96,7 @@ Popup {
                     required property string modelData
                     width: (labels.width - labels.spacing) / 2
                     text: modelData
+                    textFormat: Text.PlainText
                     elide: Text.ElideRight
                     color: Theme.textFaint
                     font.family: Theme.fontFamily

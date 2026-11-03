@@ -392,6 +392,8 @@ Rectangle {
                                                                           banner.copies.length)
                             return where !== "" ? kept + " (" + where + ")." : kept + "."
                         }
+                        // Names in it come from file names, which another computer may have chosen.
+                        textFormat: Text.PlainText
                         color: Theme.text
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.textSm
