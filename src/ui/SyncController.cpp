@@ -262,8 +262,8 @@ void SyncController::connectRemote(const QString &remote, const QString &secret,
                 }
                 QString problem = error;
                 if (problem.isEmpty() && takenByAnotherVault(remote))
-                    problem = tr("Another vault on this computer syncs there; give this one "
-                                 "another folder.");
+                    problem = tr("Another vault on this computer syncs there; choose another "
+                                 "place for this one.");
                 if (problem.isEmpty() && remoteNeedsSecret(remote) &&
                     !secrets::write(remoteSecretKey(remote), kept, &problem))
                     problem = tr("Could not keep the key in the keyring: %1").arg(problem);
