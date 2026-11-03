@@ -195,6 +195,17 @@ QString Settings::syncRemote(const QString &vaultRoot) const
     return m_store.value(syncGroup(vaultRoot) + u"/remote"_s).toString();
 }
 
+int Settings::syncRemoteUses(const QString &remote) const
+{
+    int uses = 0;
+    for (const QString &key : m_store.allKeys()) {
+        if (key.startsWith(u"sync/"_s) && key.endsWith(u"/remote"_s) &&
+            m_store.value(key).toString() == remote)
+            ++uses;
+    }
+    return uses;
+}
+
 void Settings::setSyncRemote(const QString &vaultRoot, const QString &remote)
 {
     if (syncRemote(vaultRoot) == remote)

@@ -480,15 +480,16 @@ bool DriveTransport::remove(const QString &path, const QString &expected, bool *
     return true;
 }
 
-std::optional<QString> DriveTransport::folderNamed(const QString &name, QString *error)
+std::optional<QString> DriveTransport::folderNamed(const QString &name, QString *error,
+                                                   const QString &parent)
 {
     if (!authorize(error))
         return std::nullopt;
     const Reply found =
         call("GET", apiUrl(u"/drive/v3/files"_s,
                            {{u"q"_s, u"name = "_s + quoted(name) + u" and mimeType = '"_s +
-                                         QLatin1StringView(kFolderType) +
-                                         u"' and 'root' in parents and trashed = false"_s},
+                                         QLatin1StringView(kFolderType) + u"' and "_s +
+                                         quoted(parent) + u" in parents and trashed = false"_s},
                             {u"fields"_s, u"files(id)"_s}}));
     if (found.status != 200) {
         *error = problem(found);
@@ -500,7 +501,7 @@ std::optional<QString> DriveTransport::folderNamed(const QString &name, QString 
         return files.first().toObject().value(u"id"_s).toString();
     const QJsonObject metadata{{u"name"_s, name},
                                {u"mimeType"_s, QLatin1StringView(kFolderType)},
-                               {u"parents"_s, QJsonArray{u"root"_s}}};
+                               {u"parents"_s, QJsonArray{parent}}};
     const Reply made =
         call("POST", apiUrl(u"/drive/v3/files"_s, {{u"fields"_s, u"id"_s}}),
              QJsonDocument(metadata).toJson(QJsonDocument::Compact), "application/json");
