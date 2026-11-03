@@ -1193,6 +1193,12 @@ void TestVaultController::syncsWithAFolder()
 
     const QString nas = m_dir->filePath(u"nas"_s);
     QVERIFY(QDir().mkpath(nas));
+    // Nor one another vault here syncs with, which would mix the two vaults.
+    m_settings->setSyncRemote(m_dir->filePath(u"Work"_s), u"folder:"_s + nas);
+    QVERIFY(!sync->syncWithFolder(QUrl::fromLocalFile(nas)));
+    QVERIFY(sync->problem().contains(u"Another vault"_s));
+    QVERIFY(!sync->configured());
+    m_settings->setSyncRemote(m_dir->filePath(u"Work"_s), {});
     QSignalSpy finished(sync, &SyncController::finished);
     QVERIFY(sync->syncWithFolder(QUrl::fromLocalFile(nas)));
     QVERIFY(sync->configured());

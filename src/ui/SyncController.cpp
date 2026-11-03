@@ -87,7 +87,13 @@ bool SyncController::syncWithFolder(const QUrl &folder)
         Q_EMIT changed();
         return false;
     }
-    m_settings.setSyncRemote(m_root, u"folder:"_s + QDir(path).absolutePath());
+    const QString remote = u"folder:"_s + QDir(path).absolutePath();
+    if (takenByAnotherVault(remote)) {
+        m_problem = tr("Another vault on this computer syncs with that folder; choose another.");
+        Q_EMIT changed();
+        return false;
+    }
+    m_settings.setSyncRemote(m_root, remote);
     setVault(m_root, m_save);
     return true;
 }
@@ -222,6 +228,9 @@ void SyncController::connectRemote(const QString &remote, const QString &secret,
                     return;
                 }
                 QString problem = error;
+                if (problem.isEmpty() && takenByAnotherVault(remote))
+                    problem = tr("Another vault on this computer syncs there; give this one "
+                                 "another folder.");
                 if (problem.isEmpty() && !secrets::write(remoteSecretKey(remote), kept, &problem))
                     problem = tr("Could not keep the key in the keyring: %1").arg(problem);
                 if (!problem.isEmpty()) {
@@ -237,6 +246,12 @@ void SyncController::connectRemote(const QString &remote, const QString &secret,
     });
     connect(m_thread, &QThread::finished, m_thread, &QObject::deleteLater);
     m_thread->start(QThread::LowPriority);
+}
+
+bool SyncController::takenByAnotherVault(const QString &remote) const
+{
+    const int own = m_settings.syncRemote(m_root) == remote ? 1 : 0;
+    return m_settings.syncRemoteUses(remote) > own;
 }
 
 void SyncController::stop()
