@@ -28,6 +28,7 @@ private Q_SLOTS:
     void keepsLargeFilesInLfs();
     void keepsBothPicturesWhenBothChanged();
     void failsWhenTheRepositoryRefusesThePush();
+    void startsOverAMergeLeftHalfDone();
     void usesTheVaultsOwnRepositoryAsItIs();
     void failsPlainlyWithoutTheRepository();
 
@@ -295,6 +296,32 @@ void TestGitSync::failsWhenTheRepositoryRefusesThePush()
     const SyncReport report = sync(laptop);
     QVERIFY(report.failure.contains(u"protected"_s));
     QVERIFY(report.pushed.isEmpty());
+}
+
+void TestGitSync::startsOverAMergeLeftHalfDone()
+{
+    const Computer laptop = computer(u"laptop"_s);
+    const Computer desk = computer(u"desk"_s);
+    write(laptop, u"Mara.md"_s, "line\n");
+    sync(laptop);
+    sync(desk);
+    write(laptop, u"Mara.md"_s, "laptop's line\n");
+    write(desk, u"Mara.md"_s, "desk's line\n");
+    sync(laptop);
+    // The desk quits within its merge, leaving git's markers in the note.
+    const QStringList at{u"--git-dir="_s + desk.gitDir, u"--work-tree="_s + desk.root};
+    run(desk.root, at + QStringList{u"commit"_s, u"-qam"_s, u"desk"_s});
+    run(desk.root, at + QStringList{u"fetch"_s, u"-q"_s, u"origin"_s});
+    run(desk.root, at + QStringList{u"merge"_s, u"-q"_s, u"origin/main"_s});
+    QVERIFY(read(desk, u"Mara.md"_s).contains("<<<<<<<"));
+
+    const SyncReport report = sync(desk);
+    QVERIFY2(report.failure.isEmpty(), qPrintable(report.failure));
+    QCOMPARE(read(desk, u"Mara.md"_s), QByteArray("desk's line\n"));
+    sync(laptop);
+    QCOMPARE(notes(laptop), notes(desk));
+    for (const QByteArray &data : notes(desk))
+        QVERIFY(!data.contains("<<<<<<<"));
 }
 
 void TestGitSync::usesTheVaultsOwnRepositoryAsItIs()

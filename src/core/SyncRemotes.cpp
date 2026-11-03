@@ -98,13 +98,16 @@ QString remoteSecretKey(const QString &remote)
 QString remoteLabel(const QString &remote)
 {
     if (remote.startsWith(u"git:"_s)) {
-        // Never a password, should one have been saved before Jot refused them.
+        // Never a password or token, should one have been saved before Jot refused them: over
+        // HTTP that is the user name as well.
         QUrl url(gitRemote(remote).first);
-        if (url.isValid() && !url.scheme().isEmpty() && !url.password().isEmpty()) {
+        if (url.isValid() && url.scheme().startsWith(u"http"_s))
+            url.setUserInfo({});
+        else if (url.isValid() && !url.scheme().isEmpty())
             url.setPassword({});
-            return url.toString();
-        }
-        return gitRemote(remote).first;
+        else
+            return gitRemote(remote).first;
+        return url.toString();
     }
     if (remote.startsWith(u"gdrive:"_s))
         return u"Google Drive"_s;

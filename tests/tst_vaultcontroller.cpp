@@ -1276,6 +1276,9 @@ void TestVaultController::syncsWithAGitRepository()
     sync->connectGit(u"https://mara:s3cret@example.org/notes.git"_s, {});
     QVERIFY(sync->problem().contains(u"password"_s));
     QVERIFY(!sync->configured());
+    sync->connectGit(u"https://ghp_token@example.org/notes.git"_s, {});
+    QVERIFY(sync->problem().contains(u"password"_s));
+    QVERIFY(!sync->configured());
     sync->connectGit(bare, {});
     QVERIFY(finished.wait(30000));
     QVERIFY2(sync->problem().isEmpty(), qPrintable(sync->problem()));
