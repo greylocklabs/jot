@@ -268,9 +268,14 @@ std::optional<QString> scheduledAs(const QString &text, const QString &when, con
     if (when.trimmed().isEmpty())
         return withTaskSchedule(text, {}, {});
     const QuickTask said = readQuickTask(when, now);
+    // The rule written already stays when it is all the words say besides the day: nothing else
+    // is left once it is taken out and the day read.
     const QString was = readTaskLine(text).repeat;
-    const QString repeat =
-        !was.isEmpty() && when.contains(was, Qt::CaseInsensitive) ? was : said.repeat;
+    const qsizetype at = was.isEmpty() ? -1 : when.indexOf(was, 0, Qt::CaseInsensitive);
+    const QuickTask rest =
+        at < 0 ? QuickTask{} : readQuickTask(QString(when).remove(at, was.size()), now);
+    const bool kept = at >= 0 && rest.title.isEmpty() && rest.repeat.isEmpty();
+    const QString repeat = kept ? was : said.repeat;
     if (said.due.isEmpty() && repeat.isEmpty())
         return std::nullopt;
     return withTaskSchedule(text, said.due, repeat);
