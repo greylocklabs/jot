@@ -446,7 +446,11 @@ void TestSync::readsRemoteSettings()
     QCOMPARE(jot::remoteLabel(u"git:git@example.org:mara/notes.git#main"_s),
              u"git@example.org:mara/notes.git"_s);
     QCOMPARE(jot::remoteLabel(u"git:https://mara:s3cret@example.org/notes.git#main"_s),
-             u"https://mara@example.org/notes.git"_s);
+             u"https://example.org/notes.git"_s);
+    QCOMPARE(jot::remoteLabel(u"git:https://ghp_token@example.org/notes.git#main"_s),
+             u"https://example.org/notes.git"_s);
+    QCOMPARE(jot::remoteLabel(u"git:ssh://git@example.org/notes.git#main"_s),
+             u"ssh://git@example.org/notes.git"_s);
     QVERIFY(!jot::transportFor(u"carrier-pigeon:coop"_s, {}, &error));
     QVERIFY(error.contains(u"carrier-pigeon"_s));
     // One base for each vault and remote.

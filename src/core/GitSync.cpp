@@ -341,6 +341,18 @@ SyncReport GitSync::sync(const QDateTime &now)
         report.failure = error;
         return report;
     }
+    // A merge left half done, as when Jot quit within one, holds git's conflict markers, which
+    // committing would keep: Jot undoes its own and starts it over, and leaves the person's.
+    if (git({u"rev-parse"_s, u"-q"_s, u"--verify"_s, u"MERGE_HEAD"_s}).ok()) {
+        if (m_own) {
+            report.failure = QObject::tr("the vault's repository is in the middle of a merge");
+            return report;
+        }
+        if (const Run run = git({u"merge"_s, u"--abort"_s}); !run.ok()) {
+            report.failure = QString::fromUtf8(run.err).trimmed();
+            return report;
+        }
+    }
     const std::optional<QStringList> committed = commit(&error);
     if (!committed) {
         report.failure = error;

@@ -221,8 +221,11 @@ void SyncController::connectGit(const QString &url, const QString &branch)
         Q_EMIT changed();
         return;
     }
-    // A password in the address would sit in Jot's settings in plain text.
-    if (!QUrl(repository).password().isEmpty()) {
+    // A password or token in the address would sit in Jot's settings in plain text. Over HTTP
+    // a user name can be a token too; over SSH, as in git@, it is not.
+    const QUrl address(repository);
+    if (!address.password().isEmpty() ||
+        (address.scheme().startsWith(u"http"_s) && !address.userName().isEmpty())) {
         m_problem = tr("Give the address without a password or token in it; use an SSH key or "
                        "git's credential helper to sign in.");
         Q_EMIT changed();
