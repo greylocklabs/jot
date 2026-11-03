@@ -261,7 +261,8 @@ bool S3Transport::remove(const QString &path, const QString &expected, bool *sta
     }
     // Deleted only if still that version where the store checks, as it is where it does not.
     Reply gone = send("DELETE", keyOf(path), {}, {}, {{"If-Match", expected.toUtf8()}});
-    if (gone.status == 501 || gone.status == 400)
+    // A store that does not take If-Match on a delete says so with 501; anything else stands.
+    if (gone.status == 501)
         gone = send("DELETE", keyOf(path));
     if (gone.status == 412) {
         *stale = true;

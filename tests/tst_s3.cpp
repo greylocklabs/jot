@@ -30,6 +30,7 @@ private Q_SLOTS:
     void syncsTwoComputersThroughABucket();
     void deletesNothingWithoutATrashCopy();
     void refusesAStoreThatIgnoresIfMatch();
+    void deletesOnlyTheVersionExpected();
 
 private:
     /// A bucket location of its own for each test, under a fresh prefix.
@@ -257,6 +258,49 @@ void TestS3::refusesAStoreThatIgnoresIfMatch()
     QString error;
     QVERIFY(!store.verify(&error));
     QVERIFY2(error.contains(u"conditional"_s), qPrintable(error));
+}
+
+void TestS3::deletesOnlyTheVersionExpected()
+{
+    FakeHttpServer server;
+    S3Location location{server.url({}), u"us-east-1"_s, u"b"_s, {}, true};
+    S3Transport store(location, u"id:secret"_s);
+    int deletes = 0;
+    QByteArray condition;
+    int deleteStatus = 412;
+    server.replier = [&](const FakeHttpServer::Request &request) -> FakeHttpServer::Reply {
+        if (request.method == "HEAD")
+            return {200, {}, {{"ETag", "\"e1\""}}};
+        if (request.method == "PUT")
+            return {200, "<CopyObjectResult/>", {}, "application/xml"};
+        ++deletes;
+        if (deletes == 1)
+            condition = request.headers.value("if-match");
+        const int status = deletes == 1 ? deleteStatus : 204;
+        return {status,
+                status == 204 ? QByteArray() : QByteArray("<Error><Code>X</Code></Error>"),
+                {},
+                "application/xml"};
+    };
+    QString error;
+    bool stale = false;
+    // Changed after the copy: the delete says so, and is not sent again without its condition.
+    QVERIFY(!store.remove(u"Mara.md"_s, u"\"e1\""_s, &stale, &error));
+    QVERIFY(stale);
+    QCOMPARE(condition, QByteArray("\"e1\""));
+    QCOMPARE(deletes, 1);
+    // Another refusal is an error, again with no second try.
+    deletes = 0;
+    stale = false;
+    deleteStatus = 400;
+    QVERIFY(!store.remove(u"Mara.md"_s, u"\"e1\""_s, &stale, &error));
+    QVERIFY(!stale);
+    QCOMPARE(deletes, 1);
+    // A store that does not take If-Match on deletes is asked again without it.
+    deletes = 0;
+    deleteStatus = 501;
+    QVERIFY2(store.remove(u"Mara.md"_s, u"\"e1\""_s, &stale, &error), qPrintable(error));
+    QCOMPARE(deletes, 2);
 }
 
 QTEST_GUILESS_MAIN(TestS3)
