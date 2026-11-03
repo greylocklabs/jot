@@ -247,6 +247,10 @@ Popup {
                 id: bucketForm
 
                 objectName: "bucketForm"
+
+                /// Connect was pressed, and the check it started has not finished.
+                property bool connecting: false
+
                 visible: false
                 width: parent.width
                 spacing: Theme.space2
@@ -309,16 +313,22 @@ Popup {
                              && bucketRegion.text !== "" && bucketName.text !== ""
                              && bucketKey.text !== "" && bucketSecret.text !== ""
                     text: Vault.sync.checking ? qsTr("Checking...") : qsTr("Connect")
-                    onClicked: Vault.sync.syncWithBucket(bucketEndpoint.text, bucketRegion.text,
-                                                         bucketName.text, bucketFolder.text,
-                                                         bucketKey.text, bucketSecret.text)
+                    onClicked: {
+                        bucketForm.connecting = true
+                        Vault.sync.syncWithBucket(bucketEndpoint.text, bucketRegion.text,
+                                                  bucketName.text, bucketFolder.text, bucketKey.text,
+                                                  bucketSecret.text)
+                    }
                 }
                 Connections {
                     target: Vault.sync
                     function onChanged() {
-                        // Connected: the form, and the secret typed into it, go.
-                        if (Vault.sync.configured && !Vault.sync.checking && bucketForm.visible
-                                && Vault.sync.problem === "") {
+                        // Connected: the form, and the secret typed into it, go. Only once the
+                        // check that Connect started is over, not on every change to sync.
+                        if (!bucketForm.connecting || Vault.sync.checking)
+                            return
+                        bucketForm.connecting = false
+                        if (Vault.sync.problem === "") {
                             bucketSecret.text = ""
                             bucketForm.visible = false
                         }

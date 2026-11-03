@@ -1,3 +1,5 @@
+#include "FakeHttpServer.h"
+
 #include "jot/S3Transport.h"
 #include "jot/Sync.h"
 
@@ -26,6 +28,8 @@ private Q_SLOTS:
     void writesOnlyOverTheVersionExpected();
     void keepsWhatItDeletesInTheTrash();
     void syncsTwoComputersThroughABucket();
+    void deletesNothingWithoutATrashCopy();
+    void refusesAStoreThatIgnoresIfMatch();
 
 private:
     /// A bucket location of its own for each test, under a fresh prefix.
@@ -193,6 +197,66 @@ void TestS3::syncsTwoComputersThroughABucket()
     QCOMPARE(onDesk->sync().merged, QStringList{u"Mara.md"_s});
     QVERIFY(onLaptop->sync().errors.isEmpty());
     QCOMPARE(read(laptop + u"/Mara.md"_s), QByteArray("# Mara\n\nFIRST\n\nLAST\n"));
+}
+
+void TestS3::deletesNothingWithoutATrashCopy()
+{
+    FakeHttpServer server;
+    S3Location location{server.url({}), u"us-east-1"_s, u"b"_s, {}, true};
+    S3Transport store(location, u"id:secret"_s);
+    // The object is there as expected, but its copy fails inside a 200, as S3 can answer.
+    server.replier = [](const FakeHttpServer::Request &request) -> FakeHttpServer::Reply {
+        if (request.method == "HEAD")
+            return {200, {}, {{"ETag", "\"e1\""}}};
+        if (request.method == "PUT")
+            return {200,
+                    "<Error><Code>InternalError</Code><Message>try again</Message></Error>",
+                    {},
+                    "application/xml"};
+        return {204, {}};
+    };
+    QString error;
+    bool stale = false;
+    QVERIFY(!store.remove(u"Mara.md"_s, u"\"e1\""_s, &stale, &error));
+    QVERIFY(!stale);
+    QVERIFY2(error.contains(u"try again"_s), qPrintable(error));
+    for (const FakeHttpServer::Request &request : std::as_const(server.requests))
+        QVERIFY(request.method != "DELETE");
+    // A version written since the check is not copied, nor deleted.
+    server.requests.clear();
+    QByteArray condition;
+    server.replier = [&condition](const FakeHttpServer::Request &request) -> FakeHttpServer::Reply {
+        if (request.method == "HEAD")
+            return {200, {}, {{"ETag", "\"e1\""}}};
+        condition = request.headers.value("x-amz-copy-source-if-match");
+        return {412, "<Error><Code>PreconditionFailed</Code></Error>", {}, "application/xml"};
+    };
+    QVERIFY(!store.remove(u"Mara.md"_s, u"\"e1\""_s, &stale, &error));
+    QVERIFY(stale);
+    QCOMPARE(condition, QByteArray("\"e1\""));
+}
+
+void TestS3::refusesAStoreThatIgnoresIfMatch()
+{
+    // A store that heeds If-None-Match but writes over anything given If-Match.
+    FakeHttpServer server;
+    S3Location location{server.url({}), u"us-east-1"_s, u"b"_s, {}, true};
+    S3Transport store(location, u"id:secret"_s);
+    bool written = false;
+    server.replier = [&written](const FakeHttpServer::Request &request) -> FakeHttpServer::Reply {
+        if (request.method == "GET")
+            return {200,
+                    "<ListBucketResult><IsTruncated>false</IsTruncated></ListBucketResult>",
+                    {},
+                    "application/xml"};
+        if (request.method == "PUT" && request.headers.contains("if-none-match") && written)
+            return {412, "<Error><Code>PreconditionFailed</Code></Error>", {}, "application/xml"};
+        written = written || request.method == "PUT";
+        return {200, {}, {{"ETag", "\"e1\""}}};
+    };
+    QString error;
+    QVERIFY(!store.verify(&error));
+    QVERIFY2(error.contains(u"conditional"_s), qPrintable(error));
 }
 
 QTEST_GUILESS_MAIN(TestS3)

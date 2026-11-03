@@ -240,18 +240,33 @@ bool S3Transport::remove(const QString &path, const QString &expected, bool *sta
         *error = problem(head);
         return false;
     }
-    // Kept under .jot/trash/ first, as the folder remote does, then deleted.
+    // Kept under .jot/trash/ first, as the folder remote does, copying only the version expected;
+    // one written since is no longer what was meant to be deleted.
     const QString trashed = u".jot/trash/"_s +
                             QDateTime::currentDateTime().toString(u"yyyy-MM-dd HHmmss"_s) + u'/' +
                             path;
     const QByteArray source =
         '/' + awsEncode(m_location.bucket) + '/' + awsEncode(keyOf(path), true);
-    const Reply copy = send("PUT", keyOf(trashed), {}, {}, {{"x-amz-copy-source", source}});
-    if (copy.status != 200) {
+    const Reply copy =
+        send("PUT", keyOf(trashed), {}, {},
+             {{"x-amz-copy-source", source}, {"x-amz-copy-source-if-match", expected.toUtf8()}});
+    if (copy.status == 412) {
+        *stale = true;
+        return false;
+    }
+    // A copy can fail with 200 and an Error in its body; then there is no copy to fall back on.
+    if (copy.status != 200 || !copy.body.contains("CopyObjectResult")) {
         *error = problem(copy);
         return false;
     }
-    const Reply gone = send("DELETE", keyOf(path));
+    // Deleted only if still that version where the store checks, as it is where it does not.
+    Reply gone = send("DELETE", keyOf(path), {}, {}, {{"If-Match", expected.toUtf8()}});
+    if (gone.status == 501 || gone.status == 400)
+        gone = send("DELETE", keyOf(path));
+    if (gone.status == 412) {
+        *stale = true;
+        return false;
+    }
     if (gone.status != 204 && gone.status != 200) {
         *error = problem(gone);
         return false;
@@ -270,9 +285,14 @@ bool S3Transport::verify(QString *error)
     const std::optional<QString> rev = put(probe, "probe\n", {}, &stale, error);
     if (!rev)
         return false;
-    const bool refused = !put(probe, "again\n", {}, &stale, error) && stale;
+    // Nor over one it was told of but which has changed since; and over the one it holds, yes.
+    bool overNew = false;
+    bool overOld = false;
+    const bool refusedNew = !put(probe, "again\n", {}, &overNew, error) && overNew;
+    const bool refusedOld = !put(probe, "again\n", u"\"0\""_s, &overOld, error) && overOld;
+    const std::optional<QString> over = put(probe, "again\n", *rev, &stale, error);
     send("DELETE", keyOf(probe));
-    if (!refused) {
+    if (!refusedNew || !refusedOld || !over) {
         *error = QObject::tr("this store does not support conditional writes, which sync needs "
                              "so two computers never overwrite each other");
         return false;
