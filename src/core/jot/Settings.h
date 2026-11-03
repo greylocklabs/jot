@@ -19,7 +19,7 @@ class Settings : public QObject
     Q_PROPERTY(QString theme READ theme WRITE setTheme NOTIFY themeChanged)
     /// How the note list is ordered: "updated", "created" or "title".
     Q_PROPERTY(QString noteSort READ noteSort WRITE setNoteSort NOTIFY noteSortChanged)
-    /// Which to-dos Tasks shows: "today", "upcoming", "anytime" or "all".
+    /// Which to-dos Tasks shows: "today", "upcoming", "anytime", "all" or "done".
     Q_PROPERTY(QString tasksView READ tasksView WRITE setTasksView NOTIFY tasksViewChanged)
     /// Notebooks folded shut in the sidebar, by vault path.
     Q_PROPERTY(QStringList collapsedNotebooks READ collapsedNotebooks WRITE setCollapsedNotebooks

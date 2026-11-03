@@ -215,6 +215,16 @@ void TestVaultCommands::listsWhatIsLeftToDo()
     QCOMPARE(run([](auto &c) { return c.listTasks(true, u"anytime"_s, {}, u"#calls"_s); }), 0);
     QVERIFY(json().array().isEmpty());
     QCOMPARE(run([](auto &c) { return c.listTasks(false, u"later"_s); }), 2);
+
+    // Done ones, under the day they were done.
+    QVERIFY(notefile::write(m_vault->absolute(u"Calls.md"_s),
+                            u"- [x] Call Soren ✅ 2026-10-27\n- [x] Call Mara\n"_s, &error));
+    m_index->update({u"Calls.md"_s});
+    QCOMPARE(run([](auto &c) { return c.listTasks(true, u"done"_s); }), 0);
+    QCOMPARE(json().array().first()[u"title"_s].toString(), u"Call Soren"_s);
+    QCOMPARE(json().array().first()[u"done"_s].toString(), u"2026-10-27"_s);
+    QCOMPARE(run([](auto &c) { return c.listTasks(false, u"done"_s); }), 0);
+    QVERIFY2(m_out.contains(u"2026-10-27\n  [x] Call Soren\n"_s), qPrintable(m_out));
 }
 
 void TestVaultCommands::addsAToDoToTheInbox()

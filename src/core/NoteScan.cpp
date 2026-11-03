@@ -314,6 +314,15 @@ std::optional<QString> setTaskDone(const QString &note, int line, bool done, con
     QString changed = note;
     if (!done) {
         changed[mark] = u' ';
+        // Open again, it was not done on the day ✅ says.
+        static const QRegularExpression doneOn(uR"(\s*✅\x{FE0F}?\s*\d{4}-\d{2}-\d{2})"_s);
+        qsizetype end = changed.indexOf(u'\n', mark);
+        if (end < 0)
+            end = changed.size();
+        const QRegularExpressionMatch m =
+            doneOn.matchView(QStringView(changed).sliced(mark, end - mark));
+        if (m.hasMatch())
+            changed.remove(mark + m.capturedStart(), m.capturedLength());
         return changed;
     }
     const TickEdit edit = tickedLineAt(note, mark, today);

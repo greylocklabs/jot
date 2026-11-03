@@ -52,7 +52,7 @@ const QList<std::pair<QString, QString>> kCommands = {
     {u"new"_s, u"Make a note: jot new \"Idea\"; its body is read from a pipe"_s},
     {u"show"_s, u"Print a note, by its title, an alias or its path"_s},
     {u"open"_s, u"Open a note in the app"_s},
-    {u"tasks"_s, u"What is left to do: --view today, upcoming, anytime or all"_s},
+    {u"tasks"_s, u"What is left to do: --view today, upcoming, anytime, all or done"_s},
     {u"add"_s, u"Add a to-do to the inbox: jot add \"call Soren tomorrow 3pm @minutes\""_s},
     {u"tags"_s, u"Every tag, with how many notes have it"_s},
     {u"import"_s,
@@ -266,7 +266,8 @@ int main(int argc, char *argv[])
         u"order"_s, u"With ls: updated (the default), created or title."_s, u"order"_s);
     addOption(orderOption);
     const QCommandLineOption viewOption(
-        u"view"_s, u"With tasks: today, upcoming, anytime or all (the default)."_s, u"view"_s);
+        u"view"_s, u"With tasks: today, upcoming, anytime, all (the default) or done."_s,
+        u"view"_s);
     addOption(viewOption);
     const QCommandLineOption labelOption(u"label"_s, u"With tasks: only those with this @label."_s,
                                          u"label"_s);

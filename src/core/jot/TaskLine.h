@@ -34,9 +34,9 @@ struct TaskLine
 /// for a rule Jot does not read.
 [[nodiscard]] QDate nextOccurrence(const QString &rule, const QDate &from);
 
-/// A whole checkbox line, `- [ ] …`, ticked done on `today`. When it repeats and is due, the
-/// next one goes above it, unticked and due on its next day after today, and the done one gets
-/// `✅` and today's date, as Obsidian Tasks does.
+/// A whole checkbox line, `- [ ] …`, ticked done on `today`, which it says after `✅` as
+/// Obsidian Tasks does. When it repeats and is due, the next one goes above it, unticked and due
+/// on its next day after today.
 [[nodiscard]] QString completedTaskLine(const QString &line, const QDate &today);
 
 } // namespace jot

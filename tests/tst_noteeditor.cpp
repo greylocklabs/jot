@@ -286,19 +286,21 @@ void TestNoteEditor::undoesATickOnTheShownNote()
     };
     QCOMPARE(text(), u"\ufeffone\n- [ ] two\nthree\n"_s);
     QVERIFY(!body->property("canUndo").toBool());
+    const QString ticked =
+        u"\ufeffone\n- [x] two ✅ %1\nthree\n"_s.arg(QDate::currentDate().toString(Qt::ISODate));
 
     // Each step is an edit in the editor, not a reload, so the editor's own undo keeps it.
     QVERIFY(m_vault->setTaskDone(u"Windows.md"_s, 2, true));
-    QCOMPARE(text(), u"\ufeffone\n- [x] two\nthree\n"_s);
+    QCOMPARE(text(), ticked);
     QVERIFY(body->property("canUndo").toBool());
     QVERIFY(m_vault->undoTask());
     QCOMPARE(text(), u"\ufeffone\n- [ ] two\nthree\n"_s);
     QTRY_VERIFY_WITH_TIMEOUT(!m_vault->unsaved(), 2000);
     QCOMPARE(saved(), untouched);
     QVERIFY(m_vault->redoTask());
-    QCOMPARE(text(), u"\ufeffone\n- [x] two\nthree\n"_s);
+    QCOMPARE(text(), ticked);
     QTRY_VERIFY_WITH_TIMEOUT(!m_vault->unsaved(), 2000);
-    QCOMPARE(saved(), QByteArray("\xef\xbb\xbfone\r\n- [x] two\r\nthree\r\n"));
+    QCOMPARE(saved(), QString(ticked).replace(u"\n"_s, u"\r\n"_s).toUtf8());
 }
 
 void TestNoteEditor::theTitleFollowsAnEditedTitleKey()

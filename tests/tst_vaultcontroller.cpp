@@ -75,6 +75,7 @@ private Q_SLOTS:
     void listsAndTicksWhatIsLeftToDo();
     void headsToDosByDay();
     void undoesAndRedoesTicks();
+    void listsAndReopensDoneToDos();
     void keepsAnUndoStepThatCouldNotBeWritten();
     void addsToDosToTheInbox();
     void importsFromJoplinAfterSayingWhatItWouldDo();
@@ -1133,6 +1134,43 @@ void TestVaultController::listsAndTicksWhatIsLeftToDo()
     m_vault->openAt(u"Ashfall/Characters/Soren.md"_s, 7);
     QCOMPARE(m_vault->current(), u"Ashfall/Characters/Soren.md"_s);
     QCOMPARE(m_vault->currentText().mid(reveal.first().first().toInt(), 9), u"- [x] dec"_s);
+}
+
+void TestVaultController::listsAndReopensDoneToDos()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    TaskModel *tasks = m_vault->tasks();
+    tasks->setView(u"done"_s);
+    const auto titles = [tasks] {
+        QStringList found;
+        for (int row = 0; row < tasks->rowCount(); ++row)
+            found << tasks->index(row).data(TaskModel::TitleRole).toString();
+        return found;
+    };
+    const QStringList before = titles();
+
+    // Ticked or completed today, each is at the top, under Today, with its box ticked.
+    QVERIFY(m_vault->setTaskDone(u"Ashfall/Characters/Soren.md"_s, 7, true));
+    QVERIFY(m_vault->completeTask(u"Inbox/Groceries.md"_s));
+    QCOMPARE(titles().size(), before.size() + 2);
+    QVERIFY(titles().mid(0, 2).contains(u"decide what he wants by act two"_s));
+    QVERIFY(titles().mid(0, 2).contains(u"Groceries"_s));
+    const QModelIndex first = tasks->index(0);
+    QCOMPARE(first.data(TaskModel::GroupRole).toString(), u"Today"_s);
+    QVERIFY(first.data(TaskModel::DoneRole).toBool());
+    QVERIFY(first.data(TaskModel::DueRole).toString().isEmpty());
+
+    // Opened again, they leave the list, and the note forgets when it was done.
+    QVERIFY(m_vault->setTaskDone(u"Ashfall/Characters/Soren.md"_s, 7, false));
+    QVERIFY(m_vault->reopenTask(u"Inbox/Groceries.md"_s));
+    QCOMPARE(titles(), before);
+    const QString groceries = readFile(m_root + u"/Inbox/Groceries.md"_s);
+    QVERIFY(groceries.contains(u"task: open"_s));
+    QVERIFY(!groceries.contains(u"\ndone:"_s));
+    QVERIFY(!readFile(m_root + u"/Ashfall/Characters/Soren.md"_s).contains(u"✅"_s));
+    // Reopening is undone like a tick.
+    QVERIFY(m_vault->undoTask());
+    QVERIFY(readFile(m_root + u"/Inbox/Groceries.md"_s).contains(u"task: done"_s));
 }
 
 void TestVaultController::undoesAndRedoesTicks()

@@ -880,6 +880,17 @@ bool VaultController::completeTask(const QString &path)
         true);
 }
 
+bool VaultController::reopenTask(const QString &path)
+{
+    return rewriteNote(
+        path,
+        [](const QString &text) {
+            return std::optional(setFrontMatterKey(setFrontMatterKey(text, u"task"_s, u"open"_s),
+                                                   u"done"_s, QVariant()));
+        },
+        true);
+}
+
 bool VaultController::undoTask()
 {
     if (m_undoTasks.isEmpty())

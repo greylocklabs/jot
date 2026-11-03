@@ -30,7 +30,7 @@ Rectangle {
         Item {
             id: viewsRow
 
-            readonly property var views: ["today", "upcoming", "anytime", "all"]
+            readonly property var views: ["today", "upcoming", "anytime", "all", "done"]
             readonly property var options: [
                 {
                     "label": qsTr("Today"),
@@ -51,6 +51,11 @@ Rectangle {
                     "label": qsTr("All"),
                     "short": qsTr("All"),
                     "tip": qsTr("Everything left to do")
+                },
+                {
+                    "label": qsTr("Done"),
+                    "short": qsTr("Done"),
+                    "tip": qsTr("Ticked off, most recently first")
                 }
             ]
             readonly property int current: Math.max(0, views.indexOf(Vault.tasks.view))
@@ -124,10 +129,14 @@ Rectangle {
                                                                                     0))
                 anchors.verticalCenter: parent.verticalCenter
                 elide: Text.ElideRight
-                text: Vault.tasks.count === 0 ? qsTr("Nothing here.") : Vault.tasks.count === 1 ? qsTr(
-                                                                                                      "1 thing to do") :
-                                                                                                  qsTr("%1 things to do").arg(
-                                                                                                      Vault.tasks.count)
+                text: {
+                    const count = Vault.tasks.count
+                    if (count === 0)
+                        return qsTr("Nothing here.")
+                    if (Vault.tasks.view === "done")
+                        return count === 1 ? qsTr("1 done") : qsTr("%1 done").arg(count)
+                    return count === 1 ? qsTr("1 thing to do") : qsTr("%1 things to do").arg(count)
+                }
                 color: Theme.textMuted
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.textMd
@@ -198,6 +207,7 @@ Rectangle {
             required property bool overdue
             required property var labels
             required property bool repeats
+            required property bool done
 
             width: ListView.view.width
             height: Math.max(Theme.listRowHeight, words.implicitHeight + 2 * Theme.space2)
@@ -217,6 +227,8 @@ Rectangle {
                 AbstractButton {
                     id: box
 
+                    objectName: "taskBox"
+
                     x: Theme.space5
                     anchors.verticalCenter: parent.verticalCenter
                     width: Theme.textBase + Theme.space1
@@ -224,14 +236,32 @@ Rectangle {
                     enabled: Vault.writable
                     Accessible.name: qsTr("Done")
                     Accessible.role: Accessible.CheckBox
-                    onClicked: item.kind === "note" ? Vault.completeTask(item.path) : Vault.setTaskDone(
-                                                          item.path, item.line, true)
+                    Accessible.checked: item.done
+                    // Unticked in Done, it is open again.
+                    onClicked: {
+                        if (item.kind === "note")
+                            item.done ? Vault.reopenTask(item.path) : Vault.completeTask(item.path)
+                        else
+                            Vault.setTaskDone(item.path, item.line, !item.done)
+                    }
 
                     background: Rectangle {
                         radius: Theme.radiusSm
-                        color: box.hovered ? Theme.tint(Theme.accent, 0.25) : Theme.surface
-                        border.color: box.hovered ? Theme.accent : Theme.border
+                        color: item.done ? (box.hovered ? Theme.tint(Theme.accent, 0.6) :
+                                                          Theme.accent) : box.hovered ? Theme.tint(
+                                                                                            Theme.accent,
+                                                                                            0.25) : Theme.surface
+                        border.color: box.hovered || item.done ? Theme.accent : Theme.border
                         border.width: 2
+
+                        Glyph {
+                            anchors.centerIn: parent
+                            width: parent.width - Theme.space2
+                            height: width
+                            visible: item.done
+                            name: "check"
+                            color: Theme.accentText
+                        }
                     }
                 }
                 Column {
@@ -252,7 +282,7 @@ Rectangle {
                         wrapMode: Text.WordWrap
                         maximumLineCount: 2
                         elide: Text.ElideRight
-                        color: Theme.text
+                        color: item.done ? Theme.textMuted : Theme.text
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.textBase
                         font.weight: item.kind === "note" ? Theme.weightBold : Theme.weightStrong
