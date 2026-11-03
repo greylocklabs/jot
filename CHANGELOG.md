@@ -5,6 +5,12 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ## Unreleased
 
+### Added
+
+- Vi mode's f, F, t and T go along the line to the next character typed, ; repeats the last one,
+  and a comma repeats it the other way when the leader is another key. They select in visual
+  mode, and d or c before them cuts or changes up to that character.
+
 ### Fixed
 
 - The task view's switch and + fit a narrow middle column: the switch takes shorter labels, and

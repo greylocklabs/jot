@@ -63,6 +63,9 @@ private:
     bool move(const QString &id);
     void sendKey(int key, Qt::KeyboardModifiers modifiers);
     void setPending(const QString &pending);
+    /// Goes along the line to `target`, as f, F, t or T (`kind`) do, or cuts or changes up to it
+    /// after d or c (`op`). Repeated, t and T look past a match right beside the cursor.
+    bool find(QChar op, QChar kind, QChar target, bool repeat);
     /// Whether keys type text, so the desktop's input method should see them.
     [[nodiscard]] bool typing() const;
     void updateInputMethod();
@@ -85,6 +88,9 @@ private:
     QTimer m_timeout;
     /// What dd or yy last kept, which p pastes as whole lines while the clipboard holds it.
     QString m_lines;
+    /// The last f, F, t or T and its character, for ; and , to repeat.
+    QChar m_findKind;
+    QChar m_findTarget;
 };
 
 } // namespace jot
