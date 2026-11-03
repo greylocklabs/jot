@@ -10,6 +10,7 @@
 #include <QCryptographicHash>
 #include <QDir>
 #include <QStandardPaths>
+#include <QUrl>
 
 using namespace Qt::StringLiterals;
 
@@ -96,8 +97,15 @@ QString remoteSecretKey(const QString &remote)
 
 QString remoteLabel(const QString &remote)
 {
-    if (remote.startsWith(u"git:"_s))
+    if (remote.startsWith(u"git:"_s)) {
+        // Never a password, should one have been saved before Jot refused them.
+        QUrl url(gitRemote(remote).first);
+        if (url.isValid() && !url.scheme().isEmpty() && !url.password().isEmpty()) {
+            url.setPassword({});
+            return url.toString();
+        }
         return gitRemote(remote).first;
+    }
     if (remote.startsWith(u"gdrive:"_s))
         return u"Google Drive"_s;
     if (remote.startsWith(u"dropbox:"_s))

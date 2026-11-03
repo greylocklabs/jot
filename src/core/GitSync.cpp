@@ -21,6 +21,9 @@ const QByteArray kExclude = "# Written by Jot: what stays on this computer.\n"
                             "!/.jot/\n"
                             "!/.gitattributes\n"
                             "/.jot/trash/\n";
+/// A repository of the person's own keeps what they track, so only what syncs delete stays out.
+const QByteArray kOwnExclude = "# Written by Jot: what syncs delete stays on this computer.\n"
+                               "/.jot/trash/\n";
 
 const QByteArray kLfsStart = "# Jot: large files go to Git LFS.\n";
 
@@ -46,8 +49,10 @@ GitSync::GitSync(QString root, QString url, QString branch, QString gitDir, QStr
       m_device(std::move(device))
 {
     // A vault that is a git repository already keeps using its own.
-    if (QFileInfo(m_root + u"/.git"_s).isDir())
+    if (QFileInfo(m_root + u"/.git"_s).isDir()) {
         m_gitDir = m_root + u"/.git"_s;
+        m_own = true;
+    }
 }
 
 QString GitSync::remoteBranch() const
@@ -141,7 +146,21 @@ bool GitSync::prepare(QString *error)
             return fail(run);
     }
     const Run remote = git({u"remote"_s, u"get-url"_s, u"origin"_s});
-    if (!remote.ok()) {
+    // A vault that is a repository of its own is the person's: Jot syncs it only on its origin and
+    // branch, and leaves how it is set up alone.
+    if (m_own) {
+        if (!remote.ok() || QString::fromUtf8(remote.out).trimmed() != m_url) {
+            *error =
+                QObject::tr("the vault's own repository has another origin than %1").arg(m_url);
+            return false;
+        }
+        const Run branch = git({u"symbolic-ref"_s, u"--short"_s, u"-q"_s, u"HEAD"_s});
+        if (QString::fromUtf8(branch.out).trimmed() != m_branch) {
+            *error =
+                QObject::tr("the vault's own repository is not on the branch %1").arg(m_branch);
+            return false;
+        }
+    } else if (!remote.ok()) {
         if (const Run run = git({u"remote"_s, u"add"_s, u"origin"_s, m_url}); !run.ok())
             return fail(run);
     } else if (QString::fromUtf8(remote.out).trimmed() != m_url) {
@@ -149,20 +168,21 @@ bool GitSync::prepare(QString *error)
             return fail(run);
     }
     // Commits need a name: the person's own where git has one, else this computer's.
-    if (git({u"config"_s, u"user.email"_s}).out.trimmed().isEmpty()) {
+    if (!m_own && git({u"config"_s, u"user.email"_s}).out.trimmed().isEmpty()) {
         git({u"config"_s, u"user.name"_s, u"Jot on "_s + m_device});
         git({u"config"_s, u"user.email"_s, u"jot@"_s + m_device + u".local"_s});
     }
     QDir().mkpath(m_gitDir + u"/info"_s);
+    const QByteArray &excluded = m_own ? kOwnExclude : kExclude;
     QFile exclude(m_gitDir + u"/info/exclude"_s);
-    if (exclude.open(QIODevice::ReadOnly) && exclude.readAll().contains(kExclude)) {
+    if (exclude.open(QIODevice::ReadOnly) && exclude.readAll().contains(excluded)) {
         exclude.close();
     } else {
         exclude.close();
         if (exclude.open(QIODevice::Append))
-            exclude.write('\n' + kExclude);
+            exclude.write('\n' + excluded);
     }
-    if (lfsAvailable()) {
+    if (!m_own && lfsAvailable()) {
         if (const Run run = git({u"lfs"_s, u"install"_s, u"--local"_s}); !run.ok())
             return fail(run);
         // Kept in the vault, so a plain clone of the repository reads the large files too.
@@ -217,7 +237,8 @@ bool GitSync::resolve(const QString &path, SyncReport &report, QString *error)
         if (fields.size() < 3)
             continue;
         const int stage = fields.at(2).toInt();
-        const Run shown = git({u"show"_s, u":%1:%2"_s.arg(stage).arg(path)});
+        // Through the filters, so a file in Git LFS comes back as itself, not its pointer.
+        const Run shown = git({u"cat-file"_s, u"--filters"_s, u":%1:%2"_s.arg(stage).arg(path)});
         if (shown.ok())
             stages.insert(stage, shown.out);
     }
@@ -347,13 +368,23 @@ SyncReport GitSync::sync(const QDateTime &now)
             report.pushed = *committed;
             return report;
         }
+        // Someone pushing first is met by fetching again; the repository refusing, as for a
+        // protected branch, is not.
         const QString said = QString::fromUtf8(pushed.err);
-        if (!said.contains(u"rejected"_s) && !said.contains(u"fetch first"_s)) {
+        const bool behind = !said.contains(u"[remote rejected]"_s) &&
+                            (said.contains(u"[rejected]"_s) || said.contains(u"fetch first"_s) ||
+                             said.contains(u"non-fast-forward"_s));
+        if (!behind) {
             report.failure = said.trimmed();
             return report;
         }
     }
-    report.pushed = *committed;
+    // Synced here, but the repository kept changing under every push.
+    if (git({u"rev-parse"_s, u"-q"_s, u"--verify"_s, remoteBranch()}).out !=
+        git({u"rev-parse"_s, u"HEAD"_s}).out)
+        report.failure = QObject::tr("the repository kept changing; this will try again");
+    else
+        report.pushed = *committed;
     return report;
 }
 

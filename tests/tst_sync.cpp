@@ -443,6 +443,10 @@ void TestSync::readsRemoteSettings()
     QString error;
     QVERIFY(jot::transportFor(u"folder:/mnt/nas/Notes"_s, {}, &error));
     QCOMPARE(jot::remoteLabel(u"folder:/mnt/nas/Notes"_s), u"/mnt/nas/Notes"_s);
+    QCOMPARE(jot::remoteLabel(u"git:git@example.org:mara/notes.git#main"_s),
+             u"git@example.org:mara/notes.git"_s);
+    QCOMPARE(jot::remoteLabel(u"git:https://mara:s3cret@example.org/notes.git#main"_s),
+             u"https://mara@example.org/notes.git"_s);
     QVERIFY(!jot::transportFor(u"carrier-pigeon:coop"_s, {}, &error));
     QVERIFY(error.contains(u"carrier-pigeon"_s));
     // One base for each vault and remote.
