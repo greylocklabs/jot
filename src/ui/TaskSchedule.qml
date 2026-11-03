@@ -23,7 +23,8 @@ Popup {
     }
     function set() {
         const line = Vault.scheduledAs(root.task, input.text)
-        if (line === "")
+        // Cleared, a to-do of nothing but its markers has no words left.
+        if (line === "" && !root.clearing)
             return
         close()
         root.chosen(line)

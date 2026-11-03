@@ -117,12 +117,6 @@ Rectangle {
             tip: qsTr("Checkbox (Ctrl+Enter)")
         }
         FormatButton {
-            objectName: "scheduleButton"
-            label: "📅"
-            format: "schedule"
-            tip: qsTr("The to-do's day and repeat (Ctrl+Shift+D)")
-        }
-        FormatButton {
             glyph: "quote"
             format: "quote"
             tip: qsTr("Quote")

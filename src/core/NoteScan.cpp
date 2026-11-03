@@ -14,6 +14,13 @@ namespace jot {
 
 namespace {
 
+/// A checkbox line: its mark, then its words.
+const QRegularExpression &checkboxLine()
+{
+    static const QRegularExpression line(uR"(^\s*(?:[-*+]|\d+[.)])\s+\[([ xX])\]\s*(.*?)\s*$)"_s);
+    return line;
+}
+
 /// `line` with its code spans blanked out, so their contents match nothing.
 QString withoutCodeSpans(const QString &line)
 {
@@ -281,7 +288,7 @@ qsizetype lineStart(QStringView text, int line)
 std::optional<QString> setTaskDone(const QString &note, int line, bool done, const QString &text,
                                    const QDate &today)
 {
-    static const QRegularExpression task(uR"(^\s*(?:[-*+]|\d+[.)])\s+\[([ xX])\]\s*(.*?)\s*$)"_s);
+    const QRegularExpression &task = checkboxLine();
     // The mark's place in the note, if `number` is a task that says `text` (when given).
     const auto markOn = [&](int number) -> qsizetype {
         const qsizetype start = lineStart(note, number);
@@ -327,6 +334,19 @@ std::optional<QString> setTaskDone(const QString &note, int line, bool done, con
     }
     const TickEdit edit = tickedLineAt(note, mark, today);
     return changed.replace(edit.start, edit.end - edit.start, edit.text);
+}
+
+std::optional<TaskWords> taskWordsAt(QStringView note, qsizetype position)
+{
+    position = std::clamp<qsizetype>(position, 0, note.size());
+    const qsizetype start = position > 0 ? note.lastIndexOf(u'\n', position - 1) + 1 : 0;
+    qsizetype end = note.indexOf(u'\n', position);
+    if (end < 0)
+        end = note.size();
+    const QRegularExpressionMatch m = checkboxLine().matchView(note.sliced(start, end - start));
+    if (!m.hasMatch())
+        return std::nullopt;
+    return TaskWords{start + m.capturedStart(2), start + m.capturedEnd(2)};
 }
 
 TickEdit tickedLineAt(QStringView note, qsizetype position, const QDate &today)

@@ -498,6 +498,16 @@ void TestNoteEditor::setsAToDosDayAndRepeat()
     QTest::keyClick(m_window.get(), Qt::Key_Backspace);
     QTest::keyClick(m_window.get(), Qt::Key_Return);
     QTRY_VERIFY(text().contains(u"- [ ] sweep\n"_s));
+
+    // A to-do of nothing but its day is cleared too.
+    body->setProperty("text", u"- [ ] 📅 2026-12-24"_s);
+    body->setProperty("cursorPosition", 3);
+    schedule();
+    QTRY_VERIFY(popup->property("activeFocus").toBool());
+    QTest::keyClick(m_window.get(), Qt::Key_A, Qt::ControlModifier);
+    QTest::keyClick(m_window.get(), Qt::Key_Backspace);
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    QTRY_COMPARE(text(), u"- [ ] "_s);
 }
 
 void TestNoteEditor::makesTheNoteATaskWithADueDate()

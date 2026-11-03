@@ -22,6 +22,7 @@ private Q_SLOTS:
     void ticksATaskAndNothingElse();
     void findsATaskThatMoved();
     void findsWhereLinesStart();
+    void findsAToDosWords();
 };
 
 void TestNoteScan::findsEveryKindOfLink()
@@ -136,6 +137,23 @@ void TestNoteScan::findsATaskThatMoved()
     QVERIFY(!setTaskDone(u"x\n- [ ] buy\n- [ ] buy\n"_s, 1, true, u"buy"_s));
     QCOMPARE(setTaskDone(u"- [ ] buy\n"_s, 1, true, u"buy"_s, today),
              std::optional(u"- [x] buy ✅ 2026-10-28\n"_s));
+}
+
+void TestNoteScan::findsAToDosWords()
+{
+    const QString note = u"# Chores\n  * [x]  water 🔁 every week  \nsweep\n- [ ] "_s;
+    const std::optional<TaskWords> water = taskWordsAt(note, note.indexOf(u"every"_s));
+    QVERIFY(water);
+    QCOMPARE(note.sliced(water->start, water->end - water->start), u"water 🔁 every week"_s);
+    // Anywhere on the line, even its start.
+    QCOMPARE(taskWordsAt(note, note.indexOf(u"  * [x]"_s))->start, water->start);
+    QVERIFY(!taskWordsAt(note, note.indexOf(u"sweep"_s)));
+    QVERIFY(!taskWordsAt(note, 0));
+    // A box with no words yet has them at the end of the line.
+    const std::optional<TaskWords> empty = taskWordsAt(note, note.size());
+    QVERIFY(empty);
+    QCOMPARE(empty->start, note.size());
+    QCOMPARE(empty->end, note.size());
 }
 
 void TestNoteScan::findsWhereLinesStart()

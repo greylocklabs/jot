@@ -17,7 +17,7 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   back and forward buttons, the arrows in the title bar, or Ctrl+O and Ctrl+I in vi mode. Going
   back returns to where the cursor was, and the way follows notes renamed or moved and passes
   over those trashed.
-- Ctrl+Shift+D, or 📅 in the format bar, sets the day and repeat of the to-do at the cursor:
+- Ctrl+Shift+D sets the day and repeat of the to-do at the cursor:
   words in it such as "water the plants every week" or "call Soren tomorrow 3pm" become its
   markers, as quick add writes them, and with none, a popup takes them typed or a day picked.
   Emptied, it takes them away. A line that is no to-do becomes one.

@@ -64,39 +64,21 @@ Rectangle {
     function schedule() {
         if (body.readOnly)
             return false
-        const box = /^(\s*(?:[-*+]|\d+[.)])\s+\[[ xX]\]\s*)(.*)$/
-              const lineAt = () => {
-                  const text = body.text
-                  const start = text.lastIndexOf("\n", body.cursorPosition - 1) + 1
-                  let end = text.indexOf("\n", body.cursorPosition)
-                  if (end < 0)
-                      end = text.length
-                  return {
-                      "start": start,
-                      "end": end,
-                      "text": text.slice(start, end)
-                  }
-              }
-        let line = lineAt()
-        if (!box.test(line.text)) {
+        let at = Vault.taskWordsAt(body.text, body.cursorPosition)
+        if (at.start === undefined) {
             styler.format("task", body.cursorPosition, body.cursorPosition, "")
-            line = lineAt()
-            if (!box.test(line.text))
+            at = Vault.taskWordsAt(body.text, body.cursorPosition)
+            if (at.start === undefined)
                 return false
         }
-        const parts = box.exec(line.text)
-        const words = {
-            "start": line.start + parts[1].length,
-            "end": line.end
-        }
         body.forceActiveFocus()
-        const said = Vault.scheduledFromWords(parts[2])
+        const said = Vault.scheduledFromWords(at.words)
         if (said !== "") {
-            styler.replace(words.start, words.end, said)
+            styler.replace(at.start, at.end, said)
             return true
         }
-        scheduler.place = words
-        scheduler.openFor(parts[2])
+        scheduler.place = at
+        scheduler.openFor(at.words)
         return true
     }
 
