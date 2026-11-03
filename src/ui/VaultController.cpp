@@ -703,12 +703,7 @@ QVariantMap VaultController::taskWordsAt(const QString &text, int position) cons
 
 QString VaultController::scheduledAs(const QString &text, const QString &when) const
 {
-    if (when.trimmed().isEmpty())
-        return withTaskSchedule(text, {}, {});
-    const QuickTask said = jot::readQuickTask(when, QDateTime::currentDateTime());
-    if (said.due.isEmpty() && said.repeat.isEmpty())
-        return {};
-    return withTaskSchedule(text, said.due, said.repeat);
+    return jot::scheduledAs(text, when, QDateTime::currentDateTime()).value_or(QString());
 }
 
 QString VaultController::scheduleWords(const QString &text) const

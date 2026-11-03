@@ -39,6 +39,13 @@ struct QuickTask
 /// or repeat it says replaces the one marked already. Nothing when it says neither.
 [[nodiscard]] std::optional<QString> scheduledFromWords(const QString &text, const QDateTime &now);
 
+/// `text`, a checkbox's words, due and repeating as `when` says in words, such as "friday 3pm
+/// every week", or with neither when `when` is empty. A repeat rule `when` still has as `text`
+/// writes it stays as written, even where quick add reads less of it, such as "every week when
+/// done". Nothing when `when` says no day or repeat.
+[[nodiscard]] std::optional<QString> scheduledAs(const QString &text, const QString &when,
+                                                 const QDateTime &now);
+
 class Vault;
 
 /// The note quick add puts to-dos in: `inbox` in `.jot/vault.yaml`, or Inbox.md.
