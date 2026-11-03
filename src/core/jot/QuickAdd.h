@@ -19,6 +19,8 @@ struct QuickTask
     QString repeat;
     /// The to-do as its checkbox line says it, without `- [ ] `.
     QString line;
+    /// The words named a day, rather than it being today for a time alone or a repeat's first.
+    bool dayGiven = false;
 };
 
 /// Reads `typed`, such as "call Soren tomorrow 3pm @minutes", as of `now`. It understands

@@ -179,12 +179,14 @@ QuickTask readQuickTask(const QString &typed, const QDateTime &now)
     if (!time.isValid())
         text = beforeTime;
 
+    const bool dayGiven = day.isValid();
     if (!day.isValid())
         day = firstDay.isValid() ? firstDay : time.isValid() ? today : QDate();
 
     QuickTask task;
     task.title = text.simplified();
     task.repeat = repeat;
+    task.dayGiven = dayGiven;
     if (day.isValid())
         task.due = time.isValid()
                        ? u"%1T%2"_s.arg(day.toString(Qt::ISODate), time.toString(u"HH:mm"_s))
@@ -259,7 +261,13 @@ std::optional<QString> scheduledFromWords(const QString &text, const QDateTime &
         return std::nullopt;
     const TaskLine was = readTaskLine(text);
     const QString rest = first.hasMatch() ? text.sliced(first.capturedStart()) : QString();
-    return withTaskSchedule(said.title + u' ' + rest, said.due.isEmpty() ? was.due : said.due,
+    // A day already written stays unless the words name another; a time said alone goes on it.
+    QString due = said.due;
+    if (!said.dayGiven && !was.due.isEmpty()) {
+        const QString time = said.due.mid(10);
+        due = time.isEmpty() ? was.due : was.due.left(10) + time;
+    }
+    return withTaskSchedule(said.title + u' ' + rest, due.isEmpty() ? was.due : due,
                             said.repeat.isEmpty() ? was.repeat : said.repeat);
 }
 

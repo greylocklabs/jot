@@ -91,6 +91,11 @@ void TestQuickAdd::schedulesACheckboxFromItsWords()
     // the repeat already there stays.
     QCOMPARE(scheduledFromWords(u"pay rent friday 🔁 every month 📅 2026-10-01 ⏫"_s, now),
              std::optional(u"pay rent 🔁 every month 📅 2026-10-30 ⏫"_s));
+    // A repeat or a time said alone keeps the day written already.
+    QCOMPARE(scheduledFromWords(u"water every week 📅 2026-11-10"_s, now),
+             std::optional(u"water 🔁 every week 📅 2026-11-10"_s));
+    QCOMPARE(scheduledFromWords(u"call Soren 3pm 📅 2026-11-10"_s, now),
+             std::optional(u"call Soren 📅 2026-11-10 15:00"_s));
     // Nothing said, nothing to do.
     QCOMPARE(scheduledFromWords(u"buy rope 📅 2026-11-02"_s, now), std::nullopt);
     QCOMPARE(scheduledFromWords(u"buy rope"_s, now), std::nullopt);
