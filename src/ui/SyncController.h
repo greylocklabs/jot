@@ -1,5 +1,6 @@
 #pragma once
 
+#include "jot/DriveTransport.h"
 #include "jot/DropboxTransport.h"
 #include "jot/Settings.h"
 #include "jot/Sync.h"
@@ -32,6 +33,8 @@ class SyncController : public QObject
     Q_PROPERTY(QString problem READ problem NOTIFY changed)
     /// This build can sync with Dropbox, having an app key for it.
     Q_PROPERTY(bool dropboxAvailable READ dropboxAvailable CONSTANT)
+    /// This build can sync with Google Drive, having a client for it.
+    Q_PROPERTY(bool driveAvailable READ driveAvailable CONSTANT)
     /// A bucket is being checked before it is synced with.
     Q_PROPERTY(bool checking READ checking NOTIFY changed)
     /// How sync stands, in a few words: "Synced 3 minutes ago", "Syncing...".
@@ -62,6 +65,9 @@ public:
     /// Syncs the vault with Jot's folder in the user's Dropbox, under `folder` there, once the
     /// code from the sign-in is traded for a lasting one, kept in the keyring.
     Q_INVOKABLE void connectDropbox(const QString &code, const QString &folder);
+    /// Signs in to Google in the browser and syncs the vault with Jot's folder in the user's
+    /// Drive, made if need be, keeping the sign-in in the keyring.
+    Q_INVOKABLE void connectDrive();
     /// Stops syncing this vault, forgetting what the last sync knew; its files stay as they are,
     /// here and there.
     Q_INVOKABLE void stop();
@@ -72,6 +78,9 @@ public:
     [[nodiscard]] bool syncing() const { return m_thread != nullptr && !m_checking; }
     [[nodiscard]] bool checking() const { return m_checking; }
     [[nodiscard]] static bool dropboxAvailable() { return !dropboxAppKey().isEmpty(); }
+    [[nodiscard]] static bool driveAvailable() { return !googleClientId().isEmpty(); }
+    /// How long a sign-in in the browser may take.
+    static constexpr int kSignInMs = 5 * 60 * 1000;
     [[nodiscard]] QDateTime lastSynced() const { return m_lastSynced; }
     [[nodiscard]] QString problem() const { return m_problem; }
     [[nodiscard]] QString summary() const;
@@ -88,10 +97,11 @@ Q_SIGNALS:
 private:
     void start();
     void done(const SyncReport &report);
-    /// Checks a new remote on a thread of its own with `check`, then keeps `secret` for it in
-    /// the keyring and syncs with it; or says what went wrong.
+    /// Checks a new remote on a thread of its own with `check`, which may change the secret
+    /// and name the remote, then keeps the secret for it in the keyring and syncs with it; or
+    /// says what went wrong.
     void connectRemote(const QString &remote, const QString &secret,
-                       std::function<QString(QString *secret)> check);
+                       std::function<QString(QString *secret, QString *remote)> check);
 
     Settings &m_settings;
     QString m_root;

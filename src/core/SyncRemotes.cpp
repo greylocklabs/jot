@@ -1,3 +1,4 @@
+#include "jot/DriveTransport.h"
 #include "jot/DropboxTransport.h"
 #include "jot/FolderTransport.h"
 #include "jot/S3Transport.h"
@@ -20,6 +21,18 @@ std::unique_ptr<Transport> transportFor(const QString &remote, const QString &se
     const QString where = remote.section(u':', 1);
     if (kind == u"folder" && !where.isEmpty())
         return std::make_unique<FolderTransport>(where);
+    if (kind == u"gdrive" && !where.isEmpty()) {
+        if (googleClientId().isEmpty()) {
+            *error = QObject::tr("this build of Jot cannot sync with Google Drive");
+            return nullptr;
+        }
+        if (secret.isEmpty()) {
+            *error = QObject::tr("Google's sign-in is not in the keyring");
+            return nullptr;
+        }
+        return std::make_unique<DriveTransport>(googleClientId(), googleClientSecret(), secret,
+                                                where);
+    }
     if (kind == u"dropbox") {
         if (dropboxAppKey().isEmpty()) {
             *error = QObject::tr("this build of Jot cannot sync with Dropbox");
@@ -45,7 +58,8 @@ std::unique_ptr<Transport> transportFor(const QString &remote, const QString &se
 
 bool remoteNeedsSecret(const QString &remote)
 {
-    return remote.startsWith(u"s3:"_s) || remote.startsWith(u"dropbox:"_s);
+    return remote.startsWith(u"s3:"_s) || remote.startsWith(u"dropbox:"_s) ||
+           remote.startsWith(u"gdrive:"_s);
 }
 
 QString remoteSecretKey(const QString &remote)
@@ -55,6 +69,8 @@ QString remoteSecretKey(const QString &remote)
 
 QString remoteLabel(const QString &remote)
 {
+    if (remote.startsWith(u"gdrive:"_s))
+        return u"Google Drive"_s;
     if (remote.startsWith(u"dropbox:"_s))
         return u"Dropbox"_s + remote.section(u':', 1);
     if (const std::optional<S3Location> bucket = S3Location::parse(remote)) {

@@ -282,6 +282,12 @@ they are, so it can be read without Jot.
 - A file deleted on one side and changed on the other is kept, changed.
 - A Dropbox remote holds the files in Jot's own app folder, `Apps/Jot`, by their paths. Dropbox
   keeps what a sync deletes for a while, as its own trash.
+- A Google Drive remote holds the files in a folder called `Jot` at the top of the Drive, in
+  folders by their paths. Jot asks to see only what it made, so files put there in Drive's own
+  app stay out of the vault. What a sync deletes goes to Drive's trash. Drive cannot refuse a
+  write over a version other than the one expected, so Jot checks the version just before each
+  write; two computers writing the same file at that same moment could still overwrite each
+  other.
 - An S3 remote holds each file as an object named by its path, under the folder given in the
   bucket. The store must support conditional writes (`If-Match` and `If-None-Match`), which Jot
   checks before syncing with it, so two computers never overwrite each other unseen. The access

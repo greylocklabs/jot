@@ -1,10 +1,12 @@
 #include "SyncController.h"
 
+#include "jot/DriveTransport.h"
 #include "jot/DropboxTransport.h"
 #include "jot/Logging.h"
 #include "jot/S3Transport.h"
 #include "jot/Secrets.h"
 
+#include <QDesktopServices>
 #include <QDir>
 #include <QFileInfo>
 #include <QLocale>
@@ -113,7 +115,7 @@ void SyncController::syncWithBucket(const QString &endpoint, const QString &regi
     // AWS's own addresses take the bucket in the host name; the rest take it in the path.
     location.pathStyle = !location.endpoint.host().endsWith(u".amazonaws.com"_s);
     const QString credentials = keyId.trimmed() + u':' + secret;
-    connectRemote(location.remote(), credentials, [location](QString *secret) {
+    connectRemote(location.remote(), credentials, [location](QString *secret, QString *) {
         QString error;
         S3Transport bucket(location, *secret);
         bucket.verify(&error);
@@ -142,7 +144,7 @@ void SyncController::connectDropbox(const QString &code, const QString &folder)
         where.prepend(u'/');
     const QString verifier = m_dropboxVerifier;
     // The code is traded for a lasting token on the thread, which then is the secret kept.
-    connectRemote(u"dropbox:"_s + where, code, [verifier, where](QString *secret) {
+    connectRemote(u"dropbox:"_s + where, code, [verifier, where](QString *secret, QString *) {
         QString error;
         DropboxSignIn signIn;
         signIn.verifier = verifier;
@@ -156,18 +158,46 @@ void SyncController::connectDropbox(const QString &code, const QString &folder)
     });
 }
 
+void SyncController::connectDrive()
+{
+    if (m_root.isEmpty() || m_thread)
+        return;
+    connectRemote({}, {}, [this](QString *secret, QString *remote) {
+        jot::DriveSignIn signIn;
+        const QUrl url = signIn.start(googleClientId());
+        if (url.isEmpty())
+            return tr("Could not listen for Google's answer on this computer.");
+        QMetaObject::invokeMethod(
+            this, [url] { QDesktopServices::openUrl(url); }, Qt::QueuedConnection);
+        QString error;
+        const std::optional<QString> token =
+            signIn.finish(googleClientId(), googleClientSecret(), kSignInMs, &error);
+        if (!token)
+            return error;
+        *secret = *token;
+        // The same folder from every computer, as Jot can see only what it made.
+        DriveTransport drive(googleClientId(), googleClientSecret(), *token, {});
+        const std::optional<QString> folder = drive.folderNamed(u"Jot"_s, &error);
+        if (!folder)
+            return error;
+        *remote = u"gdrive:"_s + *folder;
+        return QString();
+    });
+}
+
 void SyncController::connectRemote(const QString &remote, const QString &secret,
-                                   std::function<QString(QString *secret)> check)
+                                   std::function<QString(QString *secret, QString *remote)> check)
 {
     m_checking = true;
     m_problem.clear();
     Q_EMIT changed();
     m_thread = QThread::create([this, remote, secret, check] {
         QString kept = secret;
-        const QString error = check(&kept);
+        QString named = remote;
+        const QString error = check(&kept, &named);
         QMetaObject::invokeMethod(
             this,
-            [this, remote, kept, error] {
+            [this, remote = named, kept, error] {
                 m_thread->wait();
                 m_thread = nullptr;
                 m_checking = false;
