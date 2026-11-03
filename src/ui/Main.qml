@@ -115,8 +115,41 @@ ApplicationWindow {
                 }
             }
 
+            // Where the notes sync to: how it stands, and a sync at a click.
+            StickerButton {
+                id: syncButton
+
+                objectName: "syncButton"
+                anchors {
+                    right: travel.left
+                    rightMargin: Theme.space3
+                    verticalCenter: parent.verticalCenter
+                }
+                visible: Vault.isOpen && Vault.sync.configured
+                glyph: "refresh"
+                spinning: Vault.sync.syncing
+                Accessible.name: qsTr("Sync now")
+                tip: Vault.sync.summary
+                onClicked: Vault.sync.syncNow()
+
+                // The last sync went wrong; the tip says how.
+                Rectangle {
+                    visible: Vault.sync.problem !== "" && !Vault.sync.syncing
+                    width: Theme.badgeSize
+                    height: Theme.badgeSize
+                    x: parent.width - width * 0.8
+                    y: -height * 0.2
+                    radius: width / 2
+                    color: Theme.danger
+                    border.width: width / 5
+                    border.color: Theme.bg
+                }
+            }
+
             // Back and forward through the notes opened, as a browser's arrows.
             Row {
+                id: travel
+
                 anchors {
                     right: newButton.left
                     rightMargin: Theme.space3

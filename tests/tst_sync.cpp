@@ -1,5 +1,6 @@
 #include "FakeTransport.h"
 
+#include "jot/FolderTransport.h"
 #include "jot/Sync.h"
 
 #include <QDir>
@@ -32,6 +33,8 @@ private Q_SLOTS:
     void triesAgainWhenTheRemoteChangesMeanwhile();
     void sendsAnEditMadeDuringAnUpload();
     void doesNothingWhenTheRemoteIsDown();
+    void syncsThroughAFolder();
+    void readsRemoteSettings();
     void keepsEverythingAcrossRandomEdits_data();
     void keepsEverythingAcrossRandomEdits();
 
@@ -338,6 +341,62 @@ void TestSync::doesNothingWhenTheRemoteIsDown()
     QVERIFY(report.pushed.isEmpty());
     m_remote->down = false;
     QCOMPARE(laptop.engine->sync().pushed, QStringList{u"Mara.md"_s});
+}
+
+void TestSync::syncsThroughAFolder()
+{
+    const QString shared = m_dir->filePath(u"nas/Notes"_s);
+    QVERIFY(QDir().mkpath(shared));
+    const auto onFolder = [&](const QString &name) {
+        const QString root = m_dir->filePath(name + u"/vault"_s);
+        QDir().mkpath(root);
+        return Device{
+            root, std::make_unique<SyncEngine>(root, std::make_unique<jot::FolderTransport>(shared),
+                                               m_dir->filePath(name + u"/state"_s), name)};
+    };
+    Device laptop = onFolder(u"laptop"_s);
+    Device desk = onFolder(u"desk"_s);
+    write(laptop, u"Ashfall/Mara.md"_s, "# Mara\n\none\n\ntwo\n");
+    settle({&laptop, &desk});
+    QFile copy(shared + u"/Ashfall/Mara.md"_s);
+    QVERIFY(copy.open(QIODevice::ReadOnly));
+    QCOMPARE(copy.readAll(), QByteArray("# Mara\n\none\n\ntwo\n"));
+
+    // Edits to different lines on each merge there too; a delete goes to the folder's trash.
+    write(laptop, u"Ashfall/Mara.md"_s, "# Mara\n\nONE\n\ntwo\n");
+    write(desk, u"Ashfall/Mara.md"_s, "# Mara\n\none\n\nTWO\n");
+    write(desk, u"Gone.md"_s, "gone\n");
+    settle({&laptop, &desk});
+    QCOMPARE(read(desk, u"Ashfall/Mara.md"_s), QByteArray("# Mara\n\nONE\n\nTWO\n"));
+    QVERIFY(QFile::remove(desk.root + u"/Gone.md"_s));
+    settle({&laptop, &desk});
+    QVERIFY(!exists(laptop, u"Gone.md"_s));
+    QVERIFY(!QFileInfo::exists(shared + u"/Gone.md"_s));
+    QVERIFY(QDir(shared + u"/.jot/trash"_s).exists());
+    QCOMPARE(files(laptop), files(desk));
+
+    // An unmounted share is no remote at all, not one where everything was deleted.
+    QVERIFY(QDir(shared).removeRecursively());
+    write(laptop, u"New.md"_s, "new\n");
+    const QMap<QString, QByteArray> trashed = files(laptop, true);
+    const SyncReport report = laptop.engine->sync();
+    QVERIFY(!report.failure.isEmpty());
+    QVERIFY(exists(laptop, u"Ashfall/Mara.md"_s));
+    QCOMPARE(files(laptop, true), trashed);
+}
+
+void TestSync::readsRemoteSettings()
+{
+    QString error;
+    QVERIFY(jot::transportFor(u"folder:/mnt/nas/Notes"_s, &error));
+    QCOMPARE(jot::remoteLabel(u"folder:/mnt/nas/Notes"_s), u"/mnt/nas/Notes"_s);
+    QVERIFY(!jot::transportFor(u"carrier-pigeon:coop"_s, &error));
+    QVERIFY(error.contains(u"carrier-pigeon"_s));
+    // One base for each vault and remote.
+    QVERIFY(jot::syncStateDir(u"/a"_s, u"folder:/x"_s) !=
+            jot::syncStateDir(u"/a"_s, u"folder:/y"_s));
+    QVERIFY(jot::syncStateDir(u"/a"_s, u"folder:/x"_s) !=
+            jot::syncStateDir(u"/b"_s, u"folder:/x"_s));
 }
 
 void TestSync::keepsEverythingAcrossRandomEdits_data()

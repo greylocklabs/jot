@@ -30,6 +30,7 @@ private Q_SLOTS:
     void makesNotesWithAPipedBody();
     void showsANoteByTitleAliasOrPath();
     void listsWhatIsLeftToDo();
+    void syncsOnce();
     void addsAToDoToTheInbox();
     void opensANoteInTheApp();
     void listsTagsWithTheirNotes();
@@ -52,6 +53,7 @@ void TestVaultCommands::init()
     // Joplin is looked for in home and the config folder, which must never be the real ones.
     qputenv("HOME", m_dir->filePath(u"home"_s).toUtf8());
     qputenv("XDG_CONFIG_HOME", m_dir->filePath(u"home/.config"_s).toUtf8());
+    qputenv("XDG_STATE_HOME", m_dir->filePath(u"home/.local/state"_s).toUtf8());
     const QString root = m_dir->filePath(u"Notes"_s);
     const QString sample = QStringLiteral(JOT_SAMPLE_VAULT);
     QDirIterator files(sample, QDir::Files, QDirIterator::Subdirectories);
@@ -225,6 +227,30 @@ void TestVaultCommands::listsWhatIsLeftToDo()
     QCOMPARE(json().array().first()[u"done"_s].toString(), u"2026-10-27"_s);
     QCOMPARE(run([](auto &c) { return c.listTasks(false, u"done"_s); }), 0);
     QVERIFY2(m_out.contains(u"2026-10-27\n  [x] Call Soren\n"_s), qPrintable(m_out));
+}
+
+void TestVaultCommands::syncsOnce()
+{
+    QCOMPARE(run([](auto &c) { return c.sync({}, false); }), 1);
+    QVERIFY(m_err.contains(u"does not sync"_s));
+    const QString nas = m_dir->filePath(u"nas"_s);
+    QVERIFY(QDir().mkpath(nas));
+    const QString remote = u"folder:"_s + nas;
+    QCOMPARE(run([&remote](auto &c) { return c.sync(remote, true); }), 0);
+    QVERIFY(json()[u"pushed"_s].toArray().contains(u"Inbox/Groceries.md"_s));
+    QVERIFY(QFileInfo::exists(nas + u"/Inbox/Groceries.md"_s));
+
+    // What arrives is indexed at once.
+    QString error;
+    QVERIFY(notefile::write(nas + u"/Arrived.md"_s, u"# Arrived\n"_s, &error));
+    QCOMPARE(run([&remote](auto &c) { return c.sync(remote, false); }), 0);
+    QVERIFY2(m_out.contains(u"1 brought here"_s), qPrintable(m_out));
+    QVERIFY(m_index->note(u"Arrived.md"_s));
+    // A folder that is not there says so.
+    QCOMPARE(
+        run([this](auto &c) { return c.sync(u"folder:"_s + m_dir->filePath(u"gone"_s), false); }),
+        1);
+    QVERIFY(m_err.contains(u"could not sync"_s));
 }
 
 void TestVaultCommands::addsAToDoToTheInbox()

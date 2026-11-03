@@ -38,6 +38,8 @@ qt_add_qml_module(jotui
         TagModel.cpp
         TaskModel.h
         TaskModel.cpp
+        SyncController.h
+        SyncController.cpp
         ToDoReminders.h
         ToDoReminders.cpp
         VaultController.h

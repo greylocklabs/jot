@@ -55,6 +55,7 @@ const QList<std::pair<QString, QString>> kCommands = {
     {u"tasks"_s, u"What is left to do: --view today, upcoming, anytime, all or done"_s},
     {u"add"_s, u"Add a to-do to the inbox: jot add \"call Soren tomorrow 3pm @minutes\""_s},
     {u"tags"_s, u"Every tag, with how many notes have it"_s},
+    {u"sync"_s, u"Sync the vault once with where the app syncs it to"_s},
     {u"import"_s,
      u"Bring notes in from Joplin, its database or an export; --dry-run first to see"_s},
     {u"logs"_s, u"Show, follow (-f) or open (--open) the log files"_s},
@@ -391,7 +392,7 @@ int main(int argc, char *argv[])
 
     static const QStringList kVaultCommands = {u"status"_s, u"ls"_s,   u"search"_s, u"new"_s,
                                                u"show"_s,   u"open"_s, u"tasks"_s,  u"tags"_s,
-                                               u"import"_s, u"add"_s};
+                                               u"import"_s, u"add"_s,  u"sync"_s};
     if (kVaultCommands.contains(command)) {
         std::optional<OpenVault> open = openVault(parser.value(vaultOption));
         if (!open)
@@ -415,6 +416,9 @@ int main(int argc, char *argv[])
             return commands.listTags(json);
         if (command == u"add")
             return commands.addTask(rest, json);
+        if (command == u"sync")
+            return commands.sync(Settings(Settings::defaultPath()).syncRemote(open->vault->root()),
+                                 json);
         if (command == u"import") {
             if (args.size() < 2 || args.size() > 3 || args.at(1) != u"joplin") {
                 err << QObject::tr("usage: jot import joplin [export.jex | database.sqlite | "

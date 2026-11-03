@@ -4,6 +4,7 @@
 #include "NoteListModel.h"
 #include "NotebookModel.h"
 #include "SwitcherModel.h"
+#include "SyncController.h"
 #include "TagModel.h"
 #include "TaskModel.h"
 
@@ -58,6 +59,8 @@ class VaultController : public QObject
     Q_PROPERTY(jot::SwitcherModel *linkSuggestions READ linkSuggestions CONSTANT)
     /// What is left to do across the vault.
     Q_PROPERTY(jot::TaskModel *tasks READ tasks CONSTANT)
+    /// Where the vault syncs to, and how that stands.
+    Q_PROPERTY(jot::SyncController *sync READ sync CONSTANT)
     /// The middle column shows tasks rather than notes.
     Q_PROPERTY(bool showingTasks READ showingTasks WRITE setShowingTasks NOTIFY showingTasksChanged)
     /// What links to, or names, the note shown.
@@ -263,6 +266,7 @@ public:
     [[nodiscard]] SwitcherModel *linkSuggestions() { return &m_linkSuggestions; }
     [[nodiscard]] BacklinksModel *backlinks() { return &m_backlinks; }
     [[nodiscard]] TaskModel *tasks() { return &m_tasks; }
+    [[nodiscard]] SyncController *sync() { return &m_sync; }
     [[nodiscard]] bool showingTasks() const { return m_showingTasks; }
     void setShowingTasks(bool showing);
     [[nodiscard]] QString current() const { return m_current; }
@@ -350,6 +354,7 @@ private:
     SwitcherModel m_linkSuggestions;
     BacklinksModel m_backlinks;
     TaskModel m_tasks;
+    SyncController m_sync{m_settings};
     bool m_showingTasks = false;
     QVariantMap m_notebookEmoji;
     QStringList m_pinned;

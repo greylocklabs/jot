@@ -3,6 +3,17 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## Unreleased
+
+### Added
+
+- Sync a vault with another folder, such as a NAS, a USB drive or a network share, and so with
+  other computers syncing with it: Settings, Sync. Jot syncs when it opens, shortly after you
+  write, and every few minutes; the title bar shows how it stands, and a click syncs now. Edits
+  made on both sides are merged, front matter key by key, or both versions kept; a delete never
+  wins over an edit, and what a sync deletes goes to the vault's trash.
+- `jot sync` syncs the vault once from the command line.
+
 ## 0.1.2 - 2026-11-03
 
 ### Added
