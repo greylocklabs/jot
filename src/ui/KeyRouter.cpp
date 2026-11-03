@@ -104,6 +104,7 @@ QList<KeyAction> KeyRouter::actions()
         act(u"link"_s, tr("Link"), note, {u"Ctrl+K"_s}),
         act(u"headings"_s, tr("Headings"), note, {u"Ctrl+1"_s, u"Ctrl+2"_s, u"Ctrl+3"_s}),
         act(u"checkbox"_s, tr("Checkbox"), note, {u"Ctrl+Return"_s}),
+        act(u"schedule"_s, tr("The to-do's day and repeat"), note, {u"Ctrl+Shift+D"_s}),
         act(u"listItem"_s, tr("Next list item, or end the list"), note, {u"Return"_s}),
         act(u"lineInItem"_s, tr("New line in a list item"), note, {u"Shift+Return"_s}),
         act(u"nest"_s, tr("Nest or unnest list items"), note, {u"Tab"_s, u"Shift+Tab"_s}),

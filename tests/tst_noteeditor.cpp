@@ -53,6 +53,7 @@ private Q_SLOTS:
     void switchingAwayFromAPictureLeavesNoStalePlace();
     void formatsAndUndoesInOneStep();
     void formatsFromTheKeyboard();
+    void setsAToDosDayAndRepeat();
     void makesTheNoteATaskWithADueDate();
     void continuesAndNestsLists();
     void fillsInTablesWithTheKeys();
@@ -455,6 +456,48 @@ void TestNoteEditor::formatsFromTheKeyboard()
     QCOMPARE(body->property("text").toString().mid(word, 7), u"*plain*"_s);
     QTest::keyClick(m_window.get(), Qt::Key_Return, Qt::ControlModifier);
     QVERIFY(body->property("text").toString().contains(u"- [ ] "_s));
+}
+
+void TestNoteEditor::setsAToDosDayAndRepeat()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    body->forceActiveFocus();
+    body->setProperty("text", u"# Chores\n- [ ] water the plants every week\nsweep\n"_s);
+    const auto text = [body] { return body->property("text").toString(); };
+    const QString today = QDate::currentDate().toString(Qt::ISODate);
+    const auto schedule = [this] {
+        QTest::keyClick(m_window.get(), Qt::Key_D, Qt::ControlModifier | Qt::ShiftModifier);
+    };
+
+    // Words that say when become the markers, in one step to undo.
+    body->setProperty("cursorPosition", 12);
+    schedule();
+    QCOMPARE(text(), u"# Chores\n- [ ] water the plants 🔁 every week 📅 %1\nsweep\n"_s.arg(today));
+    QMetaObject::invokeMethod(body, "undo");
+    QCOMPARE(text(), u"# Chores\n- [ ] water the plants every week\nsweep\n"_s);
+
+    // A line that is no to-do becomes one, and with nothing said, the popup asks when.
+    const qsizetype sweep = text().indexOf(u"sweep"_s);
+    body->setProperty("cursorPosition", int(sweep) + 2);
+    schedule();
+    QVERIFY(text().contains(u"- [ ] sweep\n"_s));
+    auto *popup = m_editor->findChild<QObject *>(u"scheduleInput"_s);
+    QVERIFY(popup);
+    QTRY_VERIFY(popup->property("activeFocus").toBool());
+    for (const QChar c : u"2026-12-24 every year"_s)
+        QTest::keyClick(m_window.get(), c.toLatin1());
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    QTRY_VERIFY(text().contains(u"- [ ] sweep 🔁 every year 📅 2026-12-24\n"_s));
+
+    // Asked again, it offers what is there; emptied, it takes the day and repeat away.
+    body->setProperty("cursorPosition", int(text().indexOf(u"sweep"_s)) + 2);
+    schedule();
+    QTRY_VERIFY(popup->property("activeFocus").toBool());
+    QCOMPARE(popup->property("text").toString(), u"2026-12-24 every year"_s);
+    QTest::keyClick(m_window.get(), Qt::Key_Backspace);
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    QTRY_VERIFY(text().contains(u"- [ ] sweep\n"_s));
 }
 
 void TestNoteEditor::makesTheNoteATaskWithADueDate()

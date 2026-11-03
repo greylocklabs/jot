@@ -12,6 +12,8 @@ class TestQuickAdd : public QObject
 private Q_SLOTS:
     void reads_data();
     void reads();
+    void schedulesACheckboxFromItsWords();
+    void setsAndClearsTheDayAndRepeat();
 };
 
 void TestQuickAdd::reads_data()
@@ -75,6 +77,33 @@ void TestQuickAdd::reads()
     QFETCH(QString, line);
     const QuickTask task = readQuickTask(typed, QDateTime(QDate(2026, 10, 28), QTime(10, 0)));
     QCOMPARE(task.line, line);
+}
+
+void TestQuickAdd::schedulesACheckboxFromItsWords()
+{
+    const QDateTime now(QDate(2026, 10, 28), QTime(10, 0));
+    QCOMPARE(scheduledFromWords(u"water the plants every week @day"_s, now),
+             std::optional(u"water the plants @day 🔁 every week 📅 2026-10-28"_s));
+    QCOMPARE(scheduledFromWords(u"call Soren tomorrow 3pm"_s, now),
+             std::optional(u"call Soren 📅 2026-10-29 15:00"_s));
+    // Words said after the markers are the to-do's, not read; a new day replaces the old, and
+    // the repeat already there stays.
+    QCOMPARE(scheduledFromWords(u"pay rent friday 🔁 every month 📅 2026-10-01 ⏫"_s, now),
+             std::optional(u"pay rent 🔁 every month 📅 2026-10-30 ⏫"_s));
+    // Nothing said, nothing to do.
+    QCOMPARE(scheduledFromWords(u"buy rope 📅 2026-11-02"_s, now), std::nullopt);
+    QCOMPARE(scheduledFromWords(u"buy rope"_s, now), std::nullopt);
+}
+
+void TestQuickAdd::setsAndClearsTheDayAndRepeat()
+{
+    QCOMPARE(withTaskSchedule(u"buy rope"_s, u"2026-11-02"_s, {}), u"buy rope 📅 2026-11-02"_s);
+    QCOMPARE(
+        withTaskSchedule(u"buy rope 📅 2026-11-02 #home"_s, u"2026-11-05T09:00"_s, u"every week"_s),
+        u"buy rope #home 🔁 every week 📅 2026-11-05 09:00"_s);
+    // Cleared, labels and tags after the rule stay with the to-do, and other markers stay.
+    QCOMPARE(withTaskSchedule(u"water 🔁 every day @home 📅 2026-11-02 ⏫"_s, {}, {}),
+             u"water @home ⏫"_s);
 }
 
 QTEST_GUILESS_MAIN(TestQuickAdd)

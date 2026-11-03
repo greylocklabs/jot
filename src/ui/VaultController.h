@@ -164,6 +164,15 @@ public:
     /// How quick add reads `typed`: `{title, due, when, repeat, labels, line}`, where `when` says
     /// the day and time for people, and `line` is the checkbox it would add.
     Q_INVOKABLE QVariantMap readQuickTask(const QString &typed) const;
+    /// A checkbox's words, `text`, with the day and repeat they say written as markers, as
+    /// quick add does; empty when they say neither.
+    Q_INVOKABLE QString scheduledFromWords(const QString &text) const;
+    /// A checkbox's words, `text`, due and repeating as `when` says, such as "friday 3pm every
+    /// week", or with neither when `when` is empty; empty when `when` says neither.
+    Q_INVOKABLE QString scheduledAs(const QString &text, const QString &when) const;
+    /// The day and repeat a checkbox's words, `text`, are marked with, as words quick add reads
+    /// back, such as "2026-11-07 15:00 every week"; empty when it has neither.
+    Q_INVOKABLE QString scheduleWords(const QString &text) const;
     /// How to tick done today the checkbox on the line holding `position` in the editor's
     /// `text`: `{start, end, text}`, the line's stretch and what replaces it, with the next one
     /// above it when it repeats.

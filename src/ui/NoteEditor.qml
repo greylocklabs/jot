@@ -39,6 +39,8 @@ Rectangle {
     /// Formats the selection, or the word or line at the cursor, and keeps the cursor in
     /// the note. Says whether anything was done.
     function format(action, argument) {
+        if (action === "schedule")
+            return schedule()
         if (action === "source") {
             Settings.readMode = false
             Settings.sourceMode = !Settings.sourceMode
@@ -53,6 +55,48 @@ Rectangle {
         if (after.start === undefined)
             return false
         body.select(after.start, after.end)
+        return true
+    }
+
+    /// Sets the day and repeat of the to-do at the cursor: from what its words say, such as
+    /// "every week", or else from a popup to type or pick them in. A line that is no to-do
+    /// becomes one first.
+    function schedule() {
+        if (body.readOnly)
+            return false
+        const box = /^(\s*(?:[-*+]|\d+[.)])\s+\[[ xX]\]\s*)(.*)$/
+              const lineAt = () => {
+                  const text = body.text
+                  const start = text.lastIndexOf("\n", body.cursorPosition - 1) + 1
+                  let end = text.indexOf("\n", body.cursorPosition)
+                  if (end < 0)
+                      end = text.length
+                  return {
+                      "start": start,
+                      "end": end,
+                      "text": text.slice(start, end)
+                  }
+              }
+        let line = lineAt()
+        if (!box.test(line.text)) {
+            styler.format("task", body.cursorPosition, body.cursorPosition, "")
+            line = lineAt()
+            if (!box.test(line.text))
+                return false
+        }
+        const parts = box.exec(line.text)
+        const words = {
+            "start": line.start + parts[1].length,
+            "end": line.end
+        }
+        body.forceActiveFocus()
+        const said = Vault.scheduledFromWords(parts[2])
+        if (said !== "") {
+            styler.replace(words.start, words.end, said)
+            return true
+        }
+        scheduler.place = words
+        scheduler.openFor(parts[2])
         return true
     }
 
@@ -174,7 +218,7 @@ Rectangle {
         if (event.key === Qt.Key_Slash)
             return "source"
         if (shift)
-            return event.key === Qt.Key_X ? "strike" : ""
+            return event.key === Qt.Key_X ? "strike" : event.key === Qt.Key_D ? "schedule" : ""
         switch (event.key) {
         case Qt.Key_B:
             return "bold"
@@ -718,6 +762,19 @@ Rectangle {
         font.family: Theme.fontFamily
         font.pixelSize: Theme.textSm
         font.weight: Theme.weightHeavy
+    }
+
+    TaskSchedule {
+        id: scheduler
+
+        /// Where the to-do's words are in the note, to put the new ones in their place.
+        property var place
+
+        onChosen: line => {
+            styler.replace(place.start, place.end, line)
+            body.forceActiveFocus()
+        }
+        onClosed: body.forceActiveFocus()
     }
 
     TrashConfirm {

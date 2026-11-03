@@ -4,6 +4,8 @@
 #include <QString>
 #include <QStringList>
 
+#include <optional>
+
 namespace jot {
 
 /// A to-do as typed into quick add, read the way a to-do app reads it.
@@ -26,6 +28,16 @@ struct QuickTask
 /// weeks", "every monday", "every weekday" and "daily". A time alone means today; a repeat
 /// alone starts on its first day.
 [[nodiscard]] QuickTask readQuickTask(const QString &typed, const QDateTime &now);
+
+/// `text`, a checkbox's words after `- [ ] `, due on `due` and repeating as `repeat`, either
+/// empty to take it away, in Obsidian Tasks' markers. Its other markers stay as they are.
+[[nodiscard]] QString withTaskSchedule(const QString &text, const QString &due,
+                                       const QString &repeat);
+
+/// `text`, a checkbox's words, with a day, time or repeat said in them, such as "water the
+/// plants every week" or "call Soren tomorrow 3pm", written as markers as quick add does. A day
+/// or repeat it says replaces the one marked already. Nothing when it says neither.
+[[nodiscard]] std::optional<QString> scheduledFromWords(const QString &text, const QDateTime &now);
 
 class Vault;
 

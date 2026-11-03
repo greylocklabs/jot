@@ -686,6 +686,29 @@ QVariantMap VaultController::placeBlock(const QString &text, int position,
             {u"cursor"_s, position + int(inserted.size())}};
 }
 
+QString VaultController::scheduledFromWords(const QString &text) const
+{
+    return jot::scheduledFromWords(text, QDateTime::currentDateTime()).value_or(QString());
+}
+
+QString VaultController::scheduledAs(const QString &text, const QString &when) const
+{
+    if (when.trimmed().isEmpty())
+        return withTaskSchedule(text, {}, {});
+    const QuickTask said = jot::readQuickTask(when, QDateTime::currentDateTime());
+    if (said.due.isEmpty() && said.repeat.isEmpty())
+        return {};
+    return withTaskSchedule(text, said.due, said.repeat);
+}
+
+QString VaultController::scheduleWords(const QString &text) const
+{
+    const TaskLine line = readTaskLine(text);
+    return QStringList{QString(line.due).replace(u'T', u' '), line.repeat}
+        .filter(QRegularExpression(u"\\S"_s))
+        .join(u' ');
+}
+
 QVariantMap VaultController::readQuickTask(const QString &typed) const
 {
     const QuickTask task = jot::readQuickTask(typed, QDateTime::currentDateTime());
