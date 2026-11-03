@@ -84,7 +84,7 @@ jobs:
           docker network create jot
           docker run -d --name minio --network jot \
             -e MINIO_ROOT_USER=jottest -e MINIO_ROOT_PASSWORD=jottestsecret \
-            quay.io/minio/minio:latest server /data
+            minio/minio:latest server /data
 
       - name: Build and test against it
         run: |
