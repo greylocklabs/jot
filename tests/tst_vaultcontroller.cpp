@@ -1160,6 +1160,19 @@ void TestVaultController::undoesAndRedoesTicks()
     QVERIFY(readFile(groceries).contains(u"task: open"_s));
     QVERIFY(!readFile(groceries).contains(u"\ndone: "_s));
 
+    // A write that fails keeps the step, to try again.
+    QFile folder(m_root + u"/Ashfall/Characters"_s);
+    const QFile::Permissions open = folder.permissions();
+    QVERIFY(folder.setPermissions(QFile::ReadOwner | QFile::ExeOwner));
+    auto unlock = qScopeGuard([&] { folder.setPermissions(open); });
+    const QString ticked = readFile(soren);
+    QVERIFY(!m_vault->undoTask());
+    QCOMPARE(readFile(soren), ticked);
+    QVERIFY(m_vault->problem().contains(u"Could not change"_s));
+    QVERIFY(m_vault->canUndoTask());
+    unlock.dismiss();
+    QVERIFY(folder.setPermissions(open));
+
     // Changed since, the note is left alone and the step forgotten.
     QVERIFY(m_vault->undoTask());
     QVERIFY(m_vault->redoTask());

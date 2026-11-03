@@ -821,13 +821,8 @@ bool VaultController::rewriteNote(
         m_currentText = *changed;
         setUnsaved(true);
         saveNow();
-        // The smallest edit that makes the change, in the editor's text: plain \n lines and no
-        // byte order mark.
-        const auto shown = [](QString text) {
-            if (text.startsWith(QChar(0xfeff)))
-                text.remove(0, 1);
-            return text.replace(u"\r\n"_s, u"\n"_s);
-        };
+        // The smallest edit that makes the change, in the editor's text, which has plain \n lines.
+        const auto shown = [](QString text) { return text.replace(u"\r\n"_s, u"\n"_s); };
         const QString from = shown(before);
         const QString to = shown(*changed);
         qsizetype start = 0;
@@ -890,9 +885,12 @@ bool VaultController::undoTask()
     if (m_undoTasks.isEmpty())
         return false;
     const TaskChange change = m_undoTasks.takeLast();
-    const bool done = replaceTaskText(change.path, change.after, change.before);
+    bool stale = false;
+    const bool done = replaceTaskText(change.path, change.after, change.before, &stale);
     if (done)
         m_redoTasks.append(change);
+    else if (!stale)
+        m_undoTasks.append(change);
     Q_EMIT taskHistoryChanged();
     return done;
 }
@@ -902,21 +900,29 @@ bool VaultController::redoTask()
     if (m_redoTasks.isEmpty())
         return false;
     const TaskChange change = m_redoTasks.takeLast();
-    const bool done = replaceTaskText(change.path, change.before, change.after);
+    bool stale = false;
+    const bool done = replaceTaskText(change.path, change.before, change.after, &stale);
     if (done)
         m_undoTasks.append(change);
+    else if (!stale)
+        m_redoTasks.append(change);
     Q_EMIT taskHistoryChanged();
     return done;
 }
 
-bool VaultController::replaceTaskText(const QString &path, const QString &from, const QString &to)
+bool VaultController::replaceTaskText(const QString &path, const QString &from, const QString &to,
+                                      bool *stale)
 {
-    const bool done = rewriteNote(path, [&from, &to](const QString &text) {
-        return text == from ? std::optional(to) : std::nullopt;
+    *stale = false;
+    const bool done = rewriteNote(path, [&from, &to, stale](const QString &text) {
+        *stale = text != from;
+        return *stale ? std::nullopt : std::optional(to);
     });
-    if (!done)
-        setProblem(tr("That note has changed since, so the to-do was left as it is."));
-    return done;
+    if (done)
+        return true;
+    setProblem(*stale ? tr("That note has changed since, so the to-do was left as it is.")
+                      : tr("Could not change %1.").arg(path));
+    return false;
 }
 
 void VaultController::openAt(const QString &path, int line)
