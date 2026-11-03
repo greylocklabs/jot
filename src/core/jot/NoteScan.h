@@ -67,6 +67,17 @@ rewriteLinks(QStringView body,
                                                  const QString &text = {},
                                                  const QDate &today = QDate::currentDate());
 
+/// Where a checkbox's words are in a note: from `start` to `end`, after its box.
+struct TaskWords
+{
+    qsizetype start = 0;
+    qsizetype end = 0;
+};
+
+/// The words of the checkbox on the line at `position`, or nothing when that line is no
+/// checkbox.
+[[nodiscard]] std::optional<TaskWords> taskWordsAt(QStringView note, qsizetype position);
+
 /// What ticking a checkbox done changes: the stretch of text from `start` to `end`, its whole
 /// line, becomes `text`.
 struct TickEdit

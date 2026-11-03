@@ -691,6 +691,16 @@ QString VaultController::scheduledFromWords(const QString &text) const
     return jot::scheduledFromWords(text, QDateTime::currentDateTime()).value_or(QString());
 }
 
+QVariantMap VaultController::taskWordsAt(const QString &text, int position) const
+{
+    const std::optional<TaskWords> at = jot::taskWordsAt(text, position);
+    if (!at)
+        return {};
+    return {{u"start"_s, int(at->start)},
+            {u"end"_s, int(at->end)},
+            {u"words"_s, text.sliced(at->start, at->end - at->start)}};
+}
+
 QString VaultController::scheduledAs(const QString &text, const QString &when) const
 {
     if (when.trimmed().isEmpty())

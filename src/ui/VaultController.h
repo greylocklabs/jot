@@ -167,6 +167,9 @@ public:
     /// A checkbox's words, `text`, with the day and repeat they say written as markers, as
     /// quick add does; empty when they say neither.
     Q_INVOKABLE QString scheduledFromWords(const QString &text) const;
+    /// Where the words of the checkbox on the line at `position` in `text` are, as `{start,
+    /// end, words}`; empty when that line is no checkbox.
+    Q_INVOKABLE QVariantMap taskWordsAt(const QString &text, int position) const;
     /// A checkbox's words, `text`, due and repeating as `when` says, such as "friday 3pm every
     /// week", or with neither when `when` is empty; empty when `when` says neither.
     Q_INVOKABLE QString scheduledAs(const QString &text, const QString &when) const;
