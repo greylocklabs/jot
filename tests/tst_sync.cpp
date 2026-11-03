@@ -205,6 +205,16 @@ void TestSync::mergesFrontMatterKeyByKey()
     QCOMPARE(SyncEngine::mergeNote(u"---\na: 1\nb: 2\n---\n"_s, u"---\na: 1\nb: 2\nc: 3\n---\n"_s,
                                    u"---\na: 1\n---\n"_s),
              std::optional(u"---\na: 1\nc: 3\n---\n"_s));
+    // A comment written on one side and the body changed on the other both stay.
+    QCOMPARE(SyncEngine::mergeNote(u"---\ntask: open\n---\nBody\n"_s,
+                                   u"---\ntask: open\n---\nBody\nMine\n"_s,
+                                   u"---\n# why\ntask: open\n---\nBody\n"_s),
+             std::optional(u"---\n# why\ntask: open\n---\nBody\nMine\n"_s));
+    // Beside a key changed on the other side, where only the keys could be merged, a comment
+    // would be lost: that is a conflict.
+    QCOMPARE(SyncEngine::mergeNote(u"---\ntask: open\n---\n"_s, u"---\ntask: done\n---\n"_s,
+                                   u"---\n# why\ntask: open\n---\n"_s),
+             std::nullopt);
     // The same key changed differently is a conflict.
     QCOMPARE(SyncEngine::mergeNote(base, mine,
                                    u"---\ntitle: Mara\ntask: cancelled\ndue: 2026-11-02\n---\n"
