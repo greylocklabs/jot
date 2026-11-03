@@ -40,8 +40,23 @@ std::optional<QString> utf8(const QByteArray &data)
 } // namespace
 
 const QStringList GitSync::kLargeFiles = {
-    u"png"_s, u"jpg"_s, u"jpeg"_s, u"gif"_s,  u"webp"_s, u"heic"_s, u"pdf"_s,  u"mp3"_s,
-    u"m4a"_s, u"wav"_s, u"ogg"_s,  u"flac"_s, u"mp4"_s,  u"mov"_s,  u"webm"_s, u"zip"_s};
+    u"png"_s,  u"jpg"_s, u"jpeg"_s, u"gif"_s, u"webp"_s, u"heic"_s, u"pdf"_s,
+    u"mp3"_s,  u"m4a"_s, u"wav"_s,  u"ogg"_s, u"flac"_s, u"mp4"_s,  u"mov"_s,
+    u"webm"_s, u"mkv"_s, u"avi"_s,  u"zip"_s, u"tar"_s,  u"gz"_s,   u"7z"_s};
+
+QByteArray GitSync::largeFilePattern(const QString &extension)
+{
+    // Either case, as cameras and phones write IMG_0001.JPG.
+    QByteArray pattern = "*.";
+    for (const QChar c : extension) {
+        if (c.isLetter())
+            pattern +=
+                '[' + QString(c.toUpper()).toLatin1() + QString(c.toLower()).toLatin1() + ']';
+        else
+            pattern += QString(c).toLatin1();
+    }
+    return pattern;
+}
 
 GitSync::GitSync(QString root, QString url, QString branch, QString gitDir, QString device)
     : m_root(QDir(root).absolutePath()), m_url(std::move(url)),
@@ -60,14 +75,25 @@ QString GitSync::remoteBranch() const
     return u"refs/remotes/origin/"_s + m_branch;
 }
 
-GitSync::Run GitSync::command(const QStringList &arguments, const QString &directory, int timeoutMs)
+bool GitSync::sshChosen(const QStringList &gitArguments)
+{
+    const QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
+    return environment.contains(u"GIT_SSH_COMMAND"_s) || environment.contains(u"GIT_SSH"_s) ||
+           !command(gitArguments + QStringList{u"config"_s, u"--get"_s, u"core.sshCommand"_s}, {},
+                    10000, false)
+                .out.trimmed()
+                .isEmpty();
+}
+
+GitSync::Run GitSync::command(const QStringList &arguments, const QString &directory, int timeoutMs,
+                              bool batchSsh)
 {
     QProcess process;
     QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
     // Never wait on a question nobody sees: a password prompt fails instead, and SSH uses the
-    // agent and keys it has.
+    // agent and keys it has, unless the person chose how git runs SSH.
     environment.insert(u"GIT_TERMINAL_PROMPT"_s, u"0"_s);
-    if (!environment.contains(u"GIT_SSH_COMMAND"_s))
+    if (batchSsh)
         environment.insert(u"GIT_SSH_COMMAND"_s, u"ssh -o BatchMode=yes"_s);
     environment.insert(u"LC_ALL"_s, u"C"_s);
     process.setProcessEnvironment(environment);
@@ -81,8 +107,12 @@ GitSync::Run GitSync::command(const QStringList &arguments, const QString &direc
     }
     process.closeWriteChannel();
     if (!process.waitForFinished(timeoutMs)) {
-        process.kill();
-        process.waitForFinished(1000);
+        // Asked first, so git can take its locks away; killed only if it does not stop.
+        process.terminate();
+        if (!process.waitForFinished(5000)) {
+            process.kill();
+            process.waitForFinished(1000);
+        }
         run.err = "git took too long";
         return run;
     }
@@ -94,10 +124,17 @@ GitSync::Run GitSync::command(const QStringList &arguments, const QString &direc
 
 GitSync::Run GitSync::git(const QStringList &arguments, int timeoutMs) const
 {
-    return command(QStringList{u"--git-dir="_s + m_gitDir, u"--work-tree="_s + m_root, u"-c"_s,
-                               u"core.quotepath=off"_s, u"-c"_s, u"core.autocrlf=false"_s} +
-                       arguments,
-                   m_root, timeoutMs);
+    const QStringList at{u"--git-dir="_s + m_gitDir, u"--work-tree="_s + m_root};
+    if (!m_batchSsh)
+        m_batchSsh = !sshChosen(at);
+    const Run run = command(
+        at + QStringList{u"-c"_s, u"core.quotepath=off"_s, u"-c"_s, u"core.autocrlf=false"_s} +
+            arguments,
+        m_root, timeoutMs, *m_batchSsh);
+    // A git stopped by force leaves its lock, which would refuse every later sync.
+    if (run.code == -1 && run.err == "git took too long")
+        QFile::remove(m_gitDir + u"/index.lock"_s);
+    return run;
 }
 
 bool GitSync::available()
@@ -116,7 +153,7 @@ bool GitSync::reachable(const QString &url, QString *error)
         *error = QObject::tr("git is not installed");
         return false;
     }
-    const Run run = command({u"ls-remote"_s, u"--heads"_s, url}, {}, kNetworkMs);
+    const Run run = command({u"ls-remote"_s, u"--heads"_s, url}, {}, kNetworkMs, !sshChosen({}));
     if (!run.ok())
         *error = QString::fromUtf8(run.err).trimmed();
     return run.ok();
@@ -194,7 +231,7 @@ bool GitSync::prepare(QString *error)
         if (!held.contains(kLfsStart)) {
             QByteArray lines = kLfsStart;
             for (const QString &extension : kLargeFiles)
-                lines += "*." + extension.toLatin1() + " filter=lfs diff=lfs merge=lfs -text\n";
+                lines += largeFilePattern(extension) + " filter=lfs diff=lfs merge=lfs -text\n";
             if (!held.isEmpty() && !held.endsWith('\n'))
                 held += '\n';
             if (!writeFile(u".gitattributes"_s, held + lines, error))
@@ -238,9 +275,19 @@ bool GitSync::resolve(const QString &path, SyncReport &report, QString *error)
             continue;
         const int stage = fields.at(2).toInt();
         // Through the filters, so a file in Git LFS comes back as itself, not its pointer.
-        const Run shown = git({u"cat-file"_s, u"--filters"_s, u":%1:%2"_s.arg(stage).arg(path)});
-        if (shown.ok())
-            stages.insert(stage, shown.out);
+        const Run shown =
+            git({u"cat-file"_s, u"--filters"_s, u":%1:%2"_s.arg(stage).arg(path)}, kNetworkMs);
+        // A side that cannot be read is not a side that deleted the file.
+        if (!shown.ok()) {
+            *error = QObject::tr("could not read %1 to merge it: %2")
+                         .arg(path, QString::fromUtf8(shown.err).trimmed());
+            return false;
+        }
+        stages.insert(stage, shown.out);
+    }
+    if (!listed.ok() || stages.isEmpty()) {
+        *error = QObject::tr("could not see how %1 clashes").arg(path);
+        return false;
     }
     QStringList add = {path};
     if (stages.contains(2) && stages.contains(3)) {
@@ -271,8 +318,10 @@ bool GitSync::resolve(const QString &path, SyncReport &report, QString *error)
         report.merged << path;
     } else {
         // Deleted on both sides.
-        git({u"rm"_s, u"-q"_s, u"--cached"_s, u"--"_s, path});
-        return true;
+        const Run run = git({u"rm"_s, u"-q"_s, u"--cached"_s, u"--"_s, path});
+        if (!run.ok())
+            *error = QString::fromUtf8(run.err).trimmed();
+        return run.ok();
     }
     if (const Run run = git(QStringList{u"add"_s, u"--"_s} + add); !run.ok()) {
         *error = QString::fromUtf8(run.err).trimmed();
