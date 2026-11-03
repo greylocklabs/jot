@@ -168,6 +168,21 @@ void TestLists::taskViewsFitANarrowColumn()
     QTRY_COMPARE(shown(), menu);
     item->setSize({140, 700});
     QTRY_COMPARE(shown(), menu);
+    // Its menu is as wide as its entries need, however narrow the button.
+    QMetaObject::invokeMethod(menu, "clicked");
+    auto *card = menu->findChild<QObject *>(u"dropdownMenu"_s);
+    QVERIFY(card);
+    QTRY_VERIFY(card->property("opened").toBool());
+    QVERIFY(card->property("width").toReal() > menu->width());
+    auto *entries = card->property("contentItem").value<QQuickItem *>();
+    QQuickItem *upcoming = findItem(
+        [](QQuickItem *each) {
+            return each->inherits("QQuickText") && each->property("text") == u"Upcoming"_s;
+        },
+        entries);
+    QVERIFY(upcoming);
+    QTRY_VERIFY(!upcoming->property("truncated").toBool());
+    QMetaObject::invokeMethod(card, "close");
 
     // The menu shows and sets the same view as the switches.
     m_vault->tasks()->setProperty("view", u"anytime"_s);

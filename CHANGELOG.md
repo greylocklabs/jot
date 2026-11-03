@@ -36,6 +36,11 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   (Ctrl+Alt+J unless your desktop gives another) opens quick add, even with Jot's window
   closed. Or bind any key to `jot-gui --quick-add` in your desktop's shortcut settings.
 
+### Fixed
+
+- Menus are as wide as their entries need, so the task view's menu in a narrow column shows
+  Today, Upcoming and the rest rather than blank or cut-short entries.
+
 ## 0.1.2 - 2026-11-03
 
 ### Added
