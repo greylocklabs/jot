@@ -1,3 +1,7 @@
+# Link-time optimization would redo the whole core library for every test program, doubling the
+# build for little gain in a GUI app.
+%global _lto_cflags %{nil}
+
 Name:           jot
 Version:        0.1.2
 Release:        1%{?dist}
