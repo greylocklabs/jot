@@ -21,6 +21,7 @@ private Q_SLOTS:
     void refusesAnUnknownNoteFont();
     void keepsColumnWidthsInBounds();
     void keepsKeyboardChoices();
+    void keepsDeveloperChoices();
     void keepsTheTasksView();
     void keepsReminderChoices();
     void countsTheVaultsOnARemote();
@@ -157,6 +158,26 @@ void TestSettings::keepsKeyboardChoices()
     QVERIFY(!settings.viMode());
     QCOMPARE(settings.leaderKey(), u","_s);
     QCOMPARE(settings.leaderTimeout(), 5000);
+}
+
+void TestSettings::keepsDeveloperChoices()
+{
+    QTemporaryDir dir;
+    const QString path = dir.filePath(u"settings.ini"_s);
+    Settings settings(path);
+    QVERIFY(!settings.developerMode());
+    QVERIFY(!settings.verboseLogging());
+    QSignalSpy changed(&settings, &Settings::developerChanged);
+    settings.setDeveloperMode(true);
+    settings.setVerboseLogging(true);
+    settings.setVerboseLogging(true);
+    QCOMPARE(changed.count(), 2);
+    const Settings again(path);
+    QVERIFY(again.developerMode());
+    QVERIFY(again.verboseLogging());
+    // Not a preference to reset: they are turned off as they were turned on, by hand.
+    settings.reset();
+    QVERIFY(settings.developerMode());
 }
 
 void TestSettings::keepsTheTasksView()
