@@ -19,6 +19,7 @@ private Q_SLOTS:
     void writesOutWhatQtCannotRead();
     void drawsInTheThemeColors();
     void keepsEmojiWhole();
+    void keepsLabelsAsWritten();
     void saysWhatIsWrong();
     void drawsTheSameTextOnce();
     void namesDiagramLanguages();
@@ -85,6 +86,7 @@ void TestDiagram::writesOutWhatQtCannotRead()
 {
     const QString svg = svgOf(jot::drawDiagram(u"flowchart LR\n  A(Round) --> B"_s, style()));
     QVERIFY(!svg.isEmpty());
+    // Labels here say no var(, so any left would be a style Qt cannot read.
     QVERIFY(!svg.contains(u"var("_s));
     QVERIFY(!svg.contains(u"style=\"rx:"_s));
     QVERIFY(svg.contains(u"font-size=\"15\""_s));
@@ -114,6 +116,16 @@ void TestDiagram::keepsEmojiWhole()
     QVERIFY(svg.contains(u"Practice \U0001F3B7 daily"_s));
     const QString mind = svgOf(jot::drawDiagram(u"mindmap\n  root\n    Zoë \U0001F3B7"_s, style()));
     QVERIFY(mind.contains(u"Zoë \U0001F3B7"_s));
+}
+
+void TestDiagram::keepsLabelsAsWritten()
+{
+    // Only the drawing's own styles are filled in, never what a label says.
+    const QString svg = svgOf(jot::drawDiagram(
+        u"flowchart LR\n  A[\"var(x) and getvar(--pele-bg, y)\"] --> B[\"var(--_fg)\"]"_s,
+        style()));
+    QVERIFY2(svg.contains(u">var(x) and getvar(--pele-bg,<"_s), qPrintable(svg));
+    QVERIFY(svg.contains(u">var(--_fg)<"_s));
 }
 
 void TestDiagram::saysWhatIsWrong()
