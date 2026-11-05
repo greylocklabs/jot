@@ -1044,6 +1044,17 @@ void TestNoteEditor::editsAListOfRecordsAsATable()
     records->undo();
     QTRY_COMPARE(records->rowCount(), 2);
 
+    // The keys redo and undo too, with the table in focus.
+    find(u"table"_s)->forceActiveFocus();
+    QTest::keyClick(m_window.get(), Qt::Key_Z, Qt::ControlModifier | Qt::ShiftModifier);
+    QTRY_COMPARE(records->rowCount(), 3);
+    QTest::keyClick(m_window.get(), Qt::Key_Z, Qt::ControlModifier);
+    QTRY_COMPARE(records->rowCount(), 2);
+    QTest::keyClick(m_window.get(), Qt::Key_Y, Qt::ControlModifier);
+    QTRY_COMPARE(records->rowCount(), 3);
+    QTest::keyClick(m_window.get(), Qt::Key_Z, Qt::ControlModifier);
+    QTRY_COMPARE(records->rowCount(), 2);
+
     // Undo puts the file back; the text view shows what the table wrote.
     records->undo();
     QTRY_VERIFY(m_vault->currentText().contains(u"\"age\": 40"_s));
