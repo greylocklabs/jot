@@ -95,7 +95,7 @@ Rectangle {
         Theme.name
         return Theme.noteFontFamily("mono")
     }
-    /// A list of records in JSON, CSV or TSV opens as a table; this says to show its text instead.
+    /// A list of records opens as a table; this says to show its text instead.
     property bool showText: false
     /// Why the text could not be shown as a table, after asking for one.
     property string tableWhy
@@ -368,7 +368,7 @@ Rectangle {
 
                     objectName: "viewSwitch"
                     anchors.verticalCenter: title.verticalCenter
-                    visible: root.dataFile && Vault.currentKind !== "yaml"
+                    visible: root.dataFile
                     text: root.tableShown ? qsTr("Edit as text") : qsTr("Edit as table")
                     onClicked: {
                         if (root.tableShown) {

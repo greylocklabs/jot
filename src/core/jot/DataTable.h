@@ -34,7 +34,8 @@ struct DataValue
 class DataTable
 {
 public:
-    /// Reads `text` as `kind`: "json" for an array of objects, "csv" or "tsv" with a header row.
+    /// Reads `text` as `kind`: "json" for an array of objects, "yaml" for a list of mappings,
+    /// "csv" or "tsv" with a header row.
     /// Nothing, with `why`, for text that does not read or is not a list of records.
     static std::optional<DataTable> read(const QString &kind, const QString &text,
                                          QString *why = nullptr);
@@ -86,16 +87,30 @@ private:
         Span value;
         DataValue data;
         bool quoted = false;
+        /// YAML: the quote a string was written in, if any.
+        QChar quote;
+        /// YAML: a nested value written over lines of its own.
+        bool block = false;
     };
     struct Row
     {
         Span span;
         QList<Field> fields;
+        /// YAML: a mapping written in braces, and where the list item's dash is.
+        bool flow = false;
+        qsizetype dash = -1;
     };
 
     bool parse(QString *why);
     bool parseJson(QString *why);
     bool parseDelimited(QString *why);
+    bool parseYaml(QString *why);
+    [[nodiscard]] QString yamlValue(const DataValue &value, const Field *was) const;
+    bool yamlSetValue(int row, int column, const DataValue &value);
+    [[nodiscard]] std::optional<std::pair<Span, QString>> yamlRemoval(const Row &record,
+                                                                      qsizetype at) const;
+    [[nodiscard]] qsizetype lineEnd(qsizetype at) const;
+    [[nodiscard]] qsizetype lineStart(qsizetype at) const;
     /// Puts `replacement` over `span` and reads the text again.
     bool patch(Span span, const QString &replacement);
     bool patches(QList<std::pair<Span, QString>> edits);

@@ -19,6 +19,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   open in an editor of their own. Saving rewrites only what changed, so the rest of the file keeps
   its formatting, key order, quoting and line endings. Values that differ in kind from the rest
   of their column are marked. "Edit as text" shows the file as it is.
+- A YAML file holding a list of mappings opens as a table too. Edits keep its comments, key
+  order and quoting wherever the values did not change, and nested lists and mappings edit as JSON.
 
 ## 0.2.0 - 2026-11-03
 

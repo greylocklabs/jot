@@ -259,7 +259,8 @@ bool DataTableModel::setCell(int row, int column, const QString &typed)
             most = DataValue::Type::Null;
         like = most;
     }
-    if (m_kind != u"json")
+    // CSV and TSV hold only text; JSON and YAML keep their types.
+    if (m_kind == u"csv" || m_kind == u"tsv")
         like = DataValue::Type::String;
     const DataValue value = DataTable::typed(typed, like);
     return change([&](DataTable &table) { return table.setValue(at, column, value, &m_error); });
