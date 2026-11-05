@@ -507,7 +507,7 @@ bool DataTable::stray(int row, int column) const
 
 QString DataTable::lineIndent(qsizetype at) const
 {
-    const qsizetype lineStart = m_text.lastIndexOf(u'\n', at - 1) + 1;
+    const qsizetype lineStart = at <= 0 ? 0 : m_text.lastIndexOf(u'\n', at - 1) + 1;
     qsizetype end = lineStart;
     while (end < at && (m_text.at(end) == u' ' || m_text.at(end) == u'\t'))
         ++end;

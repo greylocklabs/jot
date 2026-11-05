@@ -130,6 +130,12 @@ void TestDataTable::addsAndRemovesJsonRecords()
     QCOMPARE(table.text(), u"[]\n"_s);
     QVERIFY(table.insertRow(0));
     QCOMPARE(table.rowCount(), 1);
+
+    // A record at the very start of a line-broken file finds its indentation.
+    DataTable first = *DataTable::read(u"json"_s, u"[{\"a\": 1,\n\"b\": 2}\n]"_s);
+    QVERIFY(first.addColumn(u"c"_s));
+    QVERIFY(first.setValue(0, 2, {Type::Number, u"3"_s}));
+    QVERIFY(first.text().contains(u"\"b\": 2,\n\"c\": 3}"_s));
 }
 
 void TestDataTable::addsRenamesAndRemovesJsonColumns()
