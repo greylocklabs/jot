@@ -382,8 +382,10 @@ Item {
             readonly property bool picked: root.row === row && root.column === column
 
             implicitHeight: 32
-            color: problem !== "" ? Theme.tint(Theme.danger, 0.3) : stray ? Theme.tint(Theme.danger,
-                                                                                       0.18) : Theme.bg
+            // Through cell: the line above the table is named problem too, and an id wins.
+            color: cell.problem !== "" ? Theme.tint(Theme.danger, 0.3) : cell.stray ? Theme.tint(
+                                                                                          Theme.danger,
+                                                                                          0.18) : Theme.bg
             border.width: picked ? 2 : 1
             border.color: picked ? Theme.accent : Theme.border
 
