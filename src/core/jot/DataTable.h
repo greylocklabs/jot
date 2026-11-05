@@ -89,8 +89,10 @@ private:
         bool quoted = false;
         /// YAML: the quote a string was written in, if any.
         QChar quote;
-        /// YAML: a nested value written over lines of its own.
+        /// YAML: a nested value or a `|` or `>` scalar, written over lines of its own.
         bool block = false;
+        /// YAML: an anchor, a tag or an alias, which only the text can change safely.
+        bool locked = false;
     };
     struct Row
     {
@@ -106,7 +108,7 @@ private:
     bool parseDelimited(QString *why);
     bool parseYaml(QString *why);
     [[nodiscard]] QString yamlValue(const DataValue &value, const Field *was) const;
-    bool yamlSetValue(int row, int column, const DataValue &value);
+    bool yamlSetValue(int row, int column, const DataValue &value, QString *error);
     [[nodiscard]] std::optional<std::pair<Span, QString>> yamlRemoval(const Row &record,
                                                                       qsizetype at) const;
     [[nodiscard]] qsizetype lineEnd(qsizetype at) const;
