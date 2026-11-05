@@ -528,27 +528,54 @@ std::optional<QJsonValue> DataTable::yamlAsJson(const QString &text, QString *er
         return std::nullopt;
     yaml_parser_set_input_string(&parser, reinterpret_cast<const unsigned char *>(bytes.data()),
                                  size_t(bytes.size()));
-    // What is being built, and for a mapping the key waiting for its value.
-    QList<QJsonValue> open;
-    QList<std::optional<QString>> keys;
+    // What is being built: for each, the key waiting for its value in a mapping, whether that key
+    // is the merge key, what merge keys brought in, and the anchor naming it.
+    struct Open
+    {
+        QJsonValue value;
+        std::optional<QString> key;
+        bool merging = false;
+        QJsonObject merged;
+        QString anchor;
+    };
+    QList<Open> open;
+    QHash<QString, QJsonValue> anchors;
     std::optional<QJsonValue> done;
-    const auto place = [&](const QJsonValue &value) {
+    // `plainKey` says a scalar was written plain, as `<<` must be to merge.
+    const auto place = [&](const QJsonValue &value, bool plainKey) {
         if (open.isEmpty()) {
             done = value;
             return;
         }
-        if (open.last().isArray()) {
-            QJsonArray array = open.last().toArray();
+        Open &into = open.last();
+        if (into.value.isArray()) {
+            QJsonArray array = into.value.toArray();
             array.append(value);
-            open.last() = array;
-        } else if (!keys.last()) {
-            keys.last() = value.isString() ? value.toString() : value.toVariant().toString();
+            into.value = array;
+        } else if (!into.key) {
+            into.key = value.isString() ? value.toString() : value.toVariant().toString();
+            into.merging = plainKey && *into.key == u"<<";
+        } else if (into.merging) {
+            // A mapping, or a list of them where the first to name a key wins.
+            const QJsonArray sources = value.isArray() ? value.toArray() : QJsonArray{value};
+            for (const QJsonValue &source : sources) {
+                const QJsonObject object = source.toObject();
+                for (auto it = object.begin(); it != object.end(); ++it) {
+                    if (!into.merged.contains(it.key()))
+                        into.merged.insert(it.key(), it.value());
+                }
+            }
+            into.key.reset();
+            into.merging = false;
         } else {
-            QJsonObject object = open.last().toObject();
-            object.insert(*keys.last(), value);
-            open.last() = object;
-            keys.last().reset();
+            QJsonObject object = into.value.toObject();
+            object.insert(*into.key, value);
+            into.value = object;
+            into.key.reset();
         }
+    };
+    const auto anchorOf = [](const yaml_char_t *anchor) {
+        return anchor ? QString::fromUtf8(reinterpret_cast<const char *>(anchor)) : QString();
     };
     for (;;) {
         yaml_event_t event;
@@ -560,11 +587,20 @@ std::optional<QJsonValue> DataTable::yamlAsJson(const QString &text, QString *er
         }
         const yaml_event_type_t type = event.type;
         QJsonValue scalar;
+        QString anchor;
+        bool plain = false;
+        switch (type) {
+        case YAML_SCALAR_EVENT: anchor = anchorOf(event.data.scalar.anchor); break;
+        case YAML_SEQUENCE_START_EVENT: anchor = anchorOf(event.data.sequence_start.anchor); break;
+        case YAML_MAPPING_START_EVENT: anchor = anchorOf(event.data.mapping_start.anchor); break;
+        case YAML_ALIAS_EVENT: anchor = anchorOf(event.data.alias.anchor); break;
+        default: break;
+        }
         if (type == YAML_SCALAR_EVENT) {
             const QString value =
                 QString::fromUtf8(reinterpret_cast<const char *>(event.data.scalar.value),
                                   qsizetype(event.data.scalar.length));
-            const bool plain = event.data.scalar.style == YAML_PLAIN_SCALAR_STYLE;
+            plain = event.data.scalar.style == YAML_PLAIN_SCALAR_STYLE;
             switch (plain ? yamlType(value) : DataValue::Type::String) {
             case DataValue::Type::Null: scalar = QJsonValue::Null; break;
             case DataValue::Type::Bool: scalar = value.toLower() == u"true"; break;
@@ -583,23 +619,30 @@ std::optional<QJsonValue> DataTable::yamlAsJson(const QString &text, QString *er
         }
         yaml_event_delete(&event);
         switch (type) {
-        case YAML_SEQUENCE_START_EVENT:
-            open.append(QJsonArray());
-            keys.append(std::nullopt);
-            break;
-        case YAML_MAPPING_START_EVENT:
-            open.append(QJsonObject());
-            keys.append(std::nullopt);
-            break;
+        case YAML_SEQUENCE_START_EVENT: open.append({QJsonArray(), {}, false, {}, anchor}); break;
+        case YAML_MAPPING_START_EVENT: open.append({QJsonObject(), {}, false, {}, anchor}); break;
         case YAML_SEQUENCE_END_EVENT:
         case YAML_MAPPING_END_EVENT: {
-            const QJsonValue finished = open.takeLast();
-            keys.removeLast();
-            place(finished);
+            Open finished = open.takeLast();
+            // The mapping's own keys win over those merged in, wherever they were written.
+            if (finished.value.isObject() && !finished.merged.isEmpty()) {
+                QJsonObject object = finished.merged;
+                const QJsonObject own = finished.value.toObject();
+                for (auto it = own.begin(); it != own.end(); ++it)
+                    object.insert(it.key(), it.value());
+                finished.value = object;
+            }
+            if (!finished.anchor.isEmpty())
+                anchors.insert(finished.anchor, finished.value);
+            place(finished.value, false);
             break;
         }
-        case YAML_SCALAR_EVENT: place(scalar); break;
-        case YAML_ALIAS_EVENT: place(QJsonValue::Null); break;
+        case YAML_SCALAR_EVENT:
+            if (!anchor.isEmpty())
+                anchors.insert(anchor, scalar);
+            place(scalar, plain);
+            break;
+        case YAML_ALIAS_EVENT: place(anchors.value(anchor, QJsonValue::Null), false); break;
         case YAML_STREAM_END_EVENT:
             yaml_parser_delete(&parser);
             return done.value_or(QJsonValue::Null);
