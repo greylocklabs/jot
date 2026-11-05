@@ -1008,6 +1008,16 @@ void TestNoteEditor::checksATableAgainstItsSchema()
              u"should be one of \"lead\", \"chorus\""_s);
     QVERIFY(records->data(records->index(0, 0), DataTableModel::ProblemRole).toString().isEmpty());
     QVERIFY(find(u"schemaLine"_s)->isVisible());
+    // Only that cell is drawn as wrong.
+    QQuickItem *table = find(u"table"_s);
+    const auto cellColor = [table](int column) {
+        QQuickItem *item = nullptr;
+        QMetaObject::invokeMethod(table, "itemAtCell", Q_RETURN_ARG(QQuickItem *, item),
+                                  Q_ARG(QPoint, QPoint(column, 0)));
+        return item ? item->property("color").value<QColor>() : QColor();
+    };
+    QTRY_VERIFY(cellColor(0).isValid() && cellColor(1).isValid());
+    QVERIFY(cellColor(0) != cellColor(1));
     // The schema's values are offered for the column, and taking one clears the mark.
     QCOMPARE(records->choices(1), (QStringList{u"lead"_s, u"chorus"_s}));
     QVERIFY(records->choices(0).isEmpty());
