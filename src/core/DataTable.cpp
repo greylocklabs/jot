@@ -652,7 +652,7 @@ bool DataTable::setValue(int row, int column, const DataValue &value, QString *e
                 return false;
             }
         }
-        return yamlSetValue(row, column, value);
+        return yamlSetValue(row, column, value, error);
     }
     if (m_kind != u"json") {
         const Row &record = m_rows.at(row);
@@ -726,6 +726,8 @@ bool DataTable::clearValue(int row, int column)
     const Row &record = m_rows.at(row);
     const qsizetype at = found - record.fields.constData();
     if (m_kind == u"yaml") {
+        if (found->locked)
+            return false;
         const auto removal = yamlRemoval(record, at);
         return removal && patch(removal->first, removal->second);
     }
@@ -1038,6 +1040,19 @@ bool DataTable::parseYaml(QString *why)
         }
         const bool plainScalar =
             type == YAML_SCALAR_EVENT && event.data.scalar.style == YAML_PLAIN_SCALAR_STYLE;
+        const bool blockScalar =
+            type == YAML_SCALAR_EVENT && (event.data.scalar.style == YAML_LITERAL_SCALAR_STYLE ||
+                                          event.data.scalar.style == YAML_FOLDED_SCALAR_STYLE);
+        // An anchor or an explicit tag, which an edit of the value alone would lose or break.
+        const bool marked =
+            (type == YAML_SCALAR_EVENT &&
+             (event.data.scalar.anchor ||
+              (event.data.scalar.tag && !event.data.scalar.plain_implicit &&
+               !event.data.scalar.quoted_implicit))) ||
+            (type == YAML_MAPPING_START_EVENT &&
+             (event.data.mapping_start.anchor || !event.data.mapping_start.implicit)) ||
+            (type == YAML_SEQUENCE_START_EVENT &&
+             (event.data.sequence_start.anchor || !event.data.sequence_start.implicit));
         yaml_event_delete(&event);
 
         switch (type) {
@@ -1078,6 +1093,7 @@ bool DataTable::parseYaml(QString *why)
                     return fail(QObject::tr("a key that is not plain text"));
                 nestedStart = start;
                 field.block = !flow;
+                field.locked = marked;
                 building.clear();
                 buildingKeys.clear();
             }
@@ -1132,8 +1148,11 @@ bool DataTable::parseYaml(QString *why)
                 key = false;
                 break;
             }
-            field.value = {start, end};
+            // A | or > scalar's end runs on to the next line, which is not its.
+            field.value = {start, blockScalar ? trimmed(end) : end};
             field.quote = quote;
+            field.block = blockScalar;
+            field.locked = marked || type == YAML_ALIAS_EVENT;
             if (type == YAML_ALIAS_EVENT)
                 field.data = {DataValue::Type::String, m_text.sliced(start, end - start)};
             else if (!plainScalar)
@@ -1172,11 +1191,16 @@ QString DataTable::yamlValue(const DataValue &value, const Field *was) const
     }
 }
 
-bool DataTable::yamlSetValue(int row, int column, const DataValue &value)
+bool DataTable::yamlSetValue(int row, int column, const DataValue &value, QString *error)
 {
     const Row &record = m_rows.at(row);
     const QString text = yamlValue(value, field(row, column));
     if (const Field *found = field(row, column)) {
+        if (found->locked) {
+            if (error)
+                *error = QObject::tr("it has an anchor, a tag or an alias; edit it as text");
+            return false;
+        }
         // A value over lines of its own, or none written, is replaced from its colon on.
         if (value.type == DataValue::Type::Nested || found->block ||
             found->value.start == found->value.end)

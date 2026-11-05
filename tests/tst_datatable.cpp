@@ -45,6 +45,7 @@ private Q_SLOTS:
     void editsYamlKeepingCommentsAndQuotes();
     void addsAndRemovesYamlFieldsAndRecords();
     void editsYamlColumnsAndNestedValues();
+    void editsYamlBlockScalarsAndLeavesAnchorsAlone();
     void readsCsvWithQuotesAndLineEndings();
     void editsCsvKeepingQuotingAndShortRows();
     void addsAndRemovesCsvRowsAndColumns();
@@ -321,6 +322,36 @@ void TestDataTable::editsYamlColumnsAndNestedValues()
     QVERIFY(table.setValue(1, 3, {Type::Nested, u"[\"Go.\"]"_s}));
     QVERIFY(table.text().endsWith(u"  years: ~\n  lines: [\"Go.\"]\n"_s));
     QCOMPARE(table.value(1, 3), (DataValue{Type::Nested, u"[\"Go.\"]"_s}));
+}
+
+void TestDataTable::editsYamlBlockScalarsAndLeavesAnchorsAlone()
+{
+    const QString text = u"- a: |\n    hello\n    there\n  b: 1\n"
+                         u"- a: &x foo\n  b: *x\n  c: !!str 12\n"_s;
+    DataTable table = *DataTable::read(u"yaml"_s, text);
+    QCOMPARE(table.value(0, 0), (DataValue{Type::String, u"hello\nthere\n"_s}));
+    // A block scalar is replaced from its colon, and the field after it stays.
+    QVERIFY(table.setValue(0, 0, {Type::String, u"hi"_s}));
+    QVERIFY(table.text().startsWith(u"- a: hi\n  b: 1\n"_s));
+    DataTable cleared = *DataTable::read(u"yaml"_s, text);
+    QVERIFY(cleared.clearValue(0, 0));
+    QVERIFY(cleared.text().startsWith(u"- b: 1\n- a: &x foo\n"_s));
+
+    // An anchor, an alias or a tag is left for the text, with a reason.
+    QString error;
+    QVERIFY(!table.setValue(1, 0, {Type::String, u"bar"_s}, &error));
+    QVERIFY(error.contains(u"anchor"_s));
+    QVERIFY(!table.setValue(1, 1, {Type::String, u"bar"_s}));
+    QVERIFY(!table.setValue(1, 2, {Type::String, u"13"_s}));
+    QVERIFY(!table.clearValue(1, 0));
+    QVERIFY(table.text().endsWith(u"- a: &x foo\n  b: *x\n  c: !!str 12\n"_s));
+
+    // Windows line endings, and comment lines after a nested value, stay as they are.
+    DataTable windows = *DataTable::read(u"yaml"_s, u"- a:\r\n    - x\r\n  # note\r\n  b: 1\r\n"_s);
+    QVERIFY(windows.setValue(0, 0, {Type::Nested, u"[\"y\"]"_s}));
+    QVERIFY(windows.addColumn(u"c"_s));
+    QVERIFY(windows.setValue(0, 2, {Type::Number, u"2"_s}));
+    QCOMPARE(windows.text(), u"- a: [\"y\"]\r\n  # note\r\n  b: 1\r\n  c: 2\r\n"_s);
 }
 
 void TestDataTable::readsCsvWithQuotesAndLineEndings()
