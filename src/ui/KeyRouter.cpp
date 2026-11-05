@@ -63,7 +63,10 @@ QList<KeyAction> KeyRouter::actions()
         act(u"redoTask"_s, tr("Redo ticking a to-do"), window, {int(K::Redo)}),
         act(u"tasks"_s, tr("Tasks, or back to the notes"), window, {}, {}, u"t"_s),
         act(u"settings"_s, tr("Settings"), window, {int(K::Preferences), u"Ctrl+,"_s}, {}, u"s"_s),
+        // F5 alone, not the standard refresh keys: in vi mode Ctrl+R is redo.
+        act(u"syncNow"_s, tr("Sync now"), window, {u"F5"_s}),
         act(u"help"_s, tr("Keyboard shortcuts"), window, {int(K::HelpContents)}, u"?"_s),
+        act(u"quit"_s, tr("Quit Jot"), window, {int(K::Quit)}),
         act(u"goBack"_s, tr("Back to the note before"), window, {int(K::Back)}, u"Ctrl+O"_s),
         act(u"goForward"_s, tr("Forward to the note after"), window, {int(K::Forward)},
             u"Ctrl+I"_s),

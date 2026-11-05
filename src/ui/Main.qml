@@ -506,6 +506,8 @@ ApplicationWindow {
         case "save":
         case "tasks":
             return Vault.isOpen
+        case "syncNow":
+            return Vault.isOpen && Vault.sync.configured
         case "goBack":
             return Vault.canGoBack
         case "goForward":
@@ -554,6 +556,13 @@ ApplicationWindow {
             break
         case "goBack":
             Vault.goBack()
+            break
+        case "syncNow":
+            Vault.sync.syncNow()
+            break
+        case "quit":
+            // Unsaved typing is saved as Jot closes, as from the tray's Quit.
+            Qt.quit()
             break
         case "goForward":
             Vault.goForward()
