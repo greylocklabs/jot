@@ -50,6 +50,8 @@ void TestDataCheck::saysWhereAFileStopsReading_data()
     // Qt places it just past the stray brace; columns count characters, so the accent before it
     // counts once.
     QTest::newRow("json") << u"json"_s << u"[\n  {\"name\": \"Zoë\",}\n]\n"_s << 2 << 19 << 20;
+    // At the very start, with a newline later in the text.
+    QTest::newRow("first character") << u"json"_s << u"# not json\n[]\n"_s << 1 << 1 << 0;
     QTest::newRow("yaml") << u"yaml"_s << u"name: Mara\n  bad: [indent\n"_s << 2 << 6 << 16;
     // An emoji is two UTF-16 units but one character, for YAML and JSON alike.
     QTest::newRow("yaml emoji") << u"yaml"_s << u"- \U0001F3B7: [a\n"_s << 2 << 1 << 9;
