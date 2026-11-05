@@ -103,6 +103,10 @@ int main(int argc, char *argv[])
     jot::Settings settings(parser.isSet(vaultOption) ? scratch.filePath(u"settings.ini"_s)
                                                      : jot::Settings::defaultPath());
     jot::SettingsForeign::s_instance = &settings;
+    // Debug lines on request, from the developer settings.
+    jot::logfile::setDebug(settings.verboseLogging());
+    QObject::connect(&settings, &jot::Settings::developerChanged, &settings,
+                     [&settings] { jot::logfile::setDebug(settings.verboseLogging()); });
     jot::QuickCapture capture;
     jot::QuickCapture::s_instance = &capture;
     jot::VaultController vault(settings);

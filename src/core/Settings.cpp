@@ -36,6 +36,8 @@ const QString kNoteFont = u"editor/font"_s;
 const QString kSidebarWidth = u"layout/sidebarWidth"_s;
 const QString kNoteListWidth = u"layout/noteListWidth"_s;
 const QString kViMode = u"keyboard/viMode"_s;
+const QString kDeveloperMode = u"developer/mode"_s;
+const QString kVerboseLogging = u"developer/verboseLogging"_s;
 const QString kLeaderKey = u"keyboard/leaderKey"_s;
 const QString kLeaderTimeout = u"keyboard/leaderTimeout"_s;
 
@@ -83,6 +85,8 @@ Settings::Settings(const QString &path, QObject *parent)
     if (!noteFonts().contains(m_noteFont))
         m_noteFont.clear();
     m_viMode = m_store.value(kViMode, false).toBool();
+    m_developerMode = m_store.value(kDeveloperMode, false).toBool();
+    m_verboseLogging = m_store.value(kVerboseLogging, false).toBool();
     const QString leader = m_store.value(kLeaderKey).toString();
     m_leaderKey = kLeaderKeys.contains(leader) ? leader : u","_s;
     m_leaderTimeout = std::max(0, m_store.value(kLeaderTimeout, 5000).toInt());
@@ -335,6 +339,24 @@ void Settings::setSourceMode(bool source)
     m_sourceMode = source;
     m_store.setValue(kSourceMode, source);
     Q_EMIT sourceModeChanged();
+}
+
+void Settings::setDeveloperMode(bool on)
+{
+    if (m_developerMode == on)
+        return;
+    m_developerMode = on;
+    m_store.setValue(kDeveloperMode, on);
+    Q_EMIT developerChanged();
+}
+
+void Settings::setVerboseLogging(bool on)
+{
+    if (m_verboseLogging == on)
+        return;
+    m_verboseLogging = on;
+    m_store.setValue(kVerboseLogging, on);
+    Q_EMIT developerChanged();
 }
 
 void Settings::setViMode(bool on)
