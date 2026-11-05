@@ -162,6 +162,9 @@ std::optional<QStringList> moveNotebook(const Vault &vault, VaultIndex &index, c
         sources.insert(source);
     QList<std::pair<QString, QString>> rewrites;
     for (const QString &source : std::as_const(sources)) {
+        // A data file's text is the user's data, whatever in it looks like a link.
+        if (Vault::isDataFile(source))
+            continue;
         const std::optional<QString> text = notefile::read(vault.absolute(source), error);
         if (!text)
             return std::nullopt;
