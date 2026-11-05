@@ -173,6 +173,27 @@ QString resolve(QStringView value, const QHash<QString, QString> &vars, int dept
     return out;
 }
 
+/// Resolves custom properties inside tags only, so a label that says var(...) keeps it. Pele
+/// escapes < and > in text and attribute values, so tags end at the first >.
+QString resolveInTags(QStringView svg, const QHash<QString, QString> &vars)
+{
+    QString out;
+    qsizetype from = 0;
+    while (from < svg.size()) {
+        const qsizetype open = svg.indexOf(u'<', from);
+        if (open < 0) {
+            out += svg.mid(from);
+            break;
+        }
+        out += svg.mid(from, open - from);
+        const qsizetype close = svg.indexOf(u'>', open);
+        const qsizetype end = close < 0 ? svg.size() : close + 1;
+        out += resolve(svg.mid(open, end - open), vars);
+        from = end;
+    }
+    return out;
+}
+
 using Attributes = QList<std::pair<QString, QString>>;
 
 Attributes attributesOf(QStringView tag)
@@ -337,7 +358,7 @@ QString flatten(const QString &svg, const DiagramStyle &style)
     if (!textColor.isEmpty())
         root += u" color=\""_s + textColor + u'"';
 
-    QString body = resolve(QStringView(svg).mid(rootEnd), vars);
+    QString body = resolveInTags(QStringView(svg).mid(rootEnd), vars);
     static const QRegularExpression radius(uR"( style="rx:\s*([\d.]+)(?:px)?;?")"_s);
     body.replace(radius, uR"( rx="\1" ry="\1")"_s);
     return resolve(root, vars) + splitLines(body);
