@@ -226,6 +226,9 @@ void TestRename::movesANotebookAndKeepsItsLinksWorking()
     write(u"Cast/Soren.md"_s, u"soren\n"_s);
     write(u"Cast/Minor/Tam.md"_s, u"[mara](../Mara.md)\n"_s);
     write(u"Cast/Mara.assets/face.png"_s, u"png"_s);
+    // Data that only looks like links is left as it is.
+    const QString data = u"name,log\nMara,\"[pitch](../Pitch.md) [[Pitch]]\"\n"_s;
+    write(u"Cast/lines.csv"_s, data);
     open();
 
     // Deeper, so paths that lead out of the notebook have further to go.
@@ -245,12 +248,13 @@ void TestRename::movesANotebookAndKeepsItsLinksWorking()
              u"[brother](Soren.md), [pitch](../../Pitch.md), [[Pitch]], "
              "![](Mara.assets/face.png)\n"_s);
     QCOMPARE(read(u"Board.md"_s), u"![face](Story/People/Mara.assets/face.png)\n"_s);
+    QCOMPARE(read(u"Story/People/lines.csv"_s), data);
     QCOMPARE(read(u"Story/People/Minor/Tam.md"_s), u"[mara](../Mara.md)\n"_s);
     QCOMPARE(*written, (QStringList{u"Board.md"_s, u"Pitch.md"_s, u"Story/People/Mara.md"_s}));
 
     QCOMPARE(m_index->resolve(u"Story/People/Soren"_s, {}), u"Story/People/Soren.md"_s);
     QVERIFY(!m_index->note(u"Cast/Mara.md"_s));
-    QCOMPARE(m_index->notesIn(u"Story"_s).size(), 3);
+    QCOMPARE(m_index->notesIn(u"Story"_s).size(), 4);
 }
 
 void TestRename::refusesToMoveANotebookIntoItself()
