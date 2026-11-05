@@ -113,222 +113,205 @@ ApplicationWindow {
                     font.pixelSize: Theme.textDisplay
                     font.weight: Theme.weightStrong
                 }
-            }
 
-            // Where the notes sync to: how it stands, and a sync at a click.
-            StickerButton {
-                id: syncButton
+                // Back and forward through the notes opened, as a browser's arrows.
+                Row {
+                    id: travel
 
-                objectName: "syncButton"
-                anchors {
-                    right: travel.left
-                    rightMargin: Theme.space3
-                    verticalCenter: parent.verticalCenter
-                }
-                visible: Vault.isOpen && Vault.sync.configured
-                glyph: "refresh"
-                spinning: Vault.sync.syncing
-                Accessible.name: qsTr("Sync now")
-                tip: Vault.sync.summary
-                onClicked: Vault.sync.syncNow()
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: Vault.isOpen
+                    spacing: Theme.space2
 
-                // The last sync went wrong; the tip says how.
-                Rectangle {
-                    visible: Vault.sync.problem !== "" && !Vault.sync.syncing
-                    width: Theme.badgeSize
-                    height: Theme.badgeSize
-                    x: parent.width - width * 0.8
-                    y: -height * 0.2
-                    radius: width / 2
-                    color: Theme.danger
-                    border.width: width / 5
-                    border.color: Theme.bg
+                    StickerButton {
+                        objectName: "goBack"
+                        enabled: Vault.canGoBack
+                        glyph: "chevron-left"
+                        Accessible.name: qsTr("Back")
+                        tip: qsTr("Back to the note before (Alt+Left)")
+                        onClicked: Vault.goBack()
+                    }
+                    StickerButton {
+                        objectName: "goForward"
+                        enabled: Vault.canGoForward
+                        glyph: "chevron-right"
+                        Accessible.name: qsTr("Forward")
+                        tip: qsTr("Forward to the note after (Alt+Right)")
+                        onClicked: Vault.goForward()
+                    }
                 }
             }
 
-            // Back and forward through the notes opened, as a browser's arrows.
             Row {
-                id: travel
-
-                anchors {
-                    right: newButton.left
-                    rightMargin: Theme.space3
-                    verticalCenter: parent.verticalCenter
-                }
-                visible: Vault.isOpen
-                spacing: Theme.space1
-
-                StickerButton {
-                    objectName: "goBack"
-                    enabled: Vault.canGoBack
-                    glyph: "chevron-left"
-                    Accessible.name: qsTr("Back")
-                    tip: qsTr("Back to the note before (Alt+Left)")
-                    onClicked: Vault.goBack()
-                }
-                StickerButton {
-                    objectName: "goForward"
-                    enabled: Vault.canGoForward
-                    glyph: "chevron-right"
-                    Accessible.name: qsTr("Forward")
-                    tip: qsTr("Forward to the note after (Alt+Right)")
-                    onClicked: Vault.goForward()
-                }
-            }
-
-            StickerButton {
-                id: newButton
-
-                anchors {
-                    right: searchButton.left
-                    rightMargin: Theme.space3
-                    verticalCenter: parent.verticalCenter
-                }
-                visible: Vault.isOpen && Vault.writable
-                glyph: "plus"
-                Accessible.name: qsTr("New note")
-                tip: qsTr("New note (Ctrl+N)")
-                onClicked: {
-                    if (Vault.newNote() !== "")
-                        editor.editTitle()
-                }
-            }
-
-            StickerButton {
-                id: searchButton
-
-                anchors {
-                    right: settingsButton.left
-                    rightMargin: Theme.space3
-                    verticalCenter: parent.verticalCenter
-                }
-                visible: Vault.isOpen
-                glyph: "search"
-                Accessible.name: qsTr("Go to a note")
-                tip: qsTr("Go to a note (Ctrl+P)")
-                onClicked: switcher.open()
-            }
-
-            StickerButton {
-                id: settingsButton
-
-                anchors {
-                    right: helpButton.left
-                    rightMargin: Theme.space3
-                    verticalCenter: parent.verticalCenter
-                }
-                glyph: "settings"
-                glyphStroke: Theme.fineGlyphStroke
-                Accessible.name: qsTr("Settings")
-                tip: qsTr("Settings (Ctrl+,)")
-                onClicked: settingsDialog.open()
-            }
-
-            // Help: debug info, logs and bug reports.
-            StickerButton {
-                id: helpButton
-
-                anchors {
-                    right: rightControls.left
-                    rightMargin: Theme.space4
-                    verticalCenter: parent.verticalCenter
-                }
-                text: "?"
-                Accessible.name: qsTr("Help")
-                // Not beside its own open menu, which leaves the button hovered.
-                tip: helpMenu.visible ? "" : qsTr("Help, shortcuts and about")
-                onClicked: helpMenu.popup(helpButton, 0, helpButton.height + Theme.space3)
-
-                Tip {
-                    visible: copiedTip.running
-                    text: qsTr("Debug info copied")
-                }
-
-                // A newer release is out; the menu says which. It sits on the corner,
-                // a fifth of it past the edge, ringed in the background color.
-                Rectangle {
-                    visible: Release.update !== ""
-                    width: Theme.badgeSize
-                    height: Theme.badgeSize
-                    x: parent.width - width * 0.8
-                    y: -height * 0.2
-                    radius: width / 2
-                    color: Theme.accent
-                    border.width: width / 5
-                    border.color: Theme.bg
-                }
-
-                Timer {
-                    id: copiedTip
-                    interval: 2000
-                }
-
-                Connections {
-                    target: Support
-                    function onCopied() {
-                        copiedTip.restart()
-                    }
-                }
-
-                MenuCard {
-                    id: helpMenu
-                    minimumWidth: 200
-
-                    MenuEntry {
-                        text: qsTr("Update to Jot %1...").arg(Release.update)
-                        visible: Release.update !== ""
-                        height: visible ? implicitHeight : 0
-                        onTriggered: updateDialog.open()
-                    }
-                    MenuEntry {
-                        text: qsTr("Copy debug info")
-                        onTriggered: Support.copyDebugInfo()
-                    }
-                    MenuEntry {
-                        text: qsTr("Open logs folder")
-                        onTriggered: Support.openLogs()
-                    }
-                    MenuEntry {
-                        text: qsTr("Report a problem...")
-                        onTriggered: reportDialog.open()
-                    }
-                    MenuSeparator {
-                        contentItem: Rectangle {
-                            implicitHeight: 1
-                            color: Theme.border
-                        }
-                    }
-                    MenuEntry {
-                        text: qsTr("Keyboard shortcuts")
-                        onTriggered: keyHelp.open()
-                    }
-                    MenuEntry {
-                        text: qsTr("What's new")
-                        visible: Release.notes !== ""
-                        height: visible ? implicitHeight : 0
-                        onTriggered: whatsNew.open()
-                    }
-                    MenuEntry {
-                        text: qsTr("About Jot")
-                        onTriggered: about.open()
-                    }
-                    MenuEntry {
-                        text: qsTr("Support Jot on Ko-fi")
-                        onTriggered: Qt.openUrlExternally(Release.support)
-                    }
-                }
-            }
-
-            WindowControls {
-                id: rightControls
+                id: trailing
 
                 anchors {
                     right: parent.right
                     verticalCenter: parent.verticalCenter
                     rightMargin: Theme.space4
                 }
-                visible: buttons.length > 0
-                buttons: WindowButtons.right
+                spacing: Theme.space4
+
+                // Where the notes sync to: how it stands, and a sync at a click.
+                StickerButton {
+                    id: syncButton
+
+                    objectName: "syncButton"
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: Vault.isOpen && Vault.sync.configured
+                    glyph: "refresh"
+                    spinning: Vault.sync.syncing
+                    Accessible.name: qsTr("Sync now")
+                    tip: Vault.sync.summary
+                    onClicked: Vault.sync.syncNow()
+
+                    // The last sync went wrong; the tip says how.
+                    Rectangle {
+                        visible: Vault.sync.problem !== "" && !Vault.sync.syncing
+                        width: Theme.badgeSize
+                        height: Theme.badgeSize
+                        x: parent.width - width * 0.8
+                        y: -height * 0.2
+                        radius: width / 2
+                        color: Theme.danger
+                        border.width: width / 5
+                        border.color: Theme.bg
+                    }
+                }
+
+                StickerButton {
+                    id: newButton
+
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: Vault.isOpen && Vault.writable
+                    glyph: "plus"
+                    Accessible.name: qsTr("New note")
+                    tip: qsTr("New note (Ctrl+N)")
+                    onClicked: {
+                        if (Vault.newNote() !== "")
+                            editor.editTitle()
+                    }
+                }
+
+                StickerButton {
+                    id: searchButton
+
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: Vault.isOpen
+                    glyph: "search"
+                    Accessible.name: qsTr("Go to a note")
+                    tip: qsTr("Go to a note (Ctrl+P)")
+                    onClicked: switcher.open()
+                }
+
+                StickerButton {
+                    id: settingsButton
+
+                    anchors.verticalCenter: parent.verticalCenter
+                    glyph: "settings"
+                    glyphStroke: Theme.fineGlyphStroke
+                    Accessible.name: qsTr("Settings")
+                    tip: qsTr("Settings (Ctrl+,)")
+                    onClicked: settingsDialog.open()
+                }
+
+                // Help: debug info, logs and bug reports.
+                StickerButton {
+                    id: helpButton
+
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "?"
+                    Accessible.name: qsTr("Help")
+                    // Not beside its own open menu, which leaves the button hovered.
+                    tip: helpMenu.visible ? "" : qsTr("Help, shortcuts and about")
+                    onClicked: helpMenu.popup(helpButton, 0, helpButton.height + Theme.space3)
+
+                    Tip {
+                        visible: copiedTip.running
+                        text: qsTr("Debug info copied")
+                    }
+
+                    // A newer release is out; the menu says which. It sits on the corner,
+                    // a fifth of it past the edge, ringed in the background color.
+                    Rectangle {
+                        visible: Release.update !== ""
+                        width: Theme.badgeSize
+                        height: Theme.badgeSize
+                        x: parent.width - width * 0.8
+                        y: -height * 0.2
+                        radius: width / 2
+                        color: Theme.accent
+                        border.width: width / 5
+                        border.color: Theme.bg
+                    }
+
+                    Timer {
+                        id: copiedTip
+                        interval: 2000
+                    }
+
+                    Connections {
+                        target: Support
+                        function onCopied() {
+                            copiedTip.restart()
+                        }
+                    }
+
+                    MenuCard {
+                        id: helpMenu
+                        minimumWidth: 200
+
+                        MenuEntry {
+                            text: qsTr("Update to Jot %1...").arg(Release.update)
+                            visible: Release.update !== ""
+                            height: visible ? implicitHeight : 0
+                            onTriggered: updateDialog.open()
+                        }
+                        MenuEntry {
+                            text: qsTr("Copy debug info")
+                            onTriggered: Support.copyDebugInfo()
+                        }
+                        MenuEntry {
+                            text: qsTr("Open logs folder")
+                            onTriggered: Support.openLogs()
+                        }
+                        MenuEntry {
+                            text: qsTr("Report a problem...")
+                            onTriggered: reportDialog.open()
+                        }
+                        MenuSeparator {
+                            contentItem: Rectangle {
+                                implicitHeight: 1
+                                color: Theme.border
+                            }
+                        }
+                        MenuEntry {
+                            text: qsTr("Keyboard shortcuts")
+                            onTriggered: keyHelp.open()
+                        }
+                        MenuEntry {
+                            text: qsTr("What's new")
+                            visible: Release.notes !== ""
+                            height: visible ? implicitHeight : 0
+                            onTriggered: whatsNew.open()
+                        }
+                        MenuEntry {
+                            text: qsTr("About Jot")
+                            onTriggered: about.open()
+                        }
+                        MenuEntry {
+                            text: qsTr("Support Jot on Ko-fi")
+                            onTriggered: Qt.openUrlExternally(Release.support)
+                        }
+                    }
+                }
+
+                WindowControls {
+                    id: rightControls
+
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: buttons.length > 0
+                    buttons: WindowButtons.right
+                }
             }
         }
 
