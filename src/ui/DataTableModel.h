@@ -38,8 +38,11 @@ class DataTableModel : public QAbstractTableModel
     Q_PROPERTY(QString path READ path WRITE setPath NOTIFY schemaChanged)
     /// The schema file the records are checked against, or empty.
     Q_PROPERTY(QString schemaFile READ schemaFile NOTIFY schemaChanged)
-    /// What breaks the schema, outside any one cell first, as "where: why".
+    /// What breaks the schema, as "where: why".
     Q_PROPERTY(QStringList schemaProblems READ schemaProblems NOTIFY schemaChanged)
+    /// One line saying how the records stand against the schema, or why the schema could not be
+    /// read; empty when nothing breaks it.
+    Q_PROPERTY(QString schemaSummary READ schemaSummary NOTIFY schemaChanged)
     Q_PROPERTY(bool canUndo READ canUndo NOTIFY historyChanged)
     Q_PROPERTY(bool canRedo READ canRedo NOTIFY historyChanged)
 
@@ -80,6 +83,7 @@ public:
     void setPath(const QString &path);
     [[nodiscard]] QString schemaFile() const { return m_schemaFile; }
     [[nodiscard]] QStringList schemaProblems() const { return m_schemaProblems; }
+    [[nodiscard]] QString schemaSummary() const;
     /// The values the schema allows in `column`, when it lists them.
     Q_INVOKABLE QStringList choices(int column) const;
     [[nodiscard]] bool canUndo() const { return !m_undo.isEmpty(); }
@@ -140,6 +144,8 @@ private:
     QString m_schemaFile;
     QJsonValue m_schema;
     QStringList m_schemaProblems;
+    /// Why the schema file could not be read.
+    QString m_schemaError;
     /// Problems by record and field.
     QHash<std::pair<int, QString>, QString> m_cellProblems;
     QStringList m_undo;

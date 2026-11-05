@@ -166,15 +166,7 @@ Item {
         anchors.topMargin: Theme.space2
         width: parent.width
         visible: text !== ""
-        text: {
-            const problems = root.records.schemaProblems
-            if (problems.length === 0)
-                return ""
-            if (here !== "")
-                return here
-            return qsTr("%n value(s) break %1: %2", "", problems.length).arg(
-                        root.records.schemaFile.split("/").pop()).arg(problems[0])
-        }
+        text: here !== "" ? here : root.records.schemaSummary
         textFormat: Text.PlainText
         wrapMode: Text.WordWrap
         color: Theme.danger

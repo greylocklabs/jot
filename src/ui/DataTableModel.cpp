@@ -366,7 +366,9 @@ void DataTableModel::checkSchema()
 {
     const QString before = m_schemaFile;
     const QStringList problemsBefore = m_schemaProblems;
+    const QString errorBefore = m_schemaError;
     m_schemaFile.clear();
+    m_schemaError.clear();
     m_schema = QJsonValue();
     m_schemaProblems.clear();
     m_cellProblems.clear();
@@ -375,13 +377,14 @@ void DataTableModel::checkSchema()
     if (data)
         m_schemaFile = schemaPathFor(m_path, *data);
     QFile file(m_schemaFile);
-    if (!m_schemaFile.isEmpty() && file.open(QIODevice::ReadOnly)) {
+    const QString name = QFileInfo(m_schemaFile).fileName();
+    if (!m_schemaFile.isEmpty() && !file.open(QIODevice::ReadOnly)) {
+        m_schemaError = tr("%1 could not be read: %2").arg(name, file.errorString());
+    } else if (!m_schemaFile.isEmpty()) {
         QJsonParseError error;
         const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &error);
         if (error.error != QJsonParseError::NoError)
-            m_schemaProblems.append(
-                tr("%1 is not JSON: %2")
-                    .arg(QFileInfo(m_schemaFile).fileName(), error.errorString()));
+            m_schemaError = tr("%1 is not JSON: %2").arg(name, error.errorString());
         else
             m_schema =
                 document.isObject() ? QJsonValue(document.object()) : QJsonValue(document.array());
@@ -407,8 +410,19 @@ void DataTableModel::checkSchema()
             }
         }
     }
-    if (before != m_schemaFile || problemsBefore != m_schemaProblems)
+    if (before != m_schemaFile || problemsBefore != m_schemaProblems ||
+        errorBefore != m_schemaError)
         Q_EMIT schemaChanged();
+}
+
+QString DataTableModel::schemaSummary() const
+{
+    if (!m_schemaError.isEmpty())
+        return m_schemaError;
+    if (m_schemaProblems.isEmpty())
+        return {};
+    return tr("%n value(s) break %1: %2", "", int(m_schemaProblems.size()))
+        .arg(QFileInfo(m_schemaFile).fileName(), m_schemaProblems.first());
 }
 
 QJsonValue DataTableModel::fieldRules(const QString &name) const
