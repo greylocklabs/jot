@@ -28,7 +28,7 @@ int characters(QStringView text)
 DataProblem at(const QString &text, qsizetype index, const QString &message)
 {
     index = std::clamp<qsizetype>(index, 0, text.size());
-    const qsizetype lineStart = text.lastIndexOf(u'\n', index - 1) + 1;
+    const qsizetype lineStart = index <= 0 ? 0 : text.lastIndexOf(u'\n', index - 1) + 1;
     return {int(text.left(index).count(u'\n')) + 1,
             characters(QStringView(text).sliced(lineStart, index - lineStart)) + 1, message, index};
 }
