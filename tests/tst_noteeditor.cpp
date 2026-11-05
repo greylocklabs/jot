@@ -1,3 +1,4 @@
+#include "DataStyler.h"
 #include "MarkdownStyler.h"
 #include "SettingsForeign.h"
 #include "ThemeController.h"
@@ -19,7 +20,9 @@
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
+#include <QTextBlock>
 #include <QTextDocument>
+#include <QTextLayout>
 #include <QtQml/qqmlextensionplugin.h>
 
 #include <algorithm>
@@ -63,6 +66,7 @@ private Q_SLOTS:
     void togglesSourceMode();
     void writesInTheChosenFont();
     void editsDataFilesAsPlainText();
+    void colorsNumbersAndChecksDataFiles();
     void readsTheNoteWithLinksAndBoxesToTick();
     void tickingARepeatingToDoWritesTheNext();
     void editsInViModes();
@@ -846,6 +850,45 @@ void TestNoteEditor::editsDataFilesAsPlainText()
     m_vault->setCurrent(u"Welcome.md"_s);
     QVERIFY(body->findChild<MarkdownStyler *>()->document());
     QVERIFY(find(u"formatBar"_s)->isVisible());
+}
+
+void TestNoteEditor::colorsNumbersAndChecksDataFiles()
+{
+    QFile file(m_root + u"/cast.json"_s);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write("[\n  {\"name\": \"Mara [the ferrywoman]\"},\n  {\"name\": 3}\n]\n");
+    file.close();
+    m_vault->setCurrent(u"cast.json"_s);
+    QQuickItem *body = find(u"body"_s);
+    auto *styler = body->findChild<DataStyler *>();
+    QVERIFY(styler);
+
+    // Its words are colored by their kind.
+    QTextDocument *document = styler->document()->textDocument();
+    const QTextBlock second = document->findBlockByNumber(1);
+    QVERIFY(std::ranges::any_of(second.layout()->formats(), [](const QTextLayout::FormatRange &f) {
+        return f.format.foreground().style() != Qt::NoBrush;
+    }));
+
+    // A number for each line in view, and none for lines that are not there.
+    QCOMPARE(styler->lineTops(0, 100000).size(), 5);
+    QVERIFY(find(u"gutter"_s)->isVisible());
+
+    // The brackets around a record pair up, while one inside a string is passed over.
+    const QString text = body->property("text").toString();
+    const int open = int(text.indexOf(u'{'));
+    QCOMPARE(styler->brackets(open), (QVariantList{open, int(text.indexOf(u'}'))}));
+    QCOMPARE(styler->brackets(0), (QVariantList{0, int(text.lastIndexOf(u']'))}));
+    QVERIFY(styler->brackets(int(text.indexOf(u"[the"_s))).isEmpty());
+
+    // Breaking it says where, and clicking there takes the cursor to it.
+    QVERIFY(!find(u"dataProblem"_s)->isVisible());
+    body->setProperty("text", u"[\n  {\"name\": }\n]\n"_s);
+    styler->checkNow();
+    QQuickItem *problem = find(u"dataProblem"_s);
+    QVERIFY(problem->isVisible());
+    QVERIFY2(problem->property("text").toString().startsWith(u"Line 2"_s),
+             qPrintable(problem->property("text").toString()));
 }
 
 void TestNoteEditor::editsInViModes()

@@ -132,8 +132,11 @@ Rectangle {
         // Swapping a whole note in under a live highlighter leaves the TextEdit blank, so
         // the styling comes off for the swap and goes back on after.
         styler.document = null
+        dataStyler.document = null
         body.text = Vault.currentText
-        if (!dataFile)
+        if (dataFile)
+            dataStyler.document = body.textDocument
+        else
             styler.document = body.textDocument
         loaded = Vault.current
         body.cursorPosition = Math.min(cursor, body.length)
@@ -441,6 +444,35 @@ Rectangle {
                 font.weight: Theme.weightStrong
             }
 
+            // Where a data file stops reading as its kind; a click goes there.
+            Text {
+                id: dataProblem
+
+                objectName: "dataProblem"
+                width: parent.width - 2 * parent.padding
+                visible: root.dataFile && dataStyler.problem.line !== undefined
+                text: visible ? qsTr("Line %1, column %2: %3").arg(dataStyler.problem.line).arg(
+                                    dataStyler.problem.column).arg(dataStyler.problem.message) : ""
+                textFormat: Text.PlainText
+                wrapMode: Text.WordWrap
+                color: Theme.danger
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.textSm
+                font.weight: Theme.weightStrong
+
+                TapHandler {
+                    onTapped: {
+                        body.forceActiveFocus()
+                        body.cursorPosition = Math.min(dataStyler.positionOfLine(
+                                                           dataStyler.problem.line)
+                                                       + dataStyler.problem.column - 1, body.length)
+                    }
+                }
+                HoverHandler {
+                    cursorShape: Qt.PointingHandCursor
+                }
+            }
+
             // The note drawn to read, in place of the text to write in.
             TextEdit {
                 id: reader
@@ -509,6 +541,8 @@ Rectangle {
                 selectedTextColor: Theme.text
                 font.family: root.dataFile ? root.monoFamily : root.noteFamily
                 font.pixelSize: root.dataFile ? Theme.textBase : Theme.textLg
+                // Room for line numbers beside a data file.
+                leftPadding: root.dataFile ? gutter.width + Theme.space3 : 0
                 selectByMouse: true
                 persistentSelection: true
                 tabStopDistance: 4 * Theme.space5
@@ -642,6 +676,70 @@ Rectangle {
                     enabled: Settings.viMode
                     busy: linkPopup.visible
                     onLeaveRequested: root.leftNote()
+                }
+
+                DataStyler {
+                    id: dataStyler
+
+                    kind: root.dataFile ? Vault.currentKind : ""
+                }
+
+                // A data file's line numbers, for the lines in view.
+                Item {
+                    id: gutter
+
+                    objectName: "gutter"
+                    z: -1
+                    visible: root.dataFile
+                    width: digits.advanceWidth(String(Math.max(body.lineCount, 99)))
+                    height: body.height
+
+                    FontMetrics {
+                        id: digits
+                        font: body.font
+                    }
+                    Repeater {
+                        model: {
+                            body.layoutTick
+                            if (!root.dataFile || !dataStyler.document)
+                                return []
+                            const top = flick.contentY - page.y - body.y
+                            return dataStyler.lineTops(top, top + flick.height)
+                        }
+
+                        Text {
+                            required property var modelData
+
+                            width: gutter.width
+                            y: body.topPadding + modelData.y
+                            horizontalAlignment: Text.AlignRight
+                            text: modelData.number
+                            color: Theme.textFaint
+                            font: body.font
+                        }
+                    }
+                }
+
+                // The bracket by the cursor and the one it pairs with.
+                Repeater {
+                    model: root.dataFile && body.activeFocus ? dataStyler.brackets(
+                                                                   body.cursorPosition) : []
+
+                    Rectangle {
+                        required property int modelData
+                        readonly property rect at: {
+                            body.layoutTick
+                            return body.positionToRectangle(modelData)
+                        }
+
+                        z: -1
+                        x: at.x
+                        y: at.y
+                        width: digits.averageCharacterWidth
+                        height: at.height
+                        radius: Theme.radiusSm
+                        color: Theme.tint(Theme.accent, 0.35)
+                    }
                 }
 
                 Component {

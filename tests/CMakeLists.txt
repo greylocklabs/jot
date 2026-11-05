@@ -9,6 +9,7 @@ function(jot_add_test name)
     set_tests_properties(${name} PROPERTIES ENVIRONMENT "TZ=UTC;QT_QPA_PLATFORM=offscreen;JOT_FLATPAK=0")
 endfunction()
 
+jot_add_test(tst_datacheck)
 jot_add_test(tst_frontmatter)
 jot_add_test(tst_fuzzy)
 jot_add_test(tst_joplinexport)

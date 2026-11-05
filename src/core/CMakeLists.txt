@@ -34,6 +34,8 @@ configure_file(SyncBuildConfig.h.in "${CMAKE_CURRENT_BINARY_DIR}/generated/jot/S
                @ONLY)
 
 add_library(jotcore STATIC
+    jot/DataCheck.h
+    DataCheck.cpp
     jot/FrontMatter.h
     FrontMatter.cpp
     jot/Fuzzy.h
@@ -133,6 +135,7 @@ target_link_libraries(jotcore
         Qt6::Sql
     PRIVATE
         Qt6Keychain::Qt6Keychain
+        PkgConfig::YAML
 )
 target_include_directories(jotcore PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 

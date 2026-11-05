@@ -80,9 +80,9 @@ jobs:
       - name: Install build dependencies
         run: >-
           dnf install -y --setopt=install_weak_deps=False
-          git gcc-c++ cmake ninja-build make golang curl
+          git gcc-c++ cmake ninja-build make pkgconf golang curl
           qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtquickcontrols2-devel
-          tomlplusplus-devel kf6-syntax-highlighting-devel qtkeychain-qt6-devel
+          tomlplusplus-devel kf6-syntax-highlighting-devel qtkeychain-qt6-devel libyaml-devel
 
       - uses: actions/checkout@v7
         with:
@@ -134,21 +134,21 @@ jobs:
         if: matrix.name == 'fedora'
         run: >-
           dnf install -y --setopt=install_weak_deps=False
-          git gcc-c++ cmake ninja-build make
+          git gcc-c++ cmake ninja-build make pkgconf
           qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtquickcontrols2-devel
-          tomlplusplus-devel kf6-syntax-highlighting-devel qtkeychain-qt6-devel git-lfs
+          tomlplusplus-devel kf6-syntax-highlighting-devel qtkeychain-qt6-devel libyaml-devel git-lfs
 
       - name: Install build dependencies (Debian and Ubuntu)
         if: matrix.name != 'fedora'
         run: |
           apt-get update -qq
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-            git build-essential cmake ninja-build \
+            git build-essential cmake ninja-build pkgconf \
             qt6-base-dev qt6-declarative-dev qt6-declarative-dev-tools ca-certificates \
             qml6-module-qtquick-controls qml6-module-qtquick-templates \
             qml6-module-qtquick-effects qml6-module-qtquick-dialogs \
             libtomlplusplus-dev libqt6sql6-sqlite libkf6syntaxhighlighting-dev \
-            qtkeychain-qt6-dev git-lfs
+            qtkeychain-qt6-dev libyaml-dev git-lfs
 
       - uses: actions/checkout@v7
         with:
