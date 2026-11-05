@@ -183,12 +183,38 @@ ApplicationWindow {
 
                     anchors.verticalCenter: parent.verticalCenter
                     visible: Vault.isOpen && Vault.writable
+                    objectName: "newButton"
                     glyph: "plus"
-                    Accessible.name: qsTr("New note")
-                    tip: qsTr("New note (Ctrl+N)")
-                    onClicked: {
-                        if (Vault.newNote() !== "")
-                            editor.editTitle()
+                    Accessible.name: qsTr("New note or file")
+                    // Not beside its own open menu, which leaves the button hovered.
+                    tip: newMenu.visible ? "" : qsTr("New note or file")
+                    onClicked: newMenu.popup(newButton, 0, newButton.height + Theme.space3)
+
+                    // A note, or a data file that opens as a table.
+                    MenuCard {
+                        id: newMenu
+                        objectName: "newMenu"
+                        minimumWidth: 180
+
+                        MenuEntry {
+                            text: qsTr("Note (Ctrl+N)")
+                            onTriggered: {
+                                if (Vault.newNote() !== "")
+                                    editor.editTitle()
+                            }
+                        }
+                        Repeater {
+                            model: Vault.dataKinds
+
+                            MenuEntry {
+                                required property var modelData
+                                text: modelData.label
+                                onTriggered: {
+                                    if (Vault.newFile(modelData.kind) !== "")
+                                        editor.editTitle()
+                                }
+                            }
+                        }
                     }
                 }
 

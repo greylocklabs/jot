@@ -533,6 +533,28 @@ Rectangle {
                     root.noteMade()
             }
         }
+        // A data file that opens as a table, in this notebook.
+        MenuCard {
+            title: qsTr("New file")
+            enabled: Vault.writable
+            minimumWidth: 160
+
+            Repeater {
+                model: Vault.dataKinds
+
+                MenuEntry {
+                    required property var modelData
+                    text: modelData.label
+                    onTriggered: {
+                        Vault.showingTasks = false
+                        Vault.notes.tag = ""
+                        Vault.notes.notebook = notebookMenu.path
+                        if (Vault.newFile(modelData.kind) !== "")
+                            root.noteMade()
+                    }
+                }
+            }
+        }
         MenuEntry {
             text: notebookMenu.path === "" ? qsTr("New notebook") : qsTr("New notebook inside")
             enabled: Vault.writable

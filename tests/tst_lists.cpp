@@ -42,6 +42,7 @@ private Q_SLOTS:
     void dropsNotesAndNotebooksOnNotebooks();
     void noteMenuMakesATask();
     void notebookMenuMakesANotebookInside();
+    void notebookMenuMakesADataFile();
     void trashAsksFirst();
     void columnBordersDragToResize();
     void deleteAsksFirstForNotesAndNotebooks();
@@ -385,6 +386,17 @@ void TestLists::notebookMenuMakesANotebookInside()
     type(u"Breads"_s);
     QTest::keyClick(m_window.get(), Qt::Key_Return);
     QTRY_VERIFY(QFileInfo(m_root + u"/Recipes/Breads"_s).isDir());
+}
+
+void TestLists::notebookMenuMakesADataFile()
+{
+    click(entry(u"Recipes"_s), Qt::RightButton);
+    QTRY_VERIFY(menuEntry(u"New file"_s));
+    click(menuEntry(u"New file"_s));
+    QTRY_VERIFY(menuEntry(u"CSV file"_s));
+    click(menuEntry(u"CSV file"_s));
+    QTRY_COMPARE(m_vault->current(), u"Recipes/Untitled.csv"_s);
+    QVERIFY(QFileInfo::exists(m_root + u"/Recipes/Untitled.csv"_s));
 }
 
 void TestLists::trashAsksFirst()

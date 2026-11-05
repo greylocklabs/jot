@@ -394,6 +394,45 @@ std::optional<QString> Vault::createNote(const QString &folder, const QString &t
     return path;
 }
 
+QString Vault::starterData(const QString &kind)
+{
+    if (kind == u"json")
+        return u"[\n  { \"name\": \"First\", \"done\": false }\n]\n"_s;
+    if (kind == u"csv")
+        return u"name,done\nFirst,false\n"_s;
+    if (kind == u"tsv")
+        return u"name\tdone\nFirst\tfalse\n"_s;
+    if (kind == u"yaml" || kind == u"yml")
+        return u"- name: First\n  done: false\n"_s;
+    return {};
+}
+
+std::optional<QString> Vault::createDataFile(const QString &folder, const QString &title,
+                                             const QString &kind, QString *error) const
+{
+    const QString text = starterData(kind);
+    if (text.isEmpty()) {
+        *error = QObject::tr("%1 is not a kind of data file").arg(kind);
+        return std::nullopt;
+    }
+    if (!writable()) {
+        *error = QObject::tr("this vault is from a newer Jot, so this one only reads it");
+        return std::nullopt;
+    }
+    if (!isNotebookPath(folder)) {
+        *error = QObject::tr("%1 is not a notebook in this vault").arg(folder);
+        return std::nullopt;
+    }
+    if (!QDir().mkpath(absolute(folder))) {
+        *error = QObject::tr("could not create %1").arg(absolute(folder));
+        return std::nullopt;
+    }
+    const QString path = freePath(folder, title, u'.' + kind);
+    if (!notefile::write(absolute(path), text, error))
+        return std::nullopt;
+    return path;
+}
+
 bool Vault::moveToTrash(const QString &relative, const QString &stamp) const
 {
     // Where the desktop has no trash, as on some removable or network drives, the vault

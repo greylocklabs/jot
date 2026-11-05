@@ -39,6 +39,8 @@ class VaultController : public QObject
     Q_PROPERTY(QString root READ root NOTIFY openChanged)
     /// The same folder, for a folder dialog to start in.
     Q_PROPERTY(QUrl rootUrl READ rootUrl NOTIFY openChanged)
+    /// The kinds of data file New can make, as `{kind, label}`.
+    Q_PROPERTY(QVariantList dataKinds READ dataKinds CONSTANT)
     /// The vault's folder name, for the title bar.
     Q_PROPERTY(QString name READ name NOTIFY openChanged)
     Q_PROPERTY(bool writable READ writable NOTIFY openChanged)
@@ -113,7 +115,11 @@ public:
     Q_INVOKABLE void saveNow();
     /// Makes a note in the notebook shown and shows it. Gives its path.
     Q_INVOKABLE QString newNote(const QString &title = {});
-    /// Gives the note shown a new title, renaming its file and the links to it.
+    /// Makes a data file of `kind` ("json", "csv", "tsv" or "yaml") in the notebook shown, with
+    /// one example record, and shows it. Gives its path.
+    Q_INVOKABLE QString newFile(const QString &kind);
+    /// Gives the note shown a new title, renaming its file and the links to it. A note still
+    /// empty, named with a data file's extension ("people.csv"), becomes that kind of file.
     Q_INVOKABLE bool renameCurrent(const QString &title);
     /// Moves the note shown, and its attachments, to the system trash.
     Q_INVOKABLE bool trashCurrent();
@@ -272,6 +278,7 @@ public:
     [[nodiscard]] bool isOpen() const { return m_vault != nullptr; }
     [[nodiscard]] QString root() const;
     [[nodiscard]] QUrl rootUrl() const { return isOpen() ? QUrl::fromLocalFile(root()) : QUrl(); }
+    [[nodiscard]] static QVariantList dataKinds();
     [[nodiscard]] QString name() const;
     [[nodiscard]] bool writable() const;
     [[nodiscard]] QString error() const { return m_error; }

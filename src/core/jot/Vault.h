@@ -61,6 +61,12 @@ public:
     /// `title` too when the file name cannot hold it. Gives its vault path.
     std::optional<QString> createNote(const QString &folder, const QString &title,
                                       const QDateTime &created, QString *error) const;
+    /// Creates a data file of `kind` ("json", "csv", "tsv" or "yaml") called `title` in
+    /// `folder`, holding one example record, so it opens as a table. Gives its vault path.
+    std::optional<QString> createDataFile(const QString &folder, const QString &title,
+                                          const QString &kind, QString *error) const;
+    /// What a new data file of `kind` holds: one record with a name and whether it is done.
+    [[nodiscard]] static QString starterData(const QString &kind);
     /// Moves a note and, unless `keepAttachments`, its `.assets` folder to the system trash, or
     /// to the vault's own `.jot/trash` where the drive has none.
     bool trashNote(const QString &path, QString *error, bool keepAttachments = false) const;

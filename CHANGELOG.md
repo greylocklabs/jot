@@ -29,6 +29,9 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   fetched from the web.
 - A YAML file holding a list of mappings opens as a table too. Edits keep its comments, key
   order and quoting wherever the values did not change, and nested lists and mappings edit as JSON.
+- New, in the title bar, and New file, in a notebook's menu, make a JSON, CSV, TSV or YAML file
+  that starts with one example record, so it opens as a table. A new note still empty, named
+  `people.csv`, becomes a CSV file the same way.
 - Ctrl+Q quits Jot, and F5 syncs.
 - Settings, Developer: Developer mode shows each note's file path under its title, to copy, and
   Log debug details writes Jot's debug lines to its log, as in Callie.
