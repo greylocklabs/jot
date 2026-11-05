@@ -1,16 +1,19 @@
 #pragma once
 
 #include "jot/CodeColors.h"
+#include "jot/Diagram.h"
 
 #include <QColor>
 #include <QHash>
 #include <QSize>
 #include <QSyntaxHighlighter>
+#include <QTextBlock>
 #include <QTextBlockUserData>
 #include <QTextCharFormat>
 
 #include <functional>
 #include <memory>
+#include <utility>
 
 namespace jot {
 
@@ -47,9 +50,11 @@ public:
         /// The widest and tallest an image is shown inline.
         int imageWidth = 600;
         int imageHeight = 360;
+        /// The theme diagrams are drawn in.
+        DiagramStyle diagram;
     };
 
-    /// An image shown in place of a line that holds only its link.
+    /// An image shown in place of a line that holds only its link, or of a diagram's fence.
     struct Image : QTextBlockUserData
     {
         QString path;
@@ -101,6 +106,14 @@ private:
     /// Shows the image a line links to, if the line is only that link; says whether it did.
     bool imageLine(const QString &text);
     [[nodiscard]] QSize imageSize(const QString &path);
+    /// Makes the character at `bang` exactly as tall as `shown` and folds away the rest of the
+    /// line, reserving the room the image at `path` is drawn into.
+    void showImage(const QString &text, int bang, const QString &path, QSize shown);
+    /// The first and last lines of the diagram fence `block` is in, or -1 for both when it
+    /// is in none; a fence still open to the end of the note is not drawn yet.
+    [[nodiscard]] std::pair<int, int> diagramFence(const QTextBlock &block) const;
+    /// Draws the diagram a fence opening at this line holds; says whether it did.
+    bool diagramLine(const QString &text, int last);
 
     Look m_look;
     int m_cursorBlock = -1;

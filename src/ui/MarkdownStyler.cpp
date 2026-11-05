@@ -277,6 +277,7 @@ void MarkdownStyler::applyLook()
     look.boldWeight = theme.weightBold();
     look.imageWidth = m_width;
     look.imageHeight = theme.imageHeight();
+    look.diagram = theme.diagramStyle(look.family, m_pixelSize);
     m_highlighter->setLook(look);
     scheduleImages();
 }

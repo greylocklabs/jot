@@ -110,6 +110,8 @@ add_library(jotcore STATIC
     Diagnostics.cpp
     jot/ProblemReport.h
     ProblemReport.cpp
+    jot/Diagram.h
+    Diagram.cpp
 )
 
 
@@ -129,6 +131,13 @@ qt_add_resources(jotcore "jot_fonts"
         "${PROJECT_SOURCE_DIR}/data/fonts/Fraunces-Variable.ttf"
 )
 
+# Pele, built for Qt's JavaScript engine by tools/vendor-pele.mjs; MIT, its license beside it.
+qt_add_resources(jotcore "jot_pele"
+    PREFIX "/jot/pele"
+    BASE "${PROJECT_SOURCE_DIR}/third_party/pele"
+    FILES "${PROJECT_SOURCE_DIR}/third_party/pele/pele.js"
+)
+
 target_include_directories(jotcore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(jotcore
     PUBLIC
@@ -138,6 +147,7 @@ target_link_libraries(jotcore
         Qt6::Network
         Qt6::Sql
     PRIVATE
+        Qt6::Qml
         Qt6Keychain::Qt6Keychain
         PkgConfig::YAML
 )

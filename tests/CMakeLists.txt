@@ -10,6 +10,7 @@ function(jot_add_test name)
 endfunction()
 
 jot_add_test(tst_datacheck)
+jot_add_test(tst_diagram)
 jot_add_test(tst_datatable)
 jot_add_test(tst_jsonschema)
 jot_add_test(tst_frontmatter)

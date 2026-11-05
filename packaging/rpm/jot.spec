@@ -7,10 +7,12 @@ Version:        0.2.0
 Release:        1%{?dist}
 Summary:        Plain-file notes for Linux
 
-# The bundled Nunito and Fraunces fonts are OFL-1.1.
+# The bundled Nunito and Fraunces fonts are OFL-1.1; the bundled Pele is MIT.
 License:        MIT AND OFL-1.1
 URL:            https://jotwriter.org
 Source0:        https://github.com/greylocklabs/jot/releases/download/v%{version}/%{name}-%{version}.tar.xz
+# Draws Mermaid diagrams; built into the program for Qt's JavaScript engine.
+Provides:       bundled(js-pele) = 1.13.0
 
 BuildRequires:  cmake >= 3.28
 BuildRequires:  gcc-c++
@@ -61,6 +63,7 @@ appstream-util validate-relax --nonet \
 
 %files
 %license LICENSE data/fonts/Nunito-OFL.txt data/fonts/Fraunces-OFL.txt
+%license third_party/pele/LICENSE
 %doc README.md
 %{_bindir}/jot
 %{_bindir}/jot-gui

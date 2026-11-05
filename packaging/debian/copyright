@@ -15,6 +15,10 @@ Files: data/fonts/Fraunces-*
 Copyright: 2018 The Fraunces Project Authors (https://github.com/undercasetype/Fraunces)
 License: OFL-1.1
 
+Files: third_party/pele/*
+Copyright: 2026 kepano (https://github.com/obsidianmd/pele)
+License: MIT
+
 License: MIT
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
