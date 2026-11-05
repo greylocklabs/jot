@@ -8,6 +8,7 @@
 #include "jot/FrontMatter.h"
 #include "jot/NoteScan.h"
 
+#include <QFileInfo>
 #include <QImage>
 #include <QImageReader>
 #include <QRegularExpression>
@@ -50,7 +51,7 @@ QString drawDiagrams(const QString &markdown, const DiagramStyle &style)
                                     ? drawDiagram(lines.mid(i + 1, end - i - 1).join(u'\n'), style)
                                     : Diagram();
         if (diagram.ok()) {
-            out.append(u"![Diagram](<%1>)"_s.arg(QUrl::fromLocalFile(diagram.path).toString()));
+            out.append(u"![Diagram](<%1>)"_s.arg(diagram.path));
         } else {
             for (qsizetype k = i; k <= end && k < lines.size(); ++k)
                 out.append(lines.at(k));
@@ -147,6 +148,10 @@ void NoteReader::render()
     const ThemeController &theme = *ThemeController::instance();
     markdown = drawDiagrams(markdown, theme.diagramStyle(m_fontFamily, m_pixelSize));
     doc->setUndoRedoEnabled(false);
+    // Image names resolve beside the note, as files, rather than inside the app's resources,
+    // where the TextEdit would otherwise look for them itself.
+    if (const VaultController *vault = VaultController::instance(); vault && vault->isOpen())
+        doc->setBaseUrl(QUrl::fromLocalFile(vault->root() + u'/' + vault->current()));
     doc->setMarkdown(markdown, QTextDocument::MarkdownDialectGitHub);
 
     m_tasks.clear();
@@ -299,9 +304,12 @@ void NoteReader::placeImages()
                 continue;
             QTextImageFormat format = fragment.charFormat().toImageFormat();
             const QUrl url(format.name());
-            const QString path = url.isLocalFile() ? url.toLocalFile()
-                                 : vault           ? vault->attachmentPath(format.name(), false)
-                                                   : QString();
+            // A path or file URL as written, else an attachment the vault finds by its name.
+            const QUrl resolved = doc->baseUrl().resolved(url);
+            const QString path = resolved.isLocalFile() && QFileInfo::exists(resolved.toLocalFile())
+                                     ? resolved.toLocalFile()
+                                 : vault ? vault->attachmentPath(format.name(), false)
+                                         : QString();
             QImageReader reader(path);
             QImage image;
             QSize shown;
