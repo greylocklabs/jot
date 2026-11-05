@@ -1024,6 +1024,15 @@ void TestNoteEditor::checksATableAgainstItsSchema()
     QVERIFY(records->setCell(0, 1, u"lead"_s));
     QVERIFY(records->schemaProblems().isEmpty());
     QVERIFY(!find(u"schemaLine"_s)->isVisible());
+    // A schema that does not read says why, rather than counting as a value that breaks it.
+    write(u"cast.schema.json"_s, "{\"type\": ");
+    const QString path = records->path();
+    records->setPath(QString());
+    records->setPath(path);
+    QVERIFY(records->schemaProblems().isEmpty());
+    QVERIFY2(records->schemaSummary().startsWith(u"cast.schema.json is not JSON"_s),
+             qPrintable(records->schemaSummary()));
+    QTRY_VERIFY(find(u"schemaLine"_s)->isVisible());
 }
 
 void TestNoteEditor::editsInViModes()
