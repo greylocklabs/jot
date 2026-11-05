@@ -17,6 +17,7 @@ Build-Depends: debhelper-compat (= 13),
                qml6-module-qtquick-effects,
                qml6-module-qtquick-dialogs,
                qml6-module-qtquick-templates,
+               qt6-svg-plugins,
                desktop-file-utils,
                appstream-util
 Standards-Version: 4.7.0
@@ -31,6 +32,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends},
          qml6-module-qtquick-effects,
          qml6-module-qtquick-dialogs,
          qml6-module-qtquick-templates,
+         qt6-svg-plugins,
          git,
          git-lfs
 Description: plain-file notes for Linux

@@ -6,6 +6,7 @@
 #include <QFontDatabase>
 #include <QFontMetricsF>
 #include <QHash>
+#include <QImageReader>
 #include <QJSEngine>
 #include <QLoggingCategory>
 #include <QPointer>
@@ -88,6 +89,11 @@ class Engine : public QObject
 public:
     explicit Engine(QObject *parent) : QObject(parent)
     {
+        // Without Qt's SVG plugin a drawing could not be shown, so diagrams stay as code.
+        if (!QImageReader::supportedImageFormats().contains("svg")) {
+            m_error = u"Qt's SVG image plugin is not installed."_s;
+            return;
+        }
         QFile file(u":/jot/pele/pele.js"_s);
         if (!file.open(QIODevice::ReadOnly)) {
             m_error = u"Jot was built without its diagram renderer."_s;
