@@ -412,6 +412,32 @@ Rectangle {
                 }
             }
 
+            // The note's file in the vault, for debugging, with developer mode on.
+            Row {
+                objectName: "notePath"
+                visible: Settings.developerMode && Vault.current !== ""
+                width: parent.width - 2 * parent.padding
+                spacing: Theme.space2
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width - copyPath.width - parent.spacing
+                    text: Vault.current
+                    textFormat: Text.PlainText
+                    elide: Text.ElideMiddle
+                    color: Theme.textMuted
+                    font.family: Theme.monoFontFamily
+                    font.pixelSize: Theme.textXs
+                }
+                PillButton {
+                    id: copyPath
+                    anchors.verticalCenter: parent.verticalCenter
+                    label: qsTr("Copy")
+                    Accessible.name: qsTr("Copy the path")
+                    onClicked: Support.copyText(Vault.current)
+                }
+            }
+
             // Another version of this note was kept beside it, and waits to be looked at.
             Rectangle {
                 id: conflictBanner

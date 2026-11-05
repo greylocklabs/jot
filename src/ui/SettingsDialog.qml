@@ -848,6 +848,43 @@ Popup {
         }
 
         Section {
+            title: qsTr("Developer")
+            visible: root.tab === "developer"
+
+            Toggle {
+                objectName: "developerMode"
+                width: parent.width
+                text: qsTr("Developer mode")
+                checked: Settings.developerMode
+                onToggled: Settings.developerMode = checked
+            }
+            Text {
+                width: parent.width
+                wrapMode: Text.Wrap
+                text: qsTr("Shows each note's file path in the vault under its title, to copy.")
+                color: Theme.textMuted
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.textSm
+            }
+            Toggle {
+                objectName: "verboseLogging"
+                width: parent.width
+                text: qsTr("Log debug details")
+                checked: Settings.verboseLogging
+                onToggled: Settings.verboseLogging = checked
+            }
+            Text {
+                width: parent.width
+                wrapMode: Text.Wrap
+                text: qsTr(
+                          "Writes Jot's debug lines to the log. They can include note titles and paths, so turn it off again before sharing logs widely.")
+                color: Theme.textMuted
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.textSm
+            }
+        }
+
+        Section {
             title: qsTr("Folders")
             visible: root.tab === "developer"
 

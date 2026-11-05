@@ -41,6 +41,11 @@ class Settings : public QObject
     Q_PROPERTY(bool sourceMode READ sourceMode WRITE setSourceMode NOTIFY sourceModeChanged)
     /// Notes are shown rendered, to read, rather than to write in.
     Q_PROPERTY(bool readMode READ readMode WRITE setReadMode NOTIFY readModeChanged)
+    /// Shows what is behind a note for debugging: its file's path in the vault, to copy.
+    Q_PROPERTY(bool developerMode READ developerMode WRITE setDeveloperMode NOTIFY developerChanged)
+    /// Writes Jot's debug lines to the log, as QT_LOGGING_RULES would.
+    Q_PROPERTY(
+        bool verboseLogging READ verboseLogging WRITE setVerboseLogging NOTIFY developerChanged)
     /// Single keys act, as in vi, with a leader key before commands.
     Q_PROPERTY(bool viMode READ viMode WRITE setViMode NOTIFY keyboardChanged)
     Q_PROPERTY(QString leaderKey READ leaderKey WRITE setLeaderKey NOTIFY keyboardChanged)
@@ -99,6 +104,10 @@ public:
     void setSourceMode(bool source);
     [[nodiscard]] bool readMode() const { return m_readMode; }
     void setReadMode(bool read);
+    [[nodiscard]] bool developerMode() const { return m_developerMode; }
+    void setDeveloperMode(bool on);
+    [[nodiscard]] bool verboseLogging() const { return m_verboseLogging; }
+    void setVerboseLogging(bool on);
     [[nodiscard]] bool viMode() const { return m_viMode; }
     void setViMode(bool on);
     [[nodiscard]] QString leaderKey() const { return m_leaderKey; }
@@ -137,6 +146,7 @@ public:
 Q_SIGNALS:
     void vaultPathChanged();
     void themeChanged();
+    void developerChanged();
     void noteSortChanged();
     void collapsedNotebooksChanged();
     void collapsedTagsChanged();
@@ -167,6 +177,8 @@ private:
     int m_noteListWidth = 0;
     bool m_sourceMode = false;
     bool m_readMode = false;
+    bool m_developerMode = false;
+    bool m_verboseLogging = false;
     bool m_viMode = false;
     QString m_leaderKey = QStringLiteral(",");
     int m_leaderTimeout = 5000;
