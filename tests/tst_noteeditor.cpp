@@ -889,6 +889,19 @@ void TestNoteEditor::colorsNumbersAndChecksDataFiles()
     QVERIFY(problem->isVisible());
     QVERIFY2(problem->property("text").toString().startsWith(u"Line 2"_s),
              qPrintable(problem->property("text").toString()));
+    QTRY_VERIFY(problem->height() > 0);
+    find(u"scroll"_s)->setProperty("contentY", 0);
+    QPointF placed(-1, -1);
+    QTRY_VERIFY([&] {
+        const QPointF now = problem->mapToScene(QPointF(0, 0));
+        const bool settled = now == placed;
+        placed = now;
+        return settled;
+    }());
+    const QPointF middle = problem->mapToScene(QPointF(20, problem->height() / 2));
+    QTest::mouseClick(m_window.get(), Qt::LeftButton, {}, middle.toPoint());
+    QTRY_COMPARE(body->property("cursorPosition").toInt(), styler->problemPosition());
+    QVERIFY(styler->problemPosition() > 0);
 }
 
 void TestNoteEditor::editsInViModes()

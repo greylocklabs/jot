@@ -9,9 +9,11 @@ struct DataProblem
 {
     /// From 1; 0 when the file reads.
     int line = 0;
-    /// From 1, in characters.
+    /// From 1, in characters, an emoji counting once.
     int column = 0;
     QString message;
+    /// Where it is in the text, in UTF-16 units as QString counts them.
+    qsizetype position = 0;
 
     [[nodiscard]] bool ok() const { return line == 0; }
 };
