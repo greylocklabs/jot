@@ -92,26 +92,32 @@ std::optional<QStringList> renameNote(const Vault &vault, VaultIndex &index, con
     const std::optional<QString> own = notefile::read(vault.absolute(from), error);
     if (!own)
         return std::nullopt;
-    const NoteParts ownParts = splitFrontMatter(*own);
-    const QString ownBody = rewriteLinks(ownParts.body, [&](const QString &raw, bool wiki) {
-        const QString target = index.resolve(raw, from);
-        // A wikilink by name finds the note, or its own attachment, wherever they go.
-        const bool byName = !QUrl::fromPercentEncoding(raw.toUtf8()).contains(u'/');
-        if (target.isEmpty() || (wiki && (target != from && (movedTo(target).isEmpty() || byName))))
-            return std::optional<QString>();
-        const QString moved = movedTo(target).isEmpty() ? target : movedTo(target);
-        if (!wiki) {
-            // Other tools read a Markdown path literally, so it must still name the file
-            // from the new folder, even where Jot would find it by name.
-            const QString path = raw.section(u'#', 0, 0);
-            const QString decoded = QUrl::fromPercentEncoding(path.toUtf8());
-            const QString literal =
-                QDir::cleanPath(folderOf(to).isEmpty() ? decoded : folderOf(to) + u'/' + decoded);
-            if (literal == moved || literal + kNoteSuffix == moved)
-                return std::optional<QString>();
-        }
-        return std::optional(retarget(raw, wiki, to, moved));
-    });
+    // A data file holds no Markdown links, only text that might look like them.
+    const NoteParts ownParts =
+        Vault::isDataFile(from) ? NoteParts{{}, QStringView(*own), false} : splitFrontMatter(*own);
+    const QString ownBody =
+        Vault::isDataFile(from)
+            ? ownParts.body.toString()
+            : rewriteLinks(ownParts.body, [&](const QString &raw, bool wiki) {
+                  const QString target = index.resolve(raw, from);
+                  // A wikilink by name finds the note, or its own attachment, wherever they go.
+                  const bool byName = !QUrl::fromPercentEncoding(raw.toUtf8()).contains(u'/');
+                  if (target.isEmpty() ||
+                      (wiki && (target != from && (movedTo(target).isEmpty() || byName))))
+                      return std::optional<QString>();
+                  const QString moved = movedTo(target).isEmpty() ? target : movedTo(target);
+                  if (!wiki) {
+                      // Other tools read a Markdown path literally, so it must still name the file
+                      // from the new folder, even where Jot would find it by name.
+                      const QString path = raw.section(u'#', 0, 0);
+                      const QString decoded = QUrl::fromPercentEncoding(path.toUtf8());
+                      const QString literal = QDir::cleanPath(
+                          folderOf(to).isEmpty() ? decoded : folderOf(to) + u'/' + decoded);
+                      if (literal == moved || literal + kNoteSuffix == moved)
+                          return std::optional<QString>();
+                  }
+                  return std::optional(retarget(raw, wiki, to, moved));
+              });
     const QString ownText = own->first(ownParts.body.data() - own->data()) + ownBody;
 
     if (!vault.moveNote(from, to, error))

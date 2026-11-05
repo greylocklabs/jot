@@ -99,6 +99,14 @@ public:
     /// A path for a new note called `title` in `folder` that nothing has yet:
     /// "Pancakes.md", then "Pancakes 2.md".
     [[nodiscard]] QString freePath(const QString &folder, const QString &title) const;
+    /// A free path in `folder` for a file named `title` with `suffix` (".json"), as freePath()
+    /// gives one for a note.
+    [[nodiscard]] QString freePath(const QString &folder, const QString &title,
+                                   const QString &suffix) const;
+    /// A free path in `folder` for the file at `path` to move or be copied to: a note's for a
+    /// note, and one with the same extension for a data file.
+    [[nodiscard]] QString freePathLike(const QString &path, const QString &folder,
+                                       const QString &title) const;
 
     /// The title a note's file name gives it.
     [[nodiscard]] static QString titleFromPath(const QString &path);

@@ -245,7 +245,7 @@ QString VaultCommands::find(const QString &name) const
         return {};
     // A path or a name as a link would write it; else the closest title.
     const QString linked = m_index.resolve(name, {});
-    if (linked.endsWith(u".md"_s))
+    if (Vault::isListed(linked))
         return linked;
     QString best;
     int bestScore = 0;
