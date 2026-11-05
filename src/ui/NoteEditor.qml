@@ -735,6 +735,7 @@ Rectangle {
                     id: tableModel
 
                     kind: root.dataFile ? Vault.currentKind : ""
+                    path: root.dataFile ? Vault.root + "/" + Vault.current : ""
                     // An edit in the table is the file's new text, which the text view shows too.
                     onEdited: text => {
                         root.loading = true

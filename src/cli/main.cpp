@@ -9,6 +9,7 @@
 #include "greylock/Releases.h"
 #include "greylock/UpdateCheck.h"
 #include "jot/Diagnostics.h"
+#include "jot/JsonSchema.h"
 #include "jot/LogFile.h"
 #include "jot/Settings.h"
 
@@ -16,6 +17,10 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QProcess>
 #include <QStandardPaths>
 #include <QTextStream>
@@ -56,6 +61,8 @@ const QList<std::pair<QString, QString>> kCommands = {
     {u"add"_s, u"Add a to-do to the inbox: jot add \"call Soren tomorrow 3pm @minutes\""_s},
     {u"tags"_s, u"Every tag, with how many notes have it"_s},
     {u"sync"_s, u"Sync the vault once with where the app syncs it to"_s},
+    {u"check"_s,
+     u"Check data files, and each against its <name>.schema.json: jot check data/*.json"_s},
     {u"import"_s,
      u"Bring notes in from Joplin, its database or an export; --dry-run first to see"_s},
     {u"logs"_s, u"Show, follow (-f) or open (--open) the log files"_s},
@@ -99,6 +106,47 @@ public:
 private:
     QString m_command;
 };
+
+/// Checks each data file, saying where each problem is as editors and CI read it:
+/// path:line:column: message. Exits 1 when any has a problem, 2 when one cannot be read.
+int runCheck(const QStringList &paths, bool json)
+{
+    QJsonArray found;
+    int status = 0;
+    for (const QString &path : paths) {
+        if (jot::dataKindOf(path).isEmpty()) {
+            err << QObject::tr("jot check: %1 is not JSON, YAML, CSV or TSV").arg(path) << "\n";
+            status = 2;
+            continue;
+        }
+        QFile file(path);
+        if (!file.open(QIODevice::ReadOnly)) {
+            err << QObject::tr("jot check: could not read %1: %2").arg(path, file.errorString())
+                << "\n";
+            status = 2;
+            continue;
+        }
+        QString text = QString::fromUtf8(file.readAll());
+        if (text.startsWith(QChar(0xfeff)))
+            text.remove(0, 1);
+        for (const jot::DataProblem &problem :
+             jot::checkDataFile(QFileInfo(path).absoluteFilePath(), text)) {
+            status = std::max(status, 1);
+            if (json)
+                found.append(QJsonObject{{u"path"_s, path},
+                                         {u"line"_s, problem.line},
+                                         {u"column"_s, problem.column},
+                                         {u"message"_s, problem.message}});
+            else
+                out << path << ':' << problem.line << ':' << problem.column << ": "
+                    << problem.message << "\n";
+        }
+    }
+    if (json)
+        out << QJsonDocument(found).toJson(QJsonDocument::Indented);
+    out.flush();
+    return status;
+}
 
 int runDoctor(bool report)
 {
@@ -389,6 +437,13 @@ int main(int argc, char *argv[])
 
     if (command == u"completions" && args.size() == 2)
         return runCompletions(args.at(1));
+    if (command == u"check") {
+        if (args.size() < 2) {
+            err << QObject::tr("usage: jot check file...") << "\n";
+            return 2;
+        }
+        return runCheck(args.mid(1), parser.isSet(jsonOption));
+    }
 
     static const QStringList kVaultCommands = {u"status"_s, u"ls"_s,   u"search"_s, u"new"_s,
                                                u"show"_s,   u"open"_s, u"tasks"_s,  u"tags"_s,

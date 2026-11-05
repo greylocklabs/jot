@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QJsonValue>
 #include <QList>
 #include <QString>
 #include <QStringList>
@@ -49,6 +50,11 @@ public:
     /// A nested value as JSON over lines, keys in their order and numbers as written; empty for
     /// any other value.
     [[nodiscard]] QString nestedText(int row, int column) const;
+    /// Where a record's `field` is written, else where the record starts; the top of the file
+    /// for a record that is not there.
+    [[nodiscard]] qsizetype positionOf(int row, const QString &field) const;
+    /// A YAML document as JSON values, read by YAML's core schema.
+    static std::optional<QJsonValue> yamlAsJson(const QString &text, QString *error = nullptr);
     /// Whether the cell's type differs from the type most of its column has, as a number
     /// among strings would. Missing and null cells never do.
     [[nodiscard]] bool stray(int row, int column) const;

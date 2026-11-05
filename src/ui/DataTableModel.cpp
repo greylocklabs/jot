@@ -1,6 +1,12 @@
 #include "DataTableModel.h"
 
+#include <QFile>
+#include <QFileInfo>
 #include <QHash>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QUrl>
 
 #include <algorithm>
 
@@ -75,6 +81,7 @@ QVariant DataTableModel::data(const QModelIndex &index, int role) const
     case TypeRole: return typeName(m_table->value(at, index.column()).type);
     case StrayRole: return m_table->stray(at, index.column());
     case RecordRole: return at;
+    case ProblemRole: return m_cellProblems.value({at, m_table->columns().value(index.column())});
     default: return {};
     }
 }
@@ -94,6 +101,7 @@ QHash<int, QByteArray> DataTableModel::roleNames() const
     names.insert(TypeRole, "type");
     names.insert(StrayRole, "stray");
     names.insert(RecordRole, "record");
+    names.insert(ProblemRole, "problem");
     return names;
 }
 
@@ -126,6 +134,7 @@ void DataTableModel::reload(const QString &text)
     m_why.clear();
     m_table = DataTable::read(m_kind, text, &m_why);
     arrange();
+    checkSchema();
     endResetModel();
     Q_EMIT loaded();
 }
@@ -217,12 +226,14 @@ bool DataTableModel::change(const std::function<bool(DataTable &)> &edit)
     if (sameShape) {
         // The rows stay where they are, so the cell being edited does not jump away.
         m_table = std::move(next);
+        checkSchema();
         if (!m_order.isEmpty() && columnCount() > 0)
             Q_EMIT dataChanged(index(0, 0), index(rowCount() - 1, columnCount() - 1));
     } else {
         beginResetModel();
         m_table = std::move(next);
         arrange();
+        checkSchema();
         endResetModel();
         Q_EMIT loaded();
     }
@@ -339,6 +350,105 @@ bool DataTableModel::renameColumn(int column, const QString &name)
     if (renamed)
         Q_EMIT headerDataChanged(Qt::Horizontal, column, column);
     return renamed;
+}
+
+void DataTableModel::setPath(const QString &path)
+{
+    if (m_path == path)
+        return;
+    m_path = path;
+    beginResetModel();
+    checkSchema();
+    endResetModel();
+}
+
+void DataTableModel::checkSchema()
+{
+    const QString before = m_schemaFile;
+    const QStringList problemsBefore = m_schemaProblems;
+    m_schemaFile.clear();
+    m_schema = QJsonValue();
+    m_schemaProblems.clear();
+    m_cellProblems.clear();
+    const std::optional<QJsonValue> data =
+        m_table && !m_path.isEmpty() ? dataAsJson(m_kind, m_table->text()) : std::nullopt;
+    if (data)
+        m_schemaFile = schemaPathFor(m_path, *data);
+    QFile file(m_schemaFile);
+    if (!m_schemaFile.isEmpty() && file.open(QIODevice::ReadOnly)) {
+        QJsonParseError error;
+        const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &error);
+        if (error.error != QJsonParseError::NoError)
+            m_schemaProblems.append(
+                tr("%1 is not JSON: %2")
+                    .arg(QFileInfo(m_schemaFile).fileName(), error.errorString()));
+        else
+            m_schema =
+                document.isObject() ? QJsonValue(document.object()) : QJsonValue(document.array());
+    }
+    if (data && !m_schema.isUndefined()) {
+        for (const SchemaProblem &problem : jot::checkSchema(m_schema, *data)) {
+            bool isRow = false;
+            const int record = problem.path.value(0).toInt(&isRow);
+            if (isRow && problem.path.size() >= 2) {
+                const QString field = problem.path.at(1);
+                const QString where = problem.path.mid(2).join(u'.');
+                const QString message =
+                    where.isEmpty() ? problem.message : where + u": "_s + problem.message;
+                QString &cell = m_cellProblems[{record, field}];
+                cell = cell.isEmpty() ? message : cell + u"; "_s + message;
+                m_schemaProblems.append(tr("Row %1, %2: %3").arg(record + 1).arg(field, message));
+            } else if (isRow) {
+                m_schemaProblems.append(tr("Row %1: %2").arg(record + 1).arg(problem.message));
+            } else {
+                m_schemaProblems.append(problem.path.isEmpty()
+                                            ? problem.message
+                                            : problem.path.join(u'.') + u": "_s + problem.message);
+            }
+        }
+    }
+    if (before != m_schemaFile || problemsBefore != m_schemaProblems)
+        Q_EMIT schemaChanged();
+}
+
+QJsonValue DataTableModel::fieldRules(const QString &name) const
+{
+    const auto resolved = [this](QJsonValue value) {
+        for (int depth = 0; depth < 16 && value.isObject() &&
+                            value.toObject().value(u"$ref"_s).toString().startsWith(u'#');
+             ++depth) {
+            QJsonValue at = m_schema;
+            const QString ref = value.toObject().value(u"$ref"_s).toString();
+            for (QString part : ref.mid(1).split(u'/', Qt::SkipEmptyParts)) {
+                part = QUrl::fromPercentEncoding(part.toUtf8());
+                part.replace(u"~1"_s, u"/"_s).replace(u"~0"_s, u"~"_s);
+                at = at.toObject().value(part);
+            }
+            value = at;
+        }
+        return value;
+    };
+    const QJsonValue items = resolved(resolved(m_schema).toObject().value(u"items"_s));
+    return resolved(items.toObject().value(u"properties"_s).toObject().value(name));
+}
+
+QStringList DataTableModel::choices(int column) const
+{
+    QStringList values;
+    if (!m_table || column < 0 || column >= m_table->columns().size())
+        return values;
+    const QJsonObject rules = fieldRules(m_table->columns().at(column)).toObject();
+    for (const QJsonValue &each : rules.value(u"enum"_s).toArray()) {
+        values.append(
+            each.isString()
+                ? each.toString()
+                : QString::fromUtf8(QJsonDocument(QJsonArray{each}).toJson(QJsonDocument::Compact))
+                      .mid(1)
+                      .chopped(1));
+    }
+    if (values.isEmpty() && rules.value(u"type"_s).toString() == u"boolean")
+        values = {u"true"_s, u"false"_s};
+    return values;
 }
 
 void DataTableModel::undo()

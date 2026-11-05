@@ -31,6 +31,8 @@ My Notes/                    the vault: any folder
 - A note is a `.md` file. Data files, `.json`, `.csv`, `.tsv`, `.yaml` and `.yml`, are listed
   beside the notes under their full file names and edited as they are, with nothing added to
   them. Other files are attachments, shown but not edited.
+- A data file is checked against a JSON Schema (draft 2020-12) when one is beside it: the file its
+  top-level `$schema` names, else `<name>.schema.json`. A schema on the web is never fetched.
 - Names starting with `.` are hidden from the app and the index, apart from `.jot/`.
 - Opening a folder in Jot makes `.jot/vault.yaml` with `format: 1`, if it has none.
 - Jot's own machine-local state (search index, link index, caches) lives under

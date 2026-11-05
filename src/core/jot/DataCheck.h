@@ -21,6 +21,9 @@ struct DataProblem
 /// Checks `text` as `kind`: "json", "yaml", "csv" or "tsv". Any other kind reads.
 [[nodiscard]] DataProblem checkData(const QString &kind, const QString &text);
 
+/// A problem at UTF-16 position `index` in `text`, with its line and column worked out.
+[[nodiscard]] DataProblem problemAt(const QString &text, qsizetype index, const QString &message);
+
 /// The kind of data file `path` names, by its extension, with `yml` as "yaml"; empty for
 /// anything else.
 [[nodiscard]] QString dataKindOf(const QString &path);
