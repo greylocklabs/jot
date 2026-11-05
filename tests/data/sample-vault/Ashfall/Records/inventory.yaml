@@ -1,0 +1,10 @@
+# What the ferry carries, checked each dawn.
+- item: Rope
+  count: 3
+  spare: true
+- item: Lamp oil # half a jar left
+  count: 1
+  spare: false
+- item: Ledger
+  count: 1
+  spare: false

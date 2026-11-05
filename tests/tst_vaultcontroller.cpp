@@ -159,14 +159,14 @@ void TestVaultController::opensAFolderAndRemembersIt()
     QCOMPARE(opened.size(), 1);
     QVERIFY(m_vault->isOpen());
     QCOMPARE(m_vault->name(), u"Notes"_s);
-    QCOMPARE(m_vault->noteCount(), 9);
+    QCOMPARE(m_vault->noteCount(), 15);
     QCOMPARE(m_settings->vaultPath(), m_root);
 
     VaultController again(*m_settings);
     again.setIndexPath(m_dir->filePath(u"index.sqlite"_s));
     m_vault.reset();
     QVERIFY(again.openLast());
-    QCOMPARE(again.noteCount(), 9);
+    QCOMPARE(again.noteCount(), 15);
 }
 
 void TestVaultController::refusesWhatIsNotAFolder()
@@ -235,9 +235,9 @@ void TestVaultController::listsNotebooksThatFold()
     NotebookModel &notebooks = *m_vault->notebooks();
     QCOMPARE(column(notebooks, "path"),
              (QStringList{QString(), u"Ashfall"_s, u"Ashfall/Characters"_s, u"Ashfall/Places"_s,
-                          u"Inbox"_s, u"Recipes"_s}));
+                          u"Ashfall/Records"_s, u"Inbox"_s, u"Recipes"_s}));
     QCOMPARE(column(notebooks, "count"),
-             (QStringList{u"9"_s, u"5"_s, u"2"_s, u"1"_s, u"1"_s, u"2"_s}));
+             (QStringList{u"15"_s, u"11"_s, u"2"_s, u"1"_s, u"5"_s, u"1"_s, u"2"_s}));
     QCOMPARE(column(notebooks, "depth").at(2), u"1"_s);
 
     notebooks.toggle(u"Ashfall"_s);
@@ -245,7 +245,7 @@ void TestVaultController::listsNotebooksThatFold()
              (QStringList{QString(), u"Ashfall"_s, u"Inbox"_s, u"Recipes"_s}));
     QCOMPARE(m_settings->collapsedNotebooks(), QStringList{u"Ashfall"_s});
     notebooks.toggle(u"Ashfall"_s);
-    QCOMPARE(notebooks.rowCount(), 6);
+    QCOMPARE(notebooks.rowCount(), 7);
 }
 
 void TestVaultController::listsTagsThatFold()
@@ -280,7 +280,7 @@ void TestVaultController::listsNotesByNotebookTagAndSearch()
 {
     QVERIFY(m_vault->openPath(m_root));
     NoteListModel &notes = *m_vault->notes();
-    QCOMPARE(notes.rowCount(), 9);
+    QCOMPARE(notes.rowCount(), 15);
 
     notes.setNotebook(u"Ashfall/Characters"_s);
     QCOMPARE(notes.rowCount(), 2);
@@ -538,7 +538,7 @@ void TestVaultController::trashesANotebook()
     m_vault->setCurrent(u"Ashfall/Characters/Soren.md"_s);
     m_vault->notes()->setNotebook(u"Ashfall/Characters"_s);
     m_settings->setCollapsedNotebooks({u"Ashfall/Characters"_s, u"Recipes"_s});
-    QCOMPARE(m_vault->notesInNotebook(u"Ashfall"_s), 5);
+    QCOMPARE(m_vault->notesInNotebook(u"Ashfall"_s), 11);
 
     QVERIFY(m_vault->trashNotebook(u"Ashfall"_s));
     QVERIFY(!QFileInfo::exists(m_root + u"/Ashfall"_s));
@@ -559,7 +559,7 @@ void TestVaultController::switcherFindsByTitleAliasAndPath()
 {
     QVERIFY(m_vault->openPath(m_root));
     SwitcherModel &switcher = *m_vault->switcher();
-    QCOMPARE(switcher.rowCount(), 9);
+    QCOMPARE(switcher.rowCount(), 15);
 
     switcher.setQuery(u"sour"_s);
     QCOMPARE(column(switcher, "title").first(), u"Sourdough"_s);
@@ -597,7 +597,7 @@ void TestVaultController::followsChangesOnDisk()
     welcome.write("Rewritten elsewhere.\n");
     welcome.close();
 
-    QTRY_COMPARE_WITH_TIMEOUT(m_vault->noteCount(), 10, 3000);
+    QTRY_COMPARE_WITH_TIMEOUT(m_vault->noteCount(), 16, 3000);
     QVERIFY(m_vault->tags().contains(u"idea"_s));
     QTRY_VERIFY_WITH_TIMEOUT(m_vault->currentText().contains(u"Rewritten"_s), 3000);
     QVERIFY(!changed.isEmpty());
@@ -928,7 +928,7 @@ void TestVaultController::trashesTheNoteShown()
     QVERIFY(m_vault->trashCurrent());
     QVERIFY(!QFileInfo::exists(m_root + u"/Recipes/Pancakes.md"_s));
     QCOMPARE(m_vault->current(), QString());
-    QCOMPARE(m_vault->noteCount(), 8);
+    QCOMPARE(m_vault->noteCount(), 14);
 }
 
 void TestVaultController::followsLinksAndMakesMissingNotes()
@@ -942,7 +942,7 @@ void TestVaultController::followsLinksAndMakesMissingNotes()
 
     QVERIFY(m_vault->follow(u"Harbor Master#Debts"_s, true));
     QCOMPARE(m_vault->current(), u"Ashfall/Characters/Harbor Master.md"_s);
-    QCOMPARE(m_vault->noteCount(), 10);
+    QCOMPARE(m_vault->noteCount(), 16);
     // A Markdown link to nothing makes nothing.
     QVERIFY(!m_vault->follow(u"Nowhere.md"_s, false));
 }
@@ -955,7 +955,7 @@ void TestVaultController::opensAndRenamesDataFiles()
     file.write("[{\"name\": \"Mara\"}]\n");
     file.close();
     QVERIFY(m_vault->openPath(m_root));
-    QCOMPARE(m_vault->noteCount(), 10);
+    QCOMPARE(m_vault->noteCount(), 16);
 
     // A link to it opens it in Jot, as a data file.
     m_vault->setCurrent(u"Ashfall/Pitch.md"_s);
@@ -1134,9 +1134,11 @@ void TestVaultController::listsBacklinksAndMentions()
                           u"Ashfall/Places/The Ferry.md"_s}));
     // Read as text, not Markdown.
     QCOMPARE(column(links, "excerpt").first(), u"Match the ledger to Mara Vey's voice"_s);
-    // Soren's note names her by her alias, without a link.
-    QCOMPARE(links.unlinked(), 1);
-    QCOMPARE(column(links, "path").last(), u"Ashfall/Characters/Soren.md"_s);
+    // Soren's note names her by her alias, without a link, as do the route and the cast list.
+    QCOMPARE(links.unlinked(), 3);
+    QCOMPARE(column(links, "path").mid(3),
+             (QStringList{u"Ashfall/Records/cast.json"_s, u"Ashfall/Characters/Soren.md"_s,
+                          u"Ashfall/Route.md"_s}));
 
     // Another note starting to link here shows up once the watcher says so.
     QFile soren(m_root + u"/Ashfall/Characters/Soren.md"_s);
@@ -1144,7 +1146,7 @@ void TestVaultController::listsBacklinksAndMentions()
     soren.write("\nAsks [[Mara Vey]] for the ledger.\n");
     soren.close();
     QTRY_COMPARE_WITH_TIMEOUT(links.linked(), 4, 3000);
-    QCOMPARE(links.unlinked(), 0);
+    QCOMPARE(links.unlinked(), 2);
 
     m_vault->setCurrent(u"Recipes/Sourdough.md"_s);
     QCOMPARE(links.rowCount(), 0);

@@ -1,0 +1,6 @@
+[
+  { "name": "Mara Vey", "role": "lead", "age": 34, "aboard": true, "note": "Keeps the ledger" },
+  { "name": "Soren", "role": "cast", "age": 22, "aboard": false, "note": "Good with engines" },
+  { "name": "The stranger", "role": "unknown", "age": null, "aboard": true, "note": "Pays nothing" },
+  { "name": "Harbor master", "role": "cast", "age": 61, "aboard": false, "tags": ["debt", "harbor"] }
+]
