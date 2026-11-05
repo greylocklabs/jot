@@ -39,6 +39,12 @@ private Q_SLOTS:
     void writesNestedValuesInTheFilesStyle();
     void keepsACompactFileCompact();
     void keepsJsonLineEndings();
+    void readsYamlRecords();
+    void refusesYamlThatIsNotRecords_data();
+    void refusesYamlThatIsNotRecords();
+    void editsYamlKeepingCommentsAndQuotes();
+    void addsAndRemovesYamlFieldsAndRecords();
+    void editsYamlColumnsAndNestedValues();
     void readsCsvWithQuotesAndLineEndings();
     void editsCsvKeepingQuotingAndShortRows();
     void addsAndRemovesCsvRowsAndColumns();
@@ -70,7 +76,7 @@ void TestDataTable::refusesWhatIsNotAListOfRecords_data()
     QTest::newRow("trailing text") << u"json"_s << u"[] x"_s;
     QTest::newRow("unclosed quote") << u"csv"_s << u"a,b\n\"1,2\n"_s;
     QTest::newRow("empty csv") << u"csv"_s << QString();
-    QTest::newRow("yaml") << u"yaml"_s << u"- a: 1\n"_s;
+    QTest::newRow("other kind") << u"txt"_s << u"- a: 1\n"_s;
 }
 
 void TestDataTable::refusesWhatIsNotAListOfRecords()
@@ -202,6 +208,119 @@ void TestDataTable::keepsACompactFileCompact()
     QVERIFY(table.setValue(0, 1, {Type::Nested, u"{\"c\": [1, 2]}"_s}));
     QVERIFY(table.insertRow(2));
     QCOMPARE(table.text(), u"[{\"a\":1,\"b\":{\"c\":[1,2]}},{\"a\":2},{}]"_s);
+}
+
+/// A cast list as people write YAML: comments, quotes, a nested list, a missing field.
+static const QString kCast = uR"(# The cast of Ashfall
+- name: Mara Vey   # the lead
+  role: 'ferry pilot'
+  age: 31
+  places: [ferry, harbor]
+- name: "Söre🎷n"
+  age: ~
+  lines:
+    - Not tonight.
+    - Ask the river.
+)"_s;
+
+void TestDataTable::readsYamlRecords()
+{
+    const std::optional<DataTable> table = DataTable::read(u"yaml"_s, kCast);
+    QVERIFY(table);
+    QCOMPARE(table->columns(),
+             (QStringList{u"name"_s, u"role"_s, u"age"_s, u"places"_s, u"lines"_s}));
+    QCOMPARE(table->rowCount(), 2);
+    QCOMPARE(table->value(0, 0), (DataValue{Type::String, u"Mara Vey"_s}));
+    QCOMPARE(table->value(0, 1), (DataValue{Type::String, u"ferry pilot"_s}));
+    QCOMPARE(table->value(0, 2), (DataValue{Type::Number, u"31"_s}));
+    QCOMPARE(table->value(0, 3), (DataValue{Type::Nested, u"[\"ferry\", \"harbor\"]"_s}));
+    QCOMPARE(table->value(1, 0), (DataValue{Type::String, u"Söre🎷n"_s}));
+    QCOMPARE(table->value(1, 1).type, Type::Missing);
+    QCOMPARE(table->value(1, 2), (DataValue{Type::Null, u"~"_s}));
+    QCOMPARE(table->value(1, 4),
+             (DataValue{Type::Nested, u"[\"Not tonight.\", \"Ask the river.\"]"_s}));
+}
+
+void TestDataTable::refusesYamlThatIsNotRecords_data()
+{
+    QTest::addColumn<QString>("text");
+    QTest::newRow("mapping") << u"name: Mara\n"_s;
+    QTest::newRow("list of words") << u"- Mara\n- Soren\n"_s;
+    QTest::newRow("two documents") << u"- a: 1\n---\n- a: 2\n"_s;
+    QTest::newRow("one line") << u"[{a: 1}]\n"_s;
+    QTest::newRow("broken") << u"- a: [1\n"_s;
+}
+
+void TestDataTable::refusesYamlThatIsNotRecords()
+{
+    QFETCH(QString, text);
+    QString why;
+    QVERIFY(!DataTable::read(u"yaml"_s, text, &why));
+    QVERIFY(!why.isEmpty());
+}
+
+void TestDataTable::editsYamlKeepingCommentsAndQuotes()
+{
+    DataTable table = *DataTable::read(u"yaml"_s, kCast);
+    // Each value changes where it is written, in its own quotes; comments stay.
+    QVERIFY(table.setValue(0, 0, {Type::String, u"Mara"_s}));
+    QVERIFY(table.setValue(0, 1, {Type::String, u"the pilot's"_s}));
+    QVERIFY(table.setValue(0, 2, {Type::Number, u"32"_s}));
+    QVERIFY(table.setValue(1, 0, {Type::String, u"Soren"_s}));
+    // A string that reads as something else is quoted; ~ becomes a value.
+    QVERIFY(table.setValue(1, 2, {Type::String, u"40"_s}));
+    QString expected = kCast;
+    expected.replace(u"name: Mara Vey   #"_s, u"name: Mara   #"_s);
+    expected.replace(u"'ferry pilot'"_s, u"'the pilot''s'"_s);
+    expected.replace(u"age: 31"_s, u"age: 32"_s);
+    expected.replace(u"\"Söre🎷n\""_s, u"\"Soren\""_s);
+    expected.replace(u"age: ~"_s, u"age: \"40\""_s);
+    QCOMPARE(table.text(), expected);
+}
+
+void TestDataTable::addsAndRemovesYamlFieldsAndRecords()
+{
+    DataTable table = *DataTable::read(u"yaml"_s, u"- name: a\n  age: 1\n- name: b\n"_s);
+    // A field it lacks goes on a line of its own, after the one before it.
+    QVERIFY(table.setValue(1, 1, {Type::Number, u"2"_s}));
+    QCOMPARE(table.text(), u"- name: a\n  age: 1\n- name: b\n  age: 2\n"_s);
+    // The first field taken out lets the next move up beside the dash.
+    QVERIFY(table.clearValue(0, 0));
+    QCOMPARE(table.text(), u"- age: 1\n- name: b\n  age: 2\n"_s);
+    QVERIFY(table.clearValue(1, 1));
+    QCOMPARE(table.text(), u"- age: 1\n- name: b\n"_s);
+    // The last one leaves an empty mapping, which a new field fills.
+    QVERIFY(table.clearValue(0, 1));
+    QCOMPARE(table.text(), u"- {}\n- name: b\n"_s);
+    QVERIFY(table.setValue(0, 0, {Type::String, u"c"_s}));
+    QCOMPARE(table.text(), u"- name: c\n- name: b\n"_s);
+
+    QVERIFY(table.insertRow(1));
+    QCOMPARE(table.text(), u"- name: c\n- {}\n- name: b\n"_s);
+    QVERIFY(table.insertRow(3));
+    QCOMPARE(table.text(), u"- name: c\n- {}\n- name: b\n- {}\n"_s);
+    QVERIFY(table.removeRow(3));
+    QVERIFY(table.removeRow(1));
+    QCOMPARE(table.text(), u"- name: c\n- name: b\n"_s);
+    QVERIFY(table.removeRow(1));
+    QVERIFY(table.removeRow(0));
+    QCOMPARE(table.text(), u"[]\n"_s);
+    QVERIFY(table.insertRow(0));
+    QCOMPARE(table.text(), u"- {}\n"_s);
+}
+
+void TestDataTable::editsYamlColumnsAndNestedValues()
+{
+    DataTable table = *DataTable::read(u"yaml"_s, kCast);
+    QVERIFY(table.renameColumn(2, u"years"_s));
+    QCOMPARE(table.text().count(u"years: "_s), 2);
+    QVERIFY(table.removeColumn(1));
+    QVERIFY(!table.text().contains(u"ferry pilot"_s));
+    QVERIFY(table.text().contains(u"# the lead\n  years: 31\n"_s));
+    // A nested value, block or flow, is written in flow form from its colon.
+    QVERIFY(table.setValue(1, 3, {Type::Nested, u"[\"Go.\"]"_s}));
+    QVERIFY(table.text().endsWith(u"  years: ~\n  lines: [\"Go.\"]\n"_s));
+    QCOMPARE(table.value(1, 3), (DataValue{Type::Nested, u"[\"Go.\"]"_s}));
 }
 
 void TestDataTable::readsCsvWithQuotesAndLineEndings()

@@ -965,6 +965,19 @@ void TestNoteEditor::editsAListOfRecordsAsATable()
     QVERIFY(find(u"body"_s)->isVisible());
     QVERIFY(find(u"body"_s)->property("text").toString().contains(u"\"age\": 40"_s));
 
+    // A YAML list of records opens as a table too.
+    QFile yaml(m_root + u"/cast.yaml"_s);
+    QVERIFY(yaml.open(QIODevice::WriteOnly));
+    yaml.write("# cast\n- name: Mara\n  age: 31\n");
+    yaml.close();
+    m_vault->setCurrent(u"cast.yaml"_s);
+    QVERIFY(find(u"tableView"_s)->isVisible());
+    QCOMPARE(records->rowCount(), 1);
+    QVERIFY(records->setCell(0, 1, u"32"_s));
+    QTRY_COMPARE(m_vault->currentText(), u"# cast\n- name: Mara\n  age: 32\n"_s);
+    m_vault->setCurrent(u"cast.json"_s);
+    QMetaObject::invokeMethod(find(u"viewSwitch"_s), "clicked");
+
     // Text that is no list of records says why when asked for a table.
     find(u"body"_s)->setProperty("text", u"{\"not\": \"records\"}"_s);
     QMetaObject::invokeMethod(find(u"viewSwitch"_s), "clicked");

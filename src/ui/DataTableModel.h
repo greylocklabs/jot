@@ -18,7 +18,7 @@ class DataTableModel : public QAbstractTableModel
     Q_OBJECT
     QML_ELEMENT
 
-    /// "json", "csv" or "tsv".
+    /// "json", "yaml", "csv" or "tsv".
     Q_PROPERTY(QString kind READ kind WRITE setKind NOTIFY loaded)
     /// The file's text. Setting it reads the table again, as when the file changed elsewhere.
     Q_PROPERTY(QString text READ text WRITE setText NOTIFY loaded)

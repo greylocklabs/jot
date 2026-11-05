@@ -1,5 +1,9 @@
 #include "jot/DataTable.h"
 
+#include "jot/FrontMatter.h"
+
+#include <yaml.h>
+
 #include <QHash>
 #include <QObject>
 #include <QRegularExpression>
@@ -305,6 +309,23 @@ DataValue valueOf(const JsonNode &node)
     }
 }
 
+/// A plain YAML scalar as its type, as YAML's core schema reads it.
+DataValue::Type yamlType(const QString &text)
+{
+    static const QStringList nulls = {u""_s, u"~"_s, u"null"_s, u"Null"_s, u"NULL"_s};
+    static const QStringList bools = {u"true"_s,  u"false"_s, u"True"_s,
+                                      u"False"_s, u"TRUE"_s,  u"FALSE"_s};
+    static const QRegularExpression number(
+        uR"(^(?:[-+]?(?:\d[\d_]*(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?|0x[0-9a-fA-F]+|0o[0-7]+|[-+]?\.(?:inf|Inf|INF)|\.(?:nan|NaN|NAN))$)"_s);
+    if (nulls.contains(text))
+        return DataValue::Type::Null;
+    if (bools.contains(text))
+        return DataValue::Type::Bool;
+    if (number.match(text).hasMatch())
+        return DataValue::Type::Number;
+    return DataValue::Type::String;
+}
+
 bool isNumber(const QString &text)
 {
     static const QRegularExpression number(uR"(^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$)"_s);
@@ -336,6 +357,8 @@ bool DataTable::parse(QString *why)
         return parseJson(why);
     if (m_kind == u"csv" || m_kind == u"tsv")
         return parseDelimited(why);
+    if (m_kind == u"yaml")
+        return parseYaml(why);
     *why = QObject::tr("not a kind of file that holds a table");
     return false;
 }
@@ -468,7 +491,7 @@ const DataTable::Field *DataTable::field(int row, int column) const
     if (row < 0 || row >= m_rows.size() || column < 0 || column >= m_columns.size())
         return nullptr;
     const Row &record = m_rows.at(row);
-    if (m_kind != u"json")
+    if (m_kind == u"csv" || m_kind == u"tsv")
         return column < record.fields.size() ? &record.fields.at(column) : nullptr;
     const QString &name = m_columns.at(column);
     for (const Field &each : record.fields) {
@@ -497,7 +520,7 @@ QString DataTable::nestedText(int row, int column) const
 bool DataTable::stray(int row, int column) const
 {
     const auto kindOf = [this](const DataValue &value) {
-        if (m_kind != u"json" && value.type == DataValue::Type::String)
+        if ((m_kind == u"csv" || m_kind == u"tsv") && value.type == DataValue::Type::String)
             return value.text.isEmpty()   ? DataValue::Type::Missing
                    : isNumber(value.text) ? DataValue::Type::Number
                                           : DataValue::Type::String;
@@ -577,7 +600,7 @@ bool DataTable::patches(QList<std::pair<Span, QString>> edits)
         parse(&why);
         return false;
     }
-    if (m_kind == u"json") {
+    if (m_kind == u"json" || m_kind == u"yaml") {
         // Columns stay where they were; new ones join at the end.
         QStringList columns;
         for (const QString &name : order) {
@@ -618,6 +641,19 @@ bool DataTable::setValue(int row, int column, const DataValue &value, QString *e
 {
     if (row < 0 || row >= m_rows.size() || column < 0 || column >= m_columns.size())
         return false;
+    if (m_kind == u"yaml") {
+        if (value.type == DataValue::Type::Nested) {
+            JsonReader reader(value.text);
+            const std::optional<JsonNode> node = reader.readDocument();
+            if (!node ||
+                (node->kind != JsonNode::Kind::Object && node->kind != JsonNode::Kind::Array)) {
+                if (error)
+                    *error = node ? QObject::tr("not an object or a list") : reader.error();
+                return false;
+            }
+        }
+        return yamlSetValue(row, column, value);
+    }
     if (m_kind != u"json") {
         const Row &record = m_rows.at(row);
         if (const Field *found = field(row, column))
@@ -677,7 +713,7 @@ bool DataTable::clearValue(int row, int column)
     const Field *found = field(row, column);
     if (!found)
         return true;
-    if (m_kind != u"json")
+    if (m_kind == u"csv" || m_kind == u"tsv")
         return setValue(row, column, {DataValue::Type::String, {}});
     // The last value in a column leaves the column in place.
     const QString name = m_columns.at(column);
@@ -689,6 +725,10 @@ bool DataTable::clearValue(int row, int column)
         m_pending.append(name);
     const Row &record = m_rows.at(row);
     const qsizetype at = found - record.fields.constData();
+    if (m_kind == u"yaml") {
+        const auto removal = yamlRemoval(record, at);
+        return removal && patch(removal->first, removal->second);
+    }
     if (record.fields.size() == 1)
         return patch(record.span, u"{}"_s);
     if (at + 1 < record.fields.size())
@@ -701,6 +741,18 @@ bool DataTable::insertRow(int row)
     if (row < 0 || row > m_rows.size())
         return false;
     const QString nl = newline();
+    if (m_kind == u"yaml") {
+        // An empty mapping is written "{}" until it has a field.
+        if (m_rows.isEmpty())
+            return patch(m_array, u"- {}"_s);
+        const Row &near = m_rows.at(std::min<qsizetype>(row, m_rows.size() - 1));
+        const QString indent =
+            m_text.sliced(lineStart(near.dash), near.dash - lineStart(near.dash));
+        if (row < m_rows.size())
+            return patch({near.dash, near.dash}, u"- {}"_s + nl + indent);
+        const qsizetype end = lineEnd(near.span.end);
+        return patch({end, end}, nl + indent + u"- {}"_s);
+    }
     if (m_kind != u"json") {
         const QString line =
             QString(delimiter()).repeated(std::max<qsizetype>(m_columns.size() - 1, 0));
@@ -727,6 +779,13 @@ bool DataTable::removeRow(int row)
     if (row < 0 || row >= m_rows.size())
         return false;
     const Row &record = m_rows.at(row);
+    if (m_kind == u"yaml") {
+        if (m_rows.size() == 1)
+            return patch(m_array, u"[]"_s);
+        if (row + 1 < m_rows.size())
+            return patch({lineStart(record.dash), lineStart(m_rows.at(row + 1).dash)}, {});
+        return patch({lineEnd(m_rows.at(row - 1).span.end), lineEnd(record.span.end)}, {});
+    }
     if (m_kind != u"json") {
         const qsizetype next = row + 1 < m_rows.size()
                                    ? m_rows.at(row + 1).span.start
@@ -754,7 +813,7 @@ bool DataTable::addColumn(const QString &name, QString *error)
                                     : QObject::tr("there is a column called %1").arg(name);
         return false;
     }
-    if (m_kind == u"json") {
+    if (m_kind == u"json" || m_kind == u"yaml") {
         m_pending.append(name);
         m_columns.append(name);
         return true;
@@ -776,14 +835,17 @@ bool DataTable::removeColumn(int column)
     const QString name = m_columns.at(column);
     m_pending.removeAll(name);
     QList<std::pair<Span, QString>> edits;
-    if (m_kind == u"json") {
+    if (m_kind == u"json" || m_kind == u"yaml") {
         for (int row = 0; row < rowCount(); ++row) {
             const Field *found = field(row, column);
             if (!found)
                 continue;
             const Row &record = m_rows.at(row);
             const qsizetype at = found - record.fields.constData();
-            if (record.fields.size() == 1)
+            if (m_kind == u"yaml") {
+                if (const auto removal = yamlRemoval(record, at))
+                    edits.append(*removal);
+            } else if (record.fields.size() == 1)
                 edits.append({record.span, u"{}"_s});
             else if (at + 1 < record.fields.size())
                 edits.append({{found->key.start, record.fields.at(at + 1).key.start}, {}});
@@ -829,10 +891,10 @@ bool DataTable::renameColumn(int column, const QString &name, QString *error)
     if (const qsizetype pending = m_pending.indexOf(old); pending >= 0)
         m_pending[pending] = name;
     QList<std::pair<Span, QString>> edits;
-    if (m_kind == u"json") {
+    if (m_kind == u"json" || m_kind == u"yaml") {
         for (int row = 0; row < rowCount(); ++row) {
             if (const Field *found = field(row, column))
-                edits.append({found->key, quoted(name)});
+                edits.append({found->key, m_kind == u"yaml" ? yamlScalar(name) : quoted(name)});
         }
         // Renamed where it stands, so the column keeps its place.
         m_columns[column] = name;
@@ -843,6 +905,325 @@ bool DataTable::renameColumn(int column, const QString &name, QString *error)
         edits.append({header.value, csvField(name, header.quoted)});
     }
     return patches(edits);
+}
+
+qsizetype DataTable::lineStart(qsizetype at) const
+{
+    return at <= 0 ? 0 : m_text.lastIndexOf(u'\n', at - 1) + 1;
+}
+
+qsizetype DataTable::lineEnd(qsizetype at) const
+{
+    qsizetype end = m_text.indexOf(u'\n', at);
+    if (end < 0)
+        end = m_text.size();
+    if (end > at && m_text.at(end - 1) == u'\r')
+        --end;
+    return end;
+}
+
+bool DataTable::parseYaml(QString *why)
+{
+    const QByteArray bytes = m_text.toUtf8();
+    // libyaml counts characters, where QString counts UTF-16 units.
+    const bool astral = std::ranges::any_of(m_text, [](QChar c) { return c.isSurrogate(); });
+    QList<qsizetype> units;
+    if (astral) {
+        for (qsizetype i = 0; i < m_text.size(); ++i) {
+            if (!(m_text.at(i).isLowSurrogate() && i > 0 && m_text.at(i - 1).isHighSurrogate()))
+                units.append(i);
+        }
+        units.append(m_text.size());
+    }
+    const auto at = [&](const yaml_mark_t &mark) {
+        const auto index = qsizetype(mark.index);
+        return astral ? units.value(index, m_text.size()) : std::min(index, m_text.size());
+    };
+    // A value over lines of its own ends at its last word, before blank and comment lines.
+    const auto trimmed = [this](qsizetype end) {
+        for (;;) {
+            while (end > 0 && m_text.at(end - 1).isSpace())
+                --end;
+            const qsizetype start = lineStart(end);
+            if (end == 0 || !m_text.sliced(start, end - start).trimmed().startsWith(u'#'))
+                return end;
+            end = start;
+        }
+    };
+
+    yaml_parser_t parser;
+    if (!yaml_parser_initialize(&parser)) {
+        *why = QObject::tr("YAML could not be read");
+        return false;
+    }
+    yaml_parser_set_input_string(&parser, reinterpret_cast<const unsigned char *>(bytes.data()),
+                                 size_t(bytes.size()));
+    const auto fail = [&](const QString &reason) {
+        *why = reason;
+        yaml_parser_delete(&parser);
+        return false;
+    };
+    const QString notRecords = QObject::tr("not a list of records");
+
+    int depth = 0;
+    int documents = 0;
+    bool root = false;
+    bool rootFlow = false;
+    bool key = true;
+    Row row;
+    Field field;
+    // A nested value, built as JSON so it can show and be edited as JSON.
+    QList<JsonNode> building;
+    QList<QString> buildingKeys;
+    qsizetype nestedStart = 0;
+
+    const auto scalarNode = [](const yaml_event_t &event) {
+        JsonNode node;
+        const QString text =
+            QString::fromUtf8(reinterpret_cast<const char *>(event.data.scalar.value),
+                              qsizetype(event.data.scalar.length));
+        const bool plain = event.data.scalar.style == YAML_PLAIN_SCALAR_STYLE;
+        switch (plain ? yamlType(text) : DataValue::Type::String) {
+        case DataValue::Type::Null:
+            node.kind = JsonNode::Kind::Null;
+            node.text = u"null"_s;
+            break;
+        case DataValue::Type::Bool:
+            node.kind = JsonNode::Kind::Bool;
+            node.text = text.toLower();
+            break;
+        case DataValue::Type::Number:
+            node.kind = JsonNode::Kind::Number;
+            node.text = text;
+            break;
+        default: node.kind = JsonNode::Kind::String; node.text = text;
+        }
+        return node;
+    };
+    // Adds a finished nested value to the one around it, under the key waiting there.
+    const auto addNested = [&](JsonNode node) {
+        JsonNode &parent = building.last();
+        if (parent.kind == JsonNode::Kind::Object) {
+            if (buildingKeys.last().isNull()) {
+                buildingKeys.last() = node.text;
+                return;
+            }
+            parent.members.push_back({buildingKeys.last(), 0, 0, std::move(node)});
+            buildingKeys.last() = QString();
+        } else {
+            parent.items.push_back(std::move(node));
+        }
+    };
+
+    for (;;) {
+        yaml_event_t event;
+        if (!yaml_parser_parse(&parser, &event))
+            return fail(QString::fromUtf8(parser.problem ? parser.problem : "not valid YAML"));
+        const yaml_event_type_t type = event.type;
+        const qsizetype start = at(event.start_mark);
+        const qsizetype end = at(event.end_mark);
+        const bool flow = (type == YAML_MAPPING_START_EVENT &&
+                           event.data.mapping_start.style == YAML_FLOW_MAPPING_STYLE) ||
+                          (type == YAML_SEQUENCE_START_EVENT &&
+                           event.data.sequence_start.style == YAML_FLOW_SEQUENCE_STYLE);
+        JsonNode scalar;
+        if (type == YAML_SCALAR_EVENT)
+            scalar = scalarNode(event);
+        QChar quote;
+        if (type == YAML_SCALAR_EVENT) {
+            if (event.data.scalar.style == YAML_SINGLE_QUOTED_SCALAR_STYLE)
+                quote = u'\'';
+            else if (event.data.scalar.style == YAML_DOUBLE_QUOTED_SCALAR_STYLE)
+                quote = u'"';
+        }
+        const bool plainScalar =
+            type == YAML_SCALAR_EVENT && event.data.scalar.style == YAML_PLAIN_SCALAR_STYLE;
+        yaml_event_delete(&event);
+
+        switch (type) {
+        case YAML_STREAM_END_EVENT:
+            yaml_parser_delete(&parser);
+            if (!root)
+                return fail(notRecords);
+            if (rootFlow && !m_rows.isEmpty())
+                return fail(QObject::tr("a list written on one line, to edit as text"));
+            return true;
+        case YAML_DOCUMENT_START_EVENT:
+            if (++documents > 1)
+                return fail(QObject::tr("more than one YAML document"));
+            break;
+        case YAML_SEQUENCE_START_EVENT:
+        case YAML_MAPPING_START_EVENT: {
+            const bool mapping = type == YAML_MAPPING_START_EVENT;
+            if (depth == 0) {
+                if (mapping)
+                    return fail(notRecords);
+                root = true;
+                rootFlow = flow;
+                m_array = {start, start};
+            } else if (depth == 1) {
+                if (!mapping)
+                    return fail(notRecords);
+                row = {};
+                row.flow = flow;
+                row.span.start = start;
+                // The item's dash, before the mapping on its line.
+                qsizetype dash = start - 1;
+                while (dash >= 0 && m_text.at(dash) == u' ')
+                    --dash;
+                row.dash = dash >= 0 && m_text.at(dash) == u'-' ? dash : start;
+                key = true;
+            } else if (depth == 2) {
+                if (key)
+                    return fail(QObject::tr("a key that is not plain text"));
+                nestedStart = start;
+                field.block = !flow;
+                building.clear();
+                buildingKeys.clear();
+            }
+            if (depth >= 2) {
+                JsonNode node;
+                node.kind = mapping ? JsonNode::Kind::Object : JsonNode::Kind::Array;
+                building.append(node);
+                buildingKeys.append(QString());
+            }
+            ++depth;
+            break;
+        }
+        case YAML_SEQUENCE_END_EVENT:
+        case YAML_MAPPING_END_EVENT:
+            --depth;
+            if (depth >= 2) {
+                JsonNode done = building.takeLast();
+                buildingKeys.removeLast();
+                if (depth > 2) {
+                    addNested(std::move(done));
+                    break;
+                }
+                field.value = {nestedStart, field.block ? trimmed(start) : end};
+                field.data = {DataValue::Type::Nested, compact(done)};
+                row.fields.append(field);
+                if (!m_columns.contains(field.name))
+                    m_columns.append(field.name);
+                key = true;
+            } else if (depth == 1) {
+                row.span.end = row.flow               ? end
+                               : row.fields.isEmpty() ? row.span.start
+                                                      : row.fields.last().value.end;
+                m_rows.append(row);
+            } else if (depth == 0) {
+                m_array.end = rootFlow ? end : trimmed(start);
+            }
+            break;
+        case YAML_SCALAR_EVENT:
+        case YAML_ALIAS_EVENT:
+            if (depth < 2)
+                return fail(notRecords);
+            if (depth > 2) {
+                addNested(type == YAML_ALIAS_EVENT ? JsonNode{} : scalar);
+                break;
+            }
+            if (key) {
+                if (type == YAML_ALIAS_EVENT)
+                    return fail(QObject::tr("a key that is not plain text"));
+                field = {};
+                field.name = scalar.text;
+                field.key = {start, end};
+                key = false;
+                break;
+            }
+            field.value = {start, end};
+            field.quote = quote;
+            if (type == YAML_ALIAS_EVENT)
+                field.data = {DataValue::Type::String, m_text.sliced(start, end - start)};
+            else if (!plainScalar)
+                field.data = {DataValue::Type::String, scalar.text};
+            else
+                field.data = {yamlType(m_text.sliced(start, end - start)),
+                              m_text.sliced(start, end - start)};
+            row.fields.append(field);
+            if (!m_columns.contains(field.name))
+                m_columns.append(field.name);
+            key = true;
+            break;
+        default: break;
+        }
+    }
+}
+
+QString DataTable::yamlValue(const DataValue &value, const Field *was) const
+{
+    switch (value.type) {
+    case DataValue::Type::String:
+        if (was && was->quote == u'\'')
+            return u'\'' + QString(value.text).replace(u"'"_s, u"''"_s) + u'\'';
+        // Quoted wherever plain text would read as a number, a boolean or null.
+        if ((was && was->quote == u'"') || yamlType(value.text) != DataValue::Type::String)
+            return quoted(value.text);
+        return yamlScalar(value.text);
+    case DataValue::Type::Missing:
+    case DataValue::Type::Null: return u"null"_s;
+    case DataValue::Type::Nested: {
+        JsonReader reader(value.text);
+        const std::optional<JsonNode> node = reader.readDocument();
+        return node ? compact(*node) : value.text;
+    }
+    default: return value.text;
+    }
+}
+
+bool DataTable::yamlSetValue(int row, int column, const DataValue &value)
+{
+    const Row &record = m_rows.at(row);
+    const QString text = yamlValue(value, field(row, column));
+    if (const Field *found = field(row, column)) {
+        // A value over lines of its own, or none written, is replaced from its colon on.
+        if (value.type == DataValue::Type::Nested || found->block ||
+            found->value.start == found->value.end)
+            return patch({found->key.end, found->value.end}, u": "_s + text);
+        return patch(found->value, text);
+    }
+    const QString member = yamlScalar(m_columns.at(column)) + u": "_s + text;
+    if (record.fields.isEmpty()) {
+        // An empty "- {}" takes the field as its first line.
+        return patch(record.span, member);
+    }
+    const Field *before = nullptr;
+    for (int c = column - 1; c >= 0 && !before; --c)
+        before = field(row, c);
+    if (record.flow) {
+        if (before)
+            return patch({before->value.end, before->value.end}, u", "_s + member);
+        const qsizetype first = record.fields.first().key.start;
+        return patch({first, first}, member + u", "_s);
+    }
+    // Indented as the record's keys are, the dash taken for a space.
+    const qsizetype firstKey = record.fields.first().key.start;
+    QString indent = m_text.sliced(lineStart(firstKey), firstKey - lineStart(firstKey));
+    indent.replace(u'-', u' ');
+    if (before) {
+        const qsizetype end = lineEnd(before->value.end);
+        return patch({end, end}, newline() + indent + member);
+    }
+    return patch({firstKey, firstKey}, member + newline() + indent);
+}
+
+std::optional<std::pair<DataTable::Span, QString>> DataTable::yamlRemoval(const Row &record,
+                                                                          qsizetype at) const
+{
+    const Field &here = record.fields.at(at);
+    if (record.fields.size() == 1)
+        return std::pair{Span{here.key.start, here.value.end}, record.flow ? QString() : u"{}"_s};
+    if (record.flow) {
+        if (at + 1 < record.fields.size())
+            return std::pair{Span{here.key.start, record.fields.at(at + 1).key.start}, QString()};
+        return std::pair{Span{record.fields.at(at - 1).value.end, here.value.end}, QString()};
+    }
+    // The first field shares its line with the dash, so the next one moves up onto it.
+    if (at == 0)
+        return std::pair{Span{here.key.start, record.fields.at(1).key.start}, QString()};
+    return std::pair{Span{lineEnd(record.fields.at(at - 1).value.end), lineEnd(here.value.end)},
+                     QString()};
 }
 
 } // namespace jot
