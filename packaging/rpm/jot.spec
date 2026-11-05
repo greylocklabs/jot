@@ -27,6 +27,8 @@ BuildRequires:  cmake(Qt6Test)
 BuildRequires:  cmake(tomlplusplus)
 BuildRequires:  cmake(KF6SyntaxHighlighting)
 BuildRequires:  cmake(Qt6Keychain)
+BuildRequires:  pkgconf-pkg-config
+BuildRequires:  pkgconfig(yaml-0.1)
 BuildRequires:  desktop-file-utils
 BuildRequires:  libappstream-glib
 

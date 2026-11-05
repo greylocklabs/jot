@@ -20,6 +20,8 @@ qt_add_qml_module(jotui
         BacklinksModel.cpp
         CodeHighlighter.h
         CodeHighlighter.cpp
+        DataStyler.h
+        DataStyler.cpp
         EmojiList.h
         EmojiList.cpp
         MarkdownHighlighter.h

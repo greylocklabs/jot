@@ -10,6 +10,9 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 - JSON, CSV, TSV and YAML files in a vault show in the note list with their extension, count in
   their notebook, turn up in search and the switcher, and open in Jot from a link, to edit as
   text.
+- Data files are colored by their kind, JSON and YAML by their syntax and CSV and TSV column by
+  column, with line numbers and the bracket by the cursor matched to its partner. When one stops
+  reading as its kind, a line above it says where and why, and a click goes there.
 
 ## 0.2.0 - 2026-11-03
 

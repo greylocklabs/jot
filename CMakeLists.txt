@@ -37,6 +37,9 @@ find_package(Qt6 6.8 REQUIRED COMPONENTS Core DBus Gui Network Qml Quick QuickCo
 find_package(KF6SyntaxHighlighting 6.13 REQUIRED)
 # Keeps sync's keys in the desktop's keyring.
 find_package(Qt6Keychain REQUIRED)
+# Reads YAML data files, with where each value sits, so edits can keep the rest as written.
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-0.1)
 qt_standard_project_setup(REQUIRES 6.8)
 
 # The built-in themes come from the core submodule, which a clone made without
