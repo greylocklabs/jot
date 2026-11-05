@@ -325,6 +325,18 @@ Rectangle {
                 width: parent.width - 2 * parent.padding
                 spacing: Theme.space3
 
+                // The buttons beside the title line up with its first line's letters, not the
+                // middle of the whole title, which a long one wraps and the font's descent pulls
+                // down.
+                FontMetrics {
+                    id: titleMetrics
+                    font: title.font
+                }
+                readonly property real firstLineMiddle: {
+                    const letters = titleMetrics.tightBoundingRect("H")
+                    return title.y + titleMetrics.ascent + letters.y + letters.height / 2
+                }
+
                 TextInput {
                     id: title
                     objectName: "title"
@@ -367,7 +379,7 @@ Rectangle {
                     id: viewSwitch
 
                     objectName: "viewSwitch"
-                    anchors.verticalCenter: title.verticalCenter
+                    y: parent.firstLineMiddle - height / 2
                     visible: root.dataFile
                     text: root.tableShown ? qsTr("Edit as text") : qsTr("Edit as table")
                     onClicked: {
@@ -385,7 +397,8 @@ Rectangle {
                 DangerButton {
                     id: trash
 
-                    anchors.verticalCenter: title.verticalCenter
+                    objectName: "trash"
+                    y: parent.firstLineMiddle - height / 2
                     visible: Vault.writable
                     label: qsTr("Delete")
                     armedLabel: qsTr("Move to trash?")
