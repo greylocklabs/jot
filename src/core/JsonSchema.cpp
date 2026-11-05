@@ -36,18 +36,6 @@ QString typeOf(const QJsonValue &value)
     }
 }
 
-/// A value as a message shows it: strings in quotes, the rest as JSON writes them.
-QString shown(const QJsonValue &value)
-{
-    if (value.isString())
-        return u'"' + value.toString() + u'"';
-    if (value.isArray())
-        return QString::fromUtf8(QJsonDocument(value.toArray()).toJson(QJsonDocument::Compact));
-    if (value.isObject())
-        return QString::fromUtf8(QJsonDocument(value.toObject()).toJson(QJsonDocument::Compact));
-    return QJsonDocument(QJsonArray{value}).toJson(QJsonDocument::Compact).mid(1).chopped(1);
-}
-
 /// Names a JSON type for people: "a number", "text".
 QString typeName(const QString &type)
 {
@@ -129,12 +117,12 @@ public:
             if (!options.toArray().contains(data)) {
                 QStringList names;
                 for (const QJsonValue &each : options.toArray())
-                    names.append(shown(each));
+                    names.append(jsonText(each));
                 add(path, QObject::tr("should be one of %1").arg(names.join(u", "_s)));
             }
         }
         if (rules.contains(u"const"_s) && rules.value(u"const"_s) != data)
-            add(path, QObject::tr("should be %1").arg(shown(rules.value(u"const"_s))));
+            add(path, QObject::tr("should be %1").arg(jsonText(rules.value(u"const"_s))));
 
         if (data.isDouble())
             checkNumber(rules, data.toDouble(), path);
@@ -183,23 +171,9 @@ private:
         return trial.problems.isEmpty();
     }
 
-    /// A $ref within this schema: "#" or a JSON pointer such as "#/$defs/person".
     std::optional<QJsonValue> resolve(const QString &ref) const
     {
-        if (!ref.startsWith(u'#'))
-            return std::nullopt;
-        QJsonValue at = m_root;
-        for (QString part : ref.mid(1).split(u'/', Qt::SkipEmptyParts)) {
-            part = QUrl::fromPercentEncoding(part.toUtf8());
-            part.replace(u"~1"_s, u"/"_s).replace(u"~0"_s, u"~"_s);
-            if (at.isObject() && at.toObject().contains(part))
-                at = at.toObject().value(part);
-            else if (at.isArray() && part.toInt() < at.toArray().size())
-                at = at.toArray().at(part.toInt());
-            else
-                return std::nullopt;
-        }
-        return at;
+        return resolveSchemaRef(m_root, ref);
     }
 
     void checkNumber(const QJsonObject &rules, double number, const QStringList &path)
@@ -351,6 +325,37 @@ QList<SchemaProblem> checkSchema(const QJsonValue &schema, const QJsonValue &dat
     Checker checker(schema);
     checker.check(schema, data, {});
     return checker.problems;
+}
+
+std::optional<QJsonValue> resolveSchemaRef(const QJsonValue &schema, const QString &ref)
+{
+    if (!ref.startsWith(u'#'))
+        return std::nullopt;
+    QJsonValue at = schema;
+    for (QString part : ref.mid(1).split(u'/', Qt::SkipEmptyParts)) {
+        part = QUrl::fromPercentEncoding(part.toUtf8());
+        part.replace(u"~1"_s, u"/"_s).replace(u"~0"_s, u"~"_s);
+        bool isIndex = false;
+        const int index = part.toInt(&isIndex);
+        if (at.isObject() && at.toObject().contains(part))
+            at = at.toObject().value(part);
+        else if (at.isArray() && isIndex && index >= 0 && index < at.toArray().size())
+            at = at.toArray().at(index);
+        else
+            return std::nullopt;
+    }
+    return at;
+}
+
+QString jsonText(const QJsonValue &value)
+{
+    if (value.isString())
+        return u'"' + value.toString() + u'"';
+    if (value.isArray())
+        return QString::fromUtf8(QJsonDocument(value.toArray()).toJson(QJsonDocument::Compact));
+    if (value.isObject())
+        return QString::fromUtf8(QJsonDocument(value.toObject()).toJson(QJsonDocument::Compact));
+    return QJsonDocument(QJsonArray{value}).toJson(QJsonDocument::Compact).mid(1).chopped(1);
 }
 
 std::optional<QJsonValue> dataAsJson(const QString &kind, const QString &text, QString *error)

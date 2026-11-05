@@ -6,7 +6,6 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QUrl>
 
 #include <algorithm>
 
@@ -428,18 +427,10 @@ QString DataTableModel::schemaSummary() const
 QJsonValue DataTableModel::fieldRules(const QString &name) const
 {
     const auto resolved = [this](QJsonValue value) {
-        for (int depth = 0; depth < 16 && value.isObject() &&
-                            value.toObject().value(u"$ref"_s).toString().startsWith(u'#');
-             ++depth) {
-            QJsonValue at = m_schema;
-            const QString ref = value.toObject().value(u"$ref"_s).toString();
-            for (QString part : ref.mid(1).split(u'/', Qt::SkipEmptyParts)) {
-                part = QUrl::fromPercentEncoding(part.toUtf8());
-                part.replace(u"~1"_s, u"/"_s).replace(u"~0"_s, u"~"_s);
-                at = at.toObject().value(part);
-            }
-            value = at;
-        }
+        for (int depth = 0; depth < 16 && value.isObject() && value.toObject().contains(u"$ref"_s);
+             ++depth)
+            value = resolveSchemaRef(m_schema, value.toObject().value(u"$ref"_s).toString())
+                        .value_or(QJsonValue());
         return value;
     };
     const QJsonValue items = resolved(resolved(m_schema).toObject().value(u"items"_s));
@@ -453,12 +444,7 @@ QStringList DataTableModel::choices(int column) const
         return values;
     const QJsonObject rules = fieldRules(m_table->columns().at(column)).toObject();
     for (const QJsonValue &each : rules.value(u"enum"_s).toArray()) {
-        values.append(
-            each.isString()
-                ? each.toString()
-                : QString::fromUtf8(QJsonDocument(QJsonArray{each}).toJson(QJsonDocument::Compact))
-                      .mid(1)
-                      .chopped(1));
+        values.append(each.isString() ? each.toString() : jsonText(each));
     }
     if (values.isEmpty() && rules.value(u"type"_s).toString() == u"boolean")
         values = {u"true"_s, u"false"_s};

@@ -38,6 +38,7 @@ private Q_SLOTS:
     void saysWhereAndWhy_data();
     void saysWhereAndWhy();
     void followsRefsAndCombinations();
+    void resolvesPointersIntoTheSchema();
     void readsYamlAndCsvAsJson();
     void findsTheSchemaBesideTheFile();
     void placesProblemsAtTheirLines();
@@ -117,6 +118,22 @@ void TestJsonSchema::followsRefsAndCombinations()
     QVERIFY(messages(jot::checkSchema(json("{\"$ref\": \"#/$defs/nope\"}"), 1))
                 .first()
                 .contains(u"#/$defs/nope"_s));
+}
+
+void TestJsonSchema::resolvesPointersIntoTheSchema()
+{
+    const QJsonValue schema =
+        json("{\"$defs\": {\"a/b\": {\"enum\": [1]}, \"shapes\": [{\"type\": \"string\"}]}}");
+    QCOMPARE(jot::resolveSchemaRef(schema, u"#"_s), schema);
+    QCOMPARE(jot::resolveSchemaRef(schema, u"#/$defs/a~1b"_s), json("{\"enum\": [1]}"));
+    QCOMPARE(jot::resolveSchemaRef(schema, u"#/$defs/shapes/0"_s), json("{\"type\": \"string\"}"));
+    QVERIFY(!jot::resolveSchemaRef(schema, u"#/$defs/shapes/1"_s));
+    QVERIFY(!jot::resolveSchemaRef(schema, u"#/$defs/shapes/-1"_s));
+    QVERIFY(!jot::resolveSchemaRef(schema, u"#/$defs/none"_s));
+    QVERIFY(!jot::resolveSchemaRef(schema, u"other.json#/x"_s));
+    QCOMPARE(jot::jsonText(QJsonValue(u"Mo"_s)), u"\"Mo\""_s);
+    QCOMPARE(jot::jsonText(QJsonValue(2.5)), u"2.5"_s);
+    QCOMPARE(jot::jsonText(json("[1, true]")), u"[1,true]"_s);
 }
 
 void TestJsonSchema::readsYamlAndCsvAsJson()
