@@ -3,6 +3,14 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## Unreleased
+
+### Added
+
+- JSON, CSV, TSV and YAML files in a vault show in the note list with their extension, count in
+  their notebook, turn up in search and the switcher, and open in Jot from a link, to edit as
+  text.
+
 ## 0.2.0 - 2026-11-03
 
 ### Added

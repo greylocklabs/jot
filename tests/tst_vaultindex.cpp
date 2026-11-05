@@ -25,6 +25,7 @@ private Q_SLOTS:
     void refreshReadsOnlyWhatChanged();
     void dropsNotesThatAreGone();
     void searchesWordsAtTheStartOfWords();
+    void indexesDataFilesByNameAndWords();
     void searchFiltersByTagFolderTaskAndType();
     void searchRanksTitlesFirst();
     void searchTakesAwkwardInput();
@@ -149,6 +150,22 @@ void TestVaultIndex::searchesWordsAtTheStartOfWords()
     const SearchHit hit = m_index->search(u"dawn"_s).first();
     QCOMPARE(hit.path, u"Ferry.md"_s);
     QVERIFY2(hit.snippet.contains(u"<mark>dawn</mark>"_s), qPrintable(hit.snippet));
+}
+
+void TestVaultIndex::indexesDataFilesByNameAndWords()
+{
+    write(u"data/cast.json"_s, u"[{\"name\": \"Mara\", \"role\": \"ferrywoman\"}]\n"_s);
+    write(u"Ferry.md"_s, u"Links to [the cast](data/cast.json) and [[cast.json]].\n"_s);
+    open();
+
+    const std::optional<NoteInfo> info = m_index->note(u"data/cast.json"_s);
+    QVERIFY(info);
+    QCOMPARE(info->title, u"cast.json"_s);
+    QVERIFY(info->tags.isEmpty());
+    QCOMPARE(m_index->search(u"ferryw"_s).size(), 1);
+    QCOMPARE(m_index->search(u"ferryw"_s).first().path, u"data/cast.json"_s);
+    QCOMPARE(m_index->noteCounts().value(u"data"_s), 1);
+    QCOMPARE(m_index->backlinks(u"data/cast.json"_s).size(), 2);
 }
 
 void TestVaultIndex::searchFiltersByTagFolderTaskAndType()

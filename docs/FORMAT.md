@@ -28,7 +28,9 @@ My Notes/                    the vault: any folder
 ```
 
 - Folders are notebooks, nested to any depth. A link to a folder is shown but not followed.
-- A note is a `.md` file. Other files are attachments, shown but not edited as notes.
+- A note is a `.md` file. Data files, `.json`, `.csv`, `.tsv`, `.yaml` and `.yml`, are listed
+  beside the notes under their full file names and edited as they are, with nothing added to
+  them. Other files are attachments, shown but not edited.
 - Names starting with `.` are hidden from the app and the index, apart from `.jot/`.
 - Opening a folder in Jot makes `.jot/vault.yaml` with `format: 1`, if it has none.
 - Jot's own machine-local state (search index, link index, caches) lives under

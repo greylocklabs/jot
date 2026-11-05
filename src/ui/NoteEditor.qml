@@ -91,11 +91,21 @@ Rectangle {
         return Theme.noteFontFamily(Settings.noteFont)
     }
 
+    readonly property string monoFamily: {
+        Theme.name
+        return Theme.noteFontFamily("mono")
+    }
+    /// A data file, such as JSON or CSV, is edited as plain text, without Markdown's styling.
+    readonly property bool dataFile: Vault.currentKind !== "markdown"
+
     // The editor holds the text; the vault hears of each change and saves it shortly after.
     // A note loaded from disk replaces the text without counting as an edit.
     property bool loading: false
     /// Another note is on its way in, rather than this one changed on disk or renamed.
     property bool fresh: true
+    /// The file the editor's text came from. Until the next one is loaded, a change the editor
+    /// reports, as when its font changes, belongs to no other file.
+    property string loaded
 
     /// Opens what a link in the reading view leads to: a note, a tag's notes, or anything
     /// else with the desktop.
@@ -123,7 +133,9 @@ Rectangle {
         // the styling comes off for the swap and goes back on after.
         styler.document = null
         body.text = Vault.currentText
-        styler.document = body.textDocument
+        if (!dataFile)
+            styler.document = body.textDocument
+        loaded = Vault.current
         body.cursorPosition = Math.min(cursor, body.length)
         title.show(Vault.currentTitle)
         if (another) {
@@ -150,6 +162,9 @@ Rectangle {
             if (root.fresh || root.shown(Vault.currentText) !== body.text || Vault.currentTitle
                     !== title.text)
                 root.load()
+            else
+                root.loaded = Vault.current
+            // moved, with nothing in it changed
         }
         // As when its `title:` key is edited, here or on disk. Left alone only while something
         // else is being typed in it, so a stale title is never there to be saved back.
@@ -244,7 +259,7 @@ Rectangle {
             right: parent.right
             top: parent.top
         }
-        visible: Vault.current !== "" && Vault.writable
+        visible: Vault.current !== "" && Vault.writable && !root.dataFile
         frontMatter: styler.frontMatter
         onFormatRequested: action => root.format(action, "")
     }
@@ -410,7 +425,7 @@ Rectangle {
             }
 
             TaskDetails {
-                visible: Vault.writable && styler.frontMatter.task !== undefined
+                visible: Vault.writable && !root.dataFile && styler.frontMatter.task !== undefined
                 frontMatter: styler.frontMatter
                 onFormatRequested: (action, argument) => root.format(action, argument)
             }
@@ -431,7 +446,7 @@ Rectangle {
                 id: reader
 
                 objectName: "reader"
-                visible: Settings.readMode
+                visible: Settings.readMode && !root.dataFile
                 width: parent.width - 2 * parent.padding
                 readOnly: true
                 // NoteReader draws the document itself; the TextEdit only shows it.
@@ -457,7 +472,7 @@ Rectangle {
                     id: reading
 
                     document: reader.textDocument
-                    text: Settings.readMode ? Vault.currentText : ""
+                    text: Settings.readMode && !root.dataFile ? Vault.currentText : ""
                     fontFamily: root.noteFamily
                     pixelSize: reader.font.pixelSize
                     width: reader.width
@@ -483,7 +498,7 @@ Rectangle {
                 id: body
 
                 objectName: "body"
-                visible: !Settings.readMode
+                visible: !Settings.readMode || root.dataFile
 
                 width: parent.width - 2 * parent.padding
                 readOnly: !Vault.writable
@@ -492,14 +507,14 @@ Rectangle {
                 color: Theme.text
                 selectionColor: Theme.tint(Theme.accent, 0.4)
                 selectedTextColor: Theme.text
-                font.family: root.noteFamily
-                font.pixelSize: Theme.textLg
+                font.family: root.dataFile ? root.monoFamily : root.noteFamily
+                font.pixelSize: root.dataFile ? Theme.textBase : Theme.textLg
                 selectByMouse: true
                 persistentSelection: true
                 tabStopDistance: 4 * Theme.space5
                 Accessible.name: qsTr("Note")
                 onTextChanged: {
-                    if (root.loading)
+                    if (root.loading || root.loaded !== Vault.current)
                         return
                     Vault.edit(text)
                     // Once the cursor has moved too, so it is read where the typing ended.

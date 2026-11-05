@@ -545,10 +545,22 @@ bool VaultController::renameCurrent(const QString &title)
         return false;
     saveNow();
     const QString folder = m_current.contains(u'/') ? m_current.section(u'/', 0, -2) : QString();
-    QString to = folder.isEmpty() ? Vault::fileNameFor(wanted) + u".md"_s
-                                  : folder + u'/' + Vault::fileNameFor(wanted) + u".md"_s;
-    if (to.compare(m_current, Qt::CaseSensitive) != 0 && QFileInfo::exists(m_vault->absolute(to)))
-        to = m_vault->freePath(folder, wanted);
+    // A data file keeps its kind: a name typed without the extension gets it back.
+    const bool data = Vault::isDataFile(m_current);
+    const QString suffix = data ? u'.' + QFileInfo(m_current).suffix() : u".md"_s;
+    QString name = Vault::fileNameFor(wanted);
+    if (data && name.endsWith(suffix, Qt::CaseInsensitive))
+        name.chop(suffix.size());
+    QString to = (folder.isEmpty() ? QString() : folder + u'/') + name + suffix;
+    if (to.compare(m_current, Qt::CaseSensitive) != 0 && QFileInfo::exists(m_vault->absolute(to))) {
+        if (data) {
+            for (int n = 2; QFileInfo::exists(m_vault->absolute(to)); ++n)
+                to = (folder.isEmpty() ? QString() : folder + u'/') + u"%1 %2"_s.arg(name).arg(n) +
+                     suffix;
+        } else {
+            to = m_vault->freePath(folder, wanted);
+        }
+    }
 
     QString error;
     if (to != m_current) {
@@ -567,6 +579,8 @@ bool VaultController::renameCurrent(const QString &title)
         m_current = to;
         readCurrent();
     }
+    if (data)
+        return true;
     // The title key holds what the file name cannot; when the name can, it goes.
     const QVariantMap meta = readFrontMatter(splitFrontMatter(m_currentText).frontMatter);
     const bool fits = Vault::titleFromPath(to) == wanted;
@@ -1255,7 +1269,7 @@ bool VaultController::follow(const QString &target, bool wiki)
     if (!wiki && scheme.match(target).hasMatch())
         return QDesktopServices::openUrl(QUrl(target));
     const QString path = m_index->resolve(target, m_current);
-    if (path.endsWith(u".md"_s)) {
+    if (Vault::isListed(path)) {
         setCurrent(path);
         return true;
     }
@@ -1469,6 +1483,14 @@ bool VaultController::travel(int by)
     setCurrent(to->path);
     m_travelling = false;
     return true;
+}
+
+QString VaultController::currentKind() const
+{
+    if (!Vault::isDataFile(m_current))
+        return u"markdown"_s;
+    const QString suffix = QFileInfo(m_current).suffix().toLower();
+    return suffix == u"yml" ? u"yaml"_s : suffix;
 }
 
 QString VaultController::currentTitle() const

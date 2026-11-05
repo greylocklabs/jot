@@ -67,6 +67,7 @@ private Q_SLOTS:
     void keepsAttachmentsOtherNotesUse();
     void removesAttachmentFoldersLeftEmpty();
     void followsLinksAndMakesMissingNotes();
+    void opensAndRenamesDataFiles();
     void keepsLineEndingsAndTheByteOrderMark();
     void aRenameThatFailsHalfwayShowsWhereTheNoteIs();
     void aFailedSaveIsShownAndRetried();
@@ -929,6 +930,39 @@ void TestVaultController::followsLinksAndMakesMissingNotes()
     QCOMPARE(m_vault->noteCount(), 10);
     // A Markdown link to nothing makes nothing.
     QVERIFY(!m_vault->follow(u"Nowhere.md"_s, false));
+}
+
+void TestVaultController::opensAndRenamesDataFiles()
+{
+    QVERIFY(QDir().mkpath(m_root + u"/Ashfall/data"_s));
+    QFile file(m_root + u"/Ashfall/data/cast.json"_s);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write("[{\"name\": \"Mara\"}]\n");
+    file.close();
+    QVERIFY(m_vault->openPath(m_root));
+    QCOMPARE(m_vault->noteCount(), 10);
+
+    // A link to it opens it in Jot, as a data file.
+    m_vault->setCurrent(u"Ashfall/Pitch.md"_s);
+    QCOMPARE(m_vault->currentKind(), u"markdown"_s);
+    QVERIFY(m_vault->follow(u"data/cast.json"_s, false));
+    QCOMPARE(m_vault->current(), u"Ashfall/data/cast.json"_s);
+    QCOMPARE(m_vault->currentKind(), u"json"_s);
+    QCOMPARE(m_vault->currentTitle(), u"cast.json"_s);
+
+    // Edited and saved as it is, with no front matter added.
+    m_vault->edit(u"[{\"name\": \"Mara Vey\"}]\n"_s);
+    m_vault->saveNow();
+    QVERIFY(file.open(QIODevice::ReadOnly));
+    QCOMPARE(file.readAll(), QByteArray("[{\"name\": \"Mara Vey\"}]\n"));
+    file.close();
+
+    // A new name keeps the extension, typed or not.
+    QVERIFY(m_vault->renameCurrent(u"people"_s));
+    QCOMPARE(m_vault->current(), u"Ashfall/data/people.json"_s);
+    QVERIFY(m_vault->renameCurrent(u"crew.json"_s));
+    QCOMPARE(m_vault->current(), u"Ashfall/data/crew.json"_s);
+    QVERIFY(QFile::exists(m_root + u"/Ashfall/data/crew.json"_s));
 }
 
 void TestVaultController::keepsLineEndingsAndTheByteOrderMark()
