@@ -1,7 +1,8 @@
 ---
 tags: [ashfall]
 ---
-Every crossing Mara logs, in her own hand.
+Every crossing Mara logs, in her own hand. The route is drawn in [[Route]], and the
+timetable is in [crossings.csv](Records/crossings.csv).
 
 ## Ledger
 
