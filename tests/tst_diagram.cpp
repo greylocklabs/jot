@@ -120,12 +120,14 @@ void TestDiagram::keepsEmojiWhole()
 
 void TestDiagram::keepsLabelsAsWritten()
 {
-    // Only the drawing's own styles are filled in, never what a label says.
+    // Only the drawing's own styles are filled in, never what a label says. Short labels, so
+    // no font wraps them.
     const QString svg = svgOf(jot::drawDiagram(
-        u"flowchart LR\n  A[\"var(x) and getvar(--pele-bg, y)\"] --> B[\"var(--_fg)\"]"_s,
+        u"flowchart LR\n  A[\"var(x)\"] --> B[\"var(--_fg)\"] --> C[\"f(var(--pele-bg))\"]"_s,
         style()));
-    QVERIFY2(svg.contains(u">var(x) and getvar(--pele-bg,<"_s), qPrintable(svg));
+    QVERIFY2(svg.contains(u">var(x)<"_s), qPrintable(svg));
     QVERIFY(svg.contains(u">var(--_fg)<"_s));
+    QVERIFY(svg.contains(u">f(var(--pele-bg))<"_s));
 }
 
 void TestDiagram::saysWhatIsWrong()
