@@ -2,6 +2,7 @@
 
 #include "JexBuilder.h"
 
+#include "jot/DataTable.h"
 #include "jot/NoteHistory.h"
 #include "jot/Settings.h"
 
@@ -63,6 +64,8 @@ private Q_SLOTS:
     void mergesOutsideEditsToOtherLines();
     void mergesKeepingLineEndingsAndTheByteOrderMark();
     void makesNewNotesInTheNotebookShown();
+    void makesDataFilesThatOpenAsTables();
+    void namesAnEmptyNoteIntoADataFile();
     void renamingRewritesLinksAndKeepsTheTitle();
     void trashesTheNoteShown();
     void keepsAttachmentsOtherNotesUse();
@@ -858,6 +861,48 @@ void TestVaultController::makesNewNotesInTheNotebookShown()
     QCOMPARE(m_vault->current(), u"Recipes/Untitled 2.md"_s);
     QCOMPARE(m_vault->notes()->rowCount(), 4);
     QVERIFY(m_vault->currentText().startsWith(u"---\ncreated: "_s));
+}
+
+void TestVaultController::makesDataFilesThatOpenAsTables()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    m_vault->notes()->setNotebook(u"Recipes"_s);
+    QCOMPARE(m_vault->dataKinds().size(), 4);
+    for (const QVariant &each : m_vault->dataKinds()) {
+        const QString kind = each.toMap().value(u"kind"_s).toString();
+        const QString path = m_vault->newFile(kind);
+        QCOMPARE(path, u"Recipes/Untitled."_s + kind);
+        QCOMPARE(m_vault->current(), path);
+        QCOMPARE(m_vault->currentKind(), kind);
+        QCOMPARE(readFile(m_root + u'/' + path), jot::Vault::starterData(kind));
+        // One record, so it is a table from the start.
+        QString why;
+        const std::optional<jot::DataTable> table =
+            jot::DataTable::read(kind, m_vault->currentText(), &why);
+        QVERIFY2(table, qPrintable(why));
+        QCOMPARE(table->rowCount(), 1);
+    }
+    QCOMPARE(m_vault->newFile(u"json"_s), u"Recipes/Untitled 2.json"_s);
+    QVERIFY(m_vault->newFile(u"exe"_s).isEmpty());
+}
+
+void TestVaultController::namesAnEmptyNoteIntoADataFile()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    m_vault->notes()->setNotebook(u"Recipes"_s);
+    QVERIFY(!m_vault->newNote().isEmpty());
+    QVERIFY(m_vault->renameCurrent(u"Shopping.csv"_s));
+    QCOMPARE(m_vault->current(), u"Recipes/Shopping.csv"_s);
+    QCOMPARE(m_vault->currentKind(), u"csv"_s);
+    QCOMPARE(readFile(m_root + u"/Recipes/Shopping.csv"_s), jot::Vault::starterData(u"csv"_s));
+    QVERIFY(!QFileInfo::exists(m_root + u"/Recipes/Untitled.md"_s));
+
+    // A note with words in it keeps them, as a note.
+    m_vault->setCurrent(u"Recipes/Pancakes.md"_s);
+    QVERIFY(m_vault->renameCurrent(u"Pancakes.csv"_s));
+    QCOMPARE(m_vault->currentKind(), u"markdown"_s);
+    QVERIFY(m_vault->current().endsWith(u".md"_s));
+    QVERIFY(m_vault->currentText().contains(u"flour"_s, Qt::CaseInsensitive));
 }
 
 void TestVaultController::renamingRewritesLinksAndKeepsTheTitle()

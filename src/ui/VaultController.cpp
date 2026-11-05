@@ -540,6 +540,36 @@ QString VaultController::newNote(const QString &title)
     return *path;
 }
 
+QVariantList VaultController::dataKinds()
+{
+    QVariantList kinds;
+    for (const auto &[kind, label] :
+         {std::pair{u"json"_s, tr("JSON file")}, std::pair{u"csv"_s, tr("CSV file")},
+          std::pair{u"tsv"_s, tr("TSV file")}, std::pair{u"yaml"_s, tr("YAML file")}})
+        kinds << QVariantMap{{u"kind"_s, kind}, {u"label"_s, label}};
+    return kinds;
+}
+
+QString VaultController::newFile(const QString &kind)
+{
+    if (!m_vault)
+        return {};
+    saveNow();
+    const QString folder = m_notes.tag().isEmpty() ? m_notes.notebook() : QString();
+    QString error;
+    const std::optional<QString> path =
+        m_vault->createDataFile(folder, tr("Untitled"), kind, &error);
+    if (!path) {
+        qCWarning(lcVault) << "could not make a file:" << error;
+        setProblem(tr("Could not make a file: %1").arg(error));
+        return {};
+    }
+    m_index->update({*path});
+    reloadModels();
+    setCurrent(*path);
+    return *path;
+}
+
 bool VaultController::renameCurrent(const QString &title)
 {
     const QString wanted = title.trimmed();
@@ -547,6 +577,44 @@ bool VaultController::renameCurrent(const QString &title)
         return false;
     saveNow();
     const QString folder = m_current.contains(u'/') ? m_current.section(u'/', 0, -2) : QString();
+
+    // A note with nothing in it yet, named "people.csv", becomes a CSV file. One with words in
+    // it stays a note, so nothing it holds is lost.
+    const QString typed = QFileInfo(wanted).suffix().toLower();
+    if (!Vault::isDataFile(m_current) && Vault::kDataSuffixes.contains(typed)) {
+        const NoteParts parts = splitFrontMatter(m_currentText);
+        QStringList keys = readFrontMatter(parts.frontMatter).keys();
+        keys.removeOne(u"created"_s);
+        keys.removeOne(u"title"_s);
+        if (parts.body.trimmed().isEmpty() && keys.isEmpty()) {
+            const QString base = Vault::fileNameFor(wanted.chopped(typed.size() + 1).trimmed());
+            const QString to =
+                m_vault->freePath(folder, base.isEmpty() ? tr("Untitled") : base, u'.' + typed);
+            QString error;
+            const auto expect = [this](const QString &path, const QString &text) {
+                if (m_watcher)
+                    m_watcher->expectWrite(path, text);
+            };
+            forgetHistoryKept(m_current);
+            if (!renameNote(*m_vault, *m_index, m_current, to, &error, expect)) {
+                qCWarning(lcVault) << "could not rename" << m_current << error;
+                resyncAfterRename(m_current, to);
+                setProblem(tr("Could not rename the note: %1").arg(error));
+                return false;
+            }
+            m_trail.moved(m_current, to);
+            m_current = to;
+            readCurrent();
+            m_currentText = Vault::starterData(typed);
+            setUnsaved(true);
+            saveNow();
+            m_index->update({m_current});
+            reloadModels();
+            Q_EMIT currentChanged();
+            return true;
+        }
+    }
+
     // A data file keeps its kind: a name typed without the extension gets it back.
     const bool data = Vault::isDataFile(m_current);
     const QString suffix = data ? u'.' + QFileInfo(m_current).suffix() : u".md"_s;
