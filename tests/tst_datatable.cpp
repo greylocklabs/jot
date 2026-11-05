@@ -38,6 +38,7 @@ private Q_SLOTS:
     void addsRenamesAndRemovesJsonColumns();
     void writesNestedValuesInTheFilesStyle();
     void keepsACompactFileCompact();
+    void keepsJsonLineEndings();
     void readsCsvWithQuotesAndLineEndings();
     void editsCsvKeepingQuotingAndShortRows();
     void addsAndRemovesCsvRowsAndColumns();
@@ -178,6 +179,20 @@ void TestDataTable::writesNestedValuesInTheFilesStyle()
     QVERIFY(!table.setValue(0, 2, {Type::Nested, u"[1,"_s}, &error));
     QVERIFY(!error.isEmpty());
     QVERIFY(!table.setValue(0, 2, {Type::Nested, u"3"_s}, &error));
+}
+
+void TestDataTable::keepsJsonLineEndings()
+{
+    QString windows = kExercises;
+    windows.replace(u"\n"_s, u"\r\n"_s);
+    DataTable table = *DataTable::read(u"json"_s, windows);
+    // A new field, a nested value over lines, and a new record all end lines as the file does.
+    QVERIFY(table.addColumn(u"tempo"_s));
+    QVERIFY(table.setValue(0, 4, {Type::Nested, u"{\"bpm\": 60}"_s}));
+    QVERIFY(table.insertRow(2));
+    QVERIFY(table.setValue(2, 0, {Type::String, u"Arpeggios"_s}));
+    QVERIFY(!table.text().remove(u"\r\n"_s).contains(u'\n'));
+    QVERIFY(table.text().contains(u"\"tempo\": {\r\n      \"bpm\": 60\r\n    }"_s));
 }
 
 void TestDataTable::keepsACompactFileCompact()

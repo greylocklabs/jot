@@ -263,11 +263,12 @@ QString compact(const JsonNode &node)
 
 /// A value written as JSON.stringify writes it with `indent`, its inner lines `depth` levels
 /// in; all on one line when `indent` is empty.
-QString pretty(const JsonNode &node, const QString &indent, int depth, const QString &colon)
+QString pretty(const JsonNode &node, const QString &indent, int depth, const QString &colon,
+               const QString &newline = u"\n"_s)
 {
     const bool flat = indent.isEmpty();
-    const QString inner = u'\n' + indent.repeated(depth + 1);
-    const QString outer = u'\n' + indent.repeated(depth);
+    const QString inner = newline + indent.repeated(depth + 1);
+    const QString outer = newline + indent.repeated(depth);
     switch (node.kind) {
     case JsonNode::Kind::String: return quoted(node.text);
     case JsonNode::Kind::Object: {
@@ -276,7 +277,7 @@ QString pretty(const JsonNode &node, const QString &indent, int depth, const QSt
         QStringList parts;
         for (const JsonMember &member : node.members)
             parts.append(quoted(member.key) + colon +
-                         pretty(member.value, indent, depth + 1, colon));
+                         pretty(member.value, indent, depth + 1, colon, newline));
         return flat ? u'{' + parts.join(u',') + u'}'
                     : u'{' + inner + parts.join(u',' + inner) + outer + u'}';
     }
@@ -285,7 +286,7 @@ QString pretty(const JsonNode &node, const QString &indent, int depth, const QSt
             return u"[]"_s;
         QStringList parts;
         for (const JsonNode &item : node.items)
-            parts.append(pretty(item, indent, depth + 1, colon));
+            parts.append(pretty(item, indent, depth + 1, colon, newline));
         return flat ? u'[' + parts.join(u',') + u']'
                     : u'[' + inner + parts.join(u',' + inner) + outer + u']';
     }
@@ -538,7 +539,8 @@ QString DataTable::jsonValue(const DataValue &value, int depth) const
     case DataValue::Type::Nested: {
         JsonReader reader(value.text);
         const std::optional<JsonNode> node = reader.readDocument();
-        return node ? pretty(*node, m_indent, depth, m_indent.isEmpty() ? u":"_s : u": "_s)
+        return node ? pretty(*node, m_indent, depth, m_indent.isEmpty() ? u":"_s : u": "_s,
+                             newline())
                     : value.text;
     }
     default: return value.text;
@@ -654,11 +656,11 @@ bool DataTable::setValue(int row, int column, const DataValue &value, QString *e
     else if (oneLine && !record.fields.isEmpty())
         gap = u" "_s;
     else
-        gap = u'\n' + (record.fields.isEmpty() ? lineIndent(record.span.start) + m_indent
-                                               : lineIndent(record.fields.first().key.start));
+        gap = newline() + (record.fields.isEmpty() ? lineIndent(record.span.start) + m_indent
+                                                   : lineIndent(record.fields.first().key.start));
     if (record.fields.isEmpty()) {
         const QString close =
-            m_indent.isEmpty() ? QString() : u'\n' + lineIndent(record.span.start);
+            m_indent.isEmpty() ? QString() : newline() + lineIndent(record.span.start);
         return patch(record.span, u'{' + gap + member + close + u'}');
     }
     const Field *before = nullptr;
