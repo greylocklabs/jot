@@ -1064,11 +1064,26 @@ void TestNoteEditor::editsAListOfRecordsAsATable()
     m_vault->setCurrent(u"cast.json"_s);
     QMetaObject::invokeMethod(find(u"viewSwitch"_s), "clicked");
 
-    // Text that is no list of records says why when asked for a table.
-    find(u"body"_s)->setProperty("text", u"{\"not\": \"records\"}"_s);
+    // Text that is no list of records cannot be asked to be a table, and typing one in
+    // leaves the text showing until a table is asked for.
+    QQuickItem *body = find(u"body"_s);
+    body->setProperty("text", u"{\"not\": \"records\"}"_s);
+    QTRY_VERIFY(!find(u"viewSwitch"_s)->isEnabled());
+    body->setProperty("text", u"[{\"name\": \"Mo\"}]"_s);
+    QTRY_VERIFY(find(u"viewSwitch"_s)->isEnabled());
+    QVERIFY(body->isVisible());
     QMetaObject::invokeMethod(find(u"viewSwitch"_s), "clicked");
-    QVERIFY(find(u"body"_s)->isVisible());
-    QVERIFY(find(u"tableWhy"_s)->isVisible());
+    QVERIFY(find(u"tableView"_s)->isVisible());
+
+    // A file that is no table opens as its text, with no table to ask for.
+    QFile schema(m_root + u"/cast.schema.json"_s);
+    QVERIFY(schema.open(QIODevice::WriteOnly));
+    schema.write("{\"type\": \"array\"}\n");
+    schema.close();
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"cast.schema.json"_s), 3000);
+    m_vault->setCurrent(u"cast.schema.json"_s);
+    QVERIFY(body->isVisible());
+    QVERIFY(!find(u"viewSwitch"_s)->isEnabled());
 }
 
 void TestNoteEditor::checksATableAgainstItsSchema()

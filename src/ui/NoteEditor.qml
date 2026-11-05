@@ -97,8 +97,6 @@ Rectangle {
     }
     /// A list of records opens as a table; this says to show its text instead.
     property bool showText: false
-    /// Why the text could not be shown as a table, after asking for one.
-    property string tableWhy
     readonly property bool tableShown: dataFile && !showText && tableModel.table
     /// A data file, such as JSON or CSV, is edited as plain text, without Markdown's styling.
     readonly property bool dataFile: Vault.currentKind !== "markdown"
@@ -143,10 +141,12 @@ Rectangle {
             dataStyler.document = body.textDocument
         else
             styler.document = body.textDocument
-        if (another)
-            showText = false
-        tableWhy = ""
+        // The kind first, so the text is read as what it is, not as the last file was.
+        tableModel.kind = dataFile ? Vault.currentKind : ""
         tableModel.text = Vault.currentText
+        // What opens as text stays text while it is typed into, until a table is asked for.
+        if (another)
+            showText = !tableModel.table
         loaded = Vault.current
         body.cursorPosition = Math.min(cursor, body.length)
         title.show(Vault.currentTitle)
@@ -381,16 +381,15 @@ Rectangle {
                     objectName: "viewSwitch"
                     y: parent.firstLineMiddle - height / 2
                     visible: root.dataFile
+                    // Only text that reads as a list of records can be a table.
+                    enabled: root.tableShown || tableModel.table
                     text: root.tableShown ? qsTr("Edit as text") : qsTr("Edit as table")
                     onClicked: {
                         if (root.tableShown) {
                             root.showText = true
                         } else {
                             tableModel.text = body.text
-                            root.showText = false
-                            root.tableWhy = tableModel.table ? "" : qsTr(
-                                                                   "Not a list of records: %1").arg(
-                                                                   tableModel.why)
+                            root.showText = !tableModel.table
                         }
                     }
                 }
@@ -542,18 +541,6 @@ Rectangle {
                 }
             }
 
-            Text {
-                objectName: "tableWhy"
-                width: parent.width - 2 * parent.padding
-                visible: root.dataFile && !root.tableShown && root.tableWhy !== ""
-                text: root.tableWhy
-                textFormat: Text.PlainText
-                wrapMode: Text.WordWrap
-                color: Theme.textMuted
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.textSm
-            }
-
             DataTableView {
                 id: tableView
 
@@ -643,6 +630,8 @@ Rectangle {
                     if (root.loading || root.loaded !== Vault.current)
                         return
                     Vault.edit(text)
+                    if (root.dataFile && !root.tableShown)
+                        tableCheck.restart()
                     // Once the cursor has moved too, so it is read where the typing ended.
                     Qt.callLater(findLink)
                 }
@@ -770,10 +759,20 @@ Rectangle {
                     onLeaveRequested: root.leftNote()
                 }
 
+                // The text is read for a table once typing pauses, so Edit as table can say
+                // whether it would work.
+                Timer {
+                    id: tableCheck
+                    interval: 300
+                    onTriggered: {
+                        if (root.dataFile && !root.tableShown)
+                            tableModel.text = body.text
+                    }
+                }
+
                 DataTableModel {
                     id: tableModel
 
-                    kind: root.dataFile ? Vault.currentKind : ""
                     path: root.dataFile ? Vault.root + "/" + Vault.current : ""
                     // An edit in the table is the file's new text, which the text view shows too.
                     onEdited: text => {
