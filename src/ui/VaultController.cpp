@@ -206,12 +206,14 @@ void VaultController::takeOutsideEdit(const QString &theirs)
 
 void VaultController::keepConflict(const QString &theirs)
 {
-    const QString stem = Vault::titleFromPath(m_current);
+    QString stem = Vault::titleFromPath(m_current);
+    if (Vault::isDataFile(m_current))
+        stem.truncate(stem.lastIndexOf(u'.'));
     const QString folder = m_current.contains(u'/') ? m_current.section(u'/', 0, -2) : QString();
     const QString title =
         tr("%1 (conflict %2)")
             .arg(stem, QDateTime::currentDateTime().toString(u"yyyy-MM-dd HHmm"_s));
-    const QString path = m_vault->freePath(folder, title);
+    const QString path = m_vault->freePathLike(m_current, folder, title);
     QString error;
     if (notefile::write(m_vault->absolute(path), theirs, &error))
         qCWarning(lcVault) << m_current
@@ -552,15 +554,8 @@ bool VaultController::renameCurrent(const QString &title)
     if (data && name.endsWith(suffix, Qt::CaseInsensitive))
         name.chop(suffix.size());
     QString to = (folder.isEmpty() ? QString() : folder + u'/') + name + suffix;
-    if (to.compare(m_current, Qt::CaseSensitive) != 0 && QFileInfo::exists(m_vault->absolute(to))) {
-        if (data) {
-            for (int n = 2; QFileInfo::exists(m_vault->absolute(to)); ++n)
-                to = (folder.isEmpty() ? QString() : folder + u'/') + u"%1 %2"_s.arg(name).arg(n) +
-                     suffix;
-        } else {
-            to = m_vault->freePath(folder, wanted);
-        }
-    }
+    if (to.compare(m_current, Qt::CaseSensitive) != 0 && QFileInfo::exists(m_vault->absolute(to)))
+        to = m_vault->freePathLike(m_current, folder, data ? name : wanted);
 
     QString error;
     if (to != m_current) {
@@ -735,7 +730,7 @@ bool VaultController::moveNoteTo(const QString &path, const QString &notebook)
     if (folder == notebook)
         return false;
     saveNow();
-    const QString to = m_vault->freePath(notebook, Vault::titleFromPath(path));
+    const QString to = m_vault->freePathLike(path, notebook, Vault::titleFromPath(path));
     QString error;
     const auto expect = [this](const QString &note, const QString &text) {
         if (m_watcher)
@@ -935,11 +930,13 @@ QString VaultController::attachmentPath(const QString &target, bool wiki) const
             m_current.contains(u'/') ? m_current.section(u'/', 0, -2) : QString();
         const QString decoded = QUrl::fromPercentEncoding(target.section(u'#', 0, 0).toUtf8());
         const QString path = QDir::cleanPath(folder.isEmpty() ? decoded : folder + u'/' + decoded);
-        if (!path.startsWith(u"../"_s) && QFileInfo(m_vault->absolute(path)).isFile())
+        if (!path.startsWith(u"../"_s) && !Vault::isListed(path) &&
+            QFileInfo(m_vault->absolute(path)).isFile())
             return m_vault->absolute(path);
     }
     const QString path = m_index->resolve(target, m_current);
-    if (path.isEmpty() || path.endsWith(u".md"_s) || !(wiki || !target.contains(u':')))
+    // Notes and data files open in Jot; anything else is an attachment.
+    if (path.isEmpty() || Vault::isListed(path) || !(wiki || !target.contains(u':')))
         return {};
     const QString file = m_vault->absolute(path);
     return QFileInfo(file).isFile() ? file : QString();
@@ -950,14 +947,14 @@ QVariantMap VaultController::preview(const QString &target) const
     if (!m_index || m_current.isEmpty())
         return {};
     const QString path = m_index->resolve(target, m_current);
-    const std::optional<NoteInfo> info =
-        path.endsWith(u".md"_s) ? m_index->note(path) : std::nullopt;
+    const std::optional<NoteInfo> info = Vault::isListed(path) ? m_index->note(path) : std::nullopt;
     if (!info)
         return {};
     QString error;
     const QString text = notefile::read(m_vault->absolute(path), &error).value_or(QString());
     // Enough to recognize the note by, cut at a line so no Markdown is left half open.
-    QString body = splitFrontMatter(text).body.toString().trimmed();
+    QString body =
+        Vault::isDataFile(path) ? text.trimmed() : splitFrontMatter(text).body.toString().trimmed();
     constexpr qsizetype kLength = 600;
     if (body.size() > kLength) {
         const qsizetype cut = body.lastIndexOf(u'\n', kLength);
@@ -1245,7 +1242,7 @@ void VaultController::showInFiles(const QString &path) const
 {
     if (!m_vault)
         return;
-    const QString folder = path.endsWith(u".md"_s) ? Vault::notebookOf(path) : path;
+    const QString folder = Vault::isListed(path) ? Vault::notebookOf(path) : path;
     QDesktopServices::openUrl(QUrl::fromLocalFile(m_vault->absolute(folder)));
 }
 

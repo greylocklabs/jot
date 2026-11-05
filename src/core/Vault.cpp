@@ -348,11 +348,25 @@ QString Vault::linkTarget(const QString &from, const QString &to)
 
 QString Vault::freePath(const QString &folder, const QString &title) const
 {
-    const QString base = fileNameFor(title);
-    QString path = join(folder, base + kNoteSuffix);
+    return freePath(folder, title, kNoteSuffix);
+}
+
+QString Vault::freePath(const QString &folder, const QString &title, const QString &suffix) const
+{
+    QString base = fileNameFor(title);
+    if (base.endsWith(suffix, Qt::CaseInsensitive))
+        base.chop(suffix.size());
+    QString path = join(folder, base + suffix);
     for (int n = 2; QFileInfo::exists(absolute(path)); ++n)
-        path = join(folder, u"%1 %2"_s.arg(base).arg(n) + kNoteSuffix);
+        path = join(folder, u"%1 %2"_s.arg(base).arg(n) + suffix);
     return path;
+}
+
+QString Vault::freePathLike(const QString &path, const QString &folder, const QString &title) const
+{
+    if (!isDataFile(path))
+        return freePath(folder, title);
+    return freePath(folder, title, path.sliced(path.lastIndexOf(u'.')));
 }
 
 std::optional<QString> Vault::createNote(const QString &folder, const QString &title,

@@ -59,6 +59,7 @@ private Q_SLOTS:
     void saysWhenEachVersionIsFrom();
     void aRestoreThatCannotBeSavedChangesNothing();
     void keepsTheOtherVersionWhenBothChanged();
+    void keepsTheOtherVersionOfADataFileAsOne();
     void mergesOutsideEditsToOtherLines();
     void mergesKeepingLineEndingsAndTheByteOrderMark();
     void makesNewNotesInTheNotebookShown();
@@ -784,6 +785,20 @@ void TestVaultController::keepsTheOtherVersionWhenBothChanged()
     QCOMPARE(readFile(m_root + u"/Welcome.md"_s), u"Mine\n"_s);
 }
 
+void TestVaultController::keepsTheOtherVersionOfADataFileAsOne()
+{
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/cast.csv"_s, u"name\nMara\n"_s, &error));
+    QVERIFY(m_vault->openPath(m_root));
+    m_vault->setSaveDelay(60000);
+    m_vault->setCurrent(u"cast.csv"_s);
+    m_vault->edit(u"name\nMara Vey\n"_s);
+    QVERIFY(notefile::write(m_root + u"/cast.csv"_s, u"name\nSoren\n"_s, &error));
+    // The other version is kept as a CSV file too, never a note.
+    QTRY_COMPARE_WITH_TIMEOUT(QDir(m_root).entryList({u"cast (conflict *).csv"_s}).size(), 1, 3000);
+    QVERIFY(QDir(m_root).entryList({u"*conflict*.md"_s}).isEmpty());
+}
+
 void TestVaultController::mergesOutsideEditsToOtherLines()
 {
     QString error;
@@ -963,6 +978,28 @@ void TestVaultController::opensAndRenamesDataFiles()
     QVERIFY(m_vault->renameCurrent(u"crew.json"_s));
     QCOMPARE(m_vault->current(), u"Ashfall/data/crew.json"_s);
     QVERIFY(QFile::exists(m_root + u"/Ashfall/data/crew.json"_s));
+
+    // Moved to another notebook it stays JSON, byte for byte, and a link to it follows.
+    m_vault->setCurrent(u"Ashfall/Pitch.md"_s);
+    m_vault->edit(m_vault->currentText() + u"\nSee [the crew](data/crew.json).\n"_s);
+    m_vault->saveNow();
+    m_vault->setCurrent(u"Ashfall/data/crew.json"_s);
+    const QByteArray bytes = "[{\"name\": \"Mara Vey\", \"note\": \"[x](y.md)\"}]\n";
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write(bytes);
+    file.close();
+    m_vault->edit(QString::fromUtf8(bytes));
+    m_vault->saveNow();
+    QVERIFY(m_vault->moveNoteTo(u"Ashfall/data/crew.json"_s, u"Inbox"_s));
+    QCOMPARE(m_vault->current(), u"Inbox/crew.json"_s);
+    QFile moved(m_root + u"/Inbox/crew.json"_s);
+    QVERIFY(moved.open(QIODevice::ReadOnly));
+    QCOMPARE(moved.readAll(), bytes);
+    QString error;
+    QVERIFY(notefile::read(m_root + u"/Ashfall/Pitch.md"_s, &error)
+                ->contains(u"(../Inbox/crew.json)"_s));
+    // A link to it opens it in Jot rather than as an attachment.
+    QVERIFY(m_vault->attachmentPath(u"../Inbox/crew.json"_s, false).isEmpty());
 }
 
 void TestVaultController::keepsLineEndingsAndTheByteOrderMark()
