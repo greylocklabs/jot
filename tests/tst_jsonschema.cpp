@@ -126,6 +126,16 @@ void TestJsonSchema::readsYamlAndCsvAsJson()
     QCOMPARE(jot::dataAsJson(u"yaml"_s, u"- name: '31'\n"_s), json("[{\"name\": \"31\"}]"));
     QCOMPARE(jot::dataAsJson(u"csv"_s, u"name,age,lead,note\nMo,31,true,\n"_s),
              json("[{\"name\": \"Mo\", \"age\": 31, \"lead\": true}]"));
+    // Aliases stand for what their anchor named, and merge keys bring a mapping's fields in,
+    // under the fields written beside them; a quoted << is only a key.
+    QCOMPARE(jot::dataAsJson(u"yaml"_s, u"- &base {name: Mo, role: lead}\n"
+                                        "- {<<: *base, role: chorus}\n"
+                                        "- {<<: [*base, {age: 3}], name: Al}\n"
+                                        "- {owner: *base, '<<': x}\n"_s),
+             json("[{\"name\": \"Mo\", \"role\": \"lead\"},"
+                  " {\"name\": \"Mo\", \"role\": \"chorus\"},"
+                  " {\"name\": \"Al\", \"role\": \"lead\", \"age\": 3},"
+                  " {\"owner\": {\"name\": \"Mo\", \"role\": \"lead\"}, \"<<\": \"x\"}]"));
     QString error;
     QVERIFY(!jot::dataAsJson(u"json"_s, u"[1,"_s, &error));
     QVERIFY(!error.isEmpty());
@@ -176,6 +186,10 @@ void TestJsonSchema::placesProblemsAtTheirLines()
     QCOMPARE(missing.size(), 1);
     QCOMPARE(missing.first().line, 2);
     QCOMPARE(missing.first().message, u"name: is required"_s);
+    // A merge key fills a required field, and is no field of its own.
+    QVERIFY(jot::checkDataFile(dir.filePath(u"cast.yaml"_s),
+                               u"- &mo {name: Mo}\n- {<<: *mo, role: lead}\n- *mo\n"_s)
+                .isEmpty());
     // A file that does not read says so before anything else.
     QCOMPARE(jot::checkDataFile(dir.filePath(u"cast.json"_s), u"[1,"_s).size(), 1);
 }
