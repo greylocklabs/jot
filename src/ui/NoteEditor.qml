@@ -95,6 +95,11 @@ Rectangle {
         Theme.name
         return Theme.noteFontFamily("mono")
     }
+    /// A list of records in JSON, CSV or TSV opens as a table; this says to show its text instead.
+    property bool showText: false
+    /// Why the text could not be shown as a table, after asking for one.
+    property string tableWhy
+    readonly property bool tableShown: dataFile && !showText && tableModel.table
     /// A data file, such as JSON or CSV, is edited as plain text, without Markdown's styling.
     readonly property bool dataFile: Vault.currentKind !== "markdown"
 
@@ -138,6 +143,10 @@ Rectangle {
             dataStyler.document = body.textDocument
         else
             styler.document = body.textDocument
+        if (another)
+            showText = false
+        tableWhy = ""
+        tableModel.text = Vault.currentText
         loaded = Vault.current
         body.cursorPosition = Math.min(cursor, body.length)
         title.show(Vault.currentTitle)
@@ -306,7 +315,8 @@ Rectangle {
         Column {
             id: page
 
-            width: Math.min(flick.width, Theme.editorWidth + 2 * Theme.space7)
+            width: root.dataFile ? flick.width : Math.min(flick.width, Theme.editorWidth + 2
+                                                          * Theme.space7)
             x: (flick.width - width) / 2
             padding: Theme.space7
             spacing: Theme.space5
@@ -327,7 +337,9 @@ Rectangle {
                         shown = value
                     }
 
-                    width: parent.width - trash.width - parent.spacing
+                    width: parent.width - trash.width - parent.spacing - (viewSwitch.visible
+                                                                          ? viewSwitch.width
+                                                                            + parent.spacing : 0)
                     readOnly: !Vault.writable
                     wrapMode: TextInput.Wrap
                     color: Theme.text
@@ -348,6 +360,26 @@ Rectangle {
                     Keys.onEscapePressed: {
                         show(Vault.currentTitle)
                         root.editBody()
+                    }
+                }
+                // A list of records shows as a table or as its text.
+                StickerButton {
+                    id: viewSwitch
+
+                    objectName: "viewSwitch"
+                    anchors.verticalCenter: title.verticalCenter
+                    visible: root.dataFile && Vault.currentKind !== "yaml"
+                    text: root.tableShown ? qsTr("Edit as text") : qsTr("Edit as table")
+                    onClicked: {
+                        if (root.tableShown) {
+                            root.showText = true
+                        } else {
+                            tableModel.text = body.text
+                            root.showText = false
+                            root.tableWhy = tableModel.table ? "" : qsTr(
+                                                                   "Not a list of records: %1").arg(
+                                                                   tableModel.why)
+                        }
                     }
                 }
                 DangerButton {
@@ -471,6 +503,29 @@ Rectangle {
                 }
             }
 
+            Text {
+                objectName: "tableWhy"
+                width: parent.width - 2 * parent.padding
+                visible: root.dataFile && !root.tableShown && root.tableWhy !== ""
+                text: root.tableWhy
+                textFormat: Text.PlainText
+                wrapMode: Text.WordWrap
+                color: Theme.textMuted
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.textSm
+            }
+
+            DataTableView {
+                id: tableView
+
+                objectName: "tableView"
+                visible: root.tableShown
+                width: parent.width - 2 * parent.padding
+                // The rest of the window below the title, scrolled inside the table.
+                height: Math.max(240, flick.height - title.height - 2 * page.padding - page.spacing)
+                records: tableModel
+            }
+
             // The note drawn to read, in place of the text to write in.
             TextEdit {
                 id: reader
@@ -528,7 +583,7 @@ Rectangle {
                 id: body
 
                 objectName: "body"
-                visible: !Settings.readMode || root.dataFile
+                visible: (!Settings.readMode || root.dataFile) && !root.tableShown
 
                 width: parent.width - 2 * parent.padding
                 readOnly: !Vault.writable
@@ -674,6 +729,19 @@ Rectangle {
                     enabled: Settings.viMode
                     busy: linkPopup.visible
                     onLeaveRequested: root.leftNote()
+                }
+
+                DataTableModel {
+                    id: tableModel
+
+                    kind: root.dataFile ? Vault.currentKind : ""
+                    // An edit in the table is the file's new text, which the text view shows too.
+                    onEdited: text => {
+                        root.loading = true
+                        body.text = text
+                        root.loading = false
+                        Vault.edit(text)
+                    }
                 }
 
                 DataStyler {

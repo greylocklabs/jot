@@ -1,4 +1,5 @@
 #include "DataStyler.h"
+#include "DataTableModel.h"
 #include "MarkdownStyler.h"
 #include "SettingsForeign.h"
 #include "ThemeController.h"
@@ -67,6 +68,7 @@ private Q_SLOTS:
     void writesInTheChosenFont();
     void editsDataFilesAsPlainText();
     void colorsNumbersAndChecksDataFiles();
+    void editsAListOfRecordsAsATable();
     void readsTheNoteWithLinksAndBoxesToTick();
     void tickingARepeatingToDoWritesTheNext();
     void editsInViModes();
@@ -833,6 +835,8 @@ void TestNoteEditor::editsDataFilesAsPlainText()
     file.close();
     m_settings->setReadMode(true);
     m_vault->setCurrent(u"cast.json"_s);
+    // A list of records opens as a table; this is about its text.
+    m_editor->setProperty("showText", true);
     // Switching fonts on the way in sends nothing of the last note into this one.
     QCOMPARE(m_vault->currentText(), u"[{\"name\": \"**Mara**\"}]\n"_s);
     QVERIFY(!m_vault->unsaved());
@@ -859,6 +863,7 @@ void TestNoteEditor::colorsNumbersAndChecksDataFiles()
     file.write("[\n  {\"name\": \"Mara [the ferrywoman]\"},\n  {\"name\": 3}\n]\n");
     file.close();
     m_vault->setCurrent(u"cast.json"_s);
+    m_editor->setProperty("showText", true);
     QQuickItem *body = find(u"body"_s);
     auto *styler = body->findChild<DataStyler *>();
     QVERIFY(styler);
@@ -902,6 +907,60 @@ void TestNoteEditor::colorsNumbersAndChecksDataFiles()
     QTest::mouseClick(m_window.get(), Qt::LeftButton, {}, middle.toPoint());
     QTRY_COMPARE(body->property("cursorPosition").toInt(), styler->problemPosition());
     QVERIFY(styler->problemPosition() > 0);
+}
+
+void TestNoteEditor::editsAListOfRecordsAsATable()
+{
+    QFile file(m_root + u"/cast.json"_s);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write(
+        "[\n  {\"name\": \"Mara\", \"age\": 31},\n  {\"name\": \"Soren\", \"age\": 40}\n]\n");
+    file.close();
+    m_vault->setCurrent(u"cast.json"_s);
+
+    // A list of records opens as a table, in place of its text.
+    QQuickItem *view = find(u"tableView"_s);
+    QVERIFY(view->isVisible());
+    QVERIFY(!find(u"body"_s)->isVisible());
+    auto *records = view->property("records").value<DataTableModel *>();
+    QVERIFY(records);
+    QCOMPARE(records->rowCount(), 2);
+    QCOMPARE(records->columns(), (QStringList{u"name"_s, u"age"_s}));
+
+    // Typing over a cell keeps its type, and the file changes there alone.
+    auto *table = view->findChild<QQuickItem *>(u"table"_s);
+    QVERIFY(table);
+    table->forceActiveFocus();
+    view->setProperty("row", 1);
+    view->setProperty("column", 1);
+    QTest::keyClick(m_window.get(), '4');
+    QTest::keyClick(m_window.get(), '1');
+    QTRY_VERIFY(view->findChild<QQuickItem *>(u"cellEditor"_s)->isVisible());
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    QTRY_COMPARE(
+        m_vault->currentText(),
+        u"[\n  {\"name\": \"Mara\", \"age\": 31},\n  {\"name\": \"Soren\", \"age\": 41}\n]\n"_s);
+    QTRY_VERIFY_WITH_TIMEOUT(!m_vault->unsaved(), 2000);
+
+    // Sorting shows the rows in another order without touching the file.
+    records->sortBy(0);
+    records->sortBy(0);
+    QCOMPARE(records->data(records->index(0, 0)).toString(), u"Soren"_s);
+    QVERIFY(m_vault->currentText().indexOf(u"Mara"_s) < m_vault->currentText().indexOf(u"Soren"_s));
+
+    // Undo puts the file back; the text view shows what the table wrote.
+    records->undo();
+    QTRY_VERIFY(m_vault->currentText().contains(u"\"age\": 40"_s));
+    find(u"viewSwitch"_s)->setProperty("checked", false);
+    QMetaObject::invokeMethod(find(u"viewSwitch"_s), "clicked");
+    QVERIFY(find(u"body"_s)->isVisible());
+    QVERIFY(find(u"body"_s)->property("text").toString().contains(u"\"age\": 40"_s));
+
+    // Text that is no list of records says why when asked for a table.
+    find(u"body"_s)->setProperty("text", u"{\"not\": \"records\"}"_s);
+    QMetaObject::invokeMethod(find(u"viewSwitch"_s), "clicked");
+    QVERIFY(find(u"body"_s)->isVisible());
+    QVERIFY(find(u"tableWhy"_s)->isVisible());
 }
 
 void TestNoteEditor::editsInViModes()

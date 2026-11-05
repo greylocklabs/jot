@@ -22,6 +22,8 @@ qt_add_qml_module(jotui
         CodeHighlighter.cpp
         DataStyler.h
         DataStyler.cpp
+        DataTableModel.h
+        DataTableModel.cpp
         EmojiList.h
         EmojiList.cpp
         MarkdownHighlighter.h
@@ -67,6 +69,7 @@ qt_add_qml_module(jotui
         Backlinks.qml
         CheckBox.qml
         CloseButton.qml
+        DataTableView.qml
         ColumnSplitter.qml
         CommandPalette.qml
         ConflictResolver.qml
