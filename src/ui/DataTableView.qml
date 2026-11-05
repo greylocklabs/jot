@@ -151,11 +151,42 @@ Item {
         font.weight: Theme.weightStrong
     }
 
+    // What breaks the schema: the picked cell's reason, else how many values do.
+    Text {
+        id: schemaLine
+
+        readonly property string here: root.records.columns.length > 0 && root.records.rowCount()
+                                       > 0 ? root.records.data(root.records.index(root.row,
+                                                                                  root.column),
+                                                               DataTableModel.ProblemRole) || "" :
+                                             ""
+
+        objectName: "schemaLine"
+        anchors.top: problem.bottom
+        anchors.topMargin: Theme.space2
+        width: parent.width
+        visible: text !== ""
+        text: {
+            const problems = root.records.schemaProblems
+            if (problems.length === 0)
+                return ""
+            if (here !== "")
+                return here
+            return qsTr("%n value(s) break %1: %2", "", problems.length).arg(
+                        root.records.schemaFile.split("/").pop()).arg(problems[0])
+        }
+        textFormat: Text.PlainText
+        wrapMode: Text.WordWrap
+        color: Theme.danger
+        font.family: Theme.fontFamily
+        font.pixelSize: Theme.textSm
+    }
+
     HorizontalHeaderView {
         id: header
 
         objectName: "tableHeader"
-        anchors.top: problem.bottom
+        anchors.top: schemaLine.visible ? schemaLine.bottom : problem.bottom
         anchors.topMargin: Theme.space3
         anchors.left: table.left
         anchors.right: parent.right
@@ -347,10 +378,12 @@ Item {
             required property string display
             required property string type
             required property bool stray
+            required property string problem
             readonly property bool picked: root.row === row && root.column === column
 
             implicitHeight: 32
-            color: stray ? Theme.tint(Theme.danger, 0.18) : Theme.bg
+            color: problem !== "" ? Theme.tint(Theme.danger, 0.3) : stray ? Theme.tint(Theme.danger,
+                                                                                       0.18) : Theme.bg
             border.width: picked ? 2 : 1
             border.color: picked ? Theme.accent : Theme.border
 
@@ -417,6 +450,53 @@ Item {
         Keys.onTabPressed: {
             root.commit()
             root.pick(root.row, root.column + 1)
+        }
+    }
+
+    // The values the schema allows, under the cell being typed in; a click takes one.
+    Rectangle {
+        id: choiceList
+
+        readonly property var choices: cellEditor.visible ? root.records.choices(root.column) : []
+        readonly property var shown: choices.filter(c => c.toLowerCase().includes(
+                                                             cellEditor.text.toLowerCase())
+                                                         || cellEditor.text === cellEditor.original)
+
+        objectName: "choices"
+        visible: cellEditor.visible && shown.length > 0
+        z: 3
+        x: cellEditor.x
+        y: cellEditor.y + cellEditor.height
+        width: Math.max(cellEditor.width, 160)
+        height: Math.min(choiceColumn.implicitHeight, 200)
+        color: Theme.surface
+        border.color: Theme.border
+        radius: Theme.radiusSm
+        clip: true
+
+        Column {
+            id: choiceColumn
+
+            width: parent.width
+
+            Repeater {
+                model: choiceList.shown
+
+                ItemDelegate {
+                    required property string modelData
+
+                    width: choiceColumn.width
+                    text: modelData
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.textSm
+                    // Taken before the editor loses focus to the click.
+                    focusPolicy: Qt.NoFocus
+                    onClicked: {
+                        cellEditor.text = modelData
+                        root.commit()
+                    }
+                }
+            }
         }
     }
 

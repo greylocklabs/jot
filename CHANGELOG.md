@@ -19,6 +19,10 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   open in an editor of their own. Saving rewrites only what changed, so the rest of the file keeps
   its formatting, key order, quoting and line endings. Values that differ in kind from the rest
   of their column are marked. "Edit as text" shows the file as it is.
+- A data file with a JSON Schema beside it, `<name>.schema.json` or the file its `$schema` names,
+  is checked against it: the table marks each value that breaks it, says why, and offers the
+  values the schema lists while you type. `jot check data/*.json` does the same from the command
+  line, printing `file:line:column: problem` and exiting non-zero, for CI.
 - A YAML file holding a list of mappings opens as a table too. Edits keep its comments, key
   order and quoting wherever the values did not change, and nested lists and mappings edit as JSON.
 

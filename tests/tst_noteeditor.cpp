@@ -69,6 +69,7 @@ private Q_SLOTS:
     void editsDataFilesAsPlainText();
     void colorsNumbersAndChecksDataFiles();
     void editsAListOfRecordsAsATable();
+    void checksATableAgainstItsSchema();
     void readsTheNoteWithLinksAndBoxesToTick();
     void tickingARepeatingToDoWritesTheNext();
     void editsInViModes();
@@ -983,6 +984,36 @@ void TestNoteEditor::editsAListOfRecordsAsATable()
     QMetaObject::invokeMethod(find(u"viewSwitch"_s), "clicked");
     QVERIFY(find(u"body"_s)->isVisible());
     QVERIFY(find(u"tableWhy"_s)->isVisible());
+}
+
+void TestNoteEditor::checksATableAgainstItsSchema()
+{
+    const auto write = [this](const QString &name, const QByteArray &text) {
+        QFile file(m_root + u'/' + name);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write(text);
+    };
+    write(u"cast.schema.json"_s,
+          "{\"type\": \"array\", \"items\": {\"properties\": {\"role\": {\"enum\": [\"lead\", "
+          "\"chorus\"]}, \"age\": {\"type\": \"integer\"}}}}");
+    write(u"cast.json"_s, "[{\"name\": \"Mara\", \"role\": \"extra\", \"age\": 31}]\n");
+    m_vault->setCurrent(u"cast.json"_s);
+    auto *records = find(u"tableView"_s)->property("records").value<DataTableModel *>();
+    QVERIFY(records);
+
+    // The value that breaks it is marked with why, and the line says so.
+    QCOMPARE(records->schemaFile(), m_root + u"/cast.schema.json"_s);
+    QCOMPARE(records->schemaProblems().size(), 1);
+    QCOMPARE(records->data(records->index(0, 1), DataTableModel::ProblemRole).toString(),
+             u"should be one of \"lead\", \"chorus\""_s);
+    QVERIFY(records->data(records->index(0, 0), DataTableModel::ProblemRole).toString().isEmpty());
+    QVERIFY(find(u"schemaLine"_s)->isVisible());
+    // The schema's values are offered for the column, and taking one clears the mark.
+    QCOMPARE(records->choices(1), (QStringList{u"lead"_s, u"chorus"_s}));
+    QVERIFY(records->choices(0).isEmpty());
+    QVERIFY(records->setCell(0, 1, u"lead"_s));
+    QVERIFY(records->schemaProblems().isEmpty());
+    QVERIFY(!find(u"schemaLine"_s)->isVisible());
 }
 
 void TestNoteEditor::editsInViModes()

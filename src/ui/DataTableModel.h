@@ -1,8 +1,10 @@
 #pragma once
 
 #include "jot/DataTable.h"
+#include "jot/JsonSchema.h"
 
 #include <QAbstractTableModel>
+#include <QJsonValue>
 #include <QStringList>
 #include <QtQml/qqmlregistration.h>
 
@@ -32,6 +34,12 @@ class DataTableModel : public QAbstractTableModel
     Q_PROPERTY(bool sortDescending READ sortDescending NOTIFY arranged)
     /// Words a row must hold somewhere to be shown.
     Q_PROPERTY(QString filter READ filter WRITE setFilter NOTIFY arranged)
+    /// The file's own path, to find the schema beside it.
+    Q_PROPERTY(QString path READ path WRITE setPath NOTIFY schemaChanged)
+    /// The schema file the records are checked against, or empty.
+    Q_PROPERTY(QString schemaFile READ schemaFile NOTIFY schemaChanged)
+    /// What breaks the schema, outside any one cell first, as "where: why".
+    Q_PROPERTY(QStringList schemaProblems READ schemaProblems NOTIFY schemaChanged)
     Q_PROPERTY(bool canUndo READ canUndo NOTIFY historyChanged)
     Q_PROPERTY(bool canRedo READ canRedo NOTIFY historyChanged)
 
@@ -43,6 +51,8 @@ public:
         StrayRole,
         /// The record's place in the file.
         RecordRole,
+        /// Why the value breaks the schema, or empty.
+        ProblemRole,
     };
     Q_ENUM(Role)
 
@@ -66,6 +76,12 @@ public:
     [[nodiscard]] bool sortDescending() const { return m_descending; }
     [[nodiscard]] QString filter() const { return m_filter; }
     void setFilter(const QString &filter);
+    [[nodiscard]] QString path() const { return m_path; }
+    void setPath(const QString &path);
+    [[nodiscard]] QString schemaFile() const { return m_schemaFile; }
+    [[nodiscard]] QStringList schemaProblems() const { return m_schemaProblems; }
+    /// The values the schema allows in `column`, when it lists them.
+    Q_INVOKABLE QStringList choices(int column) const;
     [[nodiscard]] bool canUndo() const { return !m_undo.isEmpty(); }
     [[nodiscard]] bool canRedo() const { return !m_redo.isEmpty(); }
 
@@ -97,12 +113,17 @@ Q_SIGNALS:
     void historyChanged();
     /// The file's new text after an edit here.
     void edited(const QString &text);
+    void schemaChanged();
 
 private:
     /// Runs `change` on the table and, when it took, keeps the text before it for undo.
     bool change(const std::function<bool(DataTable &)> &change);
     void reload(const QString &text);
     void arrange();
+    /// Checks the records against the schema again.
+    void checkSchema();
+    /// The schema's rules for a record's field `name`.
+    [[nodiscard]] QJsonValue fieldRules(const QString &name) const;
     [[nodiscard]] int record(int row) const;
 
     QString m_kind;
@@ -115,6 +136,12 @@ private:
     int m_sortColumn = -1;
     bool m_descending = false;
     QString m_filter;
+    QString m_path;
+    QString m_schemaFile;
+    QJsonValue m_schema;
+    QStringList m_schemaProblems;
+    /// Problems by record and field.
+    QHash<std::pair<int, QString>, QString> m_cellProblems;
     QStringList m_undo;
     QStringList m_redo;
 };

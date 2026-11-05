@@ -24,13 +24,21 @@ int characters(QStringView text)
     return count;
 }
 
-/// The problem at UTF-16 position `index` in `text`.
-DataProblem at(const QString &text, qsizetype index, const QString &message)
+} // namespace
+
+DataProblem problemAt(const QString &text, qsizetype index, const QString &message)
 {
     index = std::clamp<qsizetype>(index, 0, text.size());
     const qsizetype lineStart = index <= 0 ? 0 : text.lastIndexOf(u'\n', index - 1) + 1;
     return {int(text.left(index).count(u'\n')) + 1,
             characters(QStringView(text).sliced(lineStart, index - lineStart)) + 1, message, index};
+}
+
+namespace {
+
+DataProblem at(const QString &text, qsizetype index, const QString &message)
+{
+    return problemAt(text, index, message);
 }
 
 /// The problem on `line` and at character `column`, both from 0, as libyaml counts them.

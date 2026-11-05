@@ -11,6 +11,7 @@ endfunction()
 
 jot_add_test(tst_datacheck)
 jot_add_test(tst_datatable)
+jot_add_test(tst_jsonschema)
 jot_add_test(tst_frontmatter)
 jot_add_test(tst_fuzzy)
 jot_add_test(tst_joplinexport)
@@ -108,3 +109,8 @@ if(EXISTS ${PROJECT_SOURCE_DIR}/www/install.sh AND CMAKE_SYSTEM_PROCESSOR STREQU
         COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/install_test.sh
             ${PROJECT_SOURCE_DIR}/www/install.sh ${CMAKE_CURRENT_SOURCE_DIR}/data/github-release.json)
 endif()
+
+# `jot check`, as CI runs it, against the built jot.
+jot_add_test(tst_checkcommand)
+target_compile_definitions(tst_checkcommand PRIVATE JOT_BINARY="$<TARGET_FILE:jot>")
+add_dependencies(tst_checkcommand jot)

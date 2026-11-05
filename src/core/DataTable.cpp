@@ -5,6 +5,8 @@
 #include <yaml.h>
 
 #include <QHash>
+#include <QJsonArray>
+#include <QJsonObject>
 #include <QObject>
 #include <QRegularExpression>
 
@@ -505,6 +507,105 @@ DataValue DataTable::value(int row, int column) const
 {
     const Field *found = field(row, column);
     return found ? found->data : DataValue();
+}
+
+qsizetype DataTable::positionOf(int row, const QString &name) const
+{
+    if (row < 0 || row >= m_rows.size())
+        return 0;
+    if (const qsizetype column = m_columns.indexOf(name); column >= 0) {
+        if (const Field *found = field(row, int(column)))
+            return found->value.start;
+    }
+    return m_rows.at(row).span.start;
+}
+
+std::optional<QJsonValue> DataTable::yamlAsJson(const QString &text, QString *error)
+{
+    const QByteArray bytes = text.toUtf8();
+    yaml_parser_t parser;
+    if (!yaml_parser_initialize(&parser))
+        return std::nullopt;
+    yaml_parser_set_input_string(&parser, reinterpret_cast<const unsigned char *>(bytes.data()),
+                                 size_t(bytes.size()));
+    // What is being built, and for a mapping the key waiting for its value.
+    QList<QJsonValue> open;
+    QList<std::optional<QString>> keys;
+    std::optional<QJsonValue> done;
+    const auto place = [&](const QJsonValue &value) {
+        if (open.isEmpty()) {
+            done = value;
+            return;
+        }
+        if (open.last().isArray()) {
+            QJsonArray array = open.last().toArray();
+            array.append(value);
+            open.last() = array;
+        } else if (!keys.last()) {
+            keys.last() = value.isString() ? value.toString() : value.toVariant().toString();
+        } else {
+            QJsonObject object = open.last().toObject();
+            object.insert(*keys.last(), value);
+            open.last() = object;
+            keys.last().reset();
+        }
+    };
+    for (;;) {
+        yaml_event_t event;
+        if (!yaml_parser_parse(&parser, &event)) {
+            if (error)
+                *error = QString::fromUtf8(parser.problem ? parser.problem : "not valid YAML");
+            yaml_parser_delete(&parser);
+            return std::nullopt;
+        }
+        const yaml_event_type_t type = event.type;
+        QJsonValue scalar;
+        if (type == YAML_SCALAR_EVENT) {
+            const QString value =
+                QString::fromUtf8(reinterpret_cast<const char *>(event.data.scalar.value),
+                                  qsizetype(event.data.scalar.length));
+            const bool plain = event.data.scalar.style == YAML_PLAIN_SCALAR_STYLE;
+            switch (plain ? yamlType(value) : DataValue::Type::String) {
+            case DataValue::Type::Null: scalar = QJsonValue::Null; break;
+            case DataValue::Type::Bool: scalar = value.toLower() == u"true"; break;
+            case DataValue::Type::Number: {
+                bool ok = false;
+                double number = QString(value).remove(u'_').toDouble(&ok);
+                if (!ok && value.startsWith(u"0x"_s))
+                    number = double(value.mid(2).toLongLong(&ok, 16));
+                if (!ok && value.startsWith(u"0o"_s))
+                    number = double(value.mid(2).toLongLong(&ok, 8));
+                scalar = ok ? QJsonValue(number) : QJsonValue(value);
+                break;
+            }
+            default: scalar = value;
+            }
+        }
+        yaml_event_delete(&event);
+        switch (type) {
+        case YAML_SEQUENCE_START_EVENT:
+            open.append(QJsonArray());
+            keys.append(std::nullopt);
+            break;
+        case YAML_MAPPING_START_EVENT:
+            open.append(QJsonObject());
+            keys.append(std::nullopt);
+            break;
+        case YAML_SEQUENCE_END_EVENT:
+        case YAML_MAPPING_END_EVENT: {
+            const QJsonValue finished = open.takeLast();
+            keys.removeLast();
+            place(finished);
+            break;
+        }
+        case YAML_SCALAR_EVENT: place(scalar); break;
+        case YAML_ALIAS_EVENT: place(QJsonValue::Null); break;
+        case YAML_STREAM_END_EVENT:
+            yaml_parser_delete(&parser);
+            return done.value_or(QJsonValue::Null);
+        default: break;
+        }
+    }
 }
 
 QString DataTable::nestedText(int row, int column) const
