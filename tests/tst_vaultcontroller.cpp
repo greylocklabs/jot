@@ -972,6 +972,8 @@ void TestVaultController::opensAndRenamesDataFiles()
     QCOMPARE(file.readAll(), QByteArray("[{\"name\": \"Mara Vey\"}]\n"));
     file.close();
 
+    m_vault->notes()->setNotebook(u"Ashfall/data"_s);
+    QCOMPARE(column(*m_vault->notes(), "title"), QStringList{u"cast.json"_s});
     // A new name keeps the extension, typed or not.
     QVERIFY(m_vault->renameCurrent(u"people"_s));
     QCOMPARE(m_vault->current(), u"Ashfall/data/people.json"_s);
@@ -979,7 +981,6 @@ void TestVaultController::opensAndRenamesDataFiles()
     QCOMPARE(m_vault->current(), u"Ashfall/data/crew.json"_s);
     QVERIFY(QFile::exists(m_root + u"/Ashfall/data/crew.json"_s));
     // The list shows the new name at once.
-    m_vault->notes()->setNotebook(u"Ashfall/data"_s);
     QCOMPARE(column(*m_vault->notes(), "title"), QStringList{u"crew.json"_s});
 
     // Moved to another notebook it stays JSON, byte for byte, and a link to it follows.
