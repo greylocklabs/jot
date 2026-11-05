@@ -27,6 +27,14 @@ struct SchemaProblem
 /// `format` is not checked, as the draft leaves it to annotate.
 [[nodiscard]] QList<SchemaProblem> checkSchema(const QJsonValue &schema, const QJsonValue &data);
 
+/// What `ref`, "#" or a JSON pointer such as "#/$defs/person", leads to within `schema`, or
+/// nothing when it leads nowhere there.
+[[nodiscard]] std::optional<QJsonValue> resolveSchemaRef(const QJsonValue &schema,
+                                                         const QString &ref);
+
+/// A value as JSON writes it, strings in quotes, all on one line.
+[[nodiscard]] QString jsonText(const QJsonValue &value);
+
 /// A data file's text as JSON values, to check: JSON as it is, YAML through its core schema,
 /// and CSV or TSV as one object per row, a number or true or false read as one and empty
 /// fields left out.
