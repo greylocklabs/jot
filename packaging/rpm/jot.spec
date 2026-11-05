@@ -33,8 +33,11 @@ BuildRequires:  pkgconf-pkg-config
 BuildRequires:  pkgconfig(yaml-0.1)
 BuildRequires:  desktop-file-utils
 BuildRequires:  libappstream-glib
+# Diagrams are drawn as SVG, which Qt reads through this plugin.
+BuildRequires:  qt6-qtsvg
 
 Requires:       hicolor-icon-theme
+Requires:       qt6-qtsvg
 # Syncing with a git repository runs git, and Git LFS for large files.
 Requires:       git-core
 Requires:       git-lfs
