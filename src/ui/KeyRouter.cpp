@@ -66,7 +66,8 @@ QList<KeyAction> KeyRouter::actions()
         // F5 alone, not the standard refresh keys: in vi mode Ctrl+R is redo.
         act(u"syncNow"_s, tr("Sync now"), window, {u"F5"_s}),
         act(u"help"_s, tr("Keyboard shortcuts"), window, {int(K::HelpContents)}, u"?"_s),
-        act(u"quit"_s, tr("Quit Jot"), window, {int(K::Quit)}),
+        // Written out: not every platform theme gives the standard Quit key one.
+        act(u"quit"_s, tr("Quit Jot"), window, {u"Ctrl+Q"_s}),
         act(u"goBack"_s, tr("Back to the note before"), window, {int(K::Back)}, u"Ctrl+O"_s),
         act(u"goForward"_s, tr("Forward to the note after"), window, {int(K::Forward)},
             u"Ctrl+I"_s),
