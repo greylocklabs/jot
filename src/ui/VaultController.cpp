@@ -574,12 +574,11 @@ bool VaultController::renameCurrent(const QString &title)
         m_current = to;
         readCurrent();
     }
-    if (data)
-        return true;
-    // The title key holds what the file name cannot; when the name can, it goes.
+    // The title key holds what the file name cannot; when the name can, it goes. A data file
+    // has no front matter, so its name is all it has.
     const QVariantMap meta = readFrontMatter(splitFrontMatter(m_currentText).frontMatter);
     const bool fits = Vault::titleFromPath(to) == wanted;
-    if (!fits || meta.contains(u"title"_s)) {
+    if (!data && (!fits || meta.contains(u"title"_s))) {
         const QString text =
             setFrontMatterKey(m_currentText, u"title"_s, fits ? QVariant() : QVariant(wanted));
         if (text != m_currentText) {
