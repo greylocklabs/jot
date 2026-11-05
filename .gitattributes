@@ -30,3 +30,5 @@ CLAUDE.md               export-ignore
 AGENTS.md               export-ignore
 RELEASING.md            export-ignore
 cliff.toml              export-ignore
+# Made by tools/vendor-pele.mjs; reviewed through its version in package.json.
+third_party/pele/pele.js linguist-generated=true -diff
