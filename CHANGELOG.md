@@ -13,6 +13,12 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 - Data files are colored by their kind, JSON and YAML by their syntax and CSV and TSV column by
   column, with line numbers and the bracket by the cursor matched to its partner. When one stops
   reading as its kind, a line above it says where and why, and a click goes there.
+- A JSON, CSV or TSV file holding a list of records opens as a table: a row per record and a
+  column per field. Edit cells in place, sort by a column, filter rows, add and remove rows and
+  columns, rename columns, and undo. JSON keeps its numbers, booleans and nulls, and nested values
+  open in an editor of their own. Saving rewrites only what changed, so the rest of the file keeps
+  its formatting, key order, quoting and line endings. Values that differ in kind from the rest
+  of their column are marked. "Edit as text" shows the file as it is.
 
 ## 0.2.0 - 2026-11-03
 

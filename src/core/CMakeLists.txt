@@ -36,6 +36,8 @@ configure_file(SyncBuildConfig.h.in "${CMAKE_CURRENT_BINARY_DIR}/generated/jot/S
 add_library(jotcore STATIC
     jot/DataCheck.h
     DataCheck.cpp
+    jot/DataTable.h
+    DataTable.cpp
     jot/FrontMatter.h
     FrontMatter.cpp
     jot/Fuzzy.h
