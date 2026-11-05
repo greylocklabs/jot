@@ -56,6 +56,7 @@ private Q_SLOTS:
     void typingKeepsWindowsLineEndings();
     void anOutsideEditKeepsTheCursorWhereItWas();
     void showsImagesInPlaceOfTheirLinks();
+    void drawsDiagramsInPlaceOfTheirText();
     void switchingAwayFromAPictureLeavesNoStalePlace();
     void formatsAndUndoesInOneStep();
     void formatsFromTheKeyboard();
@@ -71,6 +72,7 @@ private Q_SLOTS:
     void editsAListOfRecordsAsATable();
     void checksATableAgainstItsSchema();
     void readsTheNoteWithLinksAndBoxesToTick();
+    void readsDiagramsAsPictures();
     void tickingARepeatingToDoWritesTheNext();
     void editsInViModes();
     void jumpsAlongALineInVi();
@@ -448,6 +450,44 @@ void TestNoteEditor::showsImagesInPlaceOfTheirLinks()
     QTRY_VERIFY_WITH_TIMEOUT(blueInk() > 1000, 3000);
 }
 
+void TestNoteEditor::drawsDiagramsInPlaceOfTheirText()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    auto *styler = m_editor->findChild<QObject *>(u"styler"_s);
+    QVERIFY(styler);
+    const auto diagrams = [styler] {
+        QVariantList found;
+        for (const QVariant &each : styler->property("images").toList()) {
+            if (each.toMap().value(u"source"_s).toUrl().path().endsWith(u".svg"_s))
+                found.append(each);
+        }
+        return found;
+    };
+    const QString text =
+        u"# Plan\n\n```mermaid\nflowchart LR\n  A[Write] --> B[Read]\n```\n\nafter\n"_s;
+    body->forceActiveFocus();
+    body->setProperty("text", text);
+    body->setProperty("cursorPosition", int(text.size()) - 2);
+    QTRY_COMPARE(diagrams().size(), 1);
+    const QVariantMap shown = diagrams().first().toMap();
+    QCOMPARE(shown.value(u"position"_s).toInt(), int(text.indexOf(u"```"_s)));
+    QVERIFY(shown.value(u"height"_s).toInt() > 20);
+
+    // In its fence it is the text again, to edit.
+    body->setProperty("cursorPosition", int(text.indexOf(u"Write"_s)));
+    QTRY_COMPARE(diagrams().size(), 0);
+    body->setProperty("cursorPosition", int(text.size()) - 2);
+    QTRY_COMPARE(diagrams().size(), 1);
+
+    // A diagram with a mistake in it stays as its text.
+    QString wrong = text;
+    wrong.replace(u"A[Write]"_s, u"A[Write"_s);
+    body->setProperty("text", wrong);
+    body->setProperty("cursorPosition", int(wrong.size()) - 2);
+    QTRY_COMPARE(diagrams().size(), 0);
+}
+
 int TestNoteEditor::blueInk()
 {
     const QImage image = m_window->grabWindow();
@@ -774,6 +814,38 @@ void TestNoteEditor::readsTheNoteWithLinksAndBoxesToTick()
     QVERIFY(m_settings->sourceMode());
     QTRY_VERIFY(find(u"body"_s)->isVisible());
     m_settings->setSourceMode(false);
+}
+
+void TestNoteEditor::readsDiagramsAsPictures()
+{
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Diagrams.md"_s,
+                            u"# Plan\n\n```mermaid\nflowchart LR\n  A[Write] --> B[Read]\n```\n\n"
+                            "```mermaid\nflowchart LR\n  C[Broken --> D\n```\n"_s,
+                            &error));
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Diagrams.md"_s), 3000);
+    m_vault->setCurrent(u"Diagrams.md"_s);
+    m_settings->setReadMode(true);
+    QQuickItem *reader = find(u"reader"_s);
+    QTRY_VERIFY(reader->isVisible());
+    auto *doc = reader->property("textDocument").value<QQuickTextDocument *>()->textDocument();
+    QTRY_VERIFY(doc->toPlainText().contains(u"Plan"_s));
+
+    QList<QTextImageFormat> pictures;
+    for (QTextBlock block = doc->begin(); block.isValid(); block = block.next()) {
+        for (auto it = block.begin(); !it.atEnd(); ++it) {
+            if (it.fragment().charFormat().isImageFormat())
+                pictures.append(it.fragment().charFormat().toImageFormat());
+        }
+    }
+    QCOMPARE(pictures.size(), 1);
+    QVERIFY(pictures.first().name().endsWith(u".svg"_s));
+    QVERIFY(pictures.first().width() > 20);
+    const QString shown = doc->toPlainText();
+    QVERIFY2(!shown.contains(u"A[Write]"_s), qPrintable(shown));
+    // One with a mistake in it is shown as its code.
+    QVERIFY2(shown.contains(u"C[Broken --> D"_s), qPrintable(shown));
+    m_settings->setReadMode(false);
 }
 
 void TestNoteEditor::tickingARepeatingToDoWritesTheNext()

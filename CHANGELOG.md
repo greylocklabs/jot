@@ -23,6 +23,10 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   is checked against it: the table marks each value that breaks it, says why, and offers the
   values the schema lists while you type. `jot check data/*.json` does the same from the command
   line, printing `file:line:column: problem` and exiting non-zero, for CI.
+- Mermaid diagrams in a `mermaid` code block are drawn in place, in the theme's colors and the
+  note's font, in the editor and in Read. Put the cursor in the block to edit its text. A diagram
+  with a mistake in it stays as code. Drawn by [Pele](https://pele.run), inside Jot: nothing is
+  fetched from the web.
 - A YAML file holding a list of mappings opens as a table too. Edits keep its comments, key
   order and quoting wherever the values did not change, and nested lists and mappings edit as JSON.
 

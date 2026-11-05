@@ -4,10 +4,13 @@
 #include "ThemeController.h"
 #include "VaultController.h"
 
+#include "jot/Diagram.h"
 #include "jot/FrontMatter.h"
 #include "jot/NoteScan.h"
 
 #include <QImage>
+#include <QImageReader>
+#include <QRegularExpression>
 #include <QTextBlock>
 #include <QTextCursor>
 #include <QTextDocument>
@@ -22,6 +25,40 @@ using namespace Qt::StringLiterals;
 namespace jot {
 
 namespace {
+
+/// Gives `markdown` with each diagram fence drawn as an image of it; one that cannot be drawn
+/// stays as its code.
+QString drawDiagrams(const QString &markdown, const DiagramStyle &style)
+{
+    static const QRegularExpression opening(uR"(^ {0,3}(`{3,}|~{3,})\s*([^\s`{]*))"_s);
+    const QStringList lines = markdown.split(u'\n');
+    QStringList out;
+    for (qsizetype i = 0; i < lines.size(); ++i) {
+        const QRegularExpressionMatch fence = opening.match(lines.at(i));
+        if (!fence.hasMatch()) {
+            out.append(lines.at(i));
+            continue;
+        }
+        // The fence closes on a line of the same marks, at least as many, and nothing else.
+        const QString marks = fence.captured(1);
+        const QRegularExpression closing(u"^ {0,3}"_s + QRegularExpression::escape(marks.left(1)) +
+                                         u"{%1,}\\s*$"_s.arg(marks.size()));
+        qsizetype end = i + 1;
+        while (end < lines.size() && !closing.match(lines.at(end)).hasMatch())
+            ++end;
+        const Diagram diagram = end < lines.size() && isDiagramLanguage(fence.capturedView(2))
+                                    ? drawDiagram(lines.mid(i + 1, end - i - 1).join(u'\n'), style)
+                                    : Diagram();
+        if (diagram.ok()) {
+            out.append(u"![Diagram](<%1>)"_s.arg(QUrl::fromLocalFile(diagram.path).toString()));
+        } else {
+            for (qsizetype k = i; k <= end && k < lines.size(); ++k)
+                out.append(lines.at(k));
+        }
+        i = end;
+    }
+    return out.join(u'\n');
+}
 
 bool isCode(const QTextBlock &block)
 {
@@ -102,11 +139,13 @@ void NoteReader::render()
     if (!doc)
         return;
     const NoteParts parts = splitFrontMatter(m_text);
-    const QString markdown = readingMarkdown(parts.body, [](const QString &target) {
+    QString markdown = readingMarkdown(parts.body, [](const QString &target) {
         const VaultController *vault = VaultController::instance();
         const QString path = vault ? vault->attachmentPath(target, true) : QString();
         return path.isEmpty() ? QString() : QUrl::fromLocalFile(path).toString();
     });
+    const ThemeController &theme = *ThemeController::instance();
+    markdown = drawDiagrams(markdown, theme.diagramStyle(m_fontFamily, m_pixelSize));
     doc->setUndoRedoEnabled(false);
     doc->setMarkdown(markdown, QTextDocument::MarkdownDialectGitHub);
 
@@ -263,13 +302,26 @@ void NoteReader::placeImages()
             const QString path = url.isLocalFile() ? url.toLocalFile()
                                  : vault           ? vault->attachmentPath(format.name(), false)
                                                    : QString();
-            const QImage image(path);
+            QImageReader reader(path);
+            QImage image;
+            QSize shown;
+            if (reader.format() == "svg" && reader.size().isValid() && !reader.size().isEmpty()) {
+                // A drawing is read at twice the size it is shown, to stay sharp on a dense screen.
+                const QSize natural = reader.size();
+                shown = natural.width() > m_width
+                            ? QSize(m_width, natural.height() * m_width / natural.width())
+                            : natural;
+                reader.setScaledSize(shown * 2);
+                image = reader.read();
+            } else {
+                image = QImage(path);
+                if (image.width() > m_width)
+                    image = image.scaledToWidth(m_width, Qt::SmoothTransformation);
+                shown = image.size();
+            }
             if (image.isNull())
                 continue;
-            const QImage shown = image.width() > m_width
-                                     ? image.scaledToWidth(m_width, Qt::SmoothTransformation)
-                                     : image;
-            doc->addResource(QTextDocument::ImageResource, url, shown);
+            doc->addResource(QTextDocument::ImageResource, url, image);
             format.setWidth(shown.width());
             format.setHeight(shown.height());
             QTextCursor span(doc);

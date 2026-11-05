@@ -2,6 +2,8 @@
 
 #include "CodeHighlighter.h"
 
+#include "jot/Diagram.h"
+
 #include <QFileInfo>
 #include <QFontMetricsF>
 #include <QImageReader>
@@ -130,6 +132,12 @@ bool MarkdownHighlighter::imageLine(const QString &text)
     // On the cursor's line the link shows instead, to be edited.
     if (m_cursorHere)
         return false;
+    showImage(text, int(m.capturedLength(1)), path, shown);
+    return true;
+}
+
+void MarkdownHighlighter::showImage(const QString &text, int bang, const QString &path, QSize shown)
+{
     auto *image = new Image;
     image->path = path;
     image->size = shown;
@@ -137,7 +145,6 @@ bool MarkdownHighlighter::imageLine(const QString &text)
 
     // The line's one visible character is made exactly as tall as the image and no wider,
     // which reserves the room the image is drawn into; the rest folds away.
-    const int bang = int(m.capturedLength(1));
     QFont font;
     if (!m_look.family.isEmpty())
         font.setFamily(m_look.family);
@@ -153,6 +160,42 @@ bool MarkdownHighlighter::imageLine(const QString &text)
     setFormat(bang, 1, tall);
     mark(0, bang);
     mark(bang + 1, int(text.size()) - bang - 1);
+}
+
+std::pair<int, int> MarkdownHighlighter::diagramFence(const QTextBlock &block) const
+{
+    QTextBlock open = block;
+    while (open.previous().isValid() && kindOf(open.previous().userState()) == InFence)
+        open = open.previous();
+    const QRegularExpressionMatch opening = fencePattern().match(open.text());
+    if (!opening.hasMatch() || !isDiagramLanguage(opening.capturedView(2)))
+        return {-1, -1};
+    for (QTextBlock line = open.next(); line.isValid(); line = line.next()) {
+        if (fencePattern().match(line.text()).hasMatch()) {
+            // A block past the fence is in none.
+            if (block.blockNumber() > line.blockNumber())
+                return {-1, -1};
+            return {open.blockNumber(), line.blockNumber()};
+        }
+    }
+    return {-1, -1};
+}
+
+bool MarkdownHighlighter::diagramLine(const QString &text, int last)
+{
+    QStringList lines;
+    for (QTextBlock line = currentBlock().next(); line.isValid() && line.blockNumber() < last;
+         line = line.next())
+        lines.append(line.text());
+    const Diagram diagram = drawDiagram(lines.join(u'\n'), m_look.diagram);
+    if (!diagram.ok())
+        return false;
+    // Only narrowed to fit: a diagram is read, so it is never shrunk to an image's height.
+    QSize shown = diagram.size;
+    if (shown.width() > m_look.imageWidth)
+        shown = QSize(m_look.imageWidth,
+                      diagram.size.height() * m_look.imageWidth / diagram.size.width());
+    showImage(text, 0, diagram.path, shown);
     return true;
 }
 
@@ -165,9 +208,20 @@ void MarkdownHighlighter::setCursorPosition(int position)
         return;
     const int before = m_cursorBlock;
     m_cursorBlock = block;
+    // A diagram shows as its text while the cursor is anywhere in its fence.
+    const auto refresh = [this](int number) {
+        const QTextBlock line = document()->findBlockByNumber(number);
+        const auto [first, last] = diagramFence(line);
+        if (first < 0) {
+            rehighlightBlock(line);
+            return;
+        }
+        for (int i = first; i <= last; ++i)
+            rehighlightBlock(document()->findBlockByNumber(i));
+    };
     if (before >= 0)
-        rehighlightBlock(document()->findBlockByNumber(before));
-    rehighlightBlock(document()->findBlockByNumber(block));
+        refresh(before);
+    refresh(block);
 }
 
 void MarkdownHighlighter::setSourceMode(bool source)
@@ -248,6 +302,22 @@ void MarkdownHighlighter::highlightBlock(const QString &text)
 
     const QRegularExpressionMatch fence = fencePattern().match(text);
     if (state == InFence || fence.hasMatch()) {
+        if (const auto [first, last] = diagramFence(currentBlock());
+            first >= 0 && (m_cursorBlock < first || m_cursorBlock > last)) {
+            const int number = currentBlock().blockNumber();
+            if (number == first && diagramLine(text, last)) {
+                setCurrentBlockState(fenceState(fence.captured(2), {}));
+                return;
+            }
+            // The rest of a drawn diagram's fence folds away under it.
+            if (number != first &&
+                dynamic_cast<const Image *>(document()->findBlockByNumber(first).userData())) {
+                mark(0, int(text.size()));
+                if (number != last)
+                    setCurrentBlockState(fenceState(QString(), {}));
+                return;
+            }
+        }
         merge(0, int(text.size()), code);
         if (fence.hasMatch()) {
             merge(0, int(text.size()), faint);

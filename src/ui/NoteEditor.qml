@@ -841,6 +841,7 @@ Rectangle {
 
                 MarkdownStyler {
                     id: styler
+                    objectName: "styler"
 
                     sourceMode: Settings.sourceMode
                     fontFamily: root.noteFamily

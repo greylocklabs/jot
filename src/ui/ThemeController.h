@@ -1,6 +1,7 @@
 #pragma once
 
 #include "greylock/ThemeSpec.h"
+#include "jot/Diagram.h"
 
 #include <QColor>
 #include <QEasingCurve>
@@ -233,6 +234,23 @@ public:
     int treeIndent() const { return 14; }
     int editorWidth() const { return 760; }
     int imageHeight() const { return 360; }
+    /// The theme as diagrams in notes are drawn, in the note's own font and size.
+    [[nodiscard]] DiagramStyle diagramStyle(const QString &family, int pixelSize) const
+    {
+        DiagramStyle style;
+        style.background = bg();
+        style.text = text();
+        style.muted = textMuted();
+        // Boxes take the code blocks' color, so they stand off the page in every theme.
+        style.surface = surfaceAlt();
+        style.surfaceAlt = surface();
+        style.border = border();
+        style.accent = accent();
+        style.fontFamily = family.isEmpty() ? fontFamily() : family;
+        style.monoFamily = monoFontFamily();
+        style.pixelSize = pixelSize;
+        return style;
+    }
     int listRowHeight() const { return 28; }
     int switchHeight() const { return 26; }
     int badgeSize() const { return 10; }
