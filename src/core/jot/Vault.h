@@ -19,7 +19,8 @@ struct VaultEntry
 };
 
 /// A folder of Markdown notes, as docs/FORMAT.md describes it. Folders are notebooks and
-/// `.md` files are notes. Nothing here is cached: the files are the truth.
+/// `.md` files are notes; data files (JSON, CSV, TSV and YAML) are listed beside them. Nothing
+/// here is cached: the files are the truth.
 class Vault
 {
 public:
@@ -39,12 +40,19 @@ public:
     /// False for a vault from a newer Jot, which this one only reads.
     [[nodiscard]] bool writable() const { return format() <= kFormat; }
 
-    /// Every folder and note, parents before children, each folder's contents in
+    /// Every folder, note and data file, parents before children, each folder's contents in
     /// natural order ("Ch 2" before "Ch 10"). Hidden files, `.jot` and each note's
     /// `.assets` folder are left out.
     [[nodiscard]] QList<VaultEntry> entries() const;
-    /// The notes alone, in the same order.
+    /// The notes and data files alone, in the same order.
     [[nodiscard]] QStringList notes() const;
+
+    /// The extensions of the data files listed beside the notes.
+    static const QStringList kDataSuffixes;
+    /// Whether `path` names a data file: JSON, CSV, TSV or YAML.
+    [[nodiscard]] static bool isDataFile(const QString &path);
+    /// Whether `path` names a note or a data file, which the vault lists.
+    [[nodiscard]] static bool isListed(const QString &path);
     [[nodiscard]] QString absolute(const QString &path) const;
     /// The vault path of a file inside the vault, or empty for one outside it.
     [[nodiscard]] QString relative(const QString &absolutePath) const;

@@ -285,6 +285,27 @@ void VaultIndex::read(const QString &path)
         qCWarning(lcVault) << "index: could not read" << path << error;
         return;
     }
+    QSqlDatabase db = QSqlDatabase::database(m_connection);
+    // A data file is found by its name and its words; it has no front matter, links or tasks.
+    if (Vault::isDataFile(path)) {
+        const QString title = Vault::titleFromPath(path);
+        QSqlQuery note(db);
+        note.prepare(u"INSERT INTO notes VALUES (?, ?, ?, ?, '', '', '', '', '')"_s);
+        for (const QVariant &value :
+             {QVariant(path), QVariant(title), QVariant(stamp->size), QVariant(stamp->modified)})
+            note.addBindValue(value.toString());
+        exec(note, "data file");
+        const QVariant row = note.lastInsertId();
+        QSqlQuery fts(db);
+        fts.prepare(u"INSERT INTO notes_fts (rowid, path, title, aliases, tags, body) VALUES (?, "
+                    u"?, ?, '', '', ?)"_s);
+        fts.addBindValue(row);
+        fts.addBindValue(path);
+        fts.addBindValue(title);
+        fts.addBindValue(*text);
+        exec(fts, "search text");
+        return;
+    }
     const NoteParts parts = splitFrontMatter(*text);
     const QVariantMap meta = readFrontMatter(parts.frontMatter);
     const NoteScan scan = scanNote(parts.body, bodyFirstLine(*text, parts.body));
@@ -315,7 +336,6 @@ void VaultIndex::read(const QString &path)
     if (task != u"open" && task != u"done")
         task.clear();
 
-    QSqlDatabase db = QSqlDatabase::database(m_connection);
     QSqlQuery note(db);
     note.prepare(u"INSERT INTO notes VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"_s);
     for (const QVariant &value :

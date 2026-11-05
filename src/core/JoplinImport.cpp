@@ -312,8 +312,10 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
     // files, as two empty notes would be, give none rather than a guess that could overwrite one.
     const auto findMoved = [&](const QString &id, const QString &wanted) -> QString {
         if (!scanned) {
-            for (const QString &path : vault.notes())
-                pathsBySha.insert(sha(textOf(path)), path);
+            for (const QString &path : vault.notes()) {
+                if (!Vault::isDataFile(path))
+                    pathsBySha.insert(sha(textOf(path)), path);
+            }
             scanned = true;
         }
         QStringList candidates;

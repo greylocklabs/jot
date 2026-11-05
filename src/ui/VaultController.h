@@ -69,6 +69,9 @@ class VaultController : public QObject
     Q_PROPERTY(QString current READ current WRITE setCurrent NOTIFY currentChanged)
     Q_PROPERTY(QString currentTitle READ currentTitle NOTIFY currentTitleChanged)
     Q_PROPERTY(QString currentText READ currentText NOTIFY currentChanged)
+    /// The open file's kind: "markdown" for a note, else its data format: "json", "csv", "tsv"
+    /// or "yaml".
+    Q_PROPERTY(QString currentKind READ currentKind NOTIFY currentChanged)
     Q_PROPERTY(QVariantList currentConflicts READ currentConflicts NOTIFY currentConflictsChanged)
     /// Whether a to-do ticked from the task view, or a task note completed, can be undone or
     /// redone. Ticks typed in the editor are the editor's own to undo.
@@ -289,6 +292,7 @@ public:
     [[nodiscard]] QString current() const { return m_current; }
     void setCurrent(const QString &path);
     [[nodiscard]] QString currentTitle() const;
+    [[nodiscard]] QString currentKind() const;
     [[nodiscard]] QString currentText() const { return m_currentText; }
     [[nodiscard]] bool unsaved() const { return m_unsaved; }
     [[nodiscard]] QString problem() const { return m_problem; }

@@ -157,7 +157,7 @@ void Vault::collect(const QString &folder, QList<VaultEntry> &into) const
                 noteNames.contains(name.chopped(kAssetsSuffix.size())))
                 continue;
             kept.append(info);
-        } else if (name.endsWith(kNoteSuffix)) {
+        } else if (isListed(name)) {
             kept.append(info);
         }
     }
@@ -208,6 +208,20 @@ QString Vault::relative(const QString &absolutePath) const
     return relative.startsWith(u"../"_s) || relative == u".." || QDir::isAbsolutePath(relative)
                ? QString()
                : relative;
+}
+
+const QStringList Vault::kDataSuffixes = {u"json"_s, u"csv"_s, u"tsv"_s, u"yaml"_s, u"yml"_s};
+
+bool Vault::isDataFile(const QString &path)
+{
+    const qsizetype dot = path.lastIndexOf(u'.');
+    return dot > path.lastIndexOf(u'/') + 1 &&
+           kDataSuffixes.contains(path.sliced(dot + 1), Qt::CaseInsensitive);
+}
+
+bool Vault::isListed(const QString &path)
+{
+    return path.endsWith(kNoteSuffix) || isDataFile(path);
 }
 
 QString Vault::titleFromPath(const QString &path)

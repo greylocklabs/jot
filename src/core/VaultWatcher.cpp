@@ -123,7 +123,7 @@ void VaultWatcher::snapshot(const QString &folder, QHash<QString, Seen> &notes,
                 name.endsWith(u".assets"_s) && noteNames.contains(name.chopped(7));
             if (!attachments && !info.isSymLink())
                 folders.insert(path);
-        } else if (name.endsWith(kNoteSuffix)) {
+        } else if (Vault::isListed(name)) {
             struct stat status{};
             if (::stat(QFile::encodeName(info.filePath()).constData(), &status) != 0)
                 continue;

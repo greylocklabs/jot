@@ -24,6 +24,7 @@ private Q_SLOTS:
     void removesEmptyAttachmentFolders();
     void listsNotebooksAndNotesInNaturalOrder();
     void leavesHiddenFilesAndAttachmentsOut();
+    void listsDataFilesBesideNotes();
     void ordersNamesNaturally_data();
     void ordersNamesNaturally();
     void namesFilesSafely_data();
@@ -135,6 +136,28 @@ void TestVault::leavesHiddenFilesAndAttachmentsOut()
     QCOMPARE(m_vault->entries(), (QList<VaultEntry>{{u"Mara.md"_s, false},
                                                     {u"Old.assets"_s, true},
                                                     {u"Old.assets/Note.md"_s, false}}));
+}
+
+void TestVault::listsDataFilesBesideNotes()
+{
+    write(u"Cast.json"_s);
+    write(u"Mara.md"_s);
+    write(u"Places.YAML"_s);
+    write(u"data/rows.csv"_s);
+    write(u"data/rows.tsv"_s);
+    write(u"data/config.yml"_s);
+    // Other files are attachments, and a dot alone is no extension.
+    write(u"data/notes.txt"_s);
+    write(u"data/.json"_s);
+    write(u"sketch.png"_s);
+
+    QCOMPARE(m_vault->notes(),
+             (QStringList{u"Cast.json"_s, u"data/config.yml"_s, u"data/rows.csv"_s,
+                          u"data/rows.tsv"_s, u"Mara.md"_s, u"Places.YAML"_s}));
+    QVERIFY(Vault::isDataFile(u"a/b.Json"_s));
+    QVERIFY(!Vault::isDataFile(u"a.json/b"_s));
+    QVERIFY(!Vault::isDataFile(u"Mara.md"_s));
+    QCOMPARE(Vault::titleFromPath(u"data/rows.csv"_s), u"rows.csv"_s);
 }
 
 void TestVault::ordersNamesNaturally_data()

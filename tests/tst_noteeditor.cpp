@@ -48,6 +48,7 @@ private Q_SLOTS:
     void showsAndResolvesAConflictCopy();
     void goesBackToWhereTheCursorWas();
     void typingIsDrawnAndSaved();
+    void typingAfterAMoveIsSaved();
     void typingKeepsWindowsLineEndings();
     void anOutsideEditKeepsTheCursorWhereItWas();
     void showsImagesInPlaceOfTheirLinks();
@@ -61,6 +62,7 @@ private Q_SLOTS:
     void completesWikilinksFromTheKeyboard();
     void togglesSourceMode();
     void writesInTheChosenFont();
+    void editsDataFilesAsPlainText();
     void readsTheNoteWithLinksAndBoxesToTick();
     void tickingARepeatingToDoWritesTheNext();
     void editsInViModes();
@@ -226,6 +228,21 @@ void TestNoteEditor::typingIsDrawnAndSaved()
 
     QString error;
     QVERIFY(notefile::read(m_root + u"/Welcome.md"_s, &error)->endsWith(u"And **bold** words."_s));
+}
+
+void TestNoteEditor::typingAfterAMoveIsSaved()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QVERIFY(m_vault->moveNoteTo(u"Welcome.md"_s, u"Inbox"_s));
+    QCOMPARE(m_vault->current(), u"Inbox/Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    body->forceActiveFocus();
+    body->setProperty("cursorPosition", body->property("length"));
+    QTest::keyClick(m_window.get(), 'Z');
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->currentText().endsWith(u'Z'), 2000);
+    QTRY_VERIFY_WITH_TIMEOUT(!m_vault->unsaved(), 2000);
+    QString error;
+    QVERIFY(notefile::read(m_root + u"/Inbox/Welcome.md"_s, &error)->endsWith(u'Z'));
 }
 
 void TestNoteEditor::typingKeepsWindowsLineEndings()
@@ -802,6 +819,33 @@ void TestNoteEditor::writesInTheChosenFont()
     m_settings->setNoteFont({});
     QCOMPARE(family(), theme.editorFontFamily());
     QCOMPARE(styler->fontFamily(), theme.editorFontFamily());
+}
+
+void TestNoteEditor::editsDataFilesAsPlainText()
+{
+    QFile file(m_root + u"/cast.json"_s);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write("[{\"name\": \"**Mara**\"}]\n");
+    file.close();
+    m_settings->setReadMode(true);
+    m_vault->setCurrent(u"cast.json"_s);
+    // Switching fonts on the way in sends nothing of the last note into this one.
+    QCOMPARE(m_vault->currentText(), u"[{\"name\": \"**Mara**\"}]\n"_s);
+    QVERIFY(!m_vault->unsaved());
+    // Its text as it is, in the mono font, even in read mode, with no Markdown bar or styling.
+    QQuickItem *body = find(u"body"_s);
+    QVERIFY(body->isVisible());
+    QVERIFY(!find(u"reader"_s)->isVisible());
+    QVERIFY(!find(u"formatBar"_s)->isVisible());
+    QCOMPARE(body->property("text").toString(), u"[{\"name\": \"**Mara**\"}]\n"_s);
+    QCOMPARE(body->property("font").value<QFont>().family(), u"monospace"_s);
+    QVERIFY(!body->findChild<MarkdownStyler *>()->document());
+
+    // A note after it is styled again.
+    m_settings->setReadMode(false);
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QVERIFY(body->findChild<MarkdownStyler *>()->document());
+    QVERIFY(find(u"formatBar"_s)->isVisible());
 }
 
 void TestNoteEditor::editsInViModes()
