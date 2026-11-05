@@ -463,9 +463,7 @@ Rectangle {
                 TapHandler {
                     onTapped: {
                         body.forceActiveFocus()
-                        body.cursorPosition = Math.min(dataStyler.positionOfLine(
-                                                           dataStyler.problem.line)
-                                                       + dataStyler.problem.column - 1, body.length)
+                        body.cursorPosition = Math.min(dataStyler.problemPosition(), body.length)
                     }
                 }
                 HoverHandler {

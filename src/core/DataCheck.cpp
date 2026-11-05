@@ -13,12 +13,40 @@ namespace jot {
 
 namespace {
 
-/// The line and column, from 1, of character `index` in `text`.
+/// Characters in `text`, a pair of UTF-16 units for an emoji counting once.
+int characters(QStringView text)
+{
+    int count = 0;
+    for (qsizetype i = 0; i < text.size(); ++i) {
+        if (!(text.at(i).isLowSurrogate() && i > 0 && text.at(i - 1).isHighSurrogate()))
+            ++count;
+    }
+    return count;
+}
+
+/// The problem at UTF-16 position `index` in `text`.
 DataProblem at(const QString &text, qsizetype index, const QString &message)
 {
     index = std::clamp<qsizetype>(index, 0, text.size());
     const qsizetype lineStart = text.lastIndexOf(u'\n', index - 1) + 1;
-    return {int(text.left(index).count(u'\n')) + 1, int(index - lineStart) + 1, message};
+    return {int(text.left(index).count(u'\n')) + 1,
+            characters(QStringView(text).sliced(lineStart, index - lineStart)) + 1, message, index};
+}
+
+/// The problem on `line` and at character `column`, both from 0, as libyaml counts them.
+DataProblem atCharacter(const QString &text, int line, int column, const QString &message)
+{
+    qsizetype index = 0;
+    for (int l = 0; l < line && index >= 0; ++l) {
+        index = text.indexOf(u'\n', index);
+        if (index >= 0)
+            ++index;
+    }
+    if (index < 0)
+        index = text.size();
+    for (int c = 0; c < column && index < text.size() && text.at(index) != u'\n'; ++c)
+        index += text.at(index).isHighSurrogate() && index + 1 < text.size() ? 2 : 1;
+    return at(text, index, message);
 }
 
 DataProblem checkJson(const QString &text)
@@ -48,9 +76,9 @@ DataProblem checkYaml(const QString &text)
             QString message = QString::fromUtf8(parser.problem ? parser.problem : "");
             if (parser.context)
                 message = QString::fromUtf8(parser.context) + u", "_s + message;
-            // libyaml counts lines and columns from 0, in characters.
-            problem = {int(parser.problem_mark.line) + 1, int(parser.problem_mark.column) + 1,
-                       message.isEmpty() ? QObject::tr("not valid YAML") : message};
+            problem =
+                atCharacter(text, int(parser.problem_mark.line), int(parser.problem_mark.column),
+                            message.isEmpty() ? QObject::tr("not valid YAML") : message);
             break;
         }
         const bool end = event.type == YAML_STREAM_END_EVENT;

@@ -110,7 +110,7 @@ void DataStyler::setDocument(QQuickTextDocument *document)
     if (m_document == document)
         return;
     if (m_document && m_document->textDocument())
-        disconnect(m_document->textDocument(), nullptr, this, nullptr);
+        disconnect(m_document->textDocument(), nullptr, &m_check, nullptr);
     delete m_highlighter;
     m_document = document;
     if (m_document && m_document->textDocument()) {
@@ -158,7 +158,7 @@ void DataStyler::checkNow()
                              : u""_s;
     const DataProblem found = m_document ? checkData(m_kind, text) : DataProblem();
     if (found.line == m_problem.line && found.column == m_problem.column &&
-        found.message == m_problem.message)
+        found.position == m_problem.position && found.message == m_problem.message)
         return;
     m_problem = found;
     Q_EMIT problemChanged();
@@ -181,14 +181,6 @@ QVariantList DataStyler::lineTops(qreal top, qreal bottom) const
         lines.append(QVariantMap{{u"number"_s, number}, {u"y"_s, box.top()}});
     }
     return lines;
-}
-
-int DataStyler::positionOfLine(int line) const
-{
-    if (!m_document || !m_document->textDocument())
-        return 0;
-    const QTextBlock block = m_document->textDocument()->findBlockByNumber(std::max(line - 1, 0));
-    return block.isValid() ? block.position() : 0;
 }
 
 QVariantList DataStyler::brackets(int position) const

@@ -46,13 +46,17 @@ void TestDataCheck::saysWhereAFileStopsReading_data()
     QTest::addColumn<QString>("text");
     QTest::addColumn<int>("line");
     QTest::addColumn<int>("column");
+    QTest::addColumn<int>("position");
     // Qt places it just past the stray brace; columns count characters, so the accent before it
     // counts once.
-    QTest::newRow("json") << u"json"_s << u"[\n  {\"name\": \"Zoë\",}\n]\n"_s << 2 << 19;
-    QTest::newRow("yaml") << u"yaml"_s << u"name: Mara\n  bad: [indent\n"_s << 2 << 6;
-    QTest::newRow("unclosed quote") << u"csv"_s << u"a,b\n1,\"two\n3,4\n"_s << 2 << 3;
-    QTest::newRow("text after quote") << u"csv"_s << u"a,b\n\"one\"x,2\n"_s << 2 << 6;
-    QTest::newRow("tsv") << u"tsv"_s << u"a\tb\n1\t\"open\n"_s << 2 << 3;
+    QTest::newRow("json") << u"json"_s << u"[\n  {\"name\": \"Zoë\",}\n]\n"_s << 2 << 19 << 20;
+    QTest::newRow("yaml") << u"yaml"_s << u"name: Mara\n  bad: [indent\n"_s << 2 << 6 << 16;
+    // An emoji is two UTF-16 units but one character, for YAML and JSON alike.
+    QTest::newRow("yaml emoji") << u"yaml"_s << u"- \U0001F3B7: [a\n"_s << 2 << 1 << 9;
+    QTest::newRow("json emoji") << u"json"_s << u"[\"\U0001F3B7\" 1]"_s << 1 << 7 << 7;
+    QTest::newRow("unclosed quote") << u"csv"_s << u"a,b\n1,\"two\n3,4\n"_s << 2 << 3 << 6;
+    QTest::newRow("text after quote") << u"csv"_s << u"a,b\n\"one\"x,2\n"_s << 2 << 6 << 9;
+    QTest::newRow("tsv") << u"tsv"_s << u"a\tb\n1\t\"open\n"_s << 2 << 3 << 6;
 }
 
 void TestDataCheck::saysWhereAFileStopsReading()
@@ -61,11 +65,13 @@ void TestDataCheck::saysWhereAFileStopsReading()
     QFETCH(QString, text);
     QFETCH(int, line);
     QFETCH(int, column);
+    QFETCH(int, position);
     const DataProblem problem = checkData(kind, text);
     QVERIFY(!problem.ok());
     QVERIFY(!problem.message.isEmpty());
     QCOMPARE(problem.line, line);
     QCOMPARE(problem.column, column);
+    QCOMPARE(problem.position, position);
 }
 
 void TestDataCheck::namesKindsByExtension()

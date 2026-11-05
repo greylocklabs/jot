@@ -43,8 +43,8 @@ public:
     /// Where the bracket at or just before `position` and its partner are, outside strings;
     /// empty when there is none there or it has no partner.
     Q_INVOKABLE QVariantList brackets(int position) const;
-    /// Where line `line`, from 1, starts in the text.
-    Q_INVOKABLE int positionOfLine(int line) const;
+    /// Where the problem is in the text, to put the cursor on it.
+    Q_INVOKABLE int problemPosition() const { return int(m_problem.position); }
 
     /// Checks the text now rather than after the pause that follows typing.
     Q_INVOKABLE void checkNow();
