@@ -29,6 +29,17 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   fetched from the web.
 - A YAML file holding a list of mappings opens as a table too. Edits keep its comments, key
   order and quoting wherever the values did not change, and nested lists and mappings edit as JSON.
+- Ctrl+Q quits Jot, and F5 syncs.
+- Settings, Developer: Developer mode shows each note's file path under its title, to copy, and
+  Log debug details writes Jot's debug lines to its log, as in Callie.
+
+### Changed
+
+- Back and forward sit beside the title, and the title bar's buttons are spaced as in Callie.
+
+### Fixed
+
+- Delete, and Edit as table, line up with the first line of a note's title.
 
 ## 0.2.0 - 2026-11-03
 
