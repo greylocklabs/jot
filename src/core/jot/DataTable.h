@@ -45,6 +45,9 @@ public:
     [[nodiscard]] QStringList columns() const { return m_columns; }
     [[nodiscard]] int rowCount() const { return int(m_rows.size()); }
     [[nodiscard]] DataValue value(int row, int column) const;
+    /// A nested value as JSON over lines, keys in their order and numbers as written; empty for
+    /// any other value.
+    [[nodiscard]] QString nestedText(int row, int column) const;
     /// Whether the cell's type differs from the type most of its column has, as a number
     /// among strings would. Missing and null cells never do.
     [[nodiscard]] bool stray(int row, int column) const;

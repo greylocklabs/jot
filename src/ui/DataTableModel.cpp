@@ -287,17 +287,28 @@ bool DataTableModel::clearCell(int row, int column)
     return at >= 0 && change([&](DataTable &table) { return table.clearValue(at, column); });
 }
 
-bool DataTableModel::addRowAfter(int row)
+int DataTableModel::addRowAfter(int row)
 {
     const int at = row < 0 ? 0 : record(row) + 1;
     if (at < 0 || !m_table)
-        return false;
+        return -1;
+    const int before = m_table->rowCount();
     // A new record is empty, so a filter would hide it.
     if (!m_filter.isEmpty()) {
         m_filter.clear();
         Q_EMIT arranged();
     }
-    return change([at](DataTable &table) { return table.insertRow(at); });
+    if (!change([at](DataTable &table) { return table.insertRow(at); }) ||
+        m_table->rowCount() != before + 1)
+        return -1;
+    // Where it shows, which a sort may have put anywhere.
+    return int(m_order.indexOf(at));
+}
+
+QString DataTableModel::nestedText(int row, int column) const
+{
+    const int at = record(row);
+    return at < 0 ? QString() : m_table->nestedText(at, column);
 }
 
 bool DataTableModel::removeRow(int row)

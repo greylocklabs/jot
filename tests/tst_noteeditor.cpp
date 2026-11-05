@@ -948,6 +948,15 @@ void TestNoteEditor::editsAListOfRecordsAsATable()
     QCOMPARE(records->data(records->index(0, 0)).toString(), u"Soren"_s);
     QVERIFY(m_vault->currentText().indexOf(u"Mara"_s) < m_vault->currentText().indexOf(u"Soren"_s));
 
+    // A row added under a sort is picked where the sort shows it, and stays empty until typed in.
+    const int added = records->addRowAfter(0);
+    QVERIFY(added >= 0);
+    QCOMPARE(records->data(records->index(added, 0), DataTableModel::TypeRole).toString(),
+             u"missing"_s);
+    QCOMPARE(records->rowCount(), 3);
+    records->undo();
+    QTRY_COMPARE(records->rowCount(), 2);
+
     // Undo puts the file back; the text view shows what the table wrote.
     records->undo();
     QTRY_VERIFY(m_vault->currentText().contains(u"\"age\": 40"_s));

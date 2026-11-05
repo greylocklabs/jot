@@ -483,6 +483,16 @@ DataValue DataTable::value(int row, int column) const
     return found ? found->data : DataValue();
 }
 
+QString DataTable::nestedText(int row, int column) const
+{
+    const DataValue nested = value(row, column);
+    if (nested.type != DataValue::Type::Nested)
+        return {};
+    JsonReader reader(nested.text);
+    const std::optional<JsonNode> node = reader.readDocument();
+    return node ? pretty(*node, u"  "_s, 0, u": "_s) : nested.text;
+}
+
 bool DataTable::stray(int row, int column) const
 {
     const auto kindOf = [this](const DataValue &value) {
@@ -695,6 +705,9 @@ bool DataTable::insertRow(int row)
         if (row < m_rows.size())
             return patch({m_rows.at(row).span.start, m_rows.at(row).span.start}, line + nl);
         const bool endsInNewline = m_text.endsWith(u'\n');
+        // An empty line after a final newline would read as no record, so it gets one too.
+        if (!endsInNewline && line.isEmpty())
+            return patch({m_text.size(), m_text.size()}, nl + nl);
         return patch({m_text.size(), m_text.size()}, endsInNewline ? line + nl : nl + line);
     }
     const QString gap = m_indent.isEmpty() ? QString() : nl + m_indent;

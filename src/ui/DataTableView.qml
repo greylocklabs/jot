@@ -20,11 +20,12 @@ Item {
             return
         const cell = root.records.index(root.row, root.column)
         if (root.records.data(cell, DataTableModel.TypeRole) === "nested" && typed === undefined) {
-            nestedEditor.openFor(root.row, root.column, root.records.data(cell))
+            nestedEditor.openFor(root.row, root.column)
             return
         }
         // Open at once, so the next key typed lands in it; placed once the cell is in view.
-        cellEditor.text = typed !== undefined ? typed : root.records.data(cell)
+        cellEditor.original = root.records.data(cell)
+        cellEditor.text = typed !== undefined ? typed : cellEditor.original
         cellEditor.visible = true
         cellEditor.forceActiveFocus()
         if (typed === undefined)
@@ -49,6 +50,11 @@ Item {
         if (!cellEditor.visible)
             return
         cellEditor.visible = false
+        // Left as it was, it is not written, so its type and quoting stay too.
+        if (cellEditor.text === cellEditor.original) {
+            table.forceActiveFocus()
+            return
+        }
         if (!root.records.setCell(root.row, root.column, cellEditor.text))
             problem.text = root.records.lastError()
         else
@@ -81,9 +87,12 @@ Item {
             text: qsTr("Add row")
             enabled: Vault.writable
             onClicked: {
-                root.records.addRowAfter(root.records.rowCount() === 0 ? -1 : root.row)
-                root.pick(root.records.rowCount() === 1 ? 0 : root.row + 1, 0)
-                root.edit("")
+                const shown = root.records.addRowAfter(root.records.rowCount() === 0 ? -1 :
+                                                                                       root.row)
+                if (shown < 0)
+                    return
+                root.pick(shown, 0)
+                root.edit()
             }
         }
         StickerButton {
@@ -380,6 +389,9 @@ Item {
     TextField {
         id: cellEditor
 
+        /// The value as it was when editing started.
+        property string original
+
         objectName: "cellEditor"
         visible: false
         z: 2
@@ -415,10 +427,14 @@ Item {
         property int row
         property int column
 
-        function openFor(row, column, text) {
+        /// The value as shown when opened, so Save with nothing changed writes nothing.
+        property string original
+
+        function openFor(row, column) {
             nestedEditor.row = row
             nestedEditor.column = column
-            nestedText.text = JSON.stringify(JSON.parse(text), null, 2)
+            nestedEditor.original = root.records.nestedText(row, column)
+            nestedText.text = nestedEditor.original
             nestedProblem.text = ""
             open()
             nestedText.forceActiveFocus()
@@ -481,8 +497,10 @@ Item {
                     enabled: Vault.writable
                     text: qsTr("Save")
                     onClicked: {
-                        if (root.records.setCellAs(nestedEditor.row, nestedEditor.column,
-                                                   nestedText.text, "nested"))
+                        if (nestedText.text === nestedEditor.original)
+                            nestedEditor.close()
+                        else if (root.records.setCellAs(nestedEditor.row, nestedEditor.column,
+                                                        nestedText.text, "nested"))
                             nestedEditor.close()
                         else
                             nestedProblem.text = root.records.lastError()

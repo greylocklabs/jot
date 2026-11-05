@@ -168,6 +168,12 @@ void TestDataTable::writesNestedValuesInTheFilesStyle()
     QVERIFY(table.text().contains(
         u"\"families\": [\n      \"blues\",\n      {\n        \"key\": \"F\"\n      }\n    ],"_s));
     QCOMPARE(table.value(0, 2).text, u"[\"blues\", {\"key\": \"F\"}]"_s);
+    // Shown to edit as written: big numbers, numbers' zeros, repeated and number-like keys.
+    DataTable kept = *DataTable::read(
+        u"json"_s, u"[{\"n\": {\"b\": 12345678901234567890, \"2\": 1.50, \"b\": 3}}]"_s);
+    QCOMPARE(kept.nestedText(0, 0),
+             u"{\n  \"b\": 12345678901234567890,\n  \"2\": 1.50,\n  \"b\": 3\n}"_s);
+    QVERIFY(kept.nestedText(0, 1).isEmpty());
     QString error;
     QVERIFY(!table.setValue(0, 2, {Type::Nested, u"[1,"_s}, &error));
     QVERIFY(!error.isEmpty());
@@ -232,6 +238,12 @@ void TestDataTable::addsAndRemovesCsvRowsAndColumns()
     QCOMPARE(table.text(), u"b,\"c,d\"\r\n2,\r\n4,\r\n"_s);
     QVERIFY(table.removeColumn(1));
     QCOMPARE(table.text(), u"b\r\n2\r\n4\r\n"_s);
+
+    // One column and no newline at the end: the new row still reads as one.
+    DataTable single = *DataTable::read(u"csv"_s, u"a\n1"_s);
+    QVERIFY(single.insertRow(1));
+    QCOMPARE(single.rowCount(), 2);
+    QCOMPARE(single.value(1, 0).text, QString());
 
     // With no newline at the end, the last row takes the one before it.
     DataTable bare = *DataTable::read(u"tsv"_s, u"a\tb\n1\t2"_s);

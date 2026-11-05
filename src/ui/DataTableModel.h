@@ -75,8 +75,11 @@ public:
     /// Sets the cell as a string whatever it looks like, or as null.
     Q_INVOKABLE bool setCellAs(int row, int column, const QString &typed, const QString &type);
     Q_INVOKABLE bool clearCell(int row, int column);
-    /// Adds an empty record after the row shown at `row`, or first for -1.
-    Q_INVOKABLE bool addRowAfter(int row);
+    /// Adds an empty record after the row shown at `row`, or first for -1. Gives the row it
+    /// shows in, or -1 when none was added.
+    Q_INVOKABLE int addRowAfter(int row);
+    /// A nested value as JSON over lines, as it is written, to edit.
+    Q_INVOKABLE QString nestedText(int row, int column) const;
     Q_INVOKABLE bool removeRow(int row);
     Q_INVOKABLE bool addColumn(const QString &name);
     Q_INVOKABLE bool removeColumn(int column);
