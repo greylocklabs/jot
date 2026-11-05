@@ -71,6 +71,7 @@ private Q_SLOTS:
     void colorsNumbersAndChecksDataFiles();
     void editsAListOfRecordsAsATable();
     void checksATableAgainstItsSchema();
+    void scrollsAWideTableAcross();
     void readsTheNoteWithLinksAndBoxesToTick();
     void readsDiagramsAsPictures();
     void tickingARepeatingToDoWritesTheNext();
@@ -1084,6 +1085,38 @@ void TestNoteEditor::editsAListOfRecordsAsATable()
     m_vault->setCurrent(u"cast.schema.json"_s);
     QVERIFY(body->isVisible());
     QVERIFY(!find(u"viewSwitch"_s)->isEnabled());
+}
+
+void TestNoteEditor::scrollsAWideTableAcross()
+{
+    QFile file(m_root + u"/wide.json"_s);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    QStringList fields;
+    for (int i = 0; i < 16; ++i)
+        fields << u"\"field%1\": %1"_s.arg(i);
+    file.write((u"[{"_s + fields.join(u", "_s) + u"}]\n"_s).toUtf8());
+    file.close();
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"wide.json"_s), 3000);
+    m_vault->setCurrent(u"wide.json"_s);
+    QQuickItem *table = find(u"table"_s);
+    QTRY_VERIFY(table->isVisible() && table->property("contentWidth").toReal() > table->width());
+    QCOMPARE(table->property("contentX").toReal(), 0.0);
+
+    // The wheel with Shift held scrolls across.
+    const QPointF at = table->mapToScene(QPointF(table->width() / 2, 20));
+    QWheelEvent wheel(at, m_window->mapToGlobal(at), QPoint(), QPoint(0, -120), Qt::NoButton,
+                      Qt::ShiftModifier, Qt::NoScrollPhase, false);
+    QGuiApplication::sendEvent(m_window.get(), &wheel);
+    QTRY_VERIFY(table->property("contentX").toReal() > 0);
+    // And the bar for it shows all along, not only while scrolling.
+    QQuickItem *across = nullptr;
+    for (QQuickItem *child : table->findChildren<QQuickItem *>()) {
+        if (QByteArray(child->metaObject()->className()).contains("ScrollBar") &&
+            child->property("orientation").toInt() == Qt::Horizontal)
+            across = child;
+    }
+    QVERIFY(across);
+    QCOMPARE(across->property("policy").toInt(), 2); // ScrollBar.AlwaysOn
 }
 
 void TestNoteEditor::checksATableAgainstItsSchema()

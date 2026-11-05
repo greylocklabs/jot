@@ -316,8 +316,23 @@ Item {
         boundsBehavior: Flickable.StopAtBounds
         columnWidthProvider: () => 180
         focus: true
-        ScrollBar.horizontal: ScrollBar {}
-        ScrollBar.vertical: ScrollBar {}
+        // Shown whenever there is more to see, not only while scrolling.
+        ScrollBar.horizontal: ScrollBar {
+            policy: table.contentWidth > table.width ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
+        }
+        ScrollBar.vertical: ScrollBar {
+            policy: table.contentHeight > table.height ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
+        }
+
+        // Shift and the wheel scroll across the columns, as in a spreadsheet.
+        WheelHandler {
+            acceptedModifiers: Qt.ShiftModifier
+            onWheel: event => {
+                const delta = event.angleDelta.y !== 0 ? event.angleDelta.y : event.angleDelta.x
+                const most = Math.max(0, table.contentWidth - table.width)
+                table.contentX = Math.max(0, Math.min(most, table.contentX - delta))
+            }
+        }
 
         Keys.onPressed: event => {
             if (root.editing)
