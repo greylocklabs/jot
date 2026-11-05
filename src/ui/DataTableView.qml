@@ -14,6 +14,32 @@ Item {
     property int column: 0
     readonly property bool editing: cellEditor.visible
 
+    // Undo and redo the table's edits from the keyboard. The fields typed in take the keys for
+    // their own typing first; here they would otherwise go to the window's to-do undo.
+    // Written out as well, since not every platform theme gives the standard keys these.
+    function isUndo(event) {
+        return event.matches(StandardKey.Undo) || (event.key === Qt.Key_Z && event.modifiers
+                                                   === Qt.ControlModifier)
+    }
+    function isRedo(event) {
+        return event.matches(StandardKey.Redo) || (event.key === Qt.Key_Z && event.modifiers === (
+                                                       Qt.ControlModifier | Qt.ShiftModifier)) || (
+                    event.key === Qt.Key_Y && event.modifiers === Qt.ControlModifier)
+    }
+    Keys.onShortcutOverride: event => {
+        if (root.isUndo(event) || root.isRedo(event))
+            event.accepted = true
+    }
+    Keys.onPressed: event => {
+        if (root.isUndo(event)) {
+            root.records.undo()
+            event.accepted = true
+        } else if (root.isRedo(event)) {
+            root.records.redo()
+            event.accepted = true
+        }
+    }
+
     /// Starts editing the picked cell, with `typed` in place of its value when given.
     function edit(typed) {
         if (root.records.columns.length === 0 || root.records.rowCount() === 0)
@@ -298,7 +324,11 @@ Item {
                 visible: Vault.writable && numberHover.hovered
                 scale: 0.75
                 Accessible.name: qsTr("Remove row %1").arg(number.display)
-                onClicked: root.records.removeRow(number.index)
+                onClicked: {
+                    root.records.removeRow(number.index)
+                    // The button goes with its row, so the keys come back to the table.
+                    table.forceActiveFocus()
+                }
             }
         }
     }
