@@ -845,6 +845,19 @@ void TestNoteEditor::readsDiagramsAsPictures()
     QVERIFY2(!shown.contains(u"A[Write]"_s), qPrintable(shown));
     // One with a mistake in it is shown as its code.
     QVERIFY2(shown.contains(u"C[Broken --> D"_s), qPrintable(shown));
+
+    // A picture beside the note is found from its relative link, as before.
+    m_vault->setCurrent(u"Ashfall/Places/The Ferry.md"_s);
+    QTRY_VERIFY([doc] {
+        for (QTextBlock block = doc->begin(); block.isValid(); block = block.next()) {
+            for (auto it = block.begin(); !it.atEnd(); ++it) {
+                const QTextCharFormat format = it.fragment().charFormat();
+                if (format.isImageFormat() && format.toImageFormat().width() > 20)
+                    return true;
+            }
+        }
+        return false;
+    }());
     m_settings->setReadMode(false);
 }
 
