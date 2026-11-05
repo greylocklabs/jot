@@ -6,13 +6,16 @@
   "scripts": {
     "commitlint": "commitlint --edit",
     "lint:md": "markdownlint-cli2",
-    "format:md": "prettier --write \"**/*.{md,json,yml,yaml,js}\"",
-    "format:md:check": "prettier --check \"**/*.{md,json,yml,yaml,js}\""
+    "format:md": "prettier --write --ignore-path .gitignore --ignore-path .prettierignore --ignore-path third_party/.prettierignore \"**/*.{md,json,yml,yaml,js}\"",
+    "format:md:check": "prettier --check --ignore-path .gitignore --ignore-path .prettierignore --ignore-path third_party/.prettierignore \"**/*.{md,json,yml,yaml,js}\"",
+    "vendor:pele": "node tools/vendor-pele.mjs"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",
     "@commitlint/config-conventional": "^21.0.0",
+    "esbuild": "0.28.2",
     "markdownlint-cli2": "^0.24.0",
+    "pele": "1.13.0",
     "prettier": "3.9.10"
   }
 }
