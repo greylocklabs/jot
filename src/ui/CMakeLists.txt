@@ -71,6 +71,7 @@ qt_add_qml_module(jotui
         Backlinks.qml
         CheckBox.qml
         CloseButton.qml
+        ConfirmDialog.qml
         RemoveButton.qml
         DataTableView.qml
         ColumnSplitter.qml

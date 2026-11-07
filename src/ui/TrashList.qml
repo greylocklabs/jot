@@ -3,8 +3,8 @@ import Jot.Ui
 import QtQuick
 import QtQuick.Controls
 
-/// The middle column when Trash is chosen: the vault's notes in the desktop's trash or its own,
-/// newest first. Choosing one shows it beside the list, to read or bring back.
+/// The middle column when Trash is chosen: the notes in the vault's trash, newest first.
+/// Choosing one shows it beside the list, to read, bring back or delete for good.
 Rectangle {
     id: root
 
@@ -33,19 +33,46 @@ Rectangle {
         }
         spacing: Theme.space2
 
-        Text {
-            text: qsTr("Trash")
-            color: Theme.text
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.textLg
-            font.weight: Theme.weightBold
+        Item {
+            width: parent.width
+            height: Math.max(heading.implicitHeight, emptyTrash.implicitHeight)
+
+            Text {
+                id: heading
+
+                anchors.verticalCenter: parent.verticalCenter
+                text: qsTr("Trash")
+                color: Theme.text
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.textLg
+                font.weight: Theme.weightBold
+            }
+            StickerButton {
+                id: emptyTrash
+
+                objectName: "emptyTrash"
+                anchors {
+                    right: parent.right
+                    verticalCenter: parent.verticalCenter
+                }
+                visible: Vault.trash.count > 0
+                enabled: Vault.writable
+                destructive: true
+                text: qsTr("Empty trash")
+                onClicked: confirm.ask(qsTr("Empty the trash?"), qsTr(
+                                           "Its %n note(s) are deleted now, with their attachments, and cannot be brought back.",
+                                           "", Vault.trash.count), qsTr("Empty trash"), ()
+                                       => Vault.emptyTrash())
+            }
         }
         Text {
             width: parent.width
             wrapMode: Text.Wrap
-            text: Vault.trash.count > 0 ? qsTr(
-                                              "Notes deleted from this vault. Jot never empties the trash; your desktop does.") :
-                                          qsTr("Nothing from this vault is in the trash.")
+            text: Vault.trash.count === 0 ? qsTr("Nothing from this vault is in the trash.") :
+                                            Settings.trashDays > 0 ? qsTr(
+                                                                         "Notes deleted from this vault. After %n day(s) they go to your desktop's trash.",
+                                                                         "", Settings.trashDays) :
+                                                                     qsTr("Notes deleted from this vault. They stay until you delete them for good.")
             color: Theme.textMuted
             font.family: Theme.fontFamily
             font.pixelSize: Theme.textSm
@@ -125,5 +152,9 @@ Rectangle {
                 }
             }
         }
+    }
+
+    ConfirmDialog {
+        id: confirm
     }
 }

@@ -54,8 +54,6 @@ void TestDialogs::initTestCase()
     SettingsForeign::s_instance = m_settings.get();
     m_vault = std::make_unique<VaultController>(*m_settings);
     m_vault->setIndexPath(m_dir.filePath(u"index.sqlite"_s));
-    // Nothing a test trashes goes to the desktop's trash.
-    m_vault->setSystemTrash(false);
     VaultController::setInstance(m_vault.get());
     QVERIFY(m_vault->openPath(m_dir.filePath(u"Notes"_s)));
 }

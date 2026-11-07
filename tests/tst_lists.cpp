@@ -1,5 +1,6 @@
 #include "SettingsForeign.h"
 #include "ThemeController.h"
+#include "TrashModel.h"
 #include "VaultController.h"
 
 #include "jot/Layout.h"
@@ -7,6 +8,7 @@
 #include "jot/Vault.h"
 
 #include <QDirIterator>
+#include <QGuiApplication>
 #include <QMimeData>
 #include <QQmlComponent>
 #include <QQmlEngine>
@@ -14,6 +16,7 @@
 #include <QQuickStyle>
 #include <QQuickWindow>
 #include <QRegularExpression>
+#include <QStyleHints>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QtQml/qqmlextensionplugin.h>
@@ -48,6 +51,7 @@ private Q_SLOTS:
     void trashShowsWhatWasDeletedAndBringsItBack();
     void trashSitsAtTheFootWithItsOwnHighlight();
     void backlinkListsFoldUnderTheirHeadings();
+    void trashDeletesForGoodOnlyOnceAsked();
     void columnBordersDragToResize();
     void deleteAsksFirstForNotesAndNotebooks();
     void searchHandsTheKeysBackToTheList();
@@ -93,7 +97,6 @@ void TestLists::init()
     SettingsForeign::s_instance = m_settings.get();
     m_vault = std::make_unique<VaultController>(*m_settings);
     m_vault->setIndexPath(m_dir->filePath(u"index.sqlite"_s));
-    m_vault->setSystemTrash(false);
     VaultController::setInstance(m_vault.get());
     QVERIFY(m_vault->openPath(m_root));
 
@@ -589,6 +592,58 @@ void TestLists::backlinkListsFoldUnderTheirHeadings()
     click(heading("linkedHeading"));
     QTRY_COMPARE(shown(false), 3);
     QCOMPARE(shown(true), 0);
+}
+
+void TestLists::trashDeletesForGoodOnlyOnceAsked()
+{
+    QVERIFY(m_vault->trashNote(u"Recipes/Sourdough.md"_s, false));
+    QVERIFY(m_vault->trashNote(u"Recipes/Pancakes.md"_s, false));
+    m_vault->setShowingTrash(true);
+    const auto load = [this](const char *type) {
+        QQmlComponent component(m_engine.get());
+        component.loadFromModule("Jot.Ui", type);
+        std::unique_ptr<QObject> object(component.create());
+        auto *item = qobject_cast<QQuickItem *>(object.get());
+        item->setParentItem(m_window->contentItem());
+        item->setSize({640, 700});
+        return object;
+    };
+    const auto named = [this](const QString &name) {
+        return findItem(
+            [&name](QQuickItem *item) { return item->isVisible() && item->objectName() == name; },
+            m_window->contentItem());
+    };
+    TrashModel *trash = m_vault->trash();
+    QCOMPARE(trash->rowCount(), 2);
+
+    std::unique_ptr<QObject> preview = load("TrashPreview");
+    const QString location = trash->index(0).data(TrashModel::LocationRole).toString();
+    preview->setProperty("location", location);
+    click(named(u"deleteTrashed"_s));
+    // Cancelling keeps it; confirming deletes it.
+    QQuickItem *cancel = nullptr;
+    QTRY_VERIFY((cancel = named(u"cancelButton"_s)));
+    QTest::qWait(QGuiApplication::styleHints()->mouseDoubleClickInterval());
+    click(cancel);
+    QTRY_VERIFY(!named(u"cancelButton"_s));
+    QVERIFY(QFileInfo::exists(location));
+    click(named(u"deleteTrashed"_s));
+    QQuickItem *confirm = nullptr;
+    QTRY_VERIFY((confirm = named(u"confirmButton"_s)));
+    QTest::qWait(QGuiApplication::styleHints()->mouseDoubleClickInterval());
+    click(confirm);
+    QTRY_VERIFY(!QFileInfo::exists(location));
+    QCOMPARE(trash->rowCount(), 1);
+    preview.reset();
+
+    std::unique_ptr<QObject> list = load("TrashList");
+    QTRY_VERIFY(!named(u"confirmButton"_s));
+    click(named(u"emptyTrash"_s));
+    QTRY_VERIFY((confirm = named(u"confirmButton"_s)));
+    // Apart from the click before, so the two are not taken for a double click.
+    QTest::qWait(QGuiApplication::styleHints()->mouseDoubleClickInterval());
+    click(confirm);
+    QTRY_COMPARE(trash->rowCount(), 0);
 }
 
 void TestLists::columnBordersDragToResize()
