@@ -7,4 +7,5 @@ compile_commands.json
 node_modules/
 .qmlls.ini
 google-oauth-credentials.json
-tests/data/**/.jot/
+tests/data/**/.jot/*
+!tests/data/sample-vault/.jot/layout.yaml
