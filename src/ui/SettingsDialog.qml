@@ -138,6 +138,9 @@ Popup {
                     readonly property bool selected: root.tab === modelData.id
 
                     objectName: "settingsTab"
+                    // Its label's width, which sizes the list; a bare AbstractButton has none
+                    // of its own on older Qt.
+                    implicitWidth: implicitContentWidth + leftPadding + rightPadding
                     width: tabs.width
                     height: Theme.listRowHeight + Theme.space2
                     hoverEnabled: true
