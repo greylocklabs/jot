@@ -21,6 +21,7 @@
 #include <QQuickWindow>
 #include <QRegularExpression>
 #include <QSignalSpy>
+#include <QStyleHints>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QTextBlock>
@@ -1241,8 +1242,31 @@ void TestNoteEditor::removingARowOrColumnAsksWithATrashCan()
     QTRY_COMPARE(records->columns().size(), 1);
     QCOMPARE(records->sortColumn(), -1);
 
-    // Beside the X, a click on the heading still sorts.
+    // Beside the X, a double click on the heading renames it without sorting the table, so the
+    // field stays where it opened.
+    const auto renaming = [header] {
+        QQuickItem *cell = nullptr;
+        QMetaObject::invokeMethod(header, "itemAtCell", qReturnArg(cell), QPoint(0, 0));
+        return cell && cell->property("renaming").toBool();
+    };
+    // The table reloads once the removals are saved, remaking its headings; that is let pass.
+    QSignalSpy reloaded(records, &QAbstractItemModel::modelReset);
+    for (int quiet = 0; quiet < 20; ++quiet) {
+        reloaded.clear();
+        QTest::qWait(300);
+        if (reloaded.isEmpty())
+            break;
+    }
     QTest::mouseMove(m_window.get(), heading);
+    QTest::mouseDClick(m_window.get(), Qt::LeftButton, {}, heading);
+    QTRY_VERIFY(renaming());
+    QTest::qWait(QGuiApplication::styleHints()->mouseDoubleClickInterval() + 100);
+    QVERIFY(renaming());
+    QCOMPARE(records->sortColumn(), -1);
+    QTest::keyClick(m_window.get(), Qt::Key_Escape);
+    QTRY_VERIFY(!renaming());
+
+    // And a single click sorts.
     QTest::mouseClick(m_window.get(), Qt::LeftButton, {}, heading);
     QTRY_COMPARE(records->sortColumn(), 0);
 }

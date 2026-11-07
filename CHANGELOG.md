@@ -30,6 +30,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   over its cells.
 - A wide table's bar for scrolling across sits right under its last row, not at the bottom of the
   window, where it was often out of view.
+- Double-clicking a table column's heading to rename it no longer sorts the table twice, which
+  could close the name field as it opened. A single click still sorts.
 
 ## 0.3.0 - 2026-11-06
 
