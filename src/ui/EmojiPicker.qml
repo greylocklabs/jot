@@ -3,34 +3,36 @@ import Jot.Ui
 import QtQuick
 import QtQuick.Controls
 
-/// Chooses the emoji shown before a notebook's name, or Trash's, found by typing words of its name.
+/// Chooses the emoji shown before a notebook's name, or before Tasks or Trash, found by typing
+/// words of its name.
 Popup {
     id: root
 
     /// The notebook it is for.
     property string path
-    /// It is for Trash rather than a notebook.
-    property bool forTrash: false
+    /// The sidebar's own entry it is for, "tasks" or "trash", rather than a notebook.
+    property string view
     property string query
-    readonly property string current: forTrash ? Vault.trashEmoji : Vault.notebookEmoji[path] ?? ""
+    readonly property string current: view !== "" ? Vault.viewEmoji[view] ?? "" :
+                                                    Vault.notebookEmoji[path] ?? ""
 
     /// Asks for an emoji for the notebook at `path`.
     function choose(path) {
         root.path = path
-        root.forTrash = false
+        root.view = ""
         open()
     }
 
-    /// Asks for Trash's emoji.
-    function chooseForTrash() {
+    /// Asks for the emoji of `view`, "tasks" or "trash".
+    function chooseForView(view) {
         root.path = ""
-        root.forTrash = true
+        root.view = view
         open()
     }
 
     function pick(emoji) {
-        if (root.forTrash)
-            Vault.setTrashEmoji(emoji)
+        if (root.view !== "")
+            Vault.setViewEmoji(root.view, emoji)
         else
             Vault.setNotebookEmoji(root.path, emoji)
         close()
