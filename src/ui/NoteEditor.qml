@@ -1024,11 +1024,9 @@ Rectangle {
         path: Vault.current
         kind: root.tableShown ? "table" : root.dataFile ? "data" : "note"
         showCursor: body.visible
-        line: body.text.slice(0, body.cursorPosition).split("\n").length
-        column: body.cursorPosition - body.text.lastIndexOf("\n", body.cursorPosition - 1)
-        pickedLines: body.selectionEnd > body.selectionStart ? body.text.slice(body.selectionStart,
-                                                                               body.selectionEnd).split(
-                                                                   "\n").length : 0
+        line: vi.line
+        column: vi.column
+        pickedLines: vi.pickedLines
         place: {
             const range = flick.contentHeight - flick.height
             if (range <= 0)
