@@ -13,6 +13,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 - Searching notes also finds those in the trash, listed under In the trash; choosing one shows it
   in Trash. A setting leaves the trash out. Trash has a search of its own, and right-clicking a
   note there restores or permanently deletes it.
+- Ctrl+Z and Ctrl+Shift+Z outside the editor undo and redo moving a note to the trash or bringing
+  it back, as well as ticking to-dos. One that would move a note to the trash asks first.
 
 ### Changed
 

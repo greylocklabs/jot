@@ -503,6 +503,10 @@ ApplicationWindow {
         id: reportDialog
         sourceComponent: ReportDialog {}
     }
+    ConfirmDialog {
+        id: changeConfirm
+        objectName: "changeConfirm"
+    }
 
     // After an update, says what changed, once the window has settled.
     Timer {
@@ -535,10 +539,10 @@ ApplicationWindow {
             return Vault.canGoBack
         case "goForward":
             return Vault.canGoForward
-        case "undoTask":
-            return Vault.canUndoTask
-        case "redoTask":
-            return Vault.canRedoTask
+        case "undoChange":
+            return Vault.canUndo
+        case "redoChange":
+            return Vault.canRedo
         case "nextNote":
         case "previousNote":
         case "firstNote":
@@ -590,11 +594,20 @@ ApplicationWindow {
         case "goForward":
             Vault.goForward()
             break
-        case "undoTask":
-            Vault.undoTask()
+        case "undoChange":
+            // Asks first when taking it back would move a note to the trash.
+            if (Vault.undoTrashes !== "")
+                changeConfirm.ask(qsTr("Move %1 to the trash again?").arg(Vault.undoTrashes), "",
+                                  qsTr("Move to trash"), () => Vault.undo())
+            else
+                Vault.undo()
             break
-        case "redoTask":
-            Vault.redoTask()
+        case "redoChange":
+            if (Vault.redoTrashes !== "")
+                changeConfirm.ask(qsTr("Move %1 to the trash again?").arg(Vault.redoTrashes), "",
+                                  qsTr("Move to trash"), () => Vault.redo())
+            else
+                Vault.redo()
             break
         case "quickAdd":
             quickAdd.open()

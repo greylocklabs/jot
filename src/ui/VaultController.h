@@ -89,10 +89,15 @@ class VaultController : public QObject
     /// or "yaml".
     Q_PROPERTY(QString currentKind READ currentKind NOTIFY currentChanged)
     Q_PROPERTY(QVariantList currentConflicts READ currentConflicts NOTIFY currentConflictsChanged)
-    /// Whether a to-do ticked from the task view, or a task note completed, can be undone or
-    /// redone. Ticks typed in the editor are the editor's own to undo.
-    Q_PROPERTY(bool canUndoTask READ canUndoTask NOTIFY taskHistoryChanged)
-    Q_PROPERTY(bool canRedoTask READ canRedoTask NOTIFY taskHistoryChanged)
+    /// Whether the last change outside the editor can be undone or redone: a to-do ticked from
+    /// the task view, a task note completed, or a note moved to the trash or brought back.
+    /// Ticks typed in the editor are the editor's own to undo.
+    Q_PROPERTY(bool canUndo READ canUndo NOTIFY historyChanged)
+    Q_PROPERTY(bool canRedo READ canRedo NOTIFY historyChanged)
+    /// The title of the note undoing, or redoing, would move to the trash; empty when it would
+    /// not, so asking first is needed only then.
+    Q_PROPERTY(QString undoTrashes READ undoTrashes NOTIFY historyChanged)
+    Q_PROPERTY(QString redoTrashes READ redoTrashes NOTIFY historyChanged)
     /// Whether there is a note opened before or after this one to go back or forward to.
     Q_PROPERTY(bool canGoBack READ canGoBack NOTIFY trailChanged)
     Q_PROPERTY(bool canGoForward READ canGoForward NOTIFY trailChanged)
@@ -240,12 +245,14 @@ public:
     Q_INVOKABLE bool completeTask(const QString &path);
     /// Marks a note that is a done task as open again, forgetting when it was done.
     Q_INVOKABLE bool reopenTask(const QString &path);
-    /// Takes back the last tick or completion, or does again the last one taken back. Refused,
-    /// and forgotten, when the note has changed since.
-    Q_INVOKABLE bool undoTask();
-    Q_INVOKABLE bool redoTask();
-    [[nodiscard]] bool canUndoTask() const { return !m_undoTasks.isEmpty(); }
-    [[nodiscard]] bool canRedoTask() const { return !m_redoTasks.isEmpty(); }
+    /// Takes back the last change, or does again the last one taken back. Refused, and
+    /// forgotten, when the note has changed or gone since.
+    Q_INVOKABLE bool undo();
+    Q_INVOKABLE bool redo();
+    [[nodiscard]] bool canUndo() const { return !m_undo.isEmpty(); }
+    [[nodiscard]] bool canRedo() const { return !m_redo.isEmpty(); }
+    [[nodiscard]] QString undoTrashes() const;
+    [[nodiscard]] QString redoTrashes() const;
     /// Shows the note opened before this one, or after it once gone back, as a browser does.
     Q_INVOKABLE bool goBack();
     Q_INVOKABLE bool goForward();
@@ -344,7 +351,7 @@ Q_SIGNALS:
     /// The note shown changed by replacing `length` characters at `start` with `text`, just
     /// before currentChanged(), so the editor can make the same edit and keep its undo history.
     void currentPatched(int start, int length, const QString &text);
-    void taskHistoryChanged();
+    void historyChanged();
     void trailChanged();
     void cursorPositionChanged();
     /// With every currentChanged(), and when saving changes the note's title, as editing its
@@ -455,14 +462,32 @@ private:
     int m_historyInterval = 10 * 60 * 1000;
     /// When a version of each note was last kept while running.
     QHash<QString, QDateTime> m_historyKept;
-    struct TaskChange
+    /// A change that can be undone: a note's text rewritten, or a note moved to the trash or
+    /// brought back from it.
+    struct Change
     {
+        enum class Kind { Text, Trash };
+        Kind kind = Kind::Text;
         QString path;
+        /// Text: what the note said before and after.
         QString before;
         QString after;
+        /// Trash: where the note is in the trash while it is there.
+        QString location;
+        bool keepAttachments = false;
+        /// Trash: the change moved the note to the trash, rather than bringing it back.
+        bool trashed = true;
     };
-    QList<TaskChange> m_undoTasks;
-    QList<TaskChange> m_redoTasks;
+    /// Does `change`, or takes it back, keeping where the note went. `stale` says whether it
+    /// cannot be done any more, as when the note has changed or gone since.
+    bool apply(Change &change, bool back, bool *stale);
+    void remember(const Change &change);
+    /// Moves the note at `path` to the trash, and gives where it went there.
+    std::optional<QString> moveNoteToTrash(const QString &path, bool keepAttachments);
+    /// Brings the note at `location` in the trash back, and gives the path it went to.
+    std::optional<QString> bringBack(const QString &location, bool *gone);
+    QList<Change> m_undo;
+    QList<Change> m_redo;
     NoteTrail m_trail;
     /// Going back or forward, which is no new visit.
     bool m_travelling = false;

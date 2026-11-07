@@ -329,11 +329,11 @@ void TestNoteEditor::undoesATickOnTheShownNote()
     QVERIFY(m_vault->setTaskDone(u"Windows.md"_s, 2, true));
     QCOMPARE(text(), ticked);
     QVERIFY(body->property("canUndo").toBool());
-    QVERIFY(m_vault->undoTask());
+    QVERIFY(m_vault->undo());
     QCOMPARE(text(), u"\ufeffone\n- [ ] two\nthree\n"_s);
     QTRY_VERIFY_WITH_TIMEOUT(!m_vault->unsaved(), 2000);
     QCOMPARE(saved(), untouched);
-    QVERIFY(m_vault->redoTask());
+    QVERIFY(m_vault->redo());
     QCOMPARE(text(), ticked);
     QTRY_VERIFY_WITH_TIMEOUT(!m_vault->unsaved(), 2000);
     QCOMPARE(saved(), QString(ticked).replace(u"\n"_s, u"\r\n"_s).toUtf8());

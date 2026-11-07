@@ -59,8 +59,8 @@ QList<KeyAction> KeyRouter::actions()
         act(u"search"_s, tr("Search notes"), window, {int(K::Find)}, u"/"_s),
         act(u"save"_s, tr("Save now"), window, {int(K::Save)}),
         // Text fields keep these keys for their own undo, so these work everywhere else.
-        act(u"undoTask"_s, tr("Undo ticking a to-do"), window, {int(K::Undo)}),
-        act(u"redoTask"_s, tr("Redo ticking a to-do"), window, {int(K::Redo)}),
+        act(u"undoChange"_s, tr("Undo ticking, trashing or restoring"), window, {int(K::Undo)}),
+        act(u"redoChange"_s, tr("Redo ticking, trashing or restoring"), window, {int(K::Redo)}),
         act(u"tasks"_s, tr("Tasks, or back to the notes"), window, {}, {}, u"t"_s),
         act(u"settings"_s, tr("Settings"), window, {int(K::Preferences), u"Ctrl+,"_s}, {}, u"s"_s),
         // F5 alone, not the standard refresh keys: in vi mode Ctrl+R is redo.

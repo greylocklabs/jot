@@ -72,6 +72,7 @@ private Q_SLOTS:
     void removesAttachmentFoldersLeftEmpty();
     void deletesForGoodAndExpiresTheTrash();
     void searchFindsNotesInTheTrash();
+    void undoesTrashingAndRestoring();
     void followsLinksAndMakesMissingNotes();
     void opensAndRenamesDataFiles();
     void keepsLineEndingsAndTheByteOrderMark();
@@ -1082,6 +1083,47 @@ void TestVaultController::searchFindsNotesInTheTrash()
     QCOMPARE(m_vault->chosenTrashed(), QString());
 }
 
+void TestVaultController::undoesTrashingAndRestoring()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    const QString pancakes = m_root + u"/Recipes/Pancakes.md"_s;
+    QVERIFY(m_vault->trashNote(u"Recipes/Pancakes.md"_s, false));
+    // Undoing a trashing brings it back without asking; redoing it asks first.
+    QVERIFY(m_vault->canUndo());
+    QCOMPARE(m_vault->undoTrashes(), QString());
+    QVERIFY(m_vault->undo());
+    QVERIFY(QFileInfo::exists(pancakes));
+    QCOMPARE(m_vault->redoTrashes(), u"Pancakes"_s);
+    QVERIFY(m_vault->redo());
+    QVERIFY(!QFileInfo::exists(pancakes));
+    QCOMPARE(m_vault->trash()->rowCount(), 1);
+
+    // Undoing a restore moves it to the trash again, so that asks.
+    m_vault->setShowingTrash(true);
+    const QString location = m_vault->trash()->index(0).data(TrashModel::LocationRole).toString();
+    QCOMPARE(m_vault->restoreTrashed(location), u"Recipes/Pancakes.md"_s);
+    QCOMPARE(m_vault->undoTrashes(), u"Pancakes"_s);
+    QVERIFY(m_vault->undo());
+    QVERIFY(!QFileInfo::exists(pancakes));
+    QCOMPARE(m_vault->redoTrashes(), QString());
+    QVERIFY(m_vault->redo());
+    QVERIFY(QFileInfo::exists(pancakes));
+
+    // What has gone from the trash since cannot come back, and is forgotten.
+    QVERIFY(m_vault->trashNote(u"Recipes/Pancakes.md"_s, false));
+    QVERIFY(m_vault->emptyTrash());
+    QVERIFY(!m_vault->undo());
+    QVERIFY(!QFileInfo::exists(pancakes));
+    QVERIFY(!m_vault->problem().isEmpty());
+    // Nor is a note trashed again once it has moved since it came back.
+    QVERIFY(m_vault->trashNote(u"Recipes/Sourdough.md"_s, false));
+    QVERIFY(m_vault->undo());
+    QVERIFY(QFile::rename(m_root + u"/Recipes/Sourdough.md"_s, m_root + u"/Recipes/Rye.md"_s));
+    QVERIFY(!m_vault->redo());
+    QVERIFY(QFileInfo::exists(m_root + u"/Recipes/Rye.md"_s));
+    QVERIFY(!m_vault->canRedo());
+}
+
 void TestVaultController::followsLinksAndMakesMissingNotes()
 {
     QVERIFY(m_vault->openPath(m_root));
@@ -1404,7 +1446,7 @@ void TestVaultController::listsAndReopensDoneToDos()
     QVERIFY(!groceries.contains(u"\ndone:"_s));
     QVERIFY(!readFile(m_root + u"/Ashfall/Characters/Soren.md"_s).contains(u"✅"_s));
     // Reopening is undone like a tick.
-    QVERIFY(m_vault->undoTask());
+    QVERIFY(m_vault->undo());
     QVERIFY(readFile(m_root + u"/Inbox/Groceries.md"_s).contains(u"task: done"_s));
 }
 
@@ -1624,48 +1666,48 @@ void TestVaultController::undoesAndRedoesTicks()
     QVERIFY(m_vault->openPath(m_root));
     const QString soren = m_root + u"/Ashfall/Characters/Soren.md"_s;
     const QString untouched = readFile(soren);
-    QVERIFY(!m_vault->canUndoTask());
+    QVERIFY(!m_vault->canUndo());
     // Soren's open box is on line 7, in a note that is not shown.
     QVERIFY(m_vault->setTaskDone(u"Ashfall/Characters/Soren.md"_s, 7, true));
     QVERIFY(readFile(soren).contains(u"- [x] decide what he wants"_s));
-    QVERIFY(m_vault->canUndoTask());
+    QVERIFY(m_vault->canUndo());
 
-    QVERIFY(m_vault->undoTask());
+    QVERIFY(m_vault->undo());
     QCOMPARE(readFile(soren), untouched);
-    QVERIFY(!m_vault->canUndoTask());
-    QVERIFY(m_vault->canRedoTask());
-    QVERIFY(m_vault->redoTask());
+    QVERIFY(!m_vault->canUndo());
+    QVERIFY(m_vault->canRedo());
+    QVERIFY(m_vault->redo());
     QVERIFY(readFile(soren).contains(u"- [x] decide what he wants"_s));
 
     // A task note's completion comes back too.
     const QString groceries = m_root + u"/Inbox/Groceries.md"_s;
     QVERIFY(m_vault->completeTask(u"Inbox/Groceries.md"_s));
     QVERIFY(readFile(groceries).contains(u"task: done"_s));
-    QVERIFY(m_vault->undoTask());
+    QVERIFY(m_vault->undo());
     QVERIFY(readFile(groceries).contains(u"task: open"_s));
     QVERIFY(!readFile(groceries).contains(u"\ndone: "_s));
 
     // Changed since, the note is left alone and the step forgotten.
-    QVERIFY(m_vault->undoTask());
-    QVERIFY(m_vault->redoTask());
+    QVERIFY(m_vault->undo());
+    QVERIFY(m_vault->redo());
     QFile file(soren);
     QVERIFY(file.open(QIODevice::Append));
     file.write("\nMore about him.\n");
     file.close();
     const QString changed = readFile(soren);
-    QVERIFY(!m_vault->undoTask());
+    QVERIFY(!m_vault->undo());
     QCOMPARE(readFile(soren), changed);
     QVERIFY(!m_vault->problem().isEmpty());
-    QVERIFY(!m_vault->canUndoTask());
+    QVERIFY(!m_vault->canUndo());
 
     // A note renamed since has its step dropped, and the one before it still undoes.
     QVERIFY(m_vault->completeTask(u"Inbox/Groceries.md"_s));
     QVERIFY(m_vault->setTaskDone(u"Ashfall/Characters/Soren.md"_s, 7, false));
     QVERIFY(QFile::rename(soren, m_root + u"/Ashfall/Characters/Soren Vale.md"_s));
-    QVERIFY(!m_vault->undoTask());
-    QVERIFY(m_vault->undoTask());
+    QVERIFY(!m_vault->undo());
+    QVERIFY(m_vault->undo());
     QVERIFY(readFile(groceries).contains(u"task: open"_s));
-    QVERIFY(!m_vault->canUndoTask());
+    QVERIFY(!m_vault->canUndo());
 }
 
 void TestVaultController::keepsAnUndoStepThatCouldNotBeWritten()
@@ -1682,15 +1724,15 @@ void TestVaultController::keepsAnUndoStepThatCouldNotBeWritten()
     QVERIFY(folder.setPermissions(QFile::ReadOwner | QFile::ExeOwner));
     auto unlock = qScopeGuard([&] { folder.setPermissions(open); });
 
-    QVERIFY(!m_vault->undoTask());
+    QVERIFY(!m_vault->undo());
     QCOMPARE(readFile(soren), ticked);
     QVERIFY(m_vault->problem().contains(u"Could not change"_s));
-    QVERIFY(m_vault->canUndoTask());
+    QVERIFY(m_vault->canUndo());
 
     // Once it can be written, the same step undoes.
     unlock.dismiss();
     QVERIFY(folder.setPermissions(open));
-    QVERIFY(m_vault->undoTask());
+    QVERIFY(m_vault->undo());
     QVERIFY(readFile(soren).contains(u"- [ ] decide what he wants"_s));
 }
 
