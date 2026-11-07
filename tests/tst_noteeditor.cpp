@@ -12,7 +12,6 @@
 #include <QElapsedTimer>
 #include <QInputMethodEvent>
 #include <QPointer>
-#include <QPointer>
 #include <QQmlComponent>
 #include <QQmlEngine>
 #include <QQuickItem>
@@ -1168,12 +1167,12 @@ void TestNoteEditor::removingARowOrColumnAsksWithATrashCan()
             }
             return found;
         };
-    const auto visibleButton = [this, &named](const QString &name) -> QQuickItem * {
-        for (QQuickItem *item : named(m_window->contentItem(), name)) {
-            if (item->isVisible())
-                return item;
-        }
-        return nullptr;
+    // The button in a header's first cell as it is laid out now, not one in a pooled delegate.
+    const auto visibleButton = [&named](QQuickItem *header, const QString &name) -> QQuickItem * {
+        QQuickItem *cell = nullptr;
+        QMetaObject::invokeMethod(header, "itemAtCell", qReturnArg(cell), QPoint(0, 0));
+        const QList<QQuickItem *> found = cell ? named(cell, name) : QList<QQuickItem *>();
+        return !found.isEmpty() && found.first()->isVisible() ? found.first() : nullptr;
     };
     const auto clickOn = [this](QQuickItem *item) {
         const QPoint at =
@@ -1191,7 +1190,7 @@ void TestNoteEditor::removingARowOrColumnAsksWithATrashCan()
     QTest::mouseMove(m_window.get(), first + QPoint(0, 300));
     QTest::mouseMove(m_window.get(), first);
     QQuickItem *remove = nullptr;
-    QTRY_VERIFY((remove = visibleButton(u"removeRow"_s)));
+    QTRY_VERIFY((remove = visibleButton(rows, u"removeRow"_s)));
     QCOMPARE(remove->property("glyph").toString(), u"close"_s);
     clickOn(remove);
     QCOMPARE(remove->property("glyph").toString(), u"trash"_s);
@@ -1201,7 +1200,7 @@ void TestNoteEditor::removingARowOrColumnAsksWithATrashCan()
     QTRY_VERIFY(!remove->property("armed").toBool());
     // A second click on the can takes the row.
     QTest::mouseMove(m_window.get(), first);
-    QTRY_VERIFY((remove = visibleButton(u"removeRow"_s)));
+    QTRY_VERIFY((remove = visibleButton(rows, u"removeRow"_s)));
     clickOn(remove);
     clickOn(remove);
     QTRY_COMPARE(records->rowCount(), 1);
@@ -1213,7 +1212,7 @@ void TestNoteEditor::removingARowOrColumnAsksWithATrashCan()
     QVERIFY(header);
     const QPoint heading = header->mapToScene(QPointF(30, header->height() / 2)).toPoint();
     QTest::mouseMove(m_window.get(), heading);
-    QTRY_VERIFY((remove = visibleButton(u"removeColumn"_s)));
+    QTRY_VERIFY((remove = visibleButton(header, u"removeColumn"_s)));
     const QPointer<QQuickItem> armed = remove;
     clickOn(remove);
     QCOMPARE(records->columns().size(), 2);

@@ -292,12 +292,17 @@ Item {
             }
             // The X takes its own clicks, which would otherwise sort or rename too.
             TapHandler {
-                onTapped: {
-                    if (!removeColumn.hovered)
+                function onRemove(point: eventPoint): bool {
+                    const at = removeColumn.mapFromItem(heading, point.position)
+                    return removeColumn.visible && removeColumn.contains(at)
+                }
+
+                onTapped: point => {
+                    if (!onRemove(point))
                         root.records.sortBy(heading.index)
                 }
-                onDoubleTapped: {
-                    if (!Vault.writable || removeColumn.hovered)
+                onDoubleTapped: point => {
+                    if (!Vault.writable || onRemove(point))
                         return
                     rename.text = heading.display
                     heading.renaming = true
