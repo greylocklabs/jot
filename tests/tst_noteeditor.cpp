@@ -1260,12 +1260,16 @@ void TestNoteEditor::scrollsAWideTableAcross()
     QTRY_VERIFY(table->isVisible() && table->property("contentWidth").toReal() > table->width());
     QCOMPARE(table->property("contentX").toReal(), 0.0);
 
-    // The wheel with Shift held scrolls across.
-    const QPointF at = table->mapToScene(QPointF(table->width() / 2, 20));
-    QWheelEvent wheel(at, m_window->mapToGlobal(at), QPoint(), QPoint(0, -120), Qt::NoButton,
-                      Qt::ShiftModifier, Qt::NoScrollPhase, false);
-    QGuiApplication::sendEvent(m_window.get(), &wheel);
-    QTRY_VERIFY(table->property("contentX").toReal() > 0);
+    // The wheel with Shift held scrolls across, over the cells or either header.
+    for (const QString &name : {u"table"_s, u"tableHeader"_s, u"rowHeader"_s}) {
+        table->setProperty("contentX", 0.0);
+        QQuickItem *over = find(name);
+        const QPointF at = over->mapToScene(QPointF(std::min(over->width() / 2, 40.0), 10));
+        QWheelEvent wheel(at, m_window->mapToGlobal(at), QPoint(), QPoint(0, -120), Qt::NoButton,
+                          Qt::ShiftModifier, Qt::NoScrollPhase, false);
+        QGuiApplication::sendEvent(m_window.get(), &wheel);
+        QTRY_VERIFY2(table->property("contentX").toReal() > 0, qPrintable(name));
+    }
     // And the bar for it shows all along, not only while scrolling.
     QQuickItem *across = nullptr;
     for (QQuickItem *child : table->findChildren<QQuickItem *>()) {
