@@ -356,8 +356,9 @@ void TestVault::findsTheVaultsNotesInTheDesktopTrash()
     QFile mara(desktop.filePath(u"files/Cast/Mara.md"_s));
     QVERIFY(mara.open(QIODevice::WriteOnly));
     mara.close();
-    // Not from this vault, or Jot's own folder.
+    // Not from this vault, or Jot's own folder, nor one that only seems to be.
     trashed(u"Elsewhere.md"_s, u"/somewhere/else/Elsewhere.md"_s, u"2026-11-03T09:00:00"_s);
+    trashed(u"Climbs.md"_s, root + u"/../Climbs.md"_s, u"2026-11-03T09:00:00"_s);
     trashed(u"state.md"_s, root + u"/.jot/state.md"_s, u"2026-11-03T09:00:00"_s);
 
     const VaultTrash trash(*m_vault, desktop.path());
@@ -376,6 +377,12 @@ void TestVault::findsTheVaultsNotesInTheDesktopTrash()
     QVERIFY(QFileInfo(m_vault->absolute(u"Plans/Big Day.assets"_s)).isDir());
     QVERIFY(!QFileInfo::exists(desktop.filePath(u"info/Big Day.md.trashinfo"_s)));
     QVERIFY(!QFileInfo::exists(desktop.filePath(u"info/Big Day.assets.trashinfo"_s)));
+    // Nor does restoring go anywhere outside the vault.
+    TrashedNote outside = found.at(0);
+    outside.path = u"../"_s + QFileInfo(root).fileName() + u" outside.md"_s;
+    QVERIFY(!trash.restore(outside, &error));
+    QVERIFY(QFileInfo::exists(outside.location));
+    QVERIFY(!QFileInfo::exists(QDir::cleanPath(root + u'/' + outside.path)));
     // One note out of a trashed notebook.
     QCOMPARE(trash.restore(found.at(0), &error), std::optional(u"Story/Cast/Mara.md"_s));
     QVERIFY(QFileInfo::exists(desktop.filePath(u"info/Cast.trashinfo"_s)));

@@ -119,6 +119,9 @@ void VaultTrash::listDesktop(QList<TrashedNote> &into) const
     const QDir infos(m_desktopTrash + u"/info"_s);
     for (const QFileInfo &info : infos.entryInfoList({u"*.trashinfo"_s}, QDir::Files)) {
         std::optional<Record> record = readRecord(info.filePath());
+        // Resolved first, so a path that climbs out with ".." is not taken for one inside.
+        if (record)
+            record->path = QDir::cleanPath(record->path);
         if (!record || !record->path.startsWith(root))
             continue;
         const QString relative = record->path.mid(root.size());
@@ -194,6 +197,13 @@ std::optional<QString> VaultTrash::restore(const TrashedNote &note, QString *err
         return std::nullopt;
     }
     QString path = note.path;
+    // Never anywhere but inside the vault, whatever the trash's record says.
+    const QString inside = QDir::cleanPath(m_vault.absolute(path));
+    if (path.isEmpty() || !inside.startsWith(m_vault.root() + u'/') ||
+        inside.mid(m_vault.root().size() + 1) != path) {
+        *error = QObject::tr("%1 is not a place in this vault").arg(note.path);
+        return std::nullopt;
+    }
     const QString folder = Vault::notebookOf(path);
     // Where another note has the place now, it comes back beside it.
     if (QFileInfo::exists(m_vault.absolute(path)) ||
