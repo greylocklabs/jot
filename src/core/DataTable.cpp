@@ -1076,15 +1076,19 @@ bool DataTable::removeRow(int row)
     const Row &record = m_rows.at(row);
     if (m_kind == u"yaml") {
         if (m_rows.size() == 1) {
-            // A key's list over lines of its own empties to "[]" after its key, where YAML reads
-            // it whatever the list's indent was.
+            // A key's list over lines of its own may sit at its key's indent, where "[]" would
+            // not parse. It empties to "key: []", or below a commented key, to "[]" indented
+            // under it.
             const qsizetype line = lineStart(m_array.start);
             if (m_depth > 0 && line > 0 &&
                 m_text.sliced(line, m_array.start - line).trimmed().isEmpty()) {
                 qsizetype from = line - 1;
                 if (from > 0 && m_text.at(from - 1) == u'\r')
                     --from;
-                return patch({from, m_array.end}, u" []"_s);
+                const QString above = m_text.sliced(lineStart(from), from - lineStart(from));
+                if (above.trimmed().endsWith(u':') && !above.contains(u'#'))
+                    return patch({from, m_array.end}, u" []"_s);
+                return patch({line, m_array.end}, lineIndent(m_array.start) + u"  []"_s);
             }
             return patch(m_array, u"[]"_s);
         }

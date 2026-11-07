@@ -544,6 +544,22 @@ crew:
     QVERIFY2(crew->text().endsWith(u"crew: []\n"_s), qPrintable(crew->text()));
     QVERIFY(crew->text().startsWith(u"# The ferry's people\ntitle: Ashfall\n"_s));
     QCOMPARE(DataTable::read(u"yaml"_s, crew->text(), nullptr, parts.at(2))->rowCount(), 0);
+
+    // A comment after the key or above the list stays a comment.
+    for (const QString &commented : {u"crew: # aboard\n- name: Ines\nport: Vey\n"_s,
+                                     u"crew:\n# aboard\n- name: Ines\nport: Vey\n"_s,
+                                     u"crew: # aboard\n  - name: Ines\nport: Vey\n"_s}) {
+        std::optional<DataTable> list = DataTable::read(
+            u"yaml"_s, commented, nullptr, DataTable::parts(u"yaml"_s, commented).at(0));
+        QVERIFY(list);
+        QVERIFY(list->removeRow(0));
+        QVERIFY2(list->text().contains(u"# aboard\n"_s) && list->text().endsWith(u"port: Vey\n"_s),
+                 qPrintable(list->text()));
+        std::optional<DataTable> again = DataTable::read(
+            u"yaml"_s, list->text(), nullptr, DataTable::parts(u"yaml"_s, list->text()).value(0));
+        QVERIFY2(again && again->part().key == u"crew" && again->rowCount() == 0,
+                 qPrintable(list->text()));
+    }
 }
 
 void TestDataTable::findsTheListsInYamlDocuments()
