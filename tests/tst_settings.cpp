@@ -21,6 +21,7 @@ private Q_SLOTS:
     void refusesAnUnknownNoteFont();
     void keepsColumnWidthsInBounds();
     void keepsKeyboardChoices();
+    void keepsTrashChoices();
     void keepsDeveloperChoices();
     void keepsTheTasksView();
     void keepsReminderChoices();
@@ -158,6 +159,24 @@ void TestSettings::keepsKeyboardChoices()
     QVERIFY(!settings.viMode());
     QCOMPARE(settings.leaderKey(), u","_s);
     QCOMPARE(settings.leaderTimeout(), 5000);
+}
+
+void TestSettings::keepsTrashChoices()
+{
+    QTemporaryDir dir;
+    const QString path = dir.filePath(u"settings.ini"_s);
+    Settings settings(path);
+    QCOMPARE(settings.trashDays(), 0);
+    QSignalSpy changed(&settings, &Settings::trashChanged);
+    settings.setTrashDays(30);
+    settings.setTrashDays(30);
+    QCOMPARE(changed.size(), 1);
+    QCOMPARE(Settings(path).trashDays(), 30);
+    settings.setTrashDays(-5);
+    QCOMPARE(settings.trashDays(), 0);
+    settings.setTrashDays(30);
+    settings.reset();
+    QCOMPARE(settings.trashDays(), 0);
 }
 
 void TestSettings::keepsDeveloperChoices()
