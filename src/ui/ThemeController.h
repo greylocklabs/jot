@@ -97,10 +97,8 @@ class ThemeController : public QObject
     /// Vi's Insert and Visual modes, as stickers in the theme's calendar colors: green and amber.
     Q_PROPERTY(QColor insertMode READ insertMode NOTIFY changed)
     Q_PROPERTY(QColor insertModeText READ insertModeText NOTIFY changed)
-    Q_PROPERTY(QColor insertModeEdge READ insertModeEdge NOTIFY changed)
     Q_PROPERTY(QColor visualMode READ visualMode NOTIFY changed)
     Q_PROPERTY(QColor visualModeText READ visualModeText NOTIFY changed)
-    Q_PROPERTY(QColor visualModeEdge READ visualModeEdge NOTIFY changed)
 
     /// How long the leader key waits before showing what can follow it, in ms.
     Q_PROPERTY(int whichKeyDelay READ whichKeyDelay CONSTANT)
@@ -228,10 +226,8 @@ public:
     QColor dangerText() const;
     QColor insertMode() const { return sticker(kInsertHue, Part::Fill); }
     QColor insertModeText() const { return sticker(kInsertHue, Part::Ink); }
-    QColor insertModeEdge() const { return sticker(kInsertHue, Part::Edge); }
     QColor visualMode() const { return sticker(kVisualHue, Part::Fill); }
     QColor visualModeText() const { return sticker(kVisualHue, Part::Ink); }
-    QColor visualModeEdge() const { return sticker(kVisualHue, Part::Edge); }
 
     int whichKeyDelay() const { return 300; }
     qreal fadedOpacity() const { return 0.5; }
