@@ -290,10 +290,14 @@ Item {
             HoverHandler {
                 id: headingHover
             }
+            // The X takes its own clicks, which would otherwise sort or rename too.
             TapHandler {
-                onTapped: root.records.sortBy(heading.index)
+                onTapped: {
+                    if (!removeColumn.hovered)
+                        root.records.sortBy(heading.index)
+                }
                 onDoubleTapped: {
-                    if (!Vault.writable)
+                    if (!Vault.writable || removeColumn.hovered)
                         return
                     rename.text = heading.display
                     heading.renaming = true
@@ -301,13 +305,18 @@ Item {
                     rename.selectAll()
                 }
             }
-            CloseButton {
+            RemoveButton {
+                id: removeColumn
+
+                objectName: "removeColumn"
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 visible: Vault.writable && headingHover.hovered && !heading.renaming
                 scale: 0.75
-                Accessible.name: qsTr("Remove the column %1").arg(heading.display)
-                onClicked: root.records.removeColumn(heading.index)
+                Accessible.name: armed ? qsTr("Click again to remove the column %1").arg(
+                                             heading.display) : qsTr("Remove the column %1").arg(
+                                             heading.display)
+                onConfirmed: root.records.removeColumn(heading.index)
             }
         }
     }
@@ -345,12 +354,14 @@ Item {
             HoverHandler {
                 id: numberHover
             }
-            CloseButton {
+            RemoveButton {
+                objectName: "removeRow"
                 anchors.centerIn: parent
                 visible: Vault.writable && numberHover.hovered
                 scale: 0.75
-                Accessible.name: qsTr("Remove row %1").arg(number.display)
-                onClicked: {
+                Accessible.name: armed ? qsTr("Click again to remove row %1").arg(number.display) :
+                                         qsTr("Remove row %1").arg(number.display)
+                onConfirmed: {
                     root.records.removeRow(number.index)
                     // The button goes with its row, so the keys come back to the table.
                     table.forceActiveFocus()

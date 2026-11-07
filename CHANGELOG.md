@@ -14,6 +14,11 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   own, newest first. Read one there, or restore it where it was, with its attachments. Jot never
   empties the trash.
 
+### Changed
+
+- Removing a table row or column asks first: its X turns into a trash can in the same place, and
+  a second click removes it.
+
 ## 0.3.0 - 2026-11-06
 
 ### Added
