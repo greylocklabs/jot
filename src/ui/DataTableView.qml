@@ -290,24 +290,40 @@ Item {
             HoverHandler {
                 id: headingHover
             }
-            TapHandler {
-                onTapped: root.records.sortBy(heading.index)
-                onDoubleTapped: {
-                    if (!Vault.writable)
-                        return
-                    rename.text = heading.display
-                    heading.renaming = true
-                    rename.forceActiveFocus()
-                    rename.selectAll()
+            // Clicks sort and double clicks rename only beside the X, so on any Qt version the X's
+            // own clicks reach nothing else.
+            Item {
+                anchors {
+                    left: parent.left
+                    top: parent.top
+                    bottom: parent.bottom
+                    right: removeColumn.visible ? removeColumn.left : parent.right
+                }
+
+                TapHandler {
+                    onTapped: root.records.sortBy(heading.index)
+                    onDoubleTapped: {
+                        if (!Vault.writable)
+                            return
+                        rename.text = heading.display
+                        heading.renaming = true
+                        rename.forceActiveFocus()
+                        rename.selectAll()
+                    }
                 }
             }
-            CloseButton {
+            RemoveButton {
+                id: removeColumn
+
+                objectName: "removeColumn"
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 visible: Vault.writable && headingHover.hovered && !heading.renaming
                 scale: 0.75
-                Accessible.name: qsTr("Remove the column %1").arg(heading.display)
-                onClicked: root.records.removeColumn(heading.index)
+                Accessible.name: armed ? qsTr("Click again to remove the column %1").arg(
+                                             heading.display) : qsTr("Remove the column %1").arg(
+                                             heading.display)
+                onConfirmed: root.records.removeColumn(heading.index)
             }
         }
     }
@@ -345,12 +361,14 @@ Item {
             HoverHandler {
                 id: numberHover
             }
-            CloseButton {
+            RemoveButton {
+                objectName: "removeRow"
                 anchors.centerIn: parent
                 visible: Vault.writable && numberHover.hovered
                 scale: 0.75
-                Accessible.name: qsTr("Remove row %1").arg(number.display)
-                onClicked: {
+                Accessible.name: armed ? qsTr("Click again to remove row %1").arg(number.display) :
+                                         qsTr("Remove row %1").arg(number.display)
+                onConfirmed: {
                     root.records.removeRow(number.index)
                     // The button goes with its row, so the keys come back to the table.
                     table.forceActiveFocus()

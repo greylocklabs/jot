@@ -11,6 +11,7 @@
 #include <QDirIterator>
 #include <QElapsedTimer>
 #include <QInputMethodEvent>
+#include <QPointer>
 #include <QQmlComponent>
 #include <QQmlEngine>
 #include <QQuickItem>
@@ -73,6 +74,7 @@ private Q_SLOTS:
     void showsEachListOfAFileAsATab();
     void checksATableAgainstItsSchema();
     void scrollsAWideTableAcross();
+    void removingARowOrColumnAsksWithATrashCan();
     void readsTheNoteWithLinksAndBoxesToTick();
     void readsDiagramsAsPictures();
     void tickingARepeatingToDoWritesTheNext();
@@ -1139,6 +1141,108 @@ void TestNoteEditor::editsAListOfRecordsAsATable()
     m_vault->setCurrent(u"cast.schema.json"_s);
     QVERIFY(body->isVisible());
     QVERIFY(!find(u"viewSwitch"_s)->isEnabled());
+}
+
+void TestNoteEditor::removingARowOrColumnAsksWithATrashCan()
+{
+    QFile file(m_root + u"/pair.json"_s);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write("[\n  {\"name\": \"Mara\", \"age\": 31, \"town\": \"Vey\"},\n"
+               "  {\"name\": \"Soren\", \"age\": 40, \"town\": \"Ost\"}\n]\n");
+    file.close();
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"pair.json"_s), 3000);
+    m_vault->setCurrent(u"pair.json"_s);
+    QQuickItem *view = find(u"tableView"_s);
+    QTRY_VERIFY(view->isVisible());
+    auto *records = view->property("records").value<DataTableModel *>();
+    QQuickItem *rows = find(u"rowHeader"_s);
+    // Views hang their delegates on the item tree, not the object tree.
+    const std::function<QList<QQuickItem *>(QQuickItem *, const QString &)> named =
+        [&named](QQuickItem *from, const QString &name) {
+            QList<QQuickItem *> found;
+            for (QQuickItem *child : from->childItems()) {
+                if (child->objectName() == name)
+                    found << child;
+                found << named(child, name);
+            }
+            return found;
+        };
+    // The button in a header's first cell as it is laid out now. Views remake their delegates
+    // after a change, so it is looked up again for every use.
+    const auto button = [&named](QQuickItem *header, const QString &name) {
+        QQuickItem *cell = nullptr;
+        QMetaObject::invokeMethod(header, "itemAtCell", qReturnArg(cell), QPoint(0, 0));
+        const QList<QQuickItem *> found = cell ? named(cell, name) : QList<QQuickItem *>();
+        return QPointer<QQuickItem>(!found.isEmpty() && found.first()->isVisible() ? found.first()
+                                                                                   : nullptr);
+    };
+    const auto said = [&button](QQuickItem *header, const QString &name, const char *property) {
+        const QPointer<QQuickItem> item = button(header, name);
+        return item ? item->property(property) : QVariant();
+    };
+    // Points at the button first, as a mouse would, so it knows it is hovered, then clicks.
+    const auto clickOn = [this, &button](QQuickItem *header, const QString &name,
+                                         bool twice = false) {
+        QPointer<QQuickItem> item;
+        QTRY_VERIFY((item = button(header, name)));
+        const QPoint at =
+            item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint();
+        QTest::mouseMove(m_window.get(), at);
+        QTRY_VERIFY((item = button(header, name)) && item->property("hovered").toBool());
+        if (twice)
+            QTest::mouseDClick(m_window.get(), Qt::LeftButton, {}, at);
+        else
+            QTest::mouseClick(m_window.get(), Qt::LeftButton, {}, at);
+    };
+    const QString removeRow = u"removeRow"_s;
+    const QString removeColumn = u"removeColumn"_s;
+
+    // Over the first row, its X; a click turns it into a trash can and takes nothing yet.
+    QTRY_VERIFY(!named(m_window->contentItem(), removeRow).isEmpty());
+    const QPoint first = rows->mapToScene(QPointF(rows->width() / 2, 10)).toPoint();
+    QTest::mouseMove(m_window.get(), first + QPoint(0, 300));
+    QTest::mouseMove(m_window.get(), first);
+    QTRY_COMPARE(said(rows, removeRow, "glyph").toString(), u"close"_s);
+    clickOn(rows, removeRow);
+    QTRY_COMPARE(said(rows, removeRow, "glyph").toString(), u"trash"_s);
+    QCOMPARE(records->rowCount(), 2);
+    // Moving away puts the X back.
+    QTest::mouseMove(m_window.get(), first + QPoint(400, 200));
+    QTRY_VERIFY(!button(rows, removeRow));
+    QTest::mouseMove(m_window.get(), first);
+    QTRY_COMPARE(said(rows, removeRow, "armed").toBool(), false);
+    // A second click on the can takes the row.
+    clickOn(rows, removeRow);
+    QTRY_COMPARE(said(rows, removeRow, "armed").toBool(), true);
+    clickOn(rows, removeRow);
+    QTRY_COMPARE(records->rowCount(), 1);
+    QTRY_VERIFY(m_vault->currentText().contains(u"Soren"_s) &&
+                !m_vault->currentText().contains(u"Mara"_s));
+
+    // A column asks the same way.
+    QQuickItem *header = find(u"tableHeader"_s);
+    QVERIFY(header);
+    const QPoint heading = header->mapToScene(QPointF(30, header->height() / 2)).toPoint();
+    QTest::mouseMove(m_window.get(), heading);
+    clickOn(header, removeColumn);
+    QTRY_COMPARE(said(header, removeColumn, "armed").toBool(), true);
+    QCOMPARE(records->columns().size(), 3);
+    // The click is the button's alone: the heading under it neither sorts nor renames.
+    QCOMPARE(records->sortColumn(), -1);
+    clickOn(header, removeColumn);
+    QTRY_COMPARE(records->columns().size(), 2);
+
+    // Two quick clicks, which come as a double click, take it too.
+    QTest::mouseMove(m_window.get(), heading + QPoint(0, 300));
+    QTest::mouseMove(m_window.get(), heading);
+    clickOn(header, removeColumn, true);
+    QTRY_COMPARE(records->columns().size(), 1);
+    QCOMPARE(records->sortColumn(), -1);
+
+    // Beside the X, a click on the heading still sorts.
+    QTest::mouseMove(m_window.get(), heading);
+    QTest::mouseClick(m_window.get(), Qt::LeftButton, {}, heading);
+    QTRY_COMPARE(records->sortColumn(), 0);
 }
 
 void TestNoteEditor::scrollsAWideTableAcross()
