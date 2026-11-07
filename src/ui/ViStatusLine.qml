@@ -4,6 +4,7 @@ import QtQuick
 
 /// Across the foot of the editor while vi mode is on: the mode in caps and in its own color, the
 /// file with its kind's icon, then where the cursor is, how far down the view is, and the clock.
+/// It is flat, without the edge buttons have, as nothing on it is clicked.
 Rectangle {
     id: root
 
@@ -28,35 +29,25 @@ Rectangle {
                                                           ? Theme.visualMode : Theme.accent
     readonly property color modeText: mode === "insert" ? Theme.insertModeText : mode === "visual"
                                                           ? Theme.visualModeText : Theme.accentText
-    readonly property color modeEdge: mode === "insert" ? Theme.insertModeEdge : mode === "visual"
-                                                          ? Theme.visualModeEdge : Theme.accentEdge
     readonly property string folders: path.lastIndexOf("/") < 0 ? "" : path.slice(0,
                                                                                   path.lastIndexOf(
                                                                                       "/")).split(
                                                                       "/").join(" / ") + " /"
     readonly property string fileName: path.slice(path.lastIndexOf("/") + 1)
 
-    // A rounded sticker on an edge, as the buttons are.
+    // A run of text; only the mode's has a fill.
     component Segment: Item {
         id: segment
 
         default property alias content: row.data
-        property color fill: Theme.surfaceAlt
-        property color edge: Theme.edge
+        property color fill: "transparent"
 
         implicitWidth: row.implicitWidth + 2 * Theme.space3
-        implicitHeight: 26
+        implicitHeight: 22
 
         Rectangle {
             anchors.fill: parent
-            anchors.topMargin: Theme.stickerEdge
-            anchors.bottomMargin: -Theme.stickerEdge
-            radius: Theme.radiusMd
-            color: segment.edge
-        }
-        Rectangle {
-            anchors.fill: parent
-            radius: Theme.radiusMd
+            radius: Theme.radiusSm
             color: segment.fill
         }
         Row {
@@ -78,7 +69,7 @@ Rectangle {
         }
     }
 
-    implicitHeight: 26 + Theme.stickerEdge + 2 * Theme.space2
+    implicitHeight: 22 + 2 * Theme.space2
     color: Theme.surface
 
     Rectangle {
@@ -91,13 +82,11 @@ Rectangle {
         anchors.left: parent.left
         anchors.leftMargin: Theme.space2
         anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: -Theme.stickerEdge / 2
         spacing: Theme.space2
 
         Segment {
             objectName: "viMode"
             fill: root.modeFill
-            edge: root.modeEdge
 
             Label {
                 text: root.mode.toUpperCase()
@@ -144,7 +133,6 @@ Rectangle {
         anchors.right: parent.right
         anchors.rightMargin: Theme.space2
         anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: -Theme.stickerEdge / 2
         spacing: Theme.space2
 
         Segment {
@@ -166,23 +154,20 @@ Rectangle {
         }
         Segment {
             objectName: "viClock"
-            fill: root.modeFill
-            edge: root.modeEdge
 
             Glyph {
                 anchors.verticalCenter: parent.verticalCenter
                 implicitWidth: 13
                 implicitHeight: 13
                 name: "clock"
-                color: root.modeText
+                color: root.modeFill
                 stroke: Theme.fineGlyphStroke
             }
             Label {
                 // The day's short name and the time as the desktop's locale writes them.
                 text: Qt.locale().dayName(root.now.getDay(), Locale.ShortFormat) + " "
                       + root.now.toLocaleTimeString(Qt.locale(), Locale.ShortFormat)
-                color: root.modeText
-                font.weight: Theme.weightHeavy
+                color: Theme.textMuted
             }
         }
     }

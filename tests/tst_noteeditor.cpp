@@ -1484,12 +1484,12 @@ void TestNoteEditor::showsWhereViIsAlongTheFoot()
     QTRY_COMPARE(words(part("viClock")), clock());
     const QColor normal = part("viMode")->property("fill").value<QColor>();
 
-    // Each mode in its own color, the clock's too.
+    // Each mode in its own color; nothing else has a fill, so nothing looks like a button.
+    QCOMPARE(part("viClock")->property("fill").value<QColor>().alpha(), 0);
+    QCOMPARE(part("viCursor")->property("fill").value<QColor>().alpha(), 0);
     QTest::keyClick(m_window.get(), 'i');
     QCOMPARE(words(part("viMode")), u"INSERT"_s);
-    const QColor insert = part("viMode")->property("fill").value<QColor>();
-    QVERIFY(insert != normal);
-    QCOMPARE(part("viClock")->property("fill").value<QColor>(), insert);
+    QVERIFY(part("viMode")->property("fill").value<QColor>() != normal);
     QTest::keyClick(m_window.get(), Qt::Key_Escape);
 
     // Visual counts the lines it picks.
