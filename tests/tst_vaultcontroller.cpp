@@ -1123,7 +1123,13 @@ void TestVaultController::undoesTrashingAndRestoring()
     QVERIFY(QFileInfo::exists(m_root + u"/Recipes/Rye.md"_s));
     QVERIFY(!m_vault->canRedo());
 
-    // A notebook comes back with everything in it, and going again asks first.
+    // A notebook comes back with everything in it, and going again asks first. Files in a
+    // note's attachments are no notes of their own, there or back.
+    QVERIFY(QDir().mkpath(m_root + u"/Ashfall/Characters/Soren.assets"_s));
+    QFile inside(m_root + u"/Ashfall/Characters/Soren.assets/data.json"_s);
+    QVERIFY(inside.open(QIODevice::WriteOnly));
+    inside.write("[]\n");
+    inside.close();
     const int before = m_vault->noteCount();
     QVERIFY(m_vault->trashNotebook(u"Ashfall/Characters"_s));
     QVERIFY(!QFileInfo::exists(m_root + u"/Ashfall/Characters"_s));
@@ -1138,6 +1144,20 @@ void TestVaultController::undoesTrashingAndRestoring()
     QVERIFY(QDir().mkpath(m_root + u"/Ashfall/Characters"_s));
     QVERIFY(m_vault->undo());
     QVERIFY(QFileInfo::exists(m_root + u"/Ashfall/Characters 2/Mara Vey.md"_s));
+    QCOMPARE(m_vault->noteCount(), before);
+
+    // One gone from the trash since cannot come back; one moved since is not trashed again.
+    QVERIFY(m_vault->trashNotebook(u"Ashfall/Characters 2"_s));
+    QVERIFY(m_vault->emptyTrash());
+    QVERIFY(!m_vault->undo());
+    QVERIFY(!QFileInfo::exists(m_root + u"/Ashfall/Characters 2"_s));
+    QVERIFY(!m_vault->problem().isEmpty());
+    QVERIFY(m_vault->trashNotebook(u"Ashfall/Places"_s));
+    QVERIFY(m_vault->undo());
+    QVERIFY(QDir().rename(m_root + u"/Ashfall/Places"_s, m_root + u"/Ashfall/Harbor"_s));
+    QVERIFY(!m_vault->redo());
+    QVERIFY(QFileInfo::exists(m_root + u"/Ashfall/Harbor"_s));
+    QVERIFY(!m_vault->canRedo());
 }
 
 void TestVaultController::followsLinksAndMakesMissingNotes()

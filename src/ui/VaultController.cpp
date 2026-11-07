@@ -18,7 +18,6 @@
 #include <QClipboard>
 #include <QDesktopServices>
 #include <QDir>
-#include <QDirIterator>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QImage>
@@ -1580,13 +1579,9 @@ std::optional<QString> VaultController::bringNotebookBack(const QString &locatio
         setProblem(tr("Could not bring the notebook back: %1").arg(error));
         return std::nullopt;
     }
-    QStringList notes;
-    QDirIterator files(m_vault->absolute(*back), QDir::Files, QDirIterator::Subdirectories);
-    while (files.hasNext()) {
-        const QString relative = files.next().mid(m_vault->root().size() + 1);
-        if (Vault::isListed(relative))
-            notes << relative;
-    }
+    // The notes in it as the vault lists them, which leaves out files in attachment folders.
+    QStringList notes = m_vault->notes();
+    notes.removeIf([&back](const QString &note) { return !note.startsWith(*back + u'/'); });
     m_index->update(notes);
     if (m_watcher)
         m_watcher->start();
