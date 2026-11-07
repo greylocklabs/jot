@@ -290,24 +290,26 @@ Item {
             HoverHandler {
                 id: headingHover
             }
-            // The X takes its own clicks, which would otherwise sort or rename too.
-            TapHandler {
-                function onRemove(point: eventPoint): bool {
-                    const at = removeColumn.mapFromItem(heading, point.position)
-                    return removeColumn.visible && removeColumn.contains(at)
+            // Clicks sort and double clicks rename only beside the X, so on any Qt version the X's
+            // own clicks reach nothing else.
+            Item {
+                anchors {
+                    left: parent.left
+                    top: parent.top
+                    bottom: parent.bottom
+                    right: removeColumn.visible ? removeColumn.left : parent.right
                 }
 
-                onTapped: point => {
-                    if (!onRemove(point))
-                        root.records.sortBy(heading.index)
-                }
-                onDoubleTapped: point => {
-                    if (!Vault.writable || onRemove(point))
-                        return
-                    rename.text = heading.display
-                    heading.renaming = true
-                    rename.forceActiveFocus()
-                    rename.selectAll()
+                TapHandler {
+                    onTapped: root.records.sortBy(heading.index)
+                    onDoubleTapped: {
+                        if (!Vault.writable)
+                            return
+                        rename.text = heading.display
+                        heading.renaming = true
+                        rename.forceActiveFocus()
+                        rename.selectAll()
+                    }
                 }
             }
             RemoveButton {
