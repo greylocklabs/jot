@@ -32,6 +32,8 @@ class ViEditor : public QObject
     /// Where the cursor is, counted from 1 as vi does: the line, and the character on it.
     Q_PROPERTY(int line READ line NOTIFY placeChanged)
     Q_PROPERTY(int column READ column NOTIFY placeChanged)
+    /// How far through the file the cursor's line is: 0 on the first line, 100 on the last.
+    Q_PROPERTY(int percent READ percent NOTIFY placeChanged)
     /// The lines the selection touches, or 0 with nothing selected.
     Q_PROPERTY(int pickedLines READ pickedLines NOTIFY placeChanged)
 
@@ -47,6 +49,7 @@ public:
     [[nodiscard]] QString pending() const { return m_pending; }
     [[nodiscard]] int line() const;
     [[nodiscard]] int column() const;
+    [[nodiscard]] int percent() const;
     [[nodiscard]] int pickedLines() const;
 
 Q_SIGNALS:

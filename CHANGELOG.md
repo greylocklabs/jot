@@ -16,6 +16,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   is no notebook for the note to go in.
 - The Vi status line is flat, with only the mode on a color of its own, so nothing on it looks
   like a button.
+- The Vi status line says how far through the file the cursor is, from 0% on the first line to
+  100% on the last, rather than All, Top or Bot.
 
 ### Fixed
 
