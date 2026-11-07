@@ -8,6 +8,16 @@ import QtQuick.Controls
 Item {
     id: root
 
+    // Shift and the wheel scroll across the columns, as in a spreadsheet, from the headers too.
+    component AcrossWheel: WheelHandler {
+        acceptedModifiers: Qt.ShiftModifier
+        onWheel: event => {
+            const delta = event.angleDelta.y !== 0 ? event.angleDelta.y : event.angleDelta.x
+            const most = Math.max(0, table.contentWidth - table.width)
+            table.contentX = Math.max(0, Math.min(most, table.contentX - delta))
+        }
+    }
+
     required property DataTableModel records
     /// The cell picked, by the row and column shown.
     property int row: 0
@@ -238,6 +248,8 @@ Item {
         clip: true
         interactive: false
 
+        AcrossWheel {}
+
         delegate: Rectangle {
             id: heading
 
@@ -339,6 +351,8 @@ Item {
         clip: true
         interactive: false
 
+        AcrossWheel {}
+
         delegate: Rectangle {
             id: number
 
@@ -398,15 +412,7 @@ Item {
             policy: table.contentHeight > table.height ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
         }
 
-        // Shift and the wheel scroll across the columns, as in a spreadsheet.
-        WheelHandler {
-            acceptedModifiers: Qt.ShiftModifier
-            onWheel: event => {
-                const delta = event.angleDelta.y !== 0 ? event.angleDelta.y : event.angleDelta.x
-                const most = Math.max(0, table.contentWidth - table.width)
-                table.contentX = Math.max(0, Math.min(most, table.contentX - delta))
-            }
-        }
+        AcrossWheel {}
 
         Keys.onPressed: event => {
             if (root.editing)
