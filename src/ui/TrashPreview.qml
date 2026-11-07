@@ -36,6 +36,31 @@ Rectangle {
         onClicked: Vault.restoreTrashed(root.location)
     }
 
+    StickerButton {
+        id: deleteForGood
+
+        objectName: "deleteTrashed"
+        visible: root.location !== ""
+        enabled: Vault.writable
+        anchors {
+            top: restore.top
+            right: restore.left
+            rightMargin: Theme.space2
+        }
+        destructive: true
+        text: qsTr("Delete for good")
+        onClicked: {
+            const location = root.location
+            confirm.ask(qsTr("Delete %1 for good?").arg(Vault.trashedTitle(location)), qsTr(
+                            "It is deleted now, with its attachments, and cannot be brought back."),
+                        qsTr("Delete for good"), () => Vault.deleteTrashed(location))
+        }
+    }
+
+    ConfirmDialog {
+        id: confirm
+    }
+
     ScrollView {
         visible: root.location !== ""
         anchors {

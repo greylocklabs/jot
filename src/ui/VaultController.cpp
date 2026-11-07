@@ -58,6 +58,11 @@ VaultController::VaultController(Settings &settings, QObject *parent)
             [this] { m_settings.setTasksView(m_tasks.view()); });
     connect(&settings, &Settings::tasksViewChanged, this,
             [this] { m_tasks.setView(m_settings.tasksView()); });
+    // Jot keeps running for days in the tray, so the trash is looked at more than at opening.
+    m_expireTimer.setInterval(std::chrono::hours(6));
+    connect(&m_expireTimer, &QTimer::timeout, this, &VaultController::expireTrash);
+    m_expireTimer.start();
+    connect(&settings, &Settings::trashChanged, this, &VaultController::expireTrash);
 }
 
 VaultController::~VaultController()
@@ -109,7 +114,6 @@ bool VaultController::openPath(const QString &path)
         return false;
     }
     auto vault = std::make_unique<Vault>(*created);
-    vault->setSystemTrash(m_systemTrash);
     auto index = std::make_unique<VaultIndex>(*vault, m_indexPath);
     if (!index->open(&error)) {
         fail(tr("Could not open the index for %1: %2").arg(path, error));
@@ -135,6 +139,7 @@ bool VaultController::openPath(const QString &path)
     reloadModels();
     Q_EMIT openChanged();
     m_sync.setVault(m_vault->root(), [this] { saveNow(); });
+    expireTrash();
     return true;
 }
 
@@ -1078,10 +1083,7 @@ void VaultController::setShowingTrash(bool showing)
 
 void VaultController::reloadTrash()
 {
-    // Tests keep to the vault's own trash, so a test never reads the desktop's.
-    m_trash.setItems(m_vault
-                         ? VaultTrash(*m_vault, m_systemTrash ? m_desktopTrash : QString()).list()
-                         : QList<TrashedNote>());
+    m_trash.setItems(m_vault ? VaultTrash(*m_vault).list() : QList<TrashedNote>());
 }
 
 QString VaultController::restoreTrashed(const QString &location)
@@ -1090,8 +1092,7 @@ QString VaultController::restoreTrashed(const QString &location)
     if (!m_vault || !m_index || !item)
         return {};
     QString error;
-    const std::optional<QString> path =
-        VaultTrash(*m_vault, m_systemTrash ? m_desktopTrash : QString()).restore(*item, &error);
+    const std::optional<QString> path = VaultTrash(*m_vault).restore(*item, &error);
     if (!path) {
         qCWarning(lcVault) << "could not restore" << item->path << error;
         setProblem(tr("Could not bring the note back: %1").arg(error));
@@ -1109,12 +1110,60 @@ QString VaultController::restoreTrashed(const QString &location)
     return *path;
 }
 
+bool VaultController::deleteTrashed(const QString &location)
+{
+    const std::optional<TrashedNote> item = m_trash.item(location);
+    if (!m_vault || !item)
+        return false;
+    QString error;
+    const bool deleted = VaultTrash(*m_vault).remove(*item, &error);
+    if (!deleted) {
+        qCWarning(lcVault) << "could not delete" << item->path << error;
+        setProblem(tr("Could not delete the note: %1").arg(error));
+    }
+    reloadTrash();
+    return deleted;
+}
+
+bool VaultController::emptyTrash()
+{
+    if (!m_vault)
+        return false;
+    QString error;
+    const bool emptied = VaultTrash(*m_vault).empty(&error);
+    if (!emptied) {
+        qCWarning(lcVault) << "could not empty the trash" << error;
+        setProblem(tr("Could not empty the trash: %1").arg(error));
+    }
+    reloadTrash();
+    return emptied;
+}
+
+void VaultController::expireTrash()
+{
+    if (!m_vault || m_settings.trashDays() <= 0)
+        return;
+    const int moved = VaultTrash(*m_vault).expire(QDateTime::currentDateTime(),
+                                                  m_settings.trashDays(), m_discard);
+    if (moved > 0) {
+        qCInfo(lcVault) << "moved" << moved << "notes from the trash to the desktop's";
+        if (m_showingTrash)
+            reloadTrash();
+    }
+}
+
 QString VaultController::trashedText(const QString &location) const
 {
     if (!m_trash.item(location))
         return {};
     QString error;
     return notefile::read(location, &error).value_or(QString());
+}
+
+QString VaultController::trashedTitle(const QString &location) const
+{
+    const std::optional<TrashedNote> item = m_trash.item(location);
+    return item ? Vault::titleFromPath(item->path) : QString();
 }
 
 bool VaultController::rewriteNote(

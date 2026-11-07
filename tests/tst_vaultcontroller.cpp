@@ -70,6 +70,7 @@ private Q_SLOTS:
     void trashesTheNoteShown();
     void keepsAttachmentsOtherNotesUse();
     void removesAttachmentFoldersLeftEmpty();
+    void deletesForGoodAndExpiresTheTrash();
     void followsLinksAndMakesMissingNotes();
     void opensAndRenamesDataFiles();
     void keepsLineEndingsAndTheByteOrderMark();
@@ -129,7 +130,6 @@ void TestVaultController::init()
     m_settings = std::make_unique<Settings>(m_dir->filePath(u"settings.ini"_s));
     m_vault = std::make_unique<VaultController>(*m_settings);
     m_vault->setIndexPath(m_dir->filePath(u"index.sqlite"_s));
-    m_vault->setSystemTrash(false);
 }
 
 void TestVaultController::cleanup()
@@ -1013,6 +1013,39 @@ void TestVaultController::trashesTheNoteShown()
     m_vault->setShowingTrash(true);
     m_vault->setShowingTasks(true);
     QVERIFY(!m_vault->showingTrash());
+}
+
+void TestVaultController::deletesForGoodAndExpiresTheTrash()
+{
+    // An old note in the trash goes on to the desktop's when the vault opens, if settings say so.
+    const QString old = m_root + u"/.jot/trash/20200101-120000/Recipes/Old.md"_s;
+    QVERIFY(QDir().mkpath(QFileInfo(old).path()));
+    QFile file(old);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.close();
+    QStringList discarded;
+    m_vault->setDiscard([&discarded](const QString &path) {
+        discarded << path;
+        return QFile::remove(path);
+    });
+    QVERIFY(m_vault->openPath(m_root));
+    QVERIFY(discarded.isEmpty());
+    m_settings->setTrashDays(30);
+    QCOMPARE(discarded, QStringList{old});
+
+    QVERIFY(m_vault->trashNote(u"Recipes/Pancakes.md"_s, false));
+    QVERIFY(m_vault->trashNote(u"Recipes/Sourdough.md"_s, false));
+    m_vault->setShowingTrash(true);
+    TrashModel *trash = m_vault->trash();
+    QCOMPARE(trash->rowCount(), 2);
+    const QString location = trash->index(0).data(TrashModel::LocationRole).toString();
+    QVERIFY(m_vault->deleteTrashed(location));
+    QVERIFY(!QFileInfo::exists(location));
+    QCOMPARE(trash->rowCount(), 1);
+    QVERIFY(!m_vault->deleteTrashed(location));
+    QVERIFY(m_vault->emptyTrash());
+    QCOMPARE(trash->rowCount(), 0);
+    QVERIFY(!QFileInfo::exists(m_root + u"/.jot/trash"_s));
 }
 
 void TestVaultController::followsLinksAndMakesMissingNotes()

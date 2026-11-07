@@ -101,11 +101,9 @@ Popup {
         Text {
             width: parent.width
             wrapMode: Text.Wrap
-            text: root.notebook ? qsTr(
-                                      "It goes to your desktop's trash with everything in it. Where the desktop has none for this folder, it goes to the .jot/trash folder in your notes folder.") :
-                                  root.sharing.length > 0 ? qsTr(
-                                                                "It goes to your desktop's trash. Where the desktop has none for this folder, it goes to the .jot/trash folder in your notes folder.") :
-                                                            qsTr("It goes to your desktop's trash, with its attachments. Where the desktop has none for this folder, it goes to the .jot/trash folder in your notes folder.")
+            text: root.notebook ? qsTr("It goes to Jot's trash with everything in it.") :
+                                  root.sharing.length > 0 ? qsTr("It goes to Jot's trash.") : qsTr(
+                                                                "It goes to Jot's trash, with its attachments.")
             color: Theme.textMuted
             font.family: Theme.fontFamily
             font.pixelSize: Theme.textSm

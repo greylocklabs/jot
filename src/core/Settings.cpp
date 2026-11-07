@@ -40,6 +40,7 @@ const QString kDeveloperMode = u"developer/mode"_s;
 const QString kVerboseLogging = u"developer/verboseLogging"_s;
 const QString kLeaderKey = u"keyboard/leaderKey"_s;
 const QString kLeaderTimeout = u"keyboard/leaderTimeout"_s;
+const QString kTrashDays = u"trash/days"_s;
 
 /// A saved width within its bounds; 0 stays 0, the theme's own.
 int bounded(int width, int lowest, int highest)
@@ -90,6 +91,7 @@ Settings::Settings(const QString &path, QObject *parent)
     const QString leader = m_store.value(kLeaderKey).toString();
     m_leaderKey = kLeaderKeys.contains(leader) ? leader : u","_s;
     m_leaderTimeout = std::max(0, m_store.value(kLeaderTimeout, 5000).toInt());
+    m_trashDays = std::max(0, m_store.value(kTrashDays, 0).toInt());
 }
 
 QString Settings::defaultPath()
@@ -387,6 +389,16 @@ void Settings::setLeaderTimeout(int ms)
     Q_EMIT keyboardChanged();
 }
 
+void Settings::setTrashDays(int days)
+{
+    days = std::max(0, days);
+    if (m_trashDays == days)
+        return;
+    m_trashDays = days;
+    m_store.setValue(kTrashDays, days);
+    Q_EMIT trashChanged();
+}
+
 void Settings::reset()
 {
     setTheme({});
@@ -405,6 +417,7 @@ void Settings::reset()
     setViMode(false);
     setLeaderKey(u","_s);
     setLeaderTimeout(5000);
+    setTrashDays(0);
 }
 
 } // namespace jot

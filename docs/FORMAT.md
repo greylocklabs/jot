@@ -15,7 +15,7 @@ My Notes/                    the vault: any folder
     layout.yaml              notebook emoji and pinned notes
     history/                 past versions of notes
     joplin.yaml              what imports from Joplin brought, once there has been one
-    trash/                   what was deleted, where the drive has no trash, and by sync
+    trash/                   what was deleted, in Jot and by sync
   Inbox.md                   where quick add puts to-dos
   Recipes/
     Pancakes.md
@@ -180,11 +180,12 @@ Mara.assets/
 Each `*.assets` folder belongs to the note with the same name. Jot hides it in the notebook tree
 and shows its files under the note instead. One with no note of that name is a notebook.
 
-Where the drive has no trash, a deleted note, attachments folder or notebook goes to
-`.jot/trash/<yyyyMMdd-HHmmss>/` instead, with its path kept, as `A/Mara.md`. One path deleted twice
-in the same second goes to `<yyyyMMdd-HHmmss> 2/`. Jot 0.3 and earlier kept only the name, with a
-number in front of one already there (`2 Mara.md`). Jot lists what is in either trash under Trash,
-and puts it back where it was.
+A deleted note, attachments folder or notebook goes to the vault's own trash,
+`.jot/trash/<yyyyMMdd-HHmmss>/`, with its path kept, as `A/Mara.md`. One path deleted twice in the
+same second goes to `<yyyyMMdd-HHmmss> 2/`. Jot 0.3 and earlier kept only the name, with a number
+in front of one already there (`2 Mara.md`). Jot lists what is there under Trash, puts it back
+where it was, and deletes it for good when asked. With the setting on, what has been there 30 days
+goes on to the desktop's trash. The trash is never synced.
 
 ## Tasks
 

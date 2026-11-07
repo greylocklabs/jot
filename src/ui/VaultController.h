@@ -15,6 +15,7 @@
 #include "jot/VaultIndex.h"
 #include "jot/VaultWatcher.h"
 
+#include <QFile>
 #include <QObject>
 #include <QQmlEngine>
 #include <QTimer>
@@ -129,20 +130,26 @@ public:
     /// Gives the note shown a new title, renaming its file and the links to it. A note still
     /// empty, named with a data file's extension ("people.csv"), becomes that kind of file.
     Q_INVOKABLE bool renameCurrent(const QString &title);
-    /// Moves the note shown, and its attachments, to the system trash.
+    /// Moves the note shown, and its attachments, to the trash.
     Q_INVOKABLE bool trashCurrent();
     /// Moves the note at `path`, and its attachments unless `keepAttachments`, to the trash.
     Q_INVOKABLE bool trashNote(const QString &path, bool keepAttachments);
     /// The other notes that link into the attachments of the note at `path`, which trashing
     /// them with it would break.
     Q_INVOKABLE QStringList notesUsingAttachments(const QString &path) const;
-    /// Moves the notebook at `path`, and everything in it, to the system trash.
+    /// Moves the notebook at `path`, and everything in it, to the trash.
     Q_INVOKABLE bool trashNotebook(const QString &path);
     /// Brings the note at `location` in the trash back where it was, or beside a note that has
     /// its place now, and shows it. Gives its vault path, or empty when it could not.
     Q_INVOKABLE QString restoreTrashed(const QString &location);
     /// What the note at `location` in the trash says, to read before bringing it back.
     Q_INVOKABLE QString trashedText(const QString &location) const;
+    /// The title of the note at `location` in the trash.
+    Q_INVOKABLE QString trashedTitle(const QString &location) const;
+    /// Deletes the note at `location` in the trash, and its attachments, for good.
+    Q_INVOKABLE bool deleteTrashed(const QString &location);
+    /// Deletes everything in the trash for good.
+    Q_INVOKABLE bool emptyTrash();
     /// How many notes the notebook at `path` holds, inside notebooks within it too.
     Q_INVOKABLE int notesInNotebook(const QString &path) const;
     /// Makes the note at `path` a task, or no longer one. Its due date stays either way.
@@ -282,13 +289,8 @@ public:
     void setHistoryInterval(int ms) { m_historyInterval = ms; }
     /// Index the database at `path` rather than the default one, as tests do.
     void setIndexPath(const QString &path) { m_indexPath = path; }
-    /// Trashes notes into the vault's own trash rather than the desktop's, as tests do.
-    void setSystemTrash(bool use)
-    {
-        m_systemTrash = use;
-        if (m_vault)
-            m_vault->setSystemTrash(use);
-    }
+    /// How notes leave for the desktop's trash, which tests replace.
+    void setDiscard(VaultTrash::Discard discard) { m_discard = std::move(discard); }
 
     [[nodiscard]] bool isOpen() const { return m_vault != nullptr; }
     [[nodiscard]] QString root() const;
@@ -315,8 +317,6 @@ public:
     [[nodiscard]] TrashModel *trash() { return &m_trash; }
     [[nodiscard]] bool showingTrash() const { return m_showingTrash; }
     void setShowingTrash(bool showing);
-    /// Reads the desktop's trash from `folder`, as tests do; empty reads only the vault's own.
-    void setDesktopTrash(const QString &folder) { m_desktopTrash = folder; }
     [[nodiscard]] QString current() const { return m_current; }
     void setCurrent(const QString &path);
     [[nodiscard]] QString currentTitle() const;
@@ -359,6 +359,8 @@ private:
     void reloadModels();
     /// Reads the trash again for Trash.
     void reloadTrash();
+    /// Hands notes in the trash longer than settings keep them to the desktop's trash.
+    void expireTrash();
     void readCurrent();
     void fail(const QString &error);
     void setUnsaved(bool unsaved);
@@ -411,7 +413,9 @@ private:
     BacklinksModel m_backlinks;
     TaskModel m_tasks;
     TrashModel m_trash;
-    QString m_desktopTrash = VaultTrash::homeTrash();
+    VaultTrash::Discard m_discard = [](const QString &path) { return QFile::moveToTrash(path); };
+    /// Hands old notes in the trash to the desktop's, when settings say to.
+    QTimer m_expireTimer;
     bool m_showingTrash = false;
     SyncController m_sync{m_settings};
     bool m_showingTasks = false;
@@ -419,7 +423,6 @@ private:
     QVariantMap m_viewEmoji;
     QStringList m_pinned;
     QString m_indexPath;
-    bool m_systemTrash = true;
     QString m_error;
     QString m_current;
     QString m_currentText;

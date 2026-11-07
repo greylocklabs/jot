@@ -540,6 +540,50 @@ Popup {
         }
 
         Section {
+            title: qsTr("Trash")
+            visible: root.tab === "general"
+
+            Row {
+                spacing: Theme.space3
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: qsTr("Keep deleted notes")
+                    color: Theme.text
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.textMd
+                }
+                Dropdown {
+                    objectName: "trashDays"
+                    anchors.verticalCenter: parent.verticalCenter
+                    minimumWidth: 260
+                    model: [
+                        {
+                            "id": 0,
+                            "name": qsTr("Until I delete them")
+                        },
+                        {
+                            "id": 30,
+                            "name": qsTr("30 days, then in the desktop's trash")
+                        }
+                    ]
+                    currentValue: Settings.trashDays
+                    Accessible.name: qsTr("Keep deleted notes")
+                    onActivated: value => Settings.trashDays = value
+                }
+            }
+            Text {
+                width: parent.width
+                wrapMode: Text.Wrap
+                text: qsTr(
+                          "Deleted notes go to Jot's own trash, in the .jot/trash folder of your notes, which is never synced.")
+                color: Theme.textMuted
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.textSm
+            }
+        }
+
+        Section {
             title: qsTr("Reminders")
             visible: root.tab === "general"
 
