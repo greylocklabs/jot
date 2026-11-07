@@ -103,8 +103,25 @@ void TestDialogs::opensCleanly()
     QVERIFY(popup->property("height").toReal() > 100);
     QVERIFY(popup->property("width").toReal() > 100);
     // Settings' tabs are as wide as their longest label.
-    if (popup->property("tabsWidth").isValid())
+    if (popup->property("tabsWidth").isValid()) {
         QVERIFY(popup->property("tabsWidth").toReal() > 40);
+        // And each takes the keyboard, ringed while it has it.
+        const std::function<QQuickItem *(QQuickItem *)> tab = [&tab](QQuickItem *at) {
+            for (QQuickItem *child : at->childItems()) {
+                if (child->objectName() == u"settingsTab"_s)
+                    return child;
+                if (QQuickItem *found = tab(child))
+                    return found;
+            }
+            return static_cast<QQuickItem *>(nullptr);
+        };
+        QQuickItem *first = tab(window.contentItem());
+        QVERIFY(first);
+        first->forceActiveFocus(Qt::TabFocusReason);
+        QTRY_VERIFY(first->hasActiveFocus());
+        auto *ring = first->property("background").value<QQuickItem *>();
+        QTRY_COMPARE(ring->property("border").value<QObject *>()->property("width").toReal(), 2.0);
+    }
 }
 
 void TestDialogs::everyModalHasAClose_data()
