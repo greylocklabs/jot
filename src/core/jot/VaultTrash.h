@@ -52,6 +52,11 @@ public:
     /// trash, and `error` says so though the note is back.
     std::optional<QString> restore(const TrashedNote &note, QString *error) const;
 
+    /// Puts the notebook at `location` in the trash back at vault path `path`, with what is left
+    /// in it, or at a free name beside it when that is taken now. Gives the path it went to.
+    std::optional<QString> restoreFolder(const QString &location, const QString &path,
+                                         QString *error) const;
+
     /// Deletes `note` and its attachments for good.
     bool remove(const TrashedNote &note, QString *error) const;
     /// Deletes everything in the trash for good.

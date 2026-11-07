@@ -18,6 +18,7 @@
 #include <QClipboard>
 #include <QDesktopServices>
 #include <QDir>
+#include <QDirIterator>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QImage>
@@ -1359,7 +1360,7 @@ bool trashes(bool trashed, bool back)
 
 QString VaultController::undoTrashes() const
 {
-    if (m_undo.isEmpty() || m_undo.last().kind != Change::Kind::Trash ||
+    if (m_undo.isEmpty() || m_undo.last().kind == Change::Kind::Text ||
         !trashes(m_undo.last().trashed, true))
         return {};
     return Vault::titleFromPath(m_undo.last().path);
@@ -1367,7 +1368,7 @@ QString VaultController::undoTrashes() const
 
 QString VaultController::redoTrashes() const
 {
-    if (m_redo.isEmpty() || m_redo.last().kind != Change::Kind::Trash ||
+    if (m_redo.isEmpty() || m_redo.last().kind == Change::Kind::Text ||
         !trashes(m_redo.last().trashed, false))
         return {};
     return Vault::titleFromPath(m_redo.last().path);
@@ -1378,6 +1379,24 @@ bool VaultController::apply(Change &change, bool back, bool *stale)
     if (change.kind == Change::Kind::Text) {
         return back ? replaceTaskText(change.path, change.after, change.before, stale)
                     : replaceTaskText(change.path, change.before, change.after, stale);
+    }
+    if (change.kind == Change::Kind::Notebook) {
+        if (trashes(change.trashed, back)) {
+            *stale = !m_vault || !QFileInfo(m_vault->absolute(change.path)).isDir();
+            if (*stale) {
+                setProblem(tr("%1 has moved or gone since, so it was left as it is.")
+                               .arg(Vault::titleFromPath(change.path)));
+                return false;
+            }
+            const std::optional<QString> location = moveNotebookToTrash(change.path);
+            if (location)
+                change.location = *location;
+            return location.has_value();
+        }
+        const std::optional<QString> path = bringNotebookBack(change.location, change.path, stale);
+        if (path)
+            change.path = *path;
+        return path.has_value();
     }
     if (trashes(change.trashed, back)) {
         // Gone or moved since, it is not this change's to trash.
@@ -1498,8 +1517,21 @@ std::optional<QString> VaultController::moveNoteToTrash(const QString &path, boo
 
 bool VaultController::trashNotebook(const QString &path)
 {
-    if (!m_vault || !m_index || path.isEmpty())
+    const std::optional<QString> location = moveNotebookToTrash(path);
+    if (!location)
         return false;
+    Change change;
+    change.kind = Change::Kind::Notebook;
+    change.path = path;
+    change.location = *location;
+    remember(change);
+    return true;
+}
+
+std::optional<QString> VaultController::moveNotebookToTrash(const QString &path)
+{
+    if (!m_vault || !m_index || path.isEmpty())
+        return std::nullopt;
     const auto inside = [&path](const QString &other) {
         return other == path || other.startsWith(path + u'/');
     };
@@ -1509,10 +1541,11 @@ bool VaultController::trashNotebook(const QString &path)
     for (const NoteInfo &note : m_index->notesIn(path))
         notes.append(note.path);
     QString error;
-    if (!m_vault->trashFolder(path, &error)) {
+    QString location;
+    if (!m_vault->trashFolder(path, &error, &location)) {
         qCWarning(lcVault) << "could not move" << path << "to the trash:" << error;
         setProblem(tr("Could not move the notebook to the trash: %1").arg(error));
-        return false;
+        return std::nullopt;
     }
     forgetHistoryKept(path);
     m_index->update(notes);
@@ -1528,7 +1561,38 @@ bool VaultController::trashNotebook(const QString &path)
         m_watcher->start();
     reloadModels();
     reloadTrash();
-    return true;
+    return location;
+}
+
+std::optional<QString> VaultController::bringNotebookBack(const QString &location,
+                                                          const QString &path, bool *gone)
+{
+    *gone = !QFileInfo(location).isDir();
+    if (!m_vault || !m_index || *gone) {
+        if (*gone)
+            setProblem(tr("That notebook is not in the trash any more."));
+        return std::nullopt;
+    }
+    QString error;
+    const std::optional<QString> back = VaultTrash(*m_vault).restoreFolder(location, path, &error);
+    if (!back) {
+        qCWarning(lcVault) << "could not restore" << path << error;
+        setProblem(tr("Could not bring the notebook back: %1").arg(error));
+        return std::nullopt;
+    }
+    QStringList notes;
+    QDirIterator files(m_vault->absolute(*back), QDir::Files, QDirIterator::Subdirectories);
+    while (files.hasNext()) {
+        const QString relative = files.next().mid(m_vault->root().size() + 1);
+        if (Vault::isListed(relative))
+            notes << relative;
+    }
+    m_index->update(notes);
+    if (m_watcher)
+        m_watcher->start();
+    reloadModels();
+    reloadTrash();
+    return back;
 }
 
 int VaultController::notesInNotebook(const QString &path) const

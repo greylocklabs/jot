@@ -1122,6 +1122,22 @@ void TestVaultController::undoesTrashingAndRestoring()
     QVERIFY(!m_vault->redo());
     QVERIFY(QFileInfo::exists(m_root + u"/Recipes/Rye.md"_s));
     QVERIFY(!m_vault->canRedo());
+
+    // A notebook comes back with everything in it, and going again asks first.
+    const int before = m_vault->noteCount();
+    QVERIFY(m_vault->trashNotebook(u"Ashfall/Characters"_s));
+    QVERIFY(!QFileInfo::exists(m_root + u"/Ashfall/Characters"_s));
+    QCOMPARE(m_vault->undoTrashes(), QString());
+    QVERIFY(m_vault->undo());
+    QVERIFY(QFileInfo::exists(m_root + u"/Ashfall/Characters/Mara Vey.md"_s));
+    QCOMPARE(m_vault->noteCount(), before);
+    QCOMPARE(m_vault->redoTrashes(), u"Characters"_s);
+    QVERIFY(m_vault->redo());
+    QVERIFY(!QFileInfo::exists(m_root + u"/Ashfall/Characters"_s));
+    // Its name taken since, it comes back beside the one there.
+    QVERIFY(QDir().mkpath(m_root + u"/Ashfall/Characters"_s));
+    QVERIFY(m_vault->undo());
+    QVERIFY(QFileInfo::exists(m_root + u"/Ashfall/Characters 2/Mara Vey.md"_s));
 }
 
 void TestVaultController::followsLinksAndMakesMissingNotes()
