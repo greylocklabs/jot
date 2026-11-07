@@ -75,8 +75,13 @@ private:
     {
         /// As the file gives it, even empty; nothing when it says nothing.
         std::optional<QString> emoji;
-        /// Other lines under the view's section, kept as written.
+        /// Other lines under the view's section, kept as written, indented from its keys.
         QStringList lines;
+        /// The indent of the section's keys as written.
+        qsizetype indent = -1;
+        /// The section has a value on its own line, which Jot keeps as `raw` without reading.
+        bool verbatim = false;
+        QStringList raw;
     };
     QMap<QString, View> m_views;
 };
