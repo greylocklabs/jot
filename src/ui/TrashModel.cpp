@@ -40,17 +40,40 @@ QHash<int, QByteArray> TrashModel::roleNames() const
 
 void TrashModel::setItems(QList<TrashedNote> items)
 {
-    const qsizetype before = m_items.size();
+    m_all = std::move(items);
+    refill();
+}
+
+void TrashModel::setItems(QList<TrashedNote> items, const QString &query)
+{
+    m_all = std::move(items);
+    if (m_query != query) {
+        m_query = query;
+        Q_EMIT queryChanged();
+    }
+    refill();
+}
+
+void TrashModel::setQuery(const QString &query)
+{
+    if (m_query == query)
+        return;
+    m_query = query;
+    Q_EMIT queryChanged();
+    refill();
+}
+
+void TrashModel::refill()
+{
     beginResetModel();
-    m_items = std::move(items);
+    m_items = VaultTrash::matching(m_all, m_query);
     endResetModel();
-    if (before != m_items.size())
-        Q_EMIT countChanged();
+    Q_EMIT countChanged();
 }
 
 std::optional<TrashedNote> TrashModel::item(const QString &location) const
 {
-    for (const TrashedNote &item : m_items) {
+    for (const TrashedNote &item : m_all) {
         if (item.location == location)
             return item;
     }

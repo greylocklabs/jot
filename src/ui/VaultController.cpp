@@ -63,6 +63,9 @@ VaultController::VaultController(Settings &settings, QObject *parent)
     connect(&m_expireTimer, &QTimer::timeout, this, &VaultController::expireTrash);
     m_expireTimer.start();
     connect(&settings, &Settings::trashChanged, this, &VaultController::expireTrash);
+    connect(&settings, &Settings::trashChanged, this, &VaultController::updateTrashHits);
+    connect(&m_notes, &NoteListModel::queryChanged, this, &VaultController::updateTrashHits);
+    connect(&m_notes, &NoteListModel::scopeChanged, this, &VaultController::updateTrashHits);
 }
 
 VaultController::~VaultController()
@@ -140,6 +143,7 @@ bool VaultController::openPath(const QString &path)
     Q_EMIT openChanged();
     m_sync.setVault(m_vault->root(), [this] { saveNow(); });
     expireTrash();
+    reloadTrash();
     return true;
 }
 
@@ -159,6 +163,7 @@ void VaultController::close()
     Q_EMIT taskHistoryChanged();
     m_trail.clear();
     Q_EMIT trailChanged();
+    reloadTrash();
 }
 
 void VaultController::fail(const QString &error)
@@ -1083,7 +1088,40 @@ void VaultController::setShowingTrash(bool showing)
 
 void VaultController::reloadTrash()
 {
-    m_trash.setItems(m_vault ? VaultTrash(*m_vault).list() : QList<TrashedNote>());
+    m_trashed = m_vault ? VaultTrash(*m_vault).list() : QList<TrashedNote>();
+    m_trash.setItems(m_trashed);
+    if (!m_trash.contains(m_chosenTrashed))
+        setChosenTrashed({});
+    updateTrashHits();
+}
+
+void VaultController::updateTrashHits()
+{
+    // Within the notebook searched, as the notes found are; a tag's search has none there.
+    const QString query = m_notes.query().trimmed();
+    QList<TrashedNote> scope;
+    if (m_settings.searchTrash() && !query.isEmpty() && m_notes.tag().isEmpty()) {
+        const QString notebook = m_notes.notebook();
+        for (const TrashedNote &note : std::as_const(m_trashed)) {
+            if (notebook.isEmpty() || note.path.startsWith(notebook + u'/'))
+                scope << note;
+        }
+    }
+    m_trashHits.setItems(scope, query);
+}
+
+void VaultController::setChosenTrashed(const QString &location)
+{
+    if (m_chosenTrashed == location)
+        return;
+    m_chosenTrashed = location;
+    Q_EMIT chosenTrashedChanged();
+}
+
+void VaultController::showTrashed(const QString &location)
+{
+    setShowingTrash(true);
+    setChosenTrashed(m_trash.contains(location) ? location : QString());
 }
 
 QString VaultController::restoreTrashed(const QString &location)
@@ -1147,8 +1185,7 @@ void VaultController::expireTrash()
                                                   m_settings.trashDays(), m_discard);
     if (moved > 0) {
         qCInfo(lcVault) << "moved" << moved << "notes from the trash to the desktop's";
-        if (m_showingTrash)
-            reloadTrash();
+        reloadTrash();
     }
 }
 
@@ -1357,8 +1394,7 @@ bool VaultController::trashNote(const QString &path, bool keepAttachments)
     if (path == m_current)
         setCurrent({});
     reloadModels();
-    if (m_showingTrash)
-        reloadTrash();
+    reloadTrash();
     return true;
 }
 
@@ -1393,6 +1429,7 @@ bool VaultController::trashNotebook(const QString &path)
     if (m_watcher)
         m_watcher->start();
     reloadModels();
+    reloadTrash();
     return true;
 }
 

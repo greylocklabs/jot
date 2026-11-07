@@ -37,6 +37,10 @@ public:
     /// on its own.
     [[nodiscard]] QList<TrashedNote> list() const;
 
+    /// Those of `notes` whose title, folder or text holds every word of `query`, ignoring case.
+    [[nodiscard]] static QList<TrashedNote> matching(const QList<TrashedNote> &notes,
+                                                     const QString &query);
+
     /// Puts `note` back at its path, or a free one beside it when that is taken now, with its
     /// attachments. Gives the vault path it went to. Attachments that cannot follow stay in the
     /// trash, and `error` says so though the note is back.

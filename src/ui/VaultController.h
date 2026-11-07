@@ -72,6 +72,11 @@ class VaultController : public QObject
     Q_PROPERTY(bool showingTasks READ showingTasks WRITE setShowingTasks NOTIFY showingTasksChanged)
     /// What the trash holds from the vault, read again each time Trash is shown.
     Q_PROPERTY(jot::TrashModel *trash READ trash CONSTANT)
+    /// The notes in the trash that the note list's search finds, when settings say to look there.
+    Q_PROPERTY(jot::TrashModel *trashHits READ trashHits CONSTANT)
+    /// The note in the trash Trash shows, by where it is there; empty for none.
+    Q_PROPERTY(
+        QString chosenTrashed READ chosenTrashed WRITE setChosenTrashed NOTIFY chosenTrashedChanged)
     /// The middle column shows the trash rather than notes or tasks.
     Q_PROPERTY(bool showingTrash READ showingTrash WRITE setShowingTrash NOTIFY showingTrashChanged)
     /// What links to, or names, the note shown.
@@ -150,6 +155,8 @@ public:
     Q_INVOKABLE bool deleteTrashed(const QString &location);
     /// Deletes everything in the trash for good.
     Q_INVOKABLE bool emptyTrash();
+    /// Shows Trash with the note at `location` in it chosen.
+    Q_INVOKABLE void showTrashed(const QString &location);
     /// How many notes the notebook at `path` holds, inside notebooks within it too.
     Q_INVOKABLE int notesInNotebook(const QString &path) const;
     /// Makes the note at `path` a task, or no longer one. Its due date stays either way.
@@ -315,6 +322,9 @@ public:
     [[nodiscard]] bool showingTasks() const { return m_showingTasks; }
     void setShowingTasks(bool showing);
     [[nodiscard]] TrashModel *trash() { return &m_trash; }
+    [[nodiscard]] TrashModel *trashHits() { return &m_trashHits; }
+    [[nodiscard]] QString chosenTrashed() const { return m_chosenTrashed; }
+    void setChosenTrashed(const QString &location);
     [[nodiscard]] bool showingTrash() const { return m_showingTrash; }
     void setShowingTrash(bool showing);
     [[nodiscard]] QString current() const { return m_current; }
@@ -349,6 +359,7 @@ Q_SIGNALS:
     void problemChanged();
     void showingTasksChanged();
     void showingTrashChanged();
+    void chosenTrashedChanged();
     /// The editor should put the cursor here in the note shown, as the editor counts
     /// characters: line breaks as one, without a byte order mark.
     void revealPosition(int position);
@@ -361,6 +372,8 @@ private:
     void reloadTrash();
     /// Hands notes in the trash longer than settings keep them to the desktop's trash.
     void expireTrash();
+    /// Searches the trash again for what the note list's search finds there.
+    void updateTrashHits();
     void readCurrent();
     void fail(const QString &error);
     void setUnsaved(bool unsaved);
@@ -413,6 +426,10 @@ private:
     BacklinksModel m_backlinks;
     TaskModel m_tasks;
     TrashModel m_trash;
+    TrashModel m_trashHits;
+    /// Everything in the trash, as last read.
+    QList<TrashedNote> m_trashed;
+    QString m_chosenTrashed;
     VaultTrash::Discard m_discard = [](const QString &path) { return QFile::moveToTrash(path); };
     /// Hands old notes in the trash to the desktop's, when settings say to.
     QTimer m_expireTimer;
