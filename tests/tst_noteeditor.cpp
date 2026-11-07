@@ -1218,6 +1218,17 @@ void TestNoteEditor::removingARowOrColumnAsksWithATrashCan()
     };
     const QString removeRow = u"removeRow"_s;
     const QString removeColumn = u"removeColumn"_s;
+    // The table reloads once a removal is saved, remaking its headings and with them a button's
+    // armed state; that is let pass before the next click.
+    QSignalSpy reloaded(records, &QAbstractItemModel::modelReset);
+    const auto settle = [&reloaded] {
+        for (int quiet = 0; quiet < 20; ++quiet) {
+            reloaded.clear();
+            QTest::qWait(300);
+            if (reloaded.isEmpty())
+                return;
+        }
+    };
 
     // Over the first row, its X; a click turns it into a trash can and takes nothing yet.
     QTRY_VERIFY(!named(m_window->contentItem(), removeRow).isEmpty());
@@ -1240,6 +1251,7 @@ void TestNoteEditor::removingARowOrColumnAsksWithATrashCan()
     QTRY_COMPARE(records->rowCount(), 1);
     QTRY_VERIFY(m_vault->currentText().contains(u"Soren"_s) &&
                 !m_vault->currentText().contains(u"Mara"_s));
+    settle();
 
     // A column asks the same way.
     QQuickItem *header = find(u"tableHeader"_s);
@@ -1253,6 +1265,7 @@ void TestNoteEditor::removingARowOrColumnAsksWithATrashCan()
     QCOMPARE(records->sortColumn(), -1);
     clickOn(header, removeColumn);
     QTRY_COMPARE(records->columns().size(), 2);
+    settle();
 
     // Two quick clicks, which come as a double click, take it too.
     QTest::mouseMove(m_window.get(), heading + QPoint(0, 300));
@@ -1268,14 +1281,7 @@ void TestNoteEditor::removingARowOrColumnAsksWithATrashCan()
         QMetaObject::invokeMethod(header, "itemAtCell", qReturnArg(cell), QPoint(0, 0));
         return cell && cell->property("renaming").toBool();
     };
-    // The table reloads once the removals are saved, remaking its headings; that is let pass.
-    QSignalSpy reloaded(records, &QAbstractItemModel::modelReset);
-    for (int quiet = 0; quiet < 20; ++quiet) {
-        reloaded.clear();
-        QTest::qWait(300);
-        if (reloaded.isEmpty())
-            break;
-    }
+    settle();
     QTest::mouseMove(m_window.get(), heading);
     QTest::mouseDClick(m_window.get(), Qt::LeftButton, {}, heading);
     QTRY_VERIFY(renaming());
