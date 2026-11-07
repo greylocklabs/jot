@@ -25,6 +25,8 @@
 #include <QLocale>
 #include <QRegularExpression>
 
+#include <algorithm>
+
 using namespace Qt::StringLiterals;
 
 namespace jot {
@@ -583,10 +585,13 @@ bool VaultController::renameCurrent(const QString &title)
     const QString typed = QFileInfo(wanted).suffix().toLower();
     if (!Vault::isDataFile(m_current) && Vault::kDataSuffixes.contains(typed)) {
         const NoteParts parts = splitFrontMatter(m_currentText);
-        QStringList keys = readFrontMatter(parts.frontMatter).keys();
-        keys.removeOne(u"created"_s);
-        keys.removeOne(u"title"_s);
-        if (parts.body.trimmed().isEmpty() && keys.isEmpty()) {
+        // Read line by line, as a comment or list the front matter reader skips is still kept.
+        const QStringList lines = parts.frontMatter.toString().split(u'\n');
+        const bool onlyMade = std::ranges::all_of(lines, [](const QString &line) {
+            const QString kept = line.trimmed();
+            return kept.isEmpty() || kept.startsWith(u"created:"_s) || kept.startsWith(u"title:"_s);
+        });
+        if (parts.body.trimmed().isEmpty() && onlyMade) {
             const QString base = Vault::fileNameFor(wanted.chopped(typed.size() + 1).trimmed());
             const QString to =
                 m_vault->freePath(folder, base.isEmpty() ? tr("Untitled") : base, u'.' + typed);
@@ -606,6 +611,8 @@ bool VaultController::renameCurrent(const QString &title)
             m_current = to;
             readCurrent();
             m_currentText = Vault::starterData(typed);
+            // The note it was is not an earlier version of the data file.
+            m_savedText.clear();
             setUnsaved(true);
             saveNow();
             m_index->update({m_current});

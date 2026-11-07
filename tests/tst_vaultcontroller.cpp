@@ -896,6 +896,19 @@ void TestVaultController::namesAnEmptyNoteIntoADataFile()
     QCOMPARE(m_vault->currentKind(), u"csv"_s);
     QCOMPARE(readFile(m_root + u"/Recipes/Shopping.csv"_s), jot::Vault::starterData(u"csv"_s));
     QVERIFY(!QFileInfo::exists(m_root + u"/Recipes/Untitled.md"_s));
+    // The note it was is no version of the table.
+    QVERIFY(m_vault->historyOf(u"Recipes/Shopping.csv"_s).isEmpty());
+
+    // Front matter the reader skips, such as a comment or a list, is still something to keep.
+    for (const QString &kept : {u"# my settings"_s, u"- a"_s}) {
+        QVERIFY(!m_vault->newNote().isEmpty());
+        const QString note = m_vault->current();
+        m_vault->edit(u"---\n"_s + kept + u"\n---\n"_s);
+        QVERIFY(m_vault->renameCurrent(u"Kept.csv"_s));
+        QCOMPARE(m_vault->currentKind(), u"markdown"_s);
+        QVERIFY(m_vault->currentText().contains(kept));
+        QVERIFY(note.endsWith(u".md"_s));
+    }
 
     // A note with words in it keeps them, as a note.
     m_vault->setCurrent(u"Recipes/Pancakes.md"_s);
