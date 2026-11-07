@@ -1167,42 +1167,54 @@ void TestNoteEditor::removingARowOrColumnAsksWithATrashCan()
             }
             return found;
         };
-    // The button in a header's first cell as it is laid out now, not one in a pooled delegate.
-    const auto visibleButton = [&named](QQuickItem *header, const QString &name) -> QQuickItem * {
+    // The button in a header's first cell as it is laid out now. Views remake their delegates
+    // after a change, so it is looked up again for every use.
+    const auto button = [&named](QQuickItem *header, const QString &name) {
         QQuickItem *cell = nullptr;
         QMetaObject::invokeMethod(header, "itemAtCell", qReturnArg(cell), QPoint(0, 0));
         const QList<QQuickItem *> found = cell ? named(cell, name) : QList<QQuickItem *>();
-        return !found.isEmpty() && found.first()->isVisible() ? found.first() : nullptr;
+        return QPointer<QQuickItem>(!found.isEmpty() && found.first()->isVisible() ? found.first()
+                                                                                   : nullptr);
     };
-    const auto clickOn = [this](QQuickItem *item) {
+    const auto said = [&button](QQuickItem *header, const QString &name, const char *property) {
+        const QPointer<QQuickItem> item = button(header, name);
+        return item ? item->property(property) : QVariant();
+    };
+    // Points at the button first, as a mouse would, so it knows it is hovered, then clicks.
+    const auto clickOn = [this, &button](QQuickItem *header, const QString &name,
+                                         bool twice = false) {
+        QPointer<QQuickItem> item;
+        QTRY_VERIFY((item = button(header, name)));
         const QPoint at =
             item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint();
-        // Pointed at first, as a mouse would be, so the button knows it is hovered.
         QTest::mouseMove(m_window.get(), at);
-        QTRY_VERIFY(item->property("hovered").toBool());
-        QTest::mouseClick(m_window.get(), Qt::LeftButton, {}, at);
+        QTRY_VERIFY((item = button(header, name)) && item->property("hovered").toBool());
+        if (twice)
+            QTest::mouseDClick(m_window.get(), Qt::LeftButton, {}, at);
+        else
+            QTest::mouseClick(m_window.get(), Qt::LeftButton, {}, at);
     };
+    const QString removeRow = u"removeRow"_s;
+    const QString removeColumn = u"removeColumn"_s;
 
     // Over the first row, its X; a click turns it into a trash can and takes nothing yet.
-    QTRY_VERIFY(!named(m_window->contentItem(), u"removeRow"_s).isEmpty());
-    QTest::qWait(100);
+    QTRY_VERIFY(!named(m_window->contentItem(), removeRow).isEmpty());
     const QPoint first = rows->mapToScene(QPointF(rows->width() / 2, 10)).toPoint();
     QTest::mouseMove(m_window.get(), first + QPoint(0, 300));
     QTest::mouseMove(m_window.get(), first);
-    QQuickItem *remove = nullptr;
-    QTRY_VERIFY((remove = visibleButton(rows, u"removeRow"_s)));
-    QCOMPARE(remove->property("glyph").toString(), u"close"_s);
-    clickOn(remove);
-    QCOMPARE(remove->property("glyph").toString(), u"trash"_s);
+    QTRY_COMPARE(said(rows, removeRow, "glyph").toString(), u"close"_s);
+    clickOn(rows, removeRow);
+    QTRY_COMPARE(said(rows, removeRow, "glyph").toString(), u"trash"_s);
     QCOMPARE(records->rowCount(), 2);
     // Moving away puts the X back.
     QTest::mouseMove(m_window.get(), first + QPoint(400, 200));
-    QTRY_VERIFY(!remove->property("armed").toBool());
-    // A second click on the can takes the row.
+    QTRY_VERIFY(!button(rows, removeRow));
     QTest::mouseMove(m_window.get(), first);
-    QTRY_VERIFY((remove = visibleButton(rows, u"removeRow"_s)));
-    clickOn(remove);
-    clickOn(remove);
+    QTRY_COMPARE(said(rows, removeRow, "armed").toBool(), false);
+    // A second click on the can takes the row.
+    clickOn(rows, removeRow);
+    QTRY_COMPARE(said(rows, removeRow, "armed").toBool(), true);
+    clickOn(rows, removeRow);
     QTRY_COMPARE(records->rowCount(), 1);
     QTRY_VERIFY(m_vault->currentText().contains(u"Soren"_s) &&
                 !m_vault->currentText().contains(u"Mara"_s));
@@ -1212,25 +1224,18 @@ void TestNoteEditor::removingARowOrColumnAsksWithATrashCan()
     QVERIFY(header);
     const QPoint heading = header->mapToScene(QPointF(30, header->height() / 2)).toPoint();
     QTest::mouseMove(m_window.get(), heading);
-    QTRY_VERIFY((remove = visibleButton(header, u"removeColumn"_s)));
-    const QPointer<QQuickItem> armed = remove;
-    clickOn(remove);
+    clickOn(header, removeColumn);
+    QTRY_COMPARE(said(header, removeColumn, "armed").toBool(), true);
     QCOMPARE(records->columns().size(), 3);
     // The click is the button's alone: the heading under it neither sorts nor renames.
     QCOMPARE(records->sortColumn(), -1);
-    QVERIFY(armed && armed->property("armed").toBool());
-    clickOn(armed);
+    clickOn(header, removeColumn);
     QTRY_COMPARE(records->columns().size(), 2);
 
     // Two quick clicks, which come as a double click, take it too.
     QTest::mouseMove(m_window.get(), heading + QPoint(0, 300));
     QTest::mouseMove(m_window.get(), heading);
-    QTRY_VERIFY((remove = visibleButton(header, u"removeColumn"_s)));
-    const QPoint at =
-        remove->mapToScene(QPointF(remove->width() / 2, remove->height() / 2)).toPoint();
-    QTest::mouseMove(m_window.get(), at);
-    QTRY_VERIFY(remove->property("hovered").toBool());
-    QTest::mouseDClick(m_window.get(), Qt::LeftButton, {}, at);
+    clickOn(header, removeColumn, true);
     QTRY_COMPARE(records->columns().size(), 1);
     QCOMPARE(records->sortColumn(), -1);
 }
