@@ -18,6 +18,9 @@ Column {
         property bool open: true
         property bool folds: true
 
+        // Sized by what it says: a bare AbstractButton has no size of its own on older Qt.
+        implicitWidth: implicitContentWidth + leftPadding + rightPadding
+        implicitHeight: implicitContentHeight + topPadding + bottomPadding
         topPadding: Theme.space5
         bottomPadding: Theme.space2
         enabled: folds

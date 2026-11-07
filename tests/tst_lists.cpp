@@ -563,7 +563,10 @@ void TestLists::backlinkListsFoldUnderTheirHeadings()
     QTRY_COMPARE(shown(false), 3);
     QCOMPARE(shown(true), 3);
 
+    // Clicked on a heading with a size of its own, not a link under it.
+    QVERIFY(heading("linkedHeading")->height() > 0);
     click(heading("linkedHeading"));
+    QCOMPARE(m_vault->current(), u"Ashfall/Characters/Mara Vey.md"_s);
     QTRY_COMPARE(shown(false), 0);
     QCOMPARE(shown(true), 3);
     click(heading("mentionedHeading"));
