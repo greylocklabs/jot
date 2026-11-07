@@ -3,6 +3,7 @@
 #include <QTest>
 
 using namespace Qt::StringLiterals;
+using jot::DataPart;
 using jot::DataTable;
 using jot::DataValue;
 using Type = DataValue::Type;
@@ -46,6 +47,9 @@ private Q_SLOTS:
     void addsAndRemovesYamlFieldsAndRecords();
     void editsYamlColumnsAndNestedValues();
     void editsYamlBlockScalarsAndLeavesAnchorsAlone();
+    void findsTheListsInAJsonObject();
+    void findsTheListsInAYamlMapping();
+    void findsTheListsInYamlDocuments();
     void readsCsvWithQuotesAndLineEndings();
     void editsCsvKeepingQuotingAndShortRows();
     void addsAndRemovesCsvRowsAndColumns();
@@ -439,6 +443,142 @@ void TestDataTable::flagsStrayValues()
     DataTable csv = *DataTable::read(u"csv"_s, u"m\n1\n2\nthree\n\n"_s);
     QVERIFY(csv.stray(2, 0));
     QVERIFY(!csv.stray(1, 0));
+}
+
+void TestDataTable::findsTheListsInAJsonObject()
+{
+    const QString text = uR"({
+  "title": "Ashfall",
+  "cast": [
+    {
+      "name": "Mara",
+      "role": "lead"
+    }
+  ],
+  "tags": ["drama"],
+  "crew": []
+}
+)"_s;
+    // Only lists of records get a tab; the title and the list of words do not.
+    const QList<DataPart> parts = DataTable::parts(u"json"_s, text);
+    QCOMPARE(parts.size(), 2);
+    QCOMPARE(parts.at(0).name, u"cast"_s);
+    QCOMPARE(parts.at(1).key, u"crew"_s);
+    QVERIFY(DataTable::parts(u"json"_s, kExercises).isEmpty());
+
+    std::optional<DataTable> cast = DataTable::read(u"json"_s, text, nullptr, parts.at(0));
+    QVERIFY(cast);
+    QCOMPARE(cast->rowCount(), 1);
+    QCOMPARE(cast->columns(), (QStringList{u"name"_s, u"role"_s}));
+    // An edit rewrites only its value, and the table stays the cast's.
+    QVERIFY(cast->setValue(0, 1, {Type::String, u"captain"_s}));
+    QCOMPARE(cast->text(), QString(text).replace(u"\"lead\""_s, u"\"captain\""_s));
+    // A new record and a nested value take the list's depth in the file.
+    QVERIFY(cast->insertRow(1));
+    QVERIFY(cast->setValue(1, 0, {Type::String, u"Ox"_s}));
+    QVERIFY(cast->setValue(0, 1, {Type::Nested, uR"({"ship":"Kestrel"})"_s}));
+    QVERIFY2(cast->text().contains(uR"(    {
+      "name": "Mara",
+      "role": {
+        "ship": "Kestrel"
+      }
+    },
+    {
+      "name": "Ox"
+    }
+  ],)"_s),
+             qPrintable(cast->text()));
+    QVERIFY(cast->text().contains(u"\"title\": \"Ashfall\""_s));
+
+    // An empty list takes its first record.
+    std::optional<DataTable> crew = DataTable::read(u"json"_s, cast->text(), nullptr, parts.at(1));
+    QVERIFY(crew);
+    QCOMPARE(crew->rowCount(), 0);
+    QVERIFY(crew->insertRow(0));
+    QCOMPARE(crew->rowCount(), 1);
+    QVERIFY(DataTable::read(u"json"_s, crew->text(), nullptr, parts.at(0))->rowCount() == 2);
+}
+
+void TestDataTable::findsTheListsInAYamlMapping()
+{
+    const QString text = uR"(# The ferry's people
+title: Ashfall
+cast:
+  - name: Mara # the lead
+    role: lead
+  - name: Ox
+    role: crew
+settings:
+  season: winter
+extras: []
+crew:
+- name: Rhee
+)"_s;
+    const QList<DataPart> parts = DataTable::parts(u"yaml"_s, text);
+    QStringList names;
+    for (const DataPart &part : parts)
+        names << part.name;
+    QCOMPARE(names, (QStringList{u"cast"_s, u"extras"_s, u"crew"_s}));
+
+    std::optional<DataTable> cast = DataTable::read(u"yaml"_s, text, nullptr, parts.at(0));
+    QVERIFY(cast);
+    QCOMPARE(cast->rowCount(), 2);
+    QVERIFY(cast->setValue(1, 1, {Type::String, u"cook"_s}));
+    QCOMPARE(cast->text(), QString(text).replace(u"role: crew"_s, u"role: cook"_s));
+    QVERIFY(cast->insertRow(2));
+    QVERIFY(cast->setValue(2, 0, {Type::String, u"Pell"_s}));
+    QVERIFY2(cast->text().contains(u"    role: cook\n  - name: Pell\nsettings:"_s),
+             qPrintable(cast->text()));
+
+    // The empty list's first record goes on a line of its own, under its key.
+    std::optional<DataTable> extras =
+        DataTable::read(u"yaml"_s, cast->text(), nullptr, parts.at(1));
+    QVERIFY(extras);
+    QVERIFY(extras->insertRow(0));
+    QVERIFY2(extras->text().contains(u"extras:\n  - {}\ncrew:"_s), qPrintable(extras->text()));
+    // And removing the last record of a list leaves it empty, not gone.
+    std::optional<DataTable> crew =
+        DataTable::read(u"yaml"_s, extras->text(), nullptr, parts.at(2));
+    QVERIFY(crew);
+    QVERIFY(crew->removeRow(0));
+    QVERIFY2(crew->text().endsWith(u"crew: []\n"_s), qPrintable(crew->text()));
+    QVERIFY(crew->text().startsWith(u"# The ferry's people\ntitle: Ashfall\n"_s));
+    QCOMPARE(DataTable::read(u"yaml"_s, crew->text(), nullptr, parts.at(2))->rowCount(), 0);
+
+    // A comment after the key or above the list stays a comment.
+    for (const QString &commented : {u"crew: # aboard\n- name: Ines\nport: Vey\n"_s,
+                                     u"crew:\n# aboard\n- name: Ines\nport: Vey\n"_s,
+                                     u"crew: # aboard\n  - name: Ines\nport: Vey\n"_s}) {
+        std::optional<DataTable> list = DataTable::read(
+            u"yaml"_s, commented, nullptr, DataTable::parts(u"yaml"_s, commented).at(0));
+        QVERIFY(list);
+        QVERIFY(list->removeRow(0));
+        QVERIFY2(list->text().contains(u"# aboard\n"_s) && list->text().endsWith(u"port: Vey\n"_s),
+                 qPrintable(list->text()));
+        std::optional<DataTable> again = DataTable::read(
+            u"yaml"_s, list->text(), nullptr, DataTable::parts(u"yaml"_s, list->text()).value(0));
+        QVERIFY2(again && again->part().key == u"crew" && again->rowCount() == 0,
+                 qPrintable(list->text()));
+    }
+}
+
+void TestDataTable::findsTheListsInYamlDocuments()
+{
+    const QString text =
+        u"- name: Mara\n---\n# second\n- name: Ox\n- name: Rhee\n---\ntitle: x\n"_s;
+    const QList<DataPart> parts = DataTable::parts(u"yaml"_s, text);
+    QCOMPARE(parts.size(), 2);
+    QCOMPARE(parts.at(0).name, u"Document 1"_s);
+    QCOMPARE(parts.at(1).document, 1);
+    std::optional<DataTable> second = DataTable::read(u"yaml"_s, text, nullptr, parts.at(1));
+    QVERIFY(second);
+    QCOMPARE(second->rowCount(), 2);
+    QVERIFY(second->removeRow(0));
+    QCOMPARE(second->text(), u"- name: Mara\n---\n# second\n- name: Rhee\n---\ntitle: x\n"_s);
+    // A part no longer there reads as nothing, with why.
+    QString why;
+    QVERIFY(!DataTable::read(u"yaml"_s, u"- a: 1\n"_s, &why, parts.at(1)));
+    QVERIFY(!why.isEmpty());
 }
 
 QTEST_GUILESS_MAIN(TestDataTable)

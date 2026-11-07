@@ -29,6 +29,20 @@ struct DataValue
     bool operator==(const DataValue &) const = default;
 };
 
+/// One list of records in a file that holds several: the value of a key of its top-level object
+/// or mapping, or one document of a YAML file of several.
+struct DataPart
+{
+    /// What its tab says: the key, or the document's number.
+    QString name;
+    QString key;
+    /// The document, from 0, in a YAML file of several; -1 for a key's list.
+    int document = -1;
+
+    [[nodiscard]] bool isWhole() const { return key.isEmpty() && document < 0; }
+    bool operator==(const DataPart &) const = default;
+};
+
 /// A data file holding a list of records, seen as a table: one row per record and one column
 /// per field. The file's text stays the truth: each change rewrites only the part of the text it
 /// touches, so everything else keeps its formatting, key order, quoting and line endings.
@@ -38,11 +52,16 @@ public:
     /// Reads `text` as `kind`: "json" for an array of objects, "yaml" for a list of mappings,
     /// "csv" or "tsv" with a header row.
     /// Nothing, with `why`, for text that does not read or is not a list of records.
+    /// With `part`, only that list in the file is the table, and edits still rewrite the file.
     static std::optional<DataTable> read(const QString &kind, const QString &text,
-                                         QString *why = nullptr);
+                                         QString *why = nullptr, const DataPart &part = {});
+    /// The lists of records in JSON or YAML that is not one list itself, each to read as a
+    /// table of its own; empty for text that is one, or holds none.
+    static QList<DataPart> parts(const QString &kind, const QString &text);
 
     [[nodiscard]] QString kind() const { return m_kind; }
     [[nodiscard]] QString text() const { return m_text; }
+    [[nodiscard]] DataPart part() const { return m_part; }
     /// Every field, in the order records first have them.
     [[nodiscard]] QStringList columns() const { return m_columns; }
     [[nodiscard]] int rowCount() const { return int(m_rows.size()); }
@@ -109,7 +128,24 @@ private:
         qsizetype dash = -1;
     };
 
+    /// Where a part's list is written, and how deep in the file it sits.
+    struct Located
+    {
+        DataPart part;
+        Span range;
+        int depth = 0;
+    };
+
+    /// Every list in the text that could be a part, records or not.
+    static QList<Located> locate(const QString &kind, const QString &text);
+    static QList<Located> locateYaml(const QString &text);
     bool parse(QString *why);
+    /// Reads the list in `where` as the table, keeping offsets into the whole text.
+    bool parseRange(const Located &where, QString *why);
+    /// Moves every offset by `by`, for a table read from a range of the text.
+    void shift(qsizetype by);
+    /// JSON's indent for one level, from the records' lines.
+    void jsonIndent();
     bool parseJson(QString *why);
     bool parseDelimited(QString *why);
     bool parseYaml(QString *why);
@@ -141,6 +177,9 @@ private:
     Span m_array;
     /// JSON: one level of indentation as the file writes it, empty for a file on one line.
     QString m_indent;
+    DataPart m_part;
+    /// How many levels in the file the list sits, as a key's list does one in.
+    int m_depth = 0;
 };
 
 } // namespace jot

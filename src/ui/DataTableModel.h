@@ -45,6 +45,11 @@ class DataTableModel : public QAbstractTableModel
     Q_PROPERTY(QString schemaSummary READ schemaSummary NOTIFY schemaChanged)
     Q_PROPERTY(bool canUndo READ canUndo NOTIFY historyChanged)
     Q_PROPERTY(bool canRedo READ canRedo NOTIFY historyChanged)
+    /// The lists of records in a file that holds several, by name, each a tab; empty for a file
+    /// that is one list.
+    Q_PROPERTY(QStringList parts READ partNames NOTIFY loaded)
+    /// Which of those the table is.
+    Q_PROPERTY(int part READ part WRITE setPart NOTIFY loaded)
 
 public:
     enum Role {
@@ -73,6 +78,9 @@ public:
     [[nodiscard]] QString text() const;
     void setText(const QString &text);
     [[nodiscard]] bool isTable() const { return m_table.has_value(); }
+    [[nodiscard]] QStringList partNames() const;
+    [[nodiscard]] int part() const { return m_part; }
+    void setPart(int part);
     [[nodiscard]] QString why() const { return m_why; }
     [[nodiscard]] QStringList columns() const;
     [[nodiscard]] int sortColumn() const { return m_sortColumn; }
@@ -134,6 +142,10 @@ private:
     QString m_text;
     std::optional<DataTable> m_table;
     QString m_why;
+    QList<DataPart> m_parts;
+    int m_part = 0;
+    /// The tab chosen, by name, kept across edits and undo.
+    QString m_partName;
     QString m_error;
     /// Records in the order shown.
     QList<int> m_order;

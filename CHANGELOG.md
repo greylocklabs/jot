@@ -3,13 +3,21 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## Unreleased
+
+### Added
+
+- A JSON or YAML file holding several lists of records, under keys or in several YAML documents,
+  opens as a table with a tab for each list. An edit in a tab rewrites only that list, so the rest
+  of the file stays as it was.
+- Trash in the sidebar lists the notes deleted from the vault, from the desktop's trash and Jot's
+  own, newest first. Read one there, or restore it where it was, with its attachments. Jot never
+  empties the trash.
+
 ## 0.3.0 - 2026-11-06
 
 ### Added
 
-- Trash in the sidebar lists the notes deleted from the vault, from the desktop's trash and Jot's
-  own, newest first. Read one there, or restore it where it was, with its attachments. Jot never
-  empties the trash.
 - JSON, CSV, TSV and YAML files in a vault show in the note list with their extension, count in
   their notebook, turn up in search and the switcher, and open in Jot from a link, to edit as
   text.

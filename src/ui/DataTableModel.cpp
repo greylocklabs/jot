@@ -126,12 +126,46 @@ void DataTableModel::setText(const QString &text)
     Q_EMIT historyChanged();
 }
 
+QStringList DataTableModel::partNames() const
+{
+    QStringList names;
+    for (const DataPart &part : m_parts)
+        names.append(part.name);
+    return names;
+}
+
+void DataTableModel::setPart(int part)
+{
+    if (part < 0 || part >= m_parts.size() || part == m_part)
+        return;
+    m_partName = m_parts.at(part).name;
+    // Another list has other columns, so its sort starts afresh.
+    m_sortColumn = -1;
+    m_descending = false;
+    reload(text());
+    Q_EMIT arranged();
+}
+
 void DataTableModel::reload(const QString &text)
 {
     beginResetModel();
     m_text = text;
     m_why.clear();
     m_table = DataTable::read(m_kind, text, &m_why);
+    m_parts.clear();
+    m_part = 0;
+    if (!m_table) {
+        // A file of several lists shows one at a time, the one chosen before where it still is.
+        m_parts = DataTable::parts(m_kind, text);
+        for (qsizetype i = 0; i < m_parts.size(); ++i) {
+            if (m_parts.at(i).name == m_partName)
+                m_part = int(i);
+        }
+        if (!m_parts.isEmpty()) {
+            m_partName = m_parts.at(m_part).name;
+            m_table = DataTable::read(m_kind, text, &m_why, m_parts.at(m_part));
+        }
+    }
     arrange();
     checkSchema();
     endResetModel();
@@ -371,8 +405,11 @@ void DataTableModel::checkSchema()
     m_schema = QJsonValue();
     m_schemaProblems.clear();
     m_cellProblems.clear();
-    const std::optional<QJsonValue> data =
-        m_table && !m_path.isEmpty() ? dataAsJson(m_kind, m_table->text()) : std::nullopt;
+    // A document of several has no one schema to keep to, so it is checked against none.
+    const DataPart part = m_table ? m_table->part() : DataPart();
+    const std::optional<QJsonValue> data = m_table && !m_path.isEmpty() && part.document < 0
+                                               ? dataAsJson(m_kind, m_table->text())
+                                               : std::nullopt;
     if (data)
         m_schemaFile = schemaPathFor(m_path, *data);
     QFile file(m_schemaFile);
@@ -389,7 +426,14 @@ void DataTableModel::checkSchema()
                 document.isObject() ? QJsonValue(document.object()) : QJsonValue(document.array());
     }
     if (data && !m_schema.isUndefined()) {
-        for (const SchemaProblem &problem : jot::checkSchema(m_schema, *data)) {
+        for (SchemaProblem problem : jot::checkSchema(m_schema, *data)) {
+            // A key's list holds the rows; its problems are read from below the key.
+            if (!part.key.isEmpty() && problem.path.value(0) == part.key)
+                problem.path.removeFirst();
+            else if (!part.key.isEmpty() && !problem.path.isEmpty()) {
+                m_schemaProblems.append(problem.path.join(u'.') + u": "_s + problem.message);
+                continue;
+            }
             bool isRow = false;
             const int record = problem.path.value(0).toInt(&isRow);
             if (isRow && problem.path.size() >= 2) {
@@ -433,7 +477,12 @@ QJsonValue DataTableModel::fieldRules(const QString &name) const
                         .value_or(QJsonValue());
         return value;
     };
-    const QJsonValue items = resolved(resolved(m_schema).toObject().value(u"items"_s));
+    // A key's list is described under the key, as the file's object has it.
+    QJsonValue list = resolved(m_schema);
+    if (m_table && !m_table->part().key.isEmpty())
+        list =
+            resolved(list.toObject().value(u"properties"_s).toObject().value(m_table->part().key));
+    const QJsonValue items = resolved(list.toObject().value(u"items"_s));
     return resolved(items.toObject().value(u"properties"_s).toObject().value(name));
 }
 
