@@ -100,16 +100,35 @@ QColor ThemeController::dangerEdge() const
     return m_spec.colors.danger.darker(140);
 }
 
+QColor ThemeController::sticker(double hue, Part part) const
+{
+    const greylock::ThemeSpec::Calendar &c = m_spec.calendar;
+    switch (part) {
+    case Part::Ink: {
+        // The theme's sticker ink, unless it is too faint on this hue; then its text or page.
+        const QColor fill = sticker(hue, Part::Fill);
+        const QColor ink = greylock::color::fromOklch({c.inkLightness, c.inkChroma, hue});
+        if (greylock::color::contrastRatio(ink, fill) >= 4.5)
+            return ink;
+        return greylock::color::contrastRatio(text(), fill) >=
+                       greylock::color::contrastRatio(bg(), fill)
+                   ? text()
+                   : bg();
+    }
+    case Part::Edge: return greylock::color::fromOklch({c.edgeLightness, c.edgeChroma, hue});
+    case Part::Fill: break;
+    }
+    return greylock::color::fromOklch({c.lightness, c.chroma, hue});
+}
+
 DiagramStyle ThemeController::diagramColors() const
 {
     // Sticker-colored like calendars: the accent's hue first, then hues 135 degrees on, so
     // neighboring sections differ and all eight do.
-    const greylock::ThemeSpec::Calendar &sticker = m_spec.calendar;
     const double hue = greylock::color::toOklch(accent()).hue;
     DiagramStyle style;
     for (int i = 0; i < 8; ++i)
-        style.series.append(greylock::color::fromOklch(
-            {sticker.lightness, sticker.chroma, std::fmod(hue + i * 135.0, 360.0)}));
+        style.series.append(sticker(std::fmod(hue + i * 135.0, 360.0), Part::Fill));
     style.onLight = m_spec.dark ? bg() : text();
     style.onDark = m_spec.dark ? text() : bg();
     return style;

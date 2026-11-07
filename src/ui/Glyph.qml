@@ -5,7 +5,7 @@ import QtQuick
 /// A small line icon drawn from rounded bars, so icons need no image files and
 /// take the text color: chevron-left, chevron-right, chevron-down, minimize, maximize,
 /// restore, close, check, plus, refresh, bell, search, settings, menu, video, more,
-/// list-bullet, list-number, task, quote, table or pin.
+/// list-bullet, list-number, task, quote, table, pin, trash, note, braces or clock.
 Item {
     id: root
 
@@ -69,6 +69,11 @@ Item {
             return [[0.44, 0, 0.5, 0.1], [0.36, 90, 0.36, 0.3], [0.36, 90, 0.64, 0.3], [0.8, 0, 0.5,
                                                                                         0.5], [0.4,
                                                                                                90, 0.5, 0.74]]
+        case "note":
+            // A page with its corner turned down, and two lines of writing.
+            return [[0.84, 90, 0.22, 0.5], [0.56, 0, 0.5, 0.92], [0.62, 90, 0.78, 0.61], [0.36, 0,
+                                                                                          0.4, 0.08],
+                    [0.3, 48, 0.68, 0.19], [0.3, 0, 0.5, 0.56], [0.3, 0, 0.5, 0.74]]
         default:
             return []
         }
@@ -111,6 +116,8 @@ Item {
                               "more": moreShape,
                               "search": searchShape,
                               "video": videoShape,
+                              "braces": bracesShape,
+                              "clock": clockShape,
                               "maximize": frameShape,
                               "restore": frameShape
                           })[root.name] ?? null
@@ -296,6 +303,79 @@ Item {
                 rotation: 45
                 x: root.width * 0.76 - width / 2
                 y: root.height * 0.76 - height / 2
+            }
+        }
+    }
+
+    // A pair of curly braces, for a data file.
+    Component {
+        id: bracesShape
+
+        Canvas {
+            id: braces
+            antialiasing: true
+            onPaint: {
+                const ctx = getContext("2d")
+                ctx.reset()
+                const w = width, h = height
+                ctx.strokeStyle = root.color
+                ctx.lineWidth = root.stroke
+                ctx.lineCap = "round"
+                ctx.lineJoin = "round"
+                for (const side of [-1, 1]) {
+                    // Drawn for the left brace and mirrored for the right.
+                    const x = f => w * (0.5 + side * (0.5 - f))
+                    ctx.beginPath()
+                    ctx.moveTo(x(0.36), h * 0.1)
+                    ctx.quadraticCurveTo(x(0.24), h * 0.1, x(0.24), h * 0.24)
+                    ctx.lineTo(x(0.24), h * 0.38)
+                    ctx.quadraticCurveTo(x(0.24), h * 0.5, x(0.1), h * 0.5)
+                    ctx.quadraticCurveTo(x(0.24), h * 0.5, x(0.24), h * 0.62)
+                    ctx.lineTo(x(0.24), h * 0.76)
+                    ctx.quadraticCurveTo(x(0.24), h * 0.9, x(0.36), h * 0.9)
+                    ctx.stroke()
+                }
+            }
+
+            Connections {
+                target: root
+                function onColorChanged() {
+                    braces.requestPaint()
+                }
+            }
+        }
+    }
+
+    // A clock face at ten to three.
+    Component {
+        id: clockShape
+
+        Item {
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: root.width * 0.06
+                radius: width / 2
+                color: "transparent"
+                border.width: root.stroke
+                border.color: root.color
+                antialiasing: true
+            }
+            Repeater {
+                // The hands, from the middle: up, then to the right and down a little.
+                model: [[0.3, 90, 0.5, 0.36], [0.24, 34, 0.6, 0.57]]
+
+                Rectangle {
+                    required property var modelData
+
+                    width: root.width * modelData[0]
+                    height: root.stroke
+                    radius: root.stroke / 2
+                    color: root.color
+                    antialiasing: true
+                    x: root.width * modelData[2] - width / 2
+                    y: root.height * modelData[3] - height / 2
+                    rotation: modelData[1]
+                }
             }
         }
     }
