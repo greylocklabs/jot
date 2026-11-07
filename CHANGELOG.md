@@ -15,6 +15,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   note there restores or permanently deletes it.
 - Ctrl+Z and Ctrl+Shift+Z outside the editor undo and redo moving a note to the trash or bringing
   it back, as well as ticking to-dos. One that would move a note to the trash asks first.
+- Moving a notebook to the trash can be undone and redone too, bringing it back with everything
+  left in it.
 
 ### Changed
 

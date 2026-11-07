@@ -466,13 +466,13 @@ private:
     /// brought back from it.
     struct Change
     {
-        enum class Kind { Text, Trash };
+        enum class Kind { Text, Trash, Notebook };
         Kind kind = Kind::Text;
         QString path;
         /// Text: what the note said before and after.
         QString before;
         QString after;
-        /// Trash: where the note is in the trash while it is there.
+        /// Trash and Notebook: where the note or notebook is in the trash while it is there.
         QString location;
         bool keepAttachments = false;
         /// Trash: the change moved the note to the trash, rather than bringing it back.
@@ -484,6 +484,11 @@ private:
     void remember(const Change &change);
     /// Moves the note at `path` to the trash, and gives where it went there.
     std::optional<QString> moveNoteToTrash(const QString &path, bool keepAttachments);
+    /// Moves the notebook at `path` to the trash, and gives where it went there.
+    std::optional<QString> moveNotebookToTrash(const QString &path);
+    /// Brings the notebook at `location` in the trash back to `path`, and gives where it went.
+    std::optional<QString> bringNotebookBack(const QString &location, const QString &path,
+                                             bool *gone);
     /// Brings the note at `location` in the trash back, and gives the path it went to.
     std::optional<QString> bringBack(const QString &location, bool *gone);
     QList<Change> m_undo;
