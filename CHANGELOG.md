@@ -23,6 +23,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 - Shift and the mouse wheel scroll a table across over its column and row headers too, not only
   over its cells.
+- A wide table's bar for scrolling across sits right under its last row, not at the bottom of the
+  window, where it was often out of view.
 
 ## 0.3.0 - 2026-11-06
 

@@ -398,7 +398,8 @@ Item {
         anchors.top: header.bottom
         anchors.left: rowHeader.right
         anchors.right: parent.right
-        anchors.bottom: parent.bottom
+        // Only as tall as its rows, so the bar for scrolling across sits right under the last.
+        height: Math.min(contentHeight + (across.visible ? across.height : 0), parent.height - y)
         clip: true
         model: root.records
         boundsBehavior: Flickable.StopAtBounds
@@ -406,6 +407,8 @@ Item {
         focus: true
         // Shown whenever there is more to see, not only while scrolling.
         ScrollBar.horizontal: ScrollBar {
+            id: across
+
             policy: table.contentWidth > table.width ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
         }
         ScrollBar.vertical: ScrollBar {
