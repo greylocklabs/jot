@@ -7,6 +7,7 @@
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
+#include <QHash>
 #include <QRegularExpression>
 
 #include <algorithm>
@@ -80,13 +81,31 @@ QList<TrashedNote> VaultTrash::list() const
         const QString inside = stamp.filePath();
         for (const QString &relative : notesIn(inside)) {
             const QString assets = inside + u'/' + Vault::assetsFolderFor(relative);
-            found << TrashedNote{inside + u'/' + relative, relative, deleted,
-                                 QFileInfo(assets).isDir() ? assets : QString()};
+            found << TrashedNote{inside + u'/' + relative,
+                                 relative,
+                                 deleted,
+                                 QFileInfo(assets).isDir() ? assets : QString(),
+                                 {}};
         }
     }
     std::ranges::stable_sort(
         found, [](const TrashedNote &a, const TrashedNote &b) { return a.deleted > b.deleted; });
     return found;
+}
+
+void VaultTrash::readText(QList<TrashedNote> &notes, const QList<TrashedNote> &known)
+{
+    QHash<QString, QString> read;
+    for (const TrashedNote &note : known)
+        read.insert(note.location, note.text);
+    for (TrashedNote &note : notes) {
+        if (const auto it = read.constFind(note.location); it != read.cend()) {
+            note.text = *it;
+            continue;
+        }
+        QString why;
+        note.text = notefile::read(note.location, &why).value_or(QString());
+    }
 }
 
 QList<TrashedNote> VaultTrash::matching(const QList<TrashedNote> &notes, const QString &query)
@@ -96,9 +115,9 @@ QList<TrashedNote> VaultTrash::matching(const QList<TrashedNote> &notes, const Q
         return notes;
     QList<TrashedNote> found;
     for (const TrashedNote &note : notes) {
-        QString why;
-        const QString haystack =
-            note.path + u'\n' + notefile::read(note.location, &why).value_or(QString());
+        // Its title and folder, not the file's extension, which every note shares.
+        const QString haystack = Vault::notebookOf(note.path) + u'\n' +
+                                 Vault::titleFromPath(note.path) + u'\n' + note.text;
         if (std::ranges::all_of(words, [&haystack](const QString &word) {
                 return haystack.contains(word, Qt::CaseInsensitive);
             }))
