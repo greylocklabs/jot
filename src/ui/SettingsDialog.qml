@@ -572,6 +572,13 @@ Popup {
                     onActivated: value => Settings.trashDays = value
                 }
             }
+            Toggle {
+                objectName: "searchTrash"
+                width: parent.width
+                text: qsTr("Include the trash in search results")
+                checked: Settings.searchTrash
+                onToggled: Settings.searchTrash = checked
+            }
             Text {
                 width: parent.width
                 wrapMode: Text.Wrap

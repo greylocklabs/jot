@@ -9,7 +9,10 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 - The links to a note and its mentions without a link fold under their headings, open to begin
   with.
-- Trash can delete a note for good, or empty itself, each after asking.
+- Trash can permanently delete a note, or empty itself, each after asking.
+- Searching notes also finds those in the trash, listed under In the trash; choosing one shows it
+  in Trash. A setting leaves the trash out. Trash has a search of its own, and right-clicking a
+  note there restores or permanently deletes it.
 
 ### Changed
 

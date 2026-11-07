@@ -23,6 +23,7 @@ private Q_SLOTS:
     void listsAndRestoresItsOwnTrash();
     void readsEveryLayoutOfItsOwnTrash();
     void deletesForGoodAndHandsOldNotesOn();
+    void searchesTheTrash();
     void keepsAttachmentsThatCannotComeBack();
 
     void createRecordsTheFormat();
@@ -371,6 +372,25 @@ void TestVault::deletesForGoodAndHandsOldNotesOn()
     QVERIFY2(trash.empty(&error), qPrintable(error));
     QVERIFY(trash.list().isEmpty());
     QVERIFY(!QFileInfo::exists(m_vault->absolute(u".jot/trash"_s)));
+}
+
+void TestVault::searchesTheTrash()
+{
+    write(u".jot/trash/20261001-120000/Story/Ferry.md"_s, "The ferrywoman counts coins\n");
+    write(u".jot/trash/20261002-120000/Recipes/Bread.md"_s, "Flour and water\n");
+    const QList<TrashedNote> all = VaultTrash(*m_vault).list();
+    const auto found = [&all](const QString &query) {
+        QStringList paths;
+        for (const TrashedNote &note : VaultTrash::matching(all, query))
+            paths << note.path;
+        return paths;
+    };
+    QCOMPARE(found({}).size(), 2);
+    // By its text, its title or its folder, every word, whatever the case.
+    QCOMPARE(found(u"COINS"_s), QStringList{u"Story/Ferry.md"_s});
+    QCOMPARE(found(u"bread"_s), QStringList{u"Recipes/Bread.md"_s});
+    QCOMPARE(found(u"story counts"_s), QStringList{u"Story/Ferry.md"_s});
+    QCOMPARE(found(u"flour coins"_s), QStringList());
 }
 
 void TestVault::keepsAttachmentsThatCannotComeBack()

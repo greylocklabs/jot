@@ -296,10 +296,105 @@ Rectangle {
             }
         }
 
+        // Below what the search found, the notes in the trash it also finds, marked as there.
+        footer: Column {
+            width: ListView.view.width
+            visible: Vault.trashHits.count > 0
+            topPadding: Theme.space3
+
+            Row {
+                x: Theme.space5
+                height: Theme.listRowHeight
+                spacing: Theme.space2
+
+                Glyph {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Theme.smallGlyphSize
+                    height: Theme.smallGlyphSize
+                    name: "trash"
+                    color: Theme.textFaint
+                    stroke: Theme.smallGlyphStroke
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: qsTr("In the trash")
+                    color: Theme.textFaint
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.textXs
+                    font.weight: Theme.weightBold
+                    font.capitalization: Font.AllUppercase
+                    font.letterSpacing: 0.6
+                }
+            }
+            Repeater {
+                model: Vault.trashHits
+
+                AbstractButton {
+                    id: hit
+
+                    required property string title
+                    required property string folder
+                    required property string deleted
+                    required property string location
+
+                    objectName: "trashHit"
+                    width: parent.width
+                    height: hitLines.implicitHeight + 2 * Theme.space3
+                    hoverEnabled: true
+                    Accessible.name: qsTr("%1, in the trash").arg(title)
+                    onClicked: Vault.showTrashed(location)
+
+                    background: Rectangle {
+                        anchors.fill: parent
+                        anchors.leftMargin: Theme.space3
+                        anchors.rightMargin: Theme.space3
+                        radius: Theme.radiusMd
+                        color: hit.hovered ? Theme.surfaceAlt : Theme.bg
+                    }
+                    contentItem: Item {
+                        Column {
+                            id: hitLines
+
+                            anchors {
+                                left: parent.left
+                                right: parent.right
+                                leftMargin: Theme.space5
+                                rightMargin: Theme.space5
+                                verticalCenter: parent.verticalCenter
+                            }
+                            spacing: Theme.space1
+
+                            Text {
+                                width: parent.width
+                                text: hit.title
+                                textFormat: Text.PlainText
+                                elide: Text.ElideRight
+                                color: Theme.textMuted
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.textBase
+                                font.weight: Theme.weightStrong
+                            }
+                            Text {
+                                width: parent.width
+                                text: hit.folder !== "" ? qsTr("%1, deleted %2").arg(hit.folder).arg(
+                                                              hit.deleted) : qsTr("Deleted %1").arg(
+                                                              hit.deleted)
+                                textFormat: Text.PlainText
+                                elide: Text.ElideRight
+                                color: Theme.textFaint
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.textXs
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         Text {
             anchors.centerIn: parent
             width: parent.width - 2 * Theme.space6
-            visible: list.count === 0
+            visible: list.count === 0 && Vault.trashHits.count === 0
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
             text: Vault.notes.query !== "" ? qsTr("Nothing matches.") : qsTr("No notes here yet.")

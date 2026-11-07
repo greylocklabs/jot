@@ -4,23 +4,14 @@ import QtQuick
 import QtQuick.Controls
 
 /// The middle column when Trash is chosen: the notes in the vault's trash, newest first.
-/// Choosing one shows it beside the list, to read, bring back or delete for good.
+/// Choosing one shows it beside the list, to read, bring back or permanently delete.
 Rectangle {
     id: root
 
     /// Where the note chosen is in the trash, or empty.
-    property string chosen
+    readonly property string chosen: Vault.chosenTrashed
 
     color: Theme.bg
-
-    // A note brought back or gone from the trash is no longer there to show.
-    Connections {
-        target: Vault.trash
-        function onModelReset() {
-            if (!Vault.trash.contains(root.chosen))
-                root.chosen = ""
-        }
-    }
 
     Column {
         id: header
@@ -55,27 +46,41 @@ Rectangle {
                     right: parent.right
                     verticalCenter: parent.verticalCenter
                 }
-                visible: Vault.trash.count > 0
+                visible: Vault.trash.total > 0
                 enabled: Vault.writable
                 destructive: true
                 text: qsTr("Empty trash")
                 onClicked: confirm.ask(qsTr("Empty the trash?"), qsTr(
                                            "Its %n note(s) are deleted now, with their attachments, and cannot be brought back.",
-                                           "", Vault.trash.count), qsTr("Empty trash"), ()
+                                           "", Vault.trash.total), qsTr("Empty trash"), ()
                                        => Vault.emptyTrash())
             }
         }
         Text {
             width: parent.width
             wrapMode: Text.Wrap
-            text: Vault.trash.count === 0 ? qsTr("Nothing from this vault is in the trash.") :
+            text: Vault.trash.total === 0 ? qsTr("Nothing from this vault is in the trash.") :
                                             Settings.trashDays > 0 ? qsTr(
                                                                          "Notes deleted from this vault. After %n day(s) they go to your desktop's trash.",
                                                                          "", Settings.trashDays) :
-                                                                     qsTr("Notes deleted from this vault. They stay until you delete them for good.")
+                                                                     qsTr("Notes deleted from this vault. They stay until you permanently delete them.")
             color: Theme.textMuted
             font.family: Theme.fontFamily
             font.pixelSize: Theme.textSm
+        }
+        Field {
+            id: search
+
+            objectName: "trashSearch"
+            width: parent.width
+            visible: Vault.trash.total > 0
+            placeholderText: qsTr("Search the trash")
+            text: Vault.trash.query
+            onTextEdited: Vault.trash.query = text
+            Keys.onEscapePressed: {
+                text = ""
+                Vault.trash.query = ""
+            }
         }
     }
 
@@ -107,7 +112,16 @@ Rectangle {
             height: Theme.listRowHeight * 2
             hoverEnabled: true
             Accessible.name: title
-            onClicked: root.chosen = location
+            onClicked: Vault.chosenTrashed = location
+
+            TapHandler {
+                acceptedButtons: Qt.RightButton
+                onTapped: eventPoint => {
+                    rowMenu.location = row.location
+                    rowMenu.noteTitle = row.title
+                    rowMenu.popup(row, eventPoint.position.x, eventPoint.position.y)
+                }
+            }
 
             background: Rectangle {
                 anchors.fill: parent
@@ -150,6 +164,38 @@ Rectangle {
                         font.pixelSize: Theme.textSm
                     }
                 }
+            }
+        }
+    }
+
+    Text {
+        anchors.centerIn: list
+        visible: Vault.trash.total > 0 && list.count === 0
+        text: qsTr("Nothing in the trash matches.")
+        color: Theme.textFaint
+        font.family: Theme.fontFamily
+        font.pixelSize: Theme.textMd
+    }
+
+    MenuCard {
+        id: rowMenu
+
+        property string location
+        property string noteTitle
+
+        MenuEntry {
+            text: qsTr("Restore")
+            enabled: Vault.writable
+            onTriggered: Vault.restoreTrashed(rowMenu.location)
+        }
+        MenuEntry {
+            text: qsTr("Permanently delete...")
+            enabled: Vault.writable
+            onTriggered: {
+                const location = rowMenu.location
+                confirm.ask(qsTr("Permanently delete %1?").arg(rowMenu.noteTitle), qsTr(
+                                "It is deleted now, with its attachments, and cannot be brought back."),
+                            qsTr("Permanently delete"), () => Vault.deleteTrashed(location))
             }
         }
     }

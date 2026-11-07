@@ -71,6 +71,7 @@ private Q_SLOTS:
     void keepsAttachmentsOtherNotesUse();
     void removesAttachmentFoldersLeftEmpty();
     void deletesForGoodAndExpiresTheTrash();
+    void searchFindsNotesInTheTrash();
     void followsLinksAndMakesMissingNotes();
     void opensAndRenamesDataFiles();
     void keepsLineEndingsAndTheByteOrderMark();
@@ -1046,6 +1047,39 @@ void TestVaultController::deletesForGoodAndExpiresTheTrash()
     QVERIFY(m_vault->emptyTrash());
     QCOMPARE(trash->rowCount(), 0);
     QVERIFY(!QFileInfo::exists(m_root + u"/.jot/trash"_s));
+}
+
+void TestVaultController::searchFindsNotesInTheTrash()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    QVERIFY(m_vault->trashNote(u"Recipes/Sourdough.md"_s, false));
+    TrashModel *hits = m_vault->trashHits();
+    QCOMPARE(hits->rowCount(), 0);
+    m_vault->notes()->setQuery(u"sourdough"_s);
+    QCOMPARE(hits->rowCount(), 1);
+    const QString location = hits->index(0).data(TrashModel::LocationRole).toString();
+
+    // Within the notebook searched, never a tag's, and only while settings say so.
+    m_vault->notes()->setNotebook(u"Ashfall"_s);
+    QCOMPARE(hits->rowCount(), 0);
+    m_vault->notes()->setNotebook(u"Recipes"_s);
+    QCOMPARE(hits->rowCount(), 1);
+    m_vault->notes()->setTag(u"food"_s);
+    QCOMPARE(hits->rowCount(), 0);
+    m_vault->notes()->setTag({});
+    m_settings->setSearchTrash(false);
+    QCOMPARE(hits->rowCount(), 0);
+    m_settings->setSearchTrash(true);
+    QCOMPARE(hits->rowCount(), 1);
+
+    // Choosing one shows it in Trash.
+    m_vault->showTrashed(location);
+    QVERIFY(m_vault->showingTrash());
+    QCOMPARE(m_vault->chosenTrashed(), location);
+    // Gone from the trash, it is neither found nor chosen.
+    QVERIFY(m_vault->deleteTrashed(location));
+    QCOMPARE(hits->rowCount(), 0);
+    QCOMPARE(m_vault->chosenTrashed(), QString());
 }
 
 void TestVaultController::followsLinksAndMakesMissingNotes()

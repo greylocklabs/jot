@@ -52,6 +52,7 @@ private Q_SLOTS:
     void trashSitsAtTheFootWithItsOwnHighlight();
     void backlinkListsFoldUnderTheirHeadings();
     void trashDeletesForGoodOnlyOnceAsked();
+    void searchLeadsIntoTheTrash();
     void columnBordersDragToResize();
     void deleteAsksFirstForNotesAndNotebooks();
     void searchHandsTheKeysBackToTheList();
@@ -644,6 +645,63 @@ void TestLists::trashDeletesForGoodOnlyOnceAsked()
     QTest::qWait(QGuiApplication::styleHints()->mouseDoubleClickInterval());
     click(confirm);
     QTRY_COMPARE(trash->rowCount(), 0);
+}
+
+void TestLists::searchLeadsIntoTheTrash()
+{
+    QVERIFY(m_vault->trashNote(u"Recipes/Sourdough.md"_s, false));
+    QVERIFY(m_vault->trashNote(u"Recipes/Pancakes.md"_s, false));
+    m_vault->notes()->setQuery(u"sourdough"_s);
+    QQuickItem *hit = nullptr;
+    QTRY_VERIFY((hit = findItem(
+                     [](QQuickItem *item) {
+                         return item->isVisible() && item->objectName() == u"trashHit"_s;
+                     },
+                     qobject_cast<QQuickItem *>(m_noteList.get()))));
+    QCOMPARE(hit->property("title").toString(), u"Sourdough"_s);
+    // Read first: the row is made again once Trash reads the trash.
+    const QString location = hit->property("location").toString();
+    click(hit);
+    QTRY_VERIFY(m_vault->showingTrash());
+    QCOMPARE(m_vault->chosenTrashed(), location);
+
+    QQmlComponent component(m_engine.get());
+    component.loadFromModule("Jot.Ui", "TrashList");
+    std::unique_ptr<QObject> object(component.create());
+    auto *list = qobject_cast<QQuickItem *>(object.get());
+    list->setParentItem(m_window->contentItem());
+    list->setSize({640, 700});
+    const auto row = [list](const QString &title) {
+        return [list, title] {
+            std::function<QQuickItem *(QQuickItem *)> walk = [&](QQuickItem *at) -> QQuickItem * {
+                for (QQuickItem *child : at->childItems()) {
+                    if (child->isVisible() && child->property("title").toString() == title &&
+                        child->property("location").isValid())
+                        return child;
+                    if (QQuickItem *found = walk(child))
+                        return found;
+                }
+                return nullptr;
+            };
+            return walk(list);
+        };
+    };
+    QCOMPARE(list->property("chosen").toString(), m_vault->chosenTrashed());
+
+    // Its own search narrows it.
+    QTRY_VERIFY(row(u"Pancakes"_s)());
+    m_vault->trash()->setQuery(u"sourdough"_s);
+    QTRY_VERIFY(!row(u"Pancakes"_s)());
+    m_vault->trash()->setQuery({});
+    QTRY_VERIFY(row(u"Pancakes"_s)());
+
+    // Right-clicking one offers to bring it back.
+    click(row(u"Pancakes"_s)(), Qt::RightButton);
+    QQuickItem *restore = nullptr;
+    QTRY_VERIFY((restore = menuEntry(u"Restore"_s)));
+    QVERIFY(menuEntry(u"Permanently delete..."_s));
+    click(restore);
+    QTRY_VERIFY(QFileInfo::exists(m_root + u"/Recipes/Pancakes.md"_s));
 }
 
 void TestLists::columnBordersDragToResize()
