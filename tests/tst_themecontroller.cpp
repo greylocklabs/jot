@@ -112,6 +112,13 @@ void TestThemeController::everyBuiltInThemeReads()
         QVERIFY2(greylock::color::contrastRatio(theme->dangerText(), theme->danger()) >= 4.5,
                  qPrintable(id));
         QCOMPARE(theme->dangerText() == theme->text() || theme->dangerText() == theme->bg(), true);
+        // Vi's mode labels read on their stickers.
+        QVERIFY2(greylock::color::contrastRatio(theme->insertModeText(), theme->insertMode()) >=
+                     4.5,
+                 qPrintable(id));
+        QVERIFY2(greylock::color::contrastRatio(theme->visualModeText(), theme->visualMode()) >=
+                     4.5,
+                 qPrintable(id));
         // Diagram sections get eight colors of their own, each with text that reads on it.
         const jot::DiagramStyle diagram = theme->diagramStyle({}, 15);
         QSet<QString> distinct;
