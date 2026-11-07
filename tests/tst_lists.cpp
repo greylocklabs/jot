@@ -559,9 +559,22 @@ void TestLists::backlinkListsFoldUnderTheirHeadings()
             [name](QQuickItem *item) { return item->objectName() == QLatin1String(name); },
             backlinks);
     };
+    // Laid out: what shows stacks downwards, as the Column places it once the window draws.
+    const auto laidOut = [backlinks] {
+        qreal next = 0;
+        for (QQuickItem *item : backlinks->childItems()) {
+            if (!item->isVisible() || item->height() <= 0)
+                continue;
+            if (item->y() < next)
+                return false;
+            next = item->y() + item->height();
+        }
+        return true;
+    };
     // Both open to begin with.
     QTRY_COMPARE(shown(false), 3);
     QCOMPARE(shown(true), 3);
+    QTRY_VERIFY(laidOut());
 
     // Clicked on a heading with a size of its own, not a link under it.
     QVERIFY(heading("linkedHeading")->height() > 0);
@@ -569,8 +582,10 @@ void TestLists::backlinkListsFoldUnderTheirHeadings()
     QCOMPARE(m_vault->current(), u"Ashfall/Characters/Mara Vey.md"_s);
     QTRY_COMPARE(shown(false), 0);
     QCOMPARE(shown(true), 3);
+    QTRY_VERIFY(laidOut());
     click(heading("mentionedHeading"));
     QTRY_COMPARE(shown(true), 0);
+    QTRY_VERIFY(laidOut());
     click(heading("linkedHeading"));
     QTRY_COMPARE(shown(false), 3);
     QCOMPARE(shown(true), 0);
