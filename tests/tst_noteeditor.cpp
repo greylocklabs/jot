@@ -82,6 +82,7 @@ private Q_SLOTS:
     void tickingARepeatingToDoWritesTheNext();
     void editsInViModes();
     void showsWhereViIsAlongTheFoot();
+    void keepsOneCursorAcrossViModes();
     void jumpsAlongALineInVi();
     void takesTextInputOnlyInInsertMode();
     void staysQuickAndStillInALongNote();
@@ -1424,6 +1425,42 @@ void TestNoteEditor::editsInViModes()
     body->setProperty("cursorPosition", 0);
     type(u"j"_s);
     QCOMPARE(text(), u"jha big beta\n**z**"_s);
+}
+
+void TestNoteEditor::keepsOneCursorAcrossViModes()
+{
+    m_settings->setViMode(true);
+    m_vault->setCurrent(u"Ashfall/Characters/Mara Vey.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    QTRY_VERIFY(body);
+    body->forceActiveFocus();
+    const auto cursors = [this] {
+        QList<QQuickItem *> shown;
+        const std::function<void(QQuickItem *)> walk = [&](QQuickItem *item) {
+            if (item->objectName() == u"blockCursor"_s && item->isVisible())
+                shown << item;
+            for (QQuickItem *child : item->childItems())
+                walk(child);
+        };
+        walk(m_window->contentItem());
+        return shown;
+    };
+    // The same cursor in each mode, a bar while inserting, so none is left behind.
+    QTRY_COMPARE(cursors().size(), 1);
+    QPointer<QQuickItem> cursor = cursors().first();
+    const qreal block = cursor->width();
+    QTest::keyClick(m_window.get(), 'i');
+    QTRY_COMPARE(cursor->width(), 2.0);
+    QTest::keyClick(m_window.get(), Qt::Key_Escape);
+    QTRY_COMPARE(cursor->width(), block);
+    for (int i = 0; i < 5; ++i) {
+        QTest::keyClick(m_window.get(), 'i');
+        QTest::keyClick(m_window.get(), Qt::Key_Escape);
+        QTest::keyClick(m_window.get(), 'v');
+        QTest::keyClick(m_window.get(), Qt::Key_Escape);
+    }
+    QTRY_COMPARE(cursors().size(), 1);
+    QCOMPARE(cursors().first(), cursor.data());
 }
 
 void TestNoteEditor::showsWhereViIsAlongTheFoot()
