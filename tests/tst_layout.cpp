@@ -281,6 +281,13 @@ void TestLayout::keepsTheViewsEmojis()
     QCOMPARE(Layout::read(*m_vault).value().text(),
              u"trash:\n  emoji: x\n  color: red\n  nested:\n    a: 1\n"_s);
 
+    // A comment before the first key does not set how far the keys are indented.
+    write(Layout::kPath, u"trash:\n# why\n  emoji: x\n"_s);
+    Layout commented = Layout::read(*m_vault).value();
+    QCOMPARE(commented.viewEmoji(u"trash"_s), u"x"_s);
+    commented.setViewEmoji(u"trash"_s, u"z"_s);
+    QCOMPARE(commented.text(), u"trash:\n  emoji: z\n  # why\n"_s);
+
     // A value on the section's own line is kept as written, until Jot sets one itself.
     write(Layout::kPath, u"trash: {emoji: x}\npinned:\n  - Inbox/A.md\n"_s);
     Layout inline_ = Layout::read(*m_vault).value();
