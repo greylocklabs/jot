@@ -88,14 +88,24 @@ Rectangle {
                     Vault.tasks.tag = ""
                 }
 
+                TapHandler {
+                    acceptedButtons: Qt.RightButton
+                    onTapped: eventPoint => {
+                        viewMenu.view = "tasks"
+                        viewMenu.popup(tasks, eventPoint.position.x, eventPoint.position.y)
+                    }
+                }
+
                 contentItem: Item {
                     Text {
                         anchors {
                             left: parent.left
-                            leftMargin: Theme.space5
+                            // In line with the notebooks' names, past where their folds go.
+                            leftMargin: Theme.space4 + Theme.smallGlyphSize + Theme.space3
                             verticalCenter: parent.verticalCenter
                         }
-                        text: tasks.label
+                        text: (Vault.viewEmoji.tasks ?? "") !== "" ? Vault.viewEmoji.tasks + "  "
+                                                                     + tasks.label : tasks.label
                         color: tasks.selected ? Theme.text : Theme.textMuted
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.textMd
@@ -532,8 +542,10 @@ Rectangle {
 
         TapHandler {
             acceptedButtons: Qt.RightButton
-            onTapped: eventPoint => trashMenu.popup(trashEntry, eventPoint.position.x,
-                                                    eventPoint.position.y)
+            onTapped: eventPoint => {
+                viewMenu.view = "trash"
+                viewMenu.popup(trashEntry, eventPoint.position.x, eventPoint.position.y)
+            }
         }
 
         contentItem: Item {
@@ -544,8 +556,8 @@ Rectangle {
                     leftMargin: Theme.space4 + Theme.smallGlyphSize + Theme.space3
                     verticalCenter: parent.verticalCenter
                 }
-                text: Vault.trashEmoji !== "" ? Vault.trashEmoji + "  " + trashEntry.label :
-                                                trashEntry.label
+                text: (Vault.viewEmoji.trash ?? "") !== "" ? Vault.viewEmoji.trash + "  "
+                                                             + trashEntry.label : trashEntry.label
                 color: trashEntry.selected ? Theme.text : Theme.textMuted
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.textMd
@@ -554,13 +566,16 @@ Rectangle {
         }
     }
 
+    // For Tasks and Trash, which are no notebooks.
     MenuCard {
-        id: trashMenu
+        id: viewMenu
+
+        property string view
 
         MenuEntry {
             text: qsTr("Choose an emoji...")
             enabled: Vault.writable
-            onTriggered: emojiPicker.chooseForTrash()
+            onTriggered: emojiPicker.chooseForView(viewMenu.view)
         }
     }
 

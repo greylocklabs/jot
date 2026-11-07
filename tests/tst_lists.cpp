@@ -281,6 +281,10 @@ void TestLists::leavesRoomUnderTheTitleBar()
 {
     QQuickItem *tasks = entry(u"Tasks"_s);
     QVERIFY(tasks);
+    // With an emoji of its own, as Trash has.
+    QVERIFY(findItem(
+        [](QQuickItem *item) { return item->property("text").toString() == u"\u2705  Tasks"_s; },
+        tasks));
     QVERIFY(tasks->mapToScene({0, 0}).y() >= ThemeController::instance()->space3());
 }
 
@@ -498,10 +502,10 @@ void TestLists::trashSitsAtTheFootWithItsOwnHighlight()
             trash);
         return text ? text->property("text").toString() : QString();
     };
-    QCOMPARE(shown(), Layout::kTrashEmoji + u"  Trash"_s);
-    QVERIFY(m_vault->setTrashEmoji(u"\U0001F9FA"_s));
+    QCOMPARE(shown(), Layout::defaultEmoji(u"trash"_s) + u"  Trash"_s);
+    QVERIFY(m_vault->setViewEmoji(u"trash"_s, u"\U0001F9FA"_s));
     QTRY_COMPARE(shown(), u"\U0001F9FA  Trash"_s);
-    QVERIFY(m_vault->setTrashEmoji({}));
+    QVERIFY(m_vault->setViewEmoji(u"trash"_s, {}));
     QTRY_COMPARE(shown(), u"Trash"_s);
 
     // A trashed note's two lines sit in the middle of its row.

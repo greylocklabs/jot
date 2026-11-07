@@ -81,16 +81,16 @@ std::optional<Layout> Layout::read(const Vault &vault, QString *error)
                 layout.m_header.append(raw.trimmed());
             continue;
         }
-        if (section == u"trash"_s && !topLevel) {
+        if (kViews.contains(section) && !topLevel) {
             const auto key = splitKey(line);
             if (key && key->first == u"emoji"_s)
-                layout.m_trashEmoji = readYamlScalar(key->second);
+                layout.m_views[section].emoji = readYamlScalar(key->second);
             else if (!line.isEmpty())
-                layout.m_trashLines.append(QString(at - 2 > 0 ? at - 2 : 0, u' ') + line);
+                layout.m_views[section].lines.append(QString(at - 2 > 0 ? at - 2 : 0, u' ') + line);
             continue;
         }
         if (section != u"order"_s && section != u"folders"_s && section != u"pinned"_s &&
-            section != u"trash"_s) {
+            !kViews.contains(section)) {
             layout.m_other.append(raw);
             continue;
         }
@@ -175,11 +175,14 @@ QString Layout::text() const
         for (const QString &path : m_pinned)
             out += u"  - %1\n"_s.arg(yamlScalar(path));
     }
-    if (m_trashEmoji || !m_trashLines.isEmpty()) {
-        out += u"trash:\n"_s;
-        if (m_trashEmoji)
-            out += u"  emoji: %1\n"_s.arg(yamlScalar(*m_trashEmoji));
-        for (const QString &line : m_trashLines)
+    for (const QString &name : kViews) {
+        const View view = m_views.value(name);
+        if (!view.emoji && view.lines.isEmpty())
+            continue;
+        out += name + u":\n"_s;
+        if (view.emoji)
+            out += u"  emoji: %1\n"_s.arg(yamlScalar(*view.emoji));
+        for (const QString &line : view.lines)
             out += u"  "_s + line + u'\n';
     }
     for (const QString &line : m_other)
@@ -214,8 +217,7 @@ bool Layout::write(const Vault &vault, QString *error) const
     }
     kept.m_header = m_header;
     kept.m_other = m_other;
-    kept.m_trashEmoji = m_trashEmoji;
-    kept.m_trashLines = m_trashLines;
+    kept.m_views = m_views;
     for (const QString &note : m_pinned) {
         if (QFileInfo(vault.absolute(note)).isFile())
             kept.m_pinned.append(note);
@@ -294,16 +296,28 @@ void Layout::setEmoji(const QString &folder, const QString &emoji)
     m_folders[folder][u"emoji"_s] = emoji.trimmed();
 }
 
-QString Layout::trashEmoji() const
+QString Layout::defaultEmoji(const QString &view)
 {
-    return m_trashEmoji.value_or(kTrashEmoji);
+    if (view == u"tasks"_s)
+        return u"\u2705"_s;
+    if (view == u"trash"_s)
+        return u"\U0001F5D1\uFE0F"_s;
+    return {};
 }
 
-void Layout::setTrashEmoji(const QString &emoji)
+QString Layout::viewEmoji(const QString &view) const
 {
-    m_trashEmoji = emoji.trimmed();
-    if (*m_trashEmoji == kTrashEmoji)
-        m_trashEmoji.reset();
+    return m_views.value(view).emoji.value_or(defaultEmoji(view));
+}
+
+void Layout::setViewEmoji(const QString &view, const QString &emoji)
+{
+    if (!kViews.contains(view))
+        return;
+    std::optional<QString> &kept = m_views[view].emoji;
+    kept = emoji.trimmed();
+    if (*kept == defaultEmoji(view))
+        kept.reset();
 }
 
 QHash<QString, QString> Layout::emojis() const

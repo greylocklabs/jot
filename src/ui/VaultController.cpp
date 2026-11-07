@@ -723,17 +723,17 @@ bool VaultController::setNotebookEmoji(const QString &path, const QString &emoji
     return true;
 }
 
-bool VaultController::setTrashEmoji(const QString &emoji)
+bool VaultController::setViewEmoji(const QString &view, const QString &emoji)
 {
-    if (!m_vault || !m_vault->writable())
+    if (!m_vault || !m_vault->writable() || !Layout::kViews.contains(view))
         return false;
     QString error;
     std::optional<Layout> layout = Layout::read(*m_vault, &error);
     if (layout)
-        layout->setTrashEmoji(emoji);
+        layout->setViewEmoji(view, emoji);
     if (!layout || !layout->write(*m_vault, &error)) {
-        qCWarning(lcVault) << "could not set the emoji of the trash" << error;
-        setProblem(tr("Could not change the trash's emoji: %1").arg(error));
+        qCWarning(lcVault) << "could not set the emoji of" << view << error;
+        setProblem(tr("Could not change the emoji: %1").arg(error));
         return false;
     }
     reloadModels();
@@ -1528,7 +1528,8 @@ void VaultController::reloadModels()
         for (auto it = emojis.cbegin(); it != emojis.cend(); ++it)
             m_notebookEmoji.insert(it.key(), it.value());
         m_pinned = layout ? layout->pinned() : QStringList();
-        m_trashEmoji = layout ? layout->trashEmoji() : Layout::kTrashEmoji;
+        for (const QString &view : Layout::kViews)
+            m_viewEmoji.insert(view, layout ? layout->viewEmoji(view) : Layout::defaultEmoji(view));
     }
     if (m_index) {
         m_notebooks.reload(m_vault.get(), m_index->noteCounts(), m_index->noteCount());

@@ -9,6 +9,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 - Trash sits at the foot of the sidebar with a 🗑️ emoji, which can be changed or removed from its
   right-click menu.
+- Tasks has a ✅ emoji in the sidebar, which can be changed or removed from its right-click menu as
+  Trash's can.
 
 ### Fixed
 
