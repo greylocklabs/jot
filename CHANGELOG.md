@@ -34,6 +34,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 - Jot keeps deleted notes in its own trash, in the vault's .jot/trash folder, rather than the
   desktop's. A setting under General either keeps them until they are deleted or hands them to the
   desktop's trash after 30 days.
+- Settings lists its tabs down the left, under its title, and keeps one size, scrolling a tab only
+  when the window is too small for it.
 
 ### Fixed
 
