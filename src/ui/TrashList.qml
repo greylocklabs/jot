@@ -90,30 +90,38 @@ Rectangle {
                 color: root.chosen === row.location ? Theme.tint(Theme.accent, 0.18) : row.hovered
                                                       ? Theme.surfaceAlt : "transparent"
             }
-            contentItem: Column {
-                leftPadding: Theme.space5
-                rightPadding: Theme.space5
-                anchors.verticalCenter: parent.verticalCenter
+            contentItem: Item {
+                Column {
+                    anchors {
+                        left: parent.left
+                        right: parent.right
+                        leftMargin: Theme.space5
+                        rightMargin: Theme.space5
+                        verticalCenter: parent.verticalCenter
+                    }
+                    spacing: Theme.space1
 
-                Text {
-                    width: row.width - 2 * Theme.space5
-                    text: row.title
-                    textFormat: Text.PlainText
-                    elide: Text.ElideRight
-                    color: Theme.text
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.textMd
-                    font.weight: Theme.weightStrong
-                }
-                Text {
-                    width: row.width - 2 * Theme.space5
-                    text: row.folder !== "" ? qsTr("%1, deleted %2").arg(row.folder).arg(
-                                                  row.deleted) : qsTr("Deleted %1").arg(row.deleted)
-                    textFormat: Text.PlainText
-                    elide: Text.ElideRight
-                    color: Theme.textMuted
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.textSm
+                    Text {
+                        width: parent.width
+                        text: row.title
+                        textFormat: Text.PlainText
+                        elide: Text.ElideRight
+                        color: Theme.text
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.textMd
+                        font.weight: Theme.weightStrong
+                    }
+                    Text {
+                        width: parent.width
+                        text: row.folder !== "" ? qsTr("%1, deleted %2").arg(row.folder).arg(
+                                                      row.deleted) : qsTr("Deleted %1").arg(
+                                                      row.deleted)
+                        textFormat: Text.PlainText
+                        elide: Text.ElideRight
+                        color: Theme.textMuted
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.textSm
+                    }
                 }
             }
         }

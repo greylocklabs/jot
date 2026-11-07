@@ -63,7 +63,12 @@ Rectangle {
     }
 
     ScrollView {
-        anchors.fill: parent
+        anchors {
+            left: parent.left
+            right: parent.right
+            top: parent.top
+            bottom: trashEntry.top
+        }
         contentWidth: availableWidth
 
         Column {
@@ -109,31 +114,6 @@ Rectangle {
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.textXs
                         font.weight: Theme.weightBold
-                    }
-                }
-            }
-
-            Entry {
-                id: trashEntry
-
-                objectName: "trashEntry"
-                width: root.width
-                label: qsTr("Trash")
-                selected: Vault.showingTrash
-                onClicked: Vault.showingTrash = true
-
-                contentItem: Item {
-                    Text {
-                        anchors {
-                            left: parent.left
-                            leftMargin: Theme.space5
-                            verticalCenter: parent.verticalCenter
-                        }
-                        text: trashEntry.label
-                        color: trashEntry.selected ? Theme.text : Theme.textMuted
-                        font.family: Theme.fontFamily
-                        font.pixelSize: Theme.textMd
-                        font.weight: trashEntry.selected ? Theme.weightBold : Theme.weightStrong
                     }
                 }
             }
@@ -209,8 +189,8 @@ Rectangle {
 
                     width: root.width
                     label: name
-                    selected: !Vault.showingTasks && Vault.notes.tag === "" && Vault.notes.notebook
-                              === path
+                    selected: !Vault.showingTasks && !Vault.showingTrash && Vault.notes.tag === ""
+                              && Vault.notes.notebook === path
                     onClicked: {
                         Vault.showingTasks = false
                         Vault.showingTrash = false
@@ -407,12 +387,15 @@ Rectangle {
                     width: root.width
                     label: "#" + tag
                     // In Tasks, a tag narrows the to-dos; elsewhere it lists its notes.
-                    selected: Vault.showingTasks ? Vault.tasks.tag === tag : Vault.notes.tag === tag
+                    selected: Vault.showingTasks ? Vault.tasks.tag === tag : !Vault.showingTrash
+                                                   && Vault.notes.tag === tag
                     onClicked: {
-                        if (Vault.showingTasks)
+                        if (Vault.showingTasks) {
                             Vault.tasks.tag = Vault.tasks.tag === tag ? "" : tag
-                        else
+                        } else {
+                            Vault.showingTrash = false
                             Vault.notes.tag = tag
+                        }
                     }
 
                     contentItem: Item {
@@ -529,6 +512,55 @@ Rectangle {
                     }
                 }
             }
+        }
+    }
+
+    // At the foot, below everything that scrolls.
+    Entry {
+        id: trashEntry
+
+        objectName: "trashEntry"
+        anchors {
+            left: parent.left
+            right: parent.right
+            bottom: parent.bottom
+            bottomMargin: Theme.space3
+        }
+        label: qsTr("Trash")
+        selected: Vault.showingTrash
+        onClicked: Vault.showingTrash = true
+
+        TapHandler {
+            acceptedButtons: Qt.RightButton
+            onTapped: eventPoint => trashMenu.popup(trashEntry, eventPoint.position.x,
+                                                    eventPoint.position.y)
+        }
+
+        contentItem: Item {
+            Text {
+                anchors {
+                    left: parent.left
+                    // In line with the notebooks' names, past where their folds go.
+                    leftMargin: Theme.space4 + Theme.smallGlyphSize + Theme.space3
+                    verticalCenter: parent.verticalCenter
+                }
+                text: Vault.trashEmoji !== "" ? Vault.trashEmoji + "  " + trashEntry.label :
+                                                trashEntry.label
+                color: trashEntry.selected ? Theme.text : Theme.textMuted
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.textMd
+                font.weight: trashEntry.selected ? Theme.weightBold : Theme.weightStrong
+            }
+        }
+    }
+
+    MenuCard {
+        id: trashMenu
+
+        MenuEntry {
+            text: qsTr("Choose an emoji...")
+            enabled: Vault.writable
+            onTriggered: emojiPicker.chooseForTrash()
         }
     }
 

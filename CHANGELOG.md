@@ -3,6 +3,18 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## Unreleased
+
+### Changed
+
+- Trash sits at the foot of the sidebar with a 🗑️ emoji, which can be changed or removed from its
+  right-click menu.
+
+### Fixed
+
+- Choosing Trash no longer leaves the notebook or tag chosen before highlighted, and the trash
+  list's rows are evenly padded.
+
 ## 0.4.0 - 2026-11-07
 
 ### Added

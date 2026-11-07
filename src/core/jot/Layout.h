@@ -40,6 +40,12 @@ public:
     /// Every notebook's emoji, by its path.
     [[nodiscard]] QHash<QString, QString> emojis() const;
 
+    /// What Trash shows when the file names nothing for it.
+    static inline const QString kTrashEmoji = QStringLiteral("🗑️");
+    /// The emoji shown before Trash, kTrashEmoji unless changed; empty when taken away.
+    [[nodiscard]] QString trashEmoji() const;
+    void setTrashEmoji(const QString &emoji);
+
     /// The notes pinned to the top of the note list, by vault path, in the order pinned.
     [[nodiscard]] QStringList pinned() const { return m_pinned; }
     /// Pins the note at `path` to the top of the note list, or unpins it.
@@ -63,6 +69,10 @@ private:
     /// Sections Jot does not know, kept as written.
     QStringList m_other;
     QStringList m_pinned;
+    /// Trash's emoji as the file gives it, even empty; nothing when it says nothing.
+    std::optional<QString> m_trashEmoji;
+    /// Other lines under `trash:`, kept as written.
+    QStringList m_trashLines;
 };
 
 } // namespace jot

@@ -723,6 +723,23 @@ bool VaultController::setNotebookEmoji(const QString &path, const QString &emoji
     return true;
 }
 
+bool VaultController::setTrashEmoji(const QString &emoji)
+{
+    if (!m_vault || !m_vault->writable())
+        return false;
+    QString error;
+    std::optional<Layout> layout = Layout::read(*m_vault, &error);
+    if (layout)
+        layout->setTrashEmoji(emoji);
+    if (!layout || !layout->write(*m_vault, &error)) {
+        qCWarning(lcVault) << "could not set the emoji of the trash" << error;
+        setProblem(tr("Could not change the trash's emoji: %1").arg(error));
+        return false;
+    }
+    reloadModels();
+    return true;
+}
+
 bool VaultController::renameNotebook(const QString &path, const QString &name)
 {
     const QString base = Vault::fileNameFor(name.trimmed()).remove(u'/');
@@ -1511,6 +1528,7 @@ void VaultController::reloadModels()
         for (auto it = emojis.cbegin(); it != emojis.cend(); ++it)
             m_notebookEmoji.insert(it.key(), it.value());
         m_pinned = layout ? layout->pinned() : QStringList();
+        m_trashEmoji = layout ? layout->trashEmoji() : Layout::kTrashEmoji;
     }
     if (m_index) {
         m_notebooks.reload(m_vault.get(), m_index->noteCounts(), m_index->noteCount());
