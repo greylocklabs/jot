@@ -707,13 +707,22 @@ Popup {
                         checked: Settings.keepRunning
                         onToggled: Settings.keepRunning = checked
                     }
-                    Toggle {
+                    WhyDisabled {
                         width: parent.width
                         visible: StartAtLogin.available
-                        enabled: Settings.keepRunning
-                        text: qsTr("Start Jot when I log in")
-                        checked: StartAtLogin.enabled
-                        onToggled: StartAtLogin.enabled = checked
+                        target: startAtLogin
+                        reason: qsTr(
+                                    "Jot starts at login only to keep running in the tray, so turn that on first.")
+
+                        Toggle {
+                            id: startAtLogin
+
+                            width: parent.width
+                            enabled: Settings.keepRunning
+                            text: qsTr("Start Jot when I log in")
+                            checked: StartAtLogin.enabled
+                            onToggled: StartAtLogin.enabled = checked
+                        }
                     }
                     Text {
                         width: parent.width

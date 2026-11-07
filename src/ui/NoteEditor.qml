@@ -376,21 +376,26 @@ Rectangle {
                     }
                 }
                 // A list of records shows as a table or as its text.
-                StickerButton {
-                    id: viewSwitch
-
-                    objectName: "viewSwitch"
+                WhyDisabled {
                     y: parent.firstLineMiddle - height / 2
                     visible: root.dataFile
-                    // Only text that reads as a list of records can be a table.
-                    enabled: root.tableShown || tableModel.table
-                    text: root.tableShown ? qsTr("Edit as text") : qsTr("Edit as table")
-                    onClicked: {
-                        if (root.tableShown) {
-                            root.showText = true
-                        } else {
-                            tableModel.text = body.text
-                            root.showText = !tableModel.table
+                    target: viewSwitch
+                    reason: qsTr("This can't be a table: %1.").arg(tableModel.why)
+
+                    StickerButton {
+                        id: viewSwitch
+
+                        objectName: "viewSwitch"
+                        // Only text that reads as a list of records can be a table.
+                        enabled: root.tableShown || tableModel.table
+                        text: root.tableShown ? qsTr("Edit as text") : qsTr("Edit as table")
+                        onClicked: {
+                            if (root.tableShown) {
+                                root.showText = true
+                            } else {
+                                tableModel.text = body.text
+                                root.showText = !tableModel.table
+                            }
                         }
                     }
                 }
