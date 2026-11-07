@@ -158,9 +158,9 @@ void VaultController::close()
     m_index.reset();
     m_vault.reset();
     m_historyKept.clear();
-    m_undoTasks.clear();
-    m_redoTasks.clear();
-    Q_EMIT taskHistoryChanged();
+    m_undo.clear();
+    m_redo.clear();
+    Q_EMIT historyChanged();
     m_trail.clear();
     Q_EMIT trailChanged();
     reloadTrash();
@@ -1129,26 +1129,44 @@ void VaultController::showTrashed(const QString &location)
 
 QString VaultController::restoreTrashed(const QString &location)
 {
-    const std::optional<TrashedNote> item = m_trash.item(location);
-    if (!m_vault || !m_index || !item)
+    bool gone = false;
+    const std::optional<QString> path = bringBack(location, &gone);
+    if (!path)
         return {};
+    setShowingTrash(false);
+    setCurrent(*path);
+    Change change;
+    change.kind = Change::Kind::Trash;
+    change.path = *path;
+    change.trashed = false;
+    remember(change);
+    return *path;
+}
+
+std::optional<QString> VaultController::bringBack(const QString &location, bool *gone)
+{
+    const std::optional<TrashedNote> item = m_trash.item(location);
+    *gone = !item;
+    if (!m_vault || !m_index || !item) {
+        if (*gone)
+            setProblem(tr("That note is not in the trash any more."));
+        return std::nullopt;
+    }
     QString error;
     const std::optional<QString> path = VaultTrash(*m_vault).restore(*item, &error);
     if (!path) {
         qCWarning(lcVault) << "could not restore" << item->path << error;
         setProblem(tr("Could not bring the note back: %1").arg(error));
         reloadTrash();
-        return {};
+        return std::nullopt;
     }
     m_index->update({*path});
     reloadModels();
     reloadTrash();
-    setShowingTrash(false);
-    setCurrent(*path);
     // Back, though without what it says here.
     if (!error.isEmpty())
         setProblem(error);
-    return *path;
+    return path;
 }
 
 bool VaultController::deleteTrashed(const QString &location)
@@ -1212,12 +1230,14 @@ bool VaultController::rewriteNote(
 {
     if (!m_vault || !m_vault->writable())
         return false;
-    const auto remember = [this, &path, undoable](const QString &before, const QString &after) {
+    const auto record = [this, &path, undoable](const QString &before, const QString &after) {
         if (!undoable || before == after)
             return;
-        m_undoTasks.append({path, before, after});
-        m_redoTasks.clear();
-        Q_EMIT taskHistoryChanged();
+        Change text;
+        text.path = path;
+        text.before = before;
+        text.after = after;
+        remember(text);
     };
     if (path == m_current) {
         const std::optional<QString> changed = change(m_currentText);
@@ -1242,7 +1262,7 @@ bool VaultController::rewriteNote(
                               to.mid(start, to.size() - start - end));
         Q_EMIT currentChanged();
         reloadModels();
-        remember(before, *changed);
+        record(before, *changed);
         return true;
     }
     QString error;
@@ -1259,7 +1279,7 @@ bool VaultController::rewriteNote(
     }
     m_index->update({path});
     reloadModels();
-    remember(*text, *changed);
+    record(*text, *changed);
     return true;
 }
 
@@ -1297,34 +1317,93 @@ bool VaultController::reopenTask(const QString &path)
         true);
 }
 
-bool VaultController::undoTask()
+bool VaultController::undo()
 {
-    if (m_undoTasks.isEmpty())
+    if (m_undo.isEmpty())
         return false;
-    const TaskChange change = m_undoTasks.takeLast();
+    Change change = m_undo.takeLast();
     bool stale = false;
-    const bool done = replaceTaskText(change.path, change.after, change.before, &stale);
+    const bool done = apply(change, true, &stale);
     if (done)
-        m_redoTasks.append(change);
+        m_redo.append(change);
     else if (!stale)
-        m_undoTasks.append(change);
-    Q_EMIT taskHistoryChanged();
+        m_undo.append(change);
+    Q_EMIT historyChanged();
     return done;
 }
 
-bool VaultController::redoTask()
+bool VaultController::redo()
 {
-    if (m_redoTasks.isEmpty())
+    if (m_redo.isEmpty())
         return false;
-    const TaskChange change = m_redoTasks.takeLast();
+    Change change = m_redo.takeLast();
     bool stale = false;
-    const bool done = replaceTaskText(change.path, change.before, change.after, &stale);
+    const bool done = apply(change, false, &stale);
     if (done)
-        m_undoTasks.append(change);
+        m_undo.append(change);
     else if (!stale)
-        m_redoTasks.append(change);
-    Q_EMIT taskHistoryChanged();
+        m_redo.append(change);
+    Q_EMIT historyChanged();
     return done;
+}
+
+namespace {
+
+// Whether undoing (`back`) or redoing `trashed` would move the note to the trash.
+bool trashes(bool trashed, bool back)
+{
+    return trashed != back;
+}
+
+} // namespace
+
+QString VaultController::undoTrashes() const
+{
+    if (m_undo.isEmpty() || m_undo.last().kind != Change::Kind::Trash ||
+        !trashes(m_undo.last().trashed, true))
+        return {};
+    return Vault::titleFromPath(m_undo.last().path);
+}
+
+QString VaultController::redoTrashes() const
+{
+    if (m_redo.isEmpty() || m_redo.last().kind != Change::Kind::Trash ||
+        !trashes(m_redo.last().trashed, false))
+        return {};
+    return Vault::titleFromPath(m_redo.last().path);
+}
+
+bool VaultController::apply(Change &change, bool back, bool *stale)
+{
+    if (change.kind == Change::Kind::Text) {
+        return back ? replaceTaskText(change.path, change.after, change.before, stale)
+                    : replaceTaskText(change.path, change.before, change.after, stale);
+    }
+    if (trashes(change.trashed, back)) {
+        // Gone or moved since, it is not this change's to trash.
+        *stale = !m_vault || !QFileInfo::exists(m_vault->absolute(change.path));
+        if (*stale) {
+            setProblem(tr("%1 has moved or gone since, so it was left as it is.")
+                           .arg(Vault::titleFromPath(change.path)));
+            return false;
+        }
+        const std::optional<QString> location =
+            moveNoteToTrash(change.path, change.keepAttachments);
+        if (location)
+            change.location = *location;
+        return location.has_value();
+    }
+    const std::optional<QString> path = bringBack(change.location, stale);
+    if (path)
+        change.path = *path;
+    return path.has_value();
+}
+
+void VaultController::remember(const Change &change)
+{
+    m_undo.append(change);
+    m_redo.clear();
+    Q_EMIT historyChanged();
 }
 
 bool VaultController::replaceTaskText(const QString &path, const QString &from, const QString &to,
@@ -1383,14 +1462,30 @@ QStringList VaultController::notesUsingAttachments(const QString &path) const
 
 bool VaultController::trashNote(const QString &path, bool keepAttachments)
 {
-    if (!m_vault || path.isEmpty())
+    const std::optional<QString> location = moveNoteToTrash(path, keepAttachments);
+    if (!location)
         return false;
+    Change change;
+    change.kind = Change::Kind::Trash;
+    change.path = path;
+    change.location = *location;
+    change.keepAttachments = keepAttachments;
+    remember(change);
+    return true;
+}
+
+std::optional<QString> VaultController::moveNoteToTrash(const QString &path, bool keepAttachments)
+{
+    if (!m_vault || !m_index || path.isEmpty())
+        return std::nullopt;
     if (path == m_current)
         saveNow();
     QString error;
-    if (!m_vault->trashNote(path, &error, keepAttachments)) {
+    QString location;
+    if (!m_vault->trashNote(path, &error, keepAttachments, &location)) {
         qCWarning(lcVault) << "could not move" << path << "to the trash:" << error;
-        return false;
+        setProblem(tr("Could not move the note to the trash: %1").arg(error));
+        return std::nullopt;
     }
     forgetHistoryKept(path);
     m_index->update({path});
@@ -1398,7 +1493,7 @@ bool VaultController::trashNote(const QString &path, bool keepAttachments)
         setCurrent({});
     reloadModels();
     reloadTrash();
-    return true;
+    return location;
 }
 
 bool VaultController::trashNotebook(const QString &path)
