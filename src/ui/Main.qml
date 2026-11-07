@@ -180,17 +180,22 @@ ApplicationWindow {
 
                 // Always a note; its extension can change after. Not in Trash, where it would be
                 // unclear where the note goes.
-                StickerButton {
-                    id: newButton
-
+                WhyDisabled {
                     anchors.verticalCenter: parent.verticalCenter
                     visible: Vault.isOpen && Vault.writable
-                    enabled: !Vault.showingTrash
-                    objectName: "newButton"
-                    glyph: "plus"
-                    Accessible.name: qsTr("New note")
-                    tip: qsTr("New note (Ctrl+N)")
-                    onClicked: window.run("newNote")
+                    target: newButton
+                    reason: qsTr("Not in Trash, as there is no notebook for a new note to go in.")
+
+                    StickerButton {
+                        id: newButton
+
+                        enabled: !Vault.showingTrash
+                        objectName: "newButton"
+                        glyph: "plus"
+                        Accessible.name: qsTr("New note")
+                        tip: qsTr("New note (Ctrl+N)")
+                        onClicked: window.run("newNote")
+                    }
                 }
 
                 StickerButton {

@@ -26,7 +26,7 @@ Rectangle {
 
         Item {
             width: parent.width
-            height: Math.max(heading.implicitHeight, emptyTrash.implicitHeight)
+            height: Math.max(heading.implicitHeight, emptyTrash.height)
 
             Text {
                 id: heading
@@ -38,22 +38,27 @@ Rectangle {
                 font.pixelSize: Theme.textLg
                 font.weight: Theme.weightBold
             }
-            StickerButton {
-                id: emptyTrash
-
-                objectName: "emptyTrash"
+            WhyDisabled {
                 anchors {
                     right: parent.right
                     verticalCenter: parent.verticalCenter
                 }
                 visible: Vault.trash.total > 0
-                enabled: Vault.writable
-                destructive: true
-                text: qsTr("Empty trash")
-                onClicked: confirm.ask(qsTr("Empty the trash?"), qsTr(
-                                           "Its %n note(s) are deleted now, with their attachments, and cannot be brought back.",
-                                           "", Vault.trash.total), qsTr("Empty trash"), ()
-                                       => Vault.emptyTrash())
+                target: emptyTrash
+                reason: qsTr("This vault is from a newer Jot, so this one only reads it.")
+
+                StickerButton {
+                    id: emptyTrash
+
+                    objectName: "emptyTrash"
+                    enabled: Vault.writable
+                    destructive: true
+                    text: qsTr("Empty trash")
+                    onClicked: confirm.ask(qsTr("Empty the trash?"), qsTr(
+                                               "Its %n note(s) are deleted now, with their attachments, and cannot be brought back.",
+                                               "", Vault.trash.total), qsTr("Empty trash"), ()
+                                           => Vault.emptyTrash())
+                }
             }
         }
         Text {

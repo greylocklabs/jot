@@ -1128,6 +1128,26 @@ void TestNoteEditor::editsAListOfRecordsAsATable()
     QQuickItem *body = find(u"body"_s);
     body->setProperty("text", u"{\"not\": \"records\"}"_s);
     QTRY_VERIFY(!find(u"viewSwitch"_s)->isEnabled());
+    // Resting on it says why.
+    QQuickItem *viewSwitch = find(u"viewSwitch"_s);
+    QTest::mouseMove(
+        m_window.get(),
+        viewSwitch->mapToScene({viewSwitch->width() / 2, viewSwitch->height() / 2}).toPoint());
+    const auto tipSays = [this] {
+        const std::function<QString(QQuickItem *)> walk = [&](QQuickItem *item) -> QString {
+            const QString text = item->property("text").toString();
+            if (item->isVisible() && text.startsWith(u"This can't be a table"_s))
+                return text;
+            for (QQuickItem *child : item->childItems()) {
+                if (const QString found = walk(child); !found.isEmpty())
+                    return found;
+            }
+            return {};
+        };
+        return walk(m_window->contentItem());
+    };
+    QTRY_COMPARE(tipSays(), u"This can't be a table: not a list of records."_s);
+    QTest::mouseMove(m_window.get(), {1, 1});
     body->setProperty("text", u"[{\"name\": \"Mo\"}]"_s);
     QTRY_VERIFY(find(u"viewSwitch"_s)->isEnabled());
     QVERIFY(body->isVisible());
