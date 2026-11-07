@@ -367,7 +367,8 @@ void TestVault::findsTheVaultsNotesInTheDesktopTrash()
     QVERIFY(found.at(0).assets.endsWith(u"Cast/Mara.assets"_s));
     QCOMPARE(found.at(1).path, u"Plans/Big Day.md"_s);
     QCOMPARE(found.at(1).deleted, QDateTime(QDate(2026, 11, 1), QTime(10, 0)));
-    QCOMPARE(found.at(1).records.size(), 2);
+    QVERIFY(!found.at(1).record.isEmpty());
+    QVERIFY(!found.at(1).assetsRecord.isEmpty());
 
     // Back with its attachments, and the desktop's records of both gone.
     QString error;
@@ -379,6 +380,28 @@ void TestVault::findsTheVaultsNotesInTheDesktopTrash()
     QCOMPARE(trash.restore(found.at(0), &error), std::optional(u"Story/Cast/Mara.md"_s));
     QVERIFY(QFileInfo::exists(desktop.filePath(u"info/Cast.trashinfo"_s)));
     QCOMPARE(trash.list().size(), 0);
+
+    // Attachments that cannot follow stay in the trash with their record, and the note says so.
+    if (geteuid() == 0)
+        QSKIP("root can move out of a folder it may not write");
+    trashed(u"Recipe.md"_s, root + u"/Recipe.md"_s, u"2026-11-04T10:00:00"_s);
+    QTemporaryDir locked;
+    const QString stuck = locked.filePath(u"Recipe.assets"_s);
+    QVERIFY(QDir().mkpath(stuck));
+    QFile::setPermissions(locked.path(), QFile::ReadOwner | QFile::ExeOwner);
+    TrashedNote recipe = trash.list().first();
+    recipe.assets = stuck;
+    recipe.assetsRecord = desktop.filePath(u"info/Recipe.assets.trashinfo"_s);
+    QFile record(recipe.assetsRecord);
+    QVERIFY(record.open(QIODevice::WriteOnly));
+    record.close();
+    error.clear();
+    QCOMPARE(trash.restore(recipe, &error), std::optional(u"Recipe.md"_s));
+    QFile::setPermissions(locked.path(), QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner);
+    QVERIFY(error.contains(u"attachments"_s));
+    QVERIFY(QFileInfo(stuck).isDir());
+    QVERIFY(QFileInfo::exists(recipe.assetsRecord));
+    QVERIFY(!QFileInfo::exists(desktop.filePath(u"info/Recipe.md.trashinfo"_s)));
 }
 
 void TestVault::trashesANotebookWithEverythingInIt()
