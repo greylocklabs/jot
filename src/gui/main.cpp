@@ -62,6 +62,8 @@ int main(int argc, char *argv[])
     parser.addOption(noteOption);
     QCommandLineOption tasksOption(u"tasks"_s, u"With --vault: show the tasks."_s);
     parser.addOption(tasksOption);
+    QCommandLineOption trashOption(u"trash"_s, u"With --vault: show the trash."_s);
+    parser.addOption(trashOption);
     QCommandLineOption backgroundOption(
         QString::fromLatin1(greylock::Autostart::kBackgroundOption),
         u"Start without showing the window, as when started at login."_s);
@@ -133,6 +135,8 @@ int main(int argc, char *argv[])
         }
         vault.setCurrent(parser.value(noteOption));
         vault.setShowingTasks(parser.isSet(tasksOption));
+        if (parser.isSet(trashOption))
+            vault.setShowingTrash(true);
     } else {
         vault.openLast();
     }
