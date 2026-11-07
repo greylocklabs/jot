@@ -1088,7 +1088,10 @@ void VaultController::setShowingTrash(bool showing)
 
 void VaultController::reloadTrash()
 {
-    m_trashed = m_vault ? VaultTrash(*m_vault).list() : QList<TrashedNote>();
+    QList<TrashedNote> trashed = m_vault ? VaultTrash(*m_vault).list() : QList<TrashedNote>();
+    // Read once here, keeping what was read before, so searching never reads the files.
+    VaultTrash::readText(trashed, m_trashed);
+    m_trashed = trashed;
     m_trash.setItems(m_trashed);
     if (!m_trash.contains(m_chosenTrashed))
         setChosenTrashed({});

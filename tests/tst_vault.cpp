@@ -378,7 +378,8 @@ void TestVault::searchesTheTrash()
 {
     write(u".jot/trash/20261001-120000/Story/Ferry.md"_s, "The ferrywoman counts coins\n");
     write(u".jot/trash/20261002-120000/Recipes/Bread.md"_s, "Flour and water\n");
-    const QList<TrashedNote> all = VaultTrash(*m_vault).list();
+    QList<TrashedNote> all = VaultTrash(*m_vault).list();
+    VaultTrash::readText(all);
     const auto found = [&all](const QString &query) {
         QStringList paths;
         for (const TrashedNote &note : VaultTrash::matching(all, query))
@@ -391,6 +392,14 @@ void TestVault::searchesTheTrash()
     QCOMPARE(found(u"bread"_s), QStringList{u"Recipes/Bread.md"_s});
     QCOMPARE(found(u"story counts"_s), QStringList{u"Story/Ferry.md"_s});
     QCOMPARE(found(u"flour coins"_s), QStringList());
+    // Not by the extension every note has.
+    QCOMPARE(found(u"md"_s), QStringList());
+
+    // What was read is kept: a file changed after is still searched as it was.
+    write(u".jot/trash/20261002-120000/Recipes/Bread.md"_s, "Rye\n");
+    QList<TrashedNote> again = VaultTrash(*m_vault).list();
+    VaultTrash::readText(again, all);
+    QCOMPARE(VaultTrash::matching(again, u"flour"_s).size(), 1);
 }
 
 void TestVault::keepsAttachmentsThatCannotComeBack()
