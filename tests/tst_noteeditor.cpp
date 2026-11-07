@@ -1279,6 +1279,13 @@ void TestNoteEditor::scrollsAWideTableAcross()
     }
     QVERIFY(across);
     QCOMPARE(across->property("policy").toInt(), 2); // ScrollBar.AlwaysOn
+    // Right under the one row, not down at the bottom of the window.
+    const qreal rowBottom =
+        table->mapToScene(QPointF(0, table->property("contentHeight").toReal())).y();
+    const qreal barTop = across->mapToScene(QPointF(0, 0)).y();
+    QVERIFY2(barTop >= rowBottom - 1 && barTop - rowBottom < 4,
+             qPrintable(u"row ends at %1, bar starts at %2"_s.arg(rowBottom).arg(barTop)));
+    QVERIFY(table->mapToScene(QPointF(0, table->height())).y() < m_window->height() / 2.0);
 }
 
 void TestNoteEditor::checksATableAgainstItsSchema()
