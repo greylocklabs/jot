@@ -96,6 +96,11 @@ std::optional<Layout> Layout::read(const Vault &vault, QString *error)
             }
             if (topLevel || line.isEmpty())
                 continue;
+            // A comment says nothing about how far the keys are indented.
+            if (view.indent < 0 && line.startsWith(u'#')) {
+                view.lines.append(line);
+                continue;
+            }
             if (view.indent < 0)
                 view.indent = at;
             const auto key = splitKey(line);
