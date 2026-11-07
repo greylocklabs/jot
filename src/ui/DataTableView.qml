@@ -312,11 +312,25 @@ Item {
                     right: removeColumn.visible ? removeColumn.left : parent.right
                 }
 
+                // A click sorts once it is clear no second click makes it a double click to
+                // rename, so renaming never sorts the table under the field.
+                Timer {
+                    id: sortSoon
+
+                    interval: Application.styleHints.mouseDoubleClickInterval
+                    onTriggered: root.records.sortBy(heading.index)
+                }
                 TapHandler {
-                    onTapped: root.records.sortBy(heading.index)
+                    onTapped: {
+                        if (!Vault.writable)
+                            root.records.sortBy(heading.index)
+                        else if (tapCount === 1)
+                            sortSoon.restart()
+                    }
                     onDoubleTapped: {
                         if (!Vault.writable)
                             return
+                        sortSoon.stop()
                         rename.text = heading.display
                         heading.renaming = true
                         rename.forceActiveFocus()
