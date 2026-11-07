@@ -102,6 +102,9 @@ void TestDialogs::opensCleanly()
     auto *popup = lazy->property("popup").value<QObject *>();
     QVERIFY(popup->property("height").toReal() > 100);
     QVERIFY(popup->property("width").toReal() > 100);
+    // Settings' tabs are as wide as their longest label.
+    if (popup->property("tabsWidth").isValid())
+        QVERIFY(popup->property("tabsWidth").toReal() > 40);
 }
 
 void TestDialogs::everyModalHasAClose_data()
