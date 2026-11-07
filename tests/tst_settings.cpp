@@ -22,6 +22,7 @@ private Q_SLOTS:
     void keepsColumnWidthsInBounds();
     void keepsKeyboardChoices();
     void keepsTrashChoices();
+    void keepsSearchingTheTrash();
     void keepsDeveloperChoices();
     void keepsTheTasksView();
     void keepsReminderChoices();
@@ -177,6 +178,21 @@ void TestSettings::keepsTrashChoices()
     settings.setTrashDays(30);
     settings.reset();
     QCOMPARE(settings.trashDays(), 0);
+}
+
+void TestSettings::keepsSearchingTheTrash()
+{
+    QTemporaryDir dir;
+    const QString path = dir.filePath(u"settings.ini"_s);
+    Settings settings(path);
+    QVERIFY(settings.searchTrash());
+    QSignalSpy changed(&settings, &Settings::trashChanged);
+    settings.setSearchTrash(false);
+    settings.setSearchTrash(false);
+    QCOMPARE(changed.size(), 1);
+    QVERIFY(!Settings(path).searchTrash());
+    settings.reset();
+    QVERIFY(settings.searchTrash());
 }
 
 void TestSettings::keepsDeveloperChoices()
