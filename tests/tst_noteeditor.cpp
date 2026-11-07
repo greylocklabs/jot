@@ -11,6 +11,7 @@
 #include <QDirIterator>
 #include <QElapsedTimer>
 #include <QInputMethodEvent>
+#include <QLocale>
 #include <QPointer>
 #include <QQmlComponent>
 #include <QQmlEngine>
@@ -1443,7 +1444,14 @@ void TestNoteEditor::showsWhereViIsAlongTheFoot()
     body->setProperty("text", u"alpha\nbeta gamma"_s);
     body->setProperty("cursorPosition", 8);
     QCOMPARE(words(part("viPlace")), u"Top"_s);
-    QVERIFY(!words(part("viClock")).isEmpty());
+    // The day and time as the locale writes them.
+    const auto clock = [] {
+        const QDateTime now = QDateTime::currentDateTime();
+        const QLocale locale;
+        return locale.dayName(now.date().dayOfWeek(), QLocale::ShortFormat) + u' ' +
+               locale.toString(now.time(), QLocale::ShortFormat);
+    };
+    QTRY_COMPARE(words(part("viClock")), clock());
     const QColor normal = part("viMode")->property("fill").value<QColor>();
 
     // Each mode in its own color, the clock's too.
