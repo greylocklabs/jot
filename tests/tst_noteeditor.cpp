@@ -1238,6 +1238,11 @@ void TestNoteEditor::removingARowOrColumnAsksWithATrashCan()
     clickOn(header, removeColumn, true);
     QTRY_COMPARE(records->columns().size(), 1);
     QCOMPARE(records->sortColumn(), -1);
+
+    // Beside the X, a click on the heading still sorts.
+    QTest::mouseMove(m_window.get(), heading);
+    QTest::mouseClick(m_window.get(), Qt::LeftButton, {}, heading);
+    QTRY_COMPARE(records->sortColumn(), 0);
 }
 
 void TestNoteEditor::scrollsAWideTableAcross()
