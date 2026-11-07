@@ -36,6 +36,20 @@
   </categories>
 
   <releases>
+    <release version="0.4.0" date="2026-11-07">
+      <description>
+        <ul>
+          <li>A JSON or YAML file holding several lists of records, under keys or in several YAML documents, opens as a table with a tab for each list. An edit in a tab rewrites only that list, so the rest of the file stays as it was.</li>
+          <li>Trash in the sidebar lists the notes deleted from the vault, from the desktop's trash and Jot's own, newest first. Read one there, or restore it where it was, with its attachments. Jot never empties the trash.</li>
+          <li>With vi mode on, a status line across the foot of the editor shows the mode in caps and in its own color, the file and its kind, the line and column, how far down the view is, and the day and time.</li>
+          <li>Removing a table row or column asks first: its X turns into a trash can in the same place, and a second click removes it.</li>
+          <li>Diagrams take every color from the theme: timeline sections, pie slices, chart series and git branches come in the theme's sticker colors, with text that reads on each.</li>
+          <li>Shift and the mouse wheel scroll a table across over its column and row headers too, not only over its cells.</li>
+          <li>A wide table's bar for scrolling across sits right under its last row, not at the bottom of the window, where it was often out of view.</li>
+          <li>Double-clicking a table column's heading to rename it no longer sorts the table twice, which could close the name field as it opened. A single click still sorts.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.3.0" date="2026-11-06">
       <description>
         <ul>
