@@ -72,6 +72,7 @@ qt_add_qml_module(jotui
         CheckBox.qml
         CloseButton.qml
         ConfirmDialog.qml
+        WhyDisabled.qml
         RemoveButton.qml
         DataTableView.qml
         ColumnSplitter.qml

@@ -20,40 +20,52 @@ Rectangle {
         font.pixelSize: Theme.textMd
     }
 
-    StickerButton {
-        id: restore
+    WhyDisabled {
+        id: restoreHolder
 
-        objectName: "restoreTrashed"
         visible: root.location !== ""
-        enabled: Vault.writable
         anchors {
             top: parent.top
             right: parent.right
             margins: Theme.space5
         }
-        accent: true
-        text: qsTr("Restore")
-        onClicked: Vault.restoreTrashed(root.location)
+        target: restore
+        reason: qsTr("This vault is from a newer Jot, so this one only reads it.")
+
+        StickerButton {
+            id: restore
+
+            objectName: "restoreTrashed"
+            enabled: Vault.writable
+            accent: true
+            text: qsTr("Restore")
+            onClicked: Vault.restoreTrashed(root.location)
+        }
     }
 
-    StickerButton {
-        id: deleteForGood
-
-        objectName: "deleteTrashed"
+    WhyDisabled {
         visible: root.location !== ""
-        enabled: Vault.writable
         anchors {
-            top: restore.top
-            right: restore.left
+            top: restoreHolder.top
+            right: restoreHolder.left
             rightMargin: Theme.space2
         }
-        destructive: true
-        text: qsTr("Permanently delete")
-        onClicked: {
-            const location = root.location
-            confirm.ask(qsTr("Permanently delete %1?").arg(Vault.trashedTitle(location)), qsTr(
-                            "It is deleted now, with its attachments, and cannot be brought back."),
-                        qsTr("Permanently delete"), () => Vault.deleteTrashed(location))
+        target: deleteForGood
+        reason: qsTr("This vault is from a newer Jot, so this one only reads it.")
+
+        StickerButton {
+            id: deleteForGood
+
+            objectName: "deleteTrashed"
+            enabled: Vault.writable
+            destructive: true
+            text: qsTr("Permanently delete")
+            onClicked: {
+                const location = root.location
+                confirm.ask(qsTr("Permanently delete %1?").arg(Vault.trashedTitle(location)), qsTr(
+                                "It is deleted now, with its attachments, and cannot be brought back."),
+                            qsTr("Permanently delete"), () => Vault.deleteTrashed(location))
+            }
         }
     }
 
@@ -66,7 +78,7 @@ Rectangle {
         anchors {
             left: parent.left
             right: parent.right
-            top: restore.bottom
+            top: restoreHolder.bottom
             bottom: parent.bottom
             margins: Theme.space5
         }
