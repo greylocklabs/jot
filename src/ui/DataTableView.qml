@@ -94,9 +94,35 @@ Item {
         table.positionViewAtCell(Qt.point(root.column, root.row), TableView.Contain)
     }
 
+    // A file of several lists shows one at a time: a tab for each, by its key or document.
+    Flow {
+        id: partTabs
+
+        objectName: "partTabs"
+        visible: root.records.parts.length > 0
+        width: parent.width
+        height: visible ? implicitHeight : 0
+        spacing: Theme.space1
+
+        Repeater {
+            model: root.records.parts
+
+            PillButton {
+                required property string modelData
+                required property int index
+
+                label: modelData
+                selected: root.records.part === index
+                onClicked: root.records.part = index
+            }
+        }
+    }
+
     Row {
         id: tools
 
+        anchors.top: partTabs.bottom
+        anchors.topMargin: partTabs.visible ? Theme.space2 : 0
         spacing: Theme.space2
 
         Field {
