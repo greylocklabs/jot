@@ -63,6 +63,8 @@ class Settings : public QObject
     /// Days a deleted note stays in Jot's trash before going to the desktop's; 0 keeps it there
     /// until it is deleted for good.
     Q_PROPERTY(int trashDays READ trashDays WRITE setTrashDays NOTIFY trashChanged)
+    /// Searching notes also finds those in the trash, marked as there.
+    Q_PROPERTY(bool searchTrash READ searchTrash WRITE setSearchTrash NOTIFY trashChanged)
     /// The version that ran last, so a new one can say what changed.
     Q_PROPERTY(QString lastSeenVersion READ lastSeenVersion WRITE setLastSeenVersion NOTIFY
                    lastSeenVersionChanged)
@@ -120,6 +122,8 @@ public:
     void setLeaderTimeout(int ms);
     [[nodiscard]] int trashDays() const { return m_trashDays; }
     void setTrashDays(int days);
+    [[nodiscard]] bool searchTrash() const { return m_searchTrash; }
+    void setSearchTrash(bool on);
     static inline const QStringList kLeaderKeys = {QStringLiteral(","), QStringLiteral(":"),
                                                    QStringLiteral(" ")};
     [[nodiscard]] QString lastSeenVersion() const { return m_lastSeenVersion; }
@@ -189,6 +193,7 @@ private:
     QString m_leaderKey = QStringLiteral(",");
     int m_leaderTimeout = 5000;
     int m_trashDays = 0;
+    bool m_searchTrash = true;
     QString m_lastSeenVersion;
     bool m_keepRunning = true;
     bool m_remindersOn = true;

@@ -89,6 +89,24 @@ QList<TrashedNote> VaultTrash::list() const
     return found;
 }
 
+QList<TrashedNote> VaultTrash::matching(const QList<TrashedNote> &notes, const QString &query)
+{
+    const QStringList words = query.simplified().split(u' ', Qt::SkipEmptyParts);
+    if (words.isEmpty())
+        return notes;
+    QList<TrashedNote> found;
+    for (const TrashedNote &note : notes) {
+        QString why;
+        const QString haystack =
+            note.path + u'\n' + notefile::read(note.location, &why).value_or(QString());
+        if (std::ranges::all_of(words, [&haystack](const QString &word) {
+                return haystack.contains(word, Qt::CaseInsensitive);
+            }))
+            found << note;
+    }
+    return found;
+}
+
 std::optional<QString> VaultTrash::restore(const TrashedNote &note, QString *error) const
 {
     if (!m_vault.writable()) {

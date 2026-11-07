@@ -48,12 +48,12 @@ Rectangle {
             rightMargin: Theme.space2
         }
         destructive: true
-        text: qsTr("Delete for good")
+        text: qsTr("Permanently delete")
         onClicked: {
             const location = root.location
-            confirm.ask(qsTr("Delete %1 for good?").arg(Vault.trashedTitle(location)), qsTr(
+            confirm.ask(qsTr("Permanently delete %1?").arg(Vault.trashedTitle(location)), qsTr(
                             "It is deleted now, with its attachments, and cannot be brought back."),
-                        qsTr("Delete for good"), () => Vault.deleteTrashed(location))
+                        qsTr("Permanently delete"), () => Vault.deleteTrashed(location))
         }
     }
 
