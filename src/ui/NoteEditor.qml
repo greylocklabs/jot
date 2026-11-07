@@ -643,7 +643,9 @@ Rectangle {
                 }
                 // Vi's normal and visual modes show a block on the character; insert mode
                 // keeps the TextEdit's own line.
-                cursorDelegate: Settings.viMode && vi.mode !== "insert" ? blockCursor : null
+                // One cursor for every vi mode, never swapped for the built-in one, which can be
+                // left drawn where it was.
+                cursorDelegate: Settings.viMode ? blockCursor : null
                 onContentHeightChanged: layoutTick++
                 onWidthChanged: layoutTick++
 
@@ -851,11 +853,13 @@ Rectangle {
                 Component {
                     id: blockCursor
 
+                    // A block over the character, or a bar before it while inserting.
                     Rectangle {
-                        width: Math.max(2, glyphs.averageCharacterWidth)
+                        objectName: "blockCursor"
+                        width: vi.mode === "insert" ? 2 : Math.max(2, glyphs.averageCharacterWidth)
                         visible: body.activeFocus
                         color: Theme.accent
-                        opacity: Theme.blockCursorOpacity
+                        opacity: vi.mode === "insert" ? 1 : Theme.blockCursorOpacity
 
                         FontMetrics {
                             id: glyphs
