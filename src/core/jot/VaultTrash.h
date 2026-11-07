@@ -21,6 +21,8 @@ struct TrashedNote
     QDateTime deleted;
     /// Its `.assets` folder in the same trash, as an absolute path; empty when that did not go.
     QString assets;
+    /// What it says, once read for searching; see VaultTrash::readText().
+    QString text;
 };
 
 /// What the vault's own trash, `.jot/trash`, holds: listing it, bringing notes back, and deleting
@@ -37,7 +39,11 @@ public:
     /// on its own.
     [[nodiscard]] QList<TrashedNote> list() const;
 
+    /// Reads what each of `notes` says into its `text`, once, so searching does not read the
+    /// files again. Those already in `known`, by location, take the text read there.
+    static void readText(QList<TrashedNote> &notes, const QList<TrashedNote> &known = {});
     /// Those of `notes` whose title, folder or text holds every word of `query`, ignoring case.
+    /// Their text must have been read.
     [[nodiscard]] static QList<TrashedNote> matching(const QList<TrashedNote> &notes,
                                                      const QString &query);
 
