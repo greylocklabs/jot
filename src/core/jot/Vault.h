@@ -67,14 +67,13 @@ public:
                                           const QString &kind, QString *error) const;
     /// What a new data file of `kind` holds: one record with a name and whether it is done.
     [[nodiscard]] static QString starterData(const QString &kind);
-    /// Moves a note and, unless `keepAttachments`, its `.assets` folder to the system trash, or
-    /// to the vault's own `.jot/trash` where the drive has none.
-    bool trashNote(const QString &path, QString *error, bool keepAttachments = false) const;
-    /// Moves a notebook, with every note and attachment in it, to the trash as trashNote()
-    /// does a note. Not the vault itself, nor a hidden folder such as `.jot`.
+    /// Moves a note and, unless `keepAttachments`, its `.assets` folder to the vault's own trash,
+    /// `.jot/trash/<stamp>/`, keeping its path. `trashedTo`, when given, is where the note went.
+    bool trashNote(const QString &path, QString *error, bool keepAttachments = false,
+                   QString *trashedTo = nullptr) const;
+    /// Moves a notebook, with every note and attachment in it, to the trash as trashNote() does
+    /// a note. Not the vault itself, nor a hidden folder such as `.jot`.
     bool trashFolder(const QString &path, QString *error) const;
-    /// Uses the vault's own trash even where the desktop has one, as tests do.
-    void setSystemTrash(bool use) { m_systemTrash = use; }
     /// Renames or moves a note, its `.assets` folder and its history. History that cannot follow
     /// is logged rather than failing the move. Links to it are the index's job.
     bool moveNote(const QString &from, const QString &to, QString *error) const;
@@ -134,11 +133,10 @@ private:
     void collect(const QString &folder, QList<VaultEntry> &into) const;
 
     QString m_root;
-    bool m_systemTrash = true;
 
-    /// Moves the file or folder at vault path `relative` to the desktop's trash, or to the
-    /// vault's own `.jot/trash/<stamp>/<relative>` where the desktop has none.
-    bool moveToTrash(const QString &relative, const QString &stamp) const;
+    /// Moves the file or folder at vault path `relative` to `.jot/trash/<stamp>/<relative>`, and
+    /// gives where it went.
+    std::optional<QString> moveToTrash(const QString &relative, const QString &stamp) const;
     /// Moves the history of the note or notebook at `from` to `to`.
     bool moveHistory(const QString &from, const QString &to) const;
 };

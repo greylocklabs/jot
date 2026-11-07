@@ -60,6 +60,9 @@ class Settings : public QObject
                    quickCaptureKeyChanged)
     /// When, as "HH:mm" local time, a to-do due on a day with no time of its own reminds.
     Q_PROPERTY(QString reminderTime READ reminderTime WRITE setReminderTime NOTIFY remindersChanged)
+    /// Days a deleted note stays in Jot's trash before going to the desktop's; 0 keeps it there
+    /// until it is deleted for good.
+    Q_PROPERTY(int trashDays READ trashDays WRITE setTrashDays NOTIFY trashChanged)
     /// The version that ran last, so a new one can say what changed.
     Q_PROPERTY(QString lastSeenVersion READ lastSeenVersion WRITE setLastSeenVersion NOTIFY
                    lastSeenVersionChanged)
@@ -115,6 +118,8 @@ public:
     void setLeaderKey(const QString &key);
     [[nodiscard]] int leaderTimeout() const { return m_leaderTimeout; }
     void setLeaderTimeout(int ms);
+    [[nodiscard]] int trashDays() const { return m_trashDays; }
+    void setTrashDays(int days);
     static inline const QStringList kLeaderKeys = {QStringLiteral(","), QStringLiteral(":"),
                                                    QStringLiteral(" ")};
     [[nodiscard]] QString lastSeenVersion() const { return m_lastSeenVersion; }
@@ -162,6 +167,7 @@ Q_SIGNALS:
     void syncRemoteChanged();
     void remindersChanged();
     void quickCaptureKeyChanged();
+    void trashChanged();
 
 private:
     QSettings m_store;
@@ -182,6 +188,7 @@ private:
     bool m_viMode = false;
     QString m_leaderKey = QStringLiteral(",");
     int m_leaderTimeout = 5000;
+    int m_trashDays = 0;
     QString m_lastSeenVersion;
     bool m_keepRunning = true;
     bool m_remindersOn = true;

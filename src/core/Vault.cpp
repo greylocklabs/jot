@@ -433,20 +433,18 @@ std::optional<QString> Vault::createDataFile(const QString &folder, const QStrin
     return path;
 }
 
-bool Vault::moveToTrash(const QString &relative, const QString &stamp) const
+std::optional<QString> Vault::moveToTrash(const QString &relative, const QString &stamp) const
 {
-    // Where the desktop has no trash, as on some removable or network drives, the vault
-    // keeps its own, so nothing is deleted outright.
-    const QString file = absolute(relative);
-    if (m_systemTrash && QFile::moveToTrash(file))
-        return true;
     // Its path is kept, as a sync keeps it, so it can go back where it was.
+    const QString file = absolute(relative);
     const QString trash = absolute(kSettingsFolder + u"/trash/"_s);
     QString target = trash + stamp + u'/' + relative;
     // One path trashed twice in the same second keeps both.
     for (int n = 2; QFileInfo::exists(target); ++n)
         target = trash + stamp + u' ' + QString::number(n) + u'/' + relative;
-    return QDir().mkpath(QFileInfo(target).path()) && QDir().rename(file, target);
+    if (!QDir().mkpath(QFileInfo(target).path()) || !QDir().rename(file, target))
+        return std::nullopt;
+    return target;
 }
 
 bool Vault::trashFolder(const QString &path, QString *error) const
@@ -466,19 +464,22 @@ bool Vault::trashFolder(const QString &path, QString *error) const
     return true;
 }
 
-bool Vault::trashNote(const QString &path, QString *error, bool keepAttachments) const
+bool Vault::trashNote(const QString &path, QString *error, bool keepAttachments,
+                      QString *trashedTo) const
 {
     const QString stamp = QDateTime::currentDateTime().toString(u"yyyyMMdd-HHmmss"_s);
-    const auto toTrash = [this, &stamp](const QString &relative) {
-        return moveToTrash(relative, stamp);
-    };
-    if (!toTrash(path)) {
+    const std::optional<QString> note = moveToTrash(path, stamp);
+    if (!note) {
         *error = QObject::tr("could not move %1 to the trash").arg(path);
         return false;
     }
-    if (!keepAttachments && QFileInfo(absolute(assetsFolderFor(path))).isDir() &&
-        !toTrash(assetsFolderFor(path))) {
-        *error = QObject::tr("could not move %1 to the trash").arg(assetsFolderFor(path));
+    if (trashedTo)
+        *trashedTo = *note;
+    // Beside the note, in the same stamp folder, so the two come back together.
+    const QString assets = assetsFolderFor(path);
+    if (!keepAttachments && QFileInfo(absolute(assets)).isDir() &&
+        !QDir().rename(absolute(assets), assetsFolderFor(*note))) {
+        *error = QObject::tr("could not move %1 to the trash").arg(assets);
         return false;
     }
     return true;

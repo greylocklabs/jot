@@ -121,8 +121,6 @@ void TestNoteEditor::init()
     // The editor reads the Settings singleton, which would otherwise be the user's own file.
     SettingsForeign::s_instance = m_settings.get();
     m_vault = std::make_unique<VaultController>(*m_settings);
-    // What tests delete goes to the vault's own trash, never the desktop's.
-    m_vault->setSystemTrash(false);
     m_vault->setIndexPath(m_dir->filePath(u"index.sqlite"_s));
     m_vault->setSaveDelay(50);
     VaultController::setInstance(m_vault.get());

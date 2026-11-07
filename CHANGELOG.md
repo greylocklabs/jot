@@ -9,6 +9,7 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 - The links to a note and its mentions without a link fold under their headings, open to begin
   with.
+- Trash can delete a note for good, or empty itself, each after asking.
 
 ### Changed
 
@@ -23,6 +24,9 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   like a button.
 - The Vi status line says how far through the file the cursor is, from 0% on the first line to
   100% on the last, rather than All, Top or Bot.
+- Jot keeps deleted notes in its own trash, in the vault's .jot/trash folder, rather than the
+  desktop's. A setting under General either keeps them until they are deleted or hands them to the
+  desktop's trash after 30 days.
 
 ### Fixed
 
