@@ -641,8 +641,6 @@ Rectangle {
                     if (!activeFocus && vi.mode === "visual")
                         vi.mode = "normal"
                 }
-                // Vi's normal and visual modes show a block on the character; insert mode
-                // keeps the TextEdit's own line.
                 // One cursor for every vi mode, never swapped for the built-in one, which can be
                 // left drawn where it was.
                 cursorDelegate: Settings.viMode ? blockCursor : null
