@@ -1147,8 +1147,8 @@ void TestNoteEditor::removingARowOrColumnAsksWithATrashCan()
 {
     QFile file(m_root + u"/pair.json"_s);
     QVERIFY(file.open(QIODevice::WriteOnly));
-    file.write(
-        "[\n  {\"name\": \"Mara\", \"age\": 31},\n  {\"name\": \"Soren\", \"age\": 40}\n]\n");
+    file.write("[\n  {\"name\": \"Mara\", \"age\": 31, \"town\": \"Vey\"},\n"
+               "  {\"name\": \"Soren\", \"age\": 40, \"town\": \"Ost\"}\n]\n");
     file.close();
     QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"pair.json"_s), 3000);
     m_vault->setCurrent(u"pair.json"_s);
@@ -1215,12 +1215,24 @@ void TestNoteEditor::removingARowOrColumnAsksWithATrashCan()
     QTRY_VERIFY((remove = visibleButton(header, u"removeColumn"_s)));
     const QPointer<QQuickItem> armed = remove;
     clickOn(remove);
-    QCOMPARE(records->columns().size(), 2);
+    QCOMPARE(records->columns().size(), 3);
     // The click is the button's alone: the heading under it neither sorts nor renames.
     QCOMPARE(records->sortColumn(), -1);
     QVERIFY(armed && armed->property("armed").toBool());
     clickOn(armed);
+    QTRY_COMPARE(records->columns().size(), 2);
+
+    // Two quick clicks, which come as a double click, take it too.
+    QTest::mouseMove(m_window.get(), heading + QPoint(0, 300));
+    QTest::mouseMove(m_window.get(), heading);
+    QTRY_VERIFY((remove = visibleButton(header, u"removeColumn"_s)));
+    const QPoint at =
+        remove->mapToScene(QPointF(remove->width() / 2, remove->height() / 2)).toPoint();
+    QTest::mouseMove(m_window.get(), at);
+    QTRY_VERIFY(remove->property("hovered").toBool());
+    QTest::mouseDClick(m_window.get(), Qt::LeftButton, {}, at);
     QTRY_COMPARE(records->columns().size(), 1);
+    QCOMPARE(records->sortColumn(), -1);
 }
 
 void TestNoteEditor::scrollsAWideTableAcross()
