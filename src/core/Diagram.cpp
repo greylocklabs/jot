@@ -327,6 +327,12 @@ QString flatten(const QString &svg, const DiagramStyle &style)
     color("--pele-surface-alt", style.surfaceAlt);
     color("--pele-border", style.border);
     color("--pele-accent", style.accent);
+    color("--pele-error", style.danger);
+    color("--pele-critical", style.danger);
+    color("--pele-fg-on-light", style.onLight);
+    color("--pele-fg-on-dark", style.onDark);
+    for (qsizetype i = 0; i < style.series.size(); ++i)
+        color(qPrintable(u"--pele-series-%1"_s.arg(i + 1)), style.series.at(i));
     const QString family = familyList(style.fontFamily, u"sans-serif"_s);
     vars.insert(u"--pele-font"_s, family);
     vars.insert(u"--pele-font-mono"_s, familyList(style.monoFamily, u"monospace"_s));
@@ -373,10 +379,22 @@ Diagram Engine::draw(const QString &source, const DiagramStyle &style)
     }
     QCryptographicHash hash(QCryptographicHash::Sha1);
     hash.addData(source.toUtf8());
-    for (const QString &part :
-         {style.background.name(), style.text.name(), style.muted.name(), style.surface.name(),
-          style.surfaceAlt.name(), style.border.name(), style.accent.name(), style.fontFamily,
-          style.monoFamily, QString::number(style.pixelSize)}) {
+    QStringList parts{style.background.name(),
+                      style.text.name(),
+                      style.muted.name(),
+                      style.surface.name(),
+                      style.surfaceAlt.name(),
+                      style.border.name(),
+                      style.accent.name(),
+                      style.danger.name(),
+                      style.onLight.name(),
+                      style.onDark.name(),
+                      style.fontFamily,
+                      style.monoFamily,
+                      QString::number(style.pixelSize)};
+    for (const QColor &fill : style.series)
+        parts.append(fill.name());
+    for (const QString &part : std::as_const(parts)) {
         hash.addData(QByteArrayView("\0", 1));
         hash.addData(part.toUtf8());
     }
@@ -397,6 +415,23 @@ Diagram Engine::draw(const QString &source, const DiagramStyle &style)
     // A diagram is a picture in a note: nothing in it reaches out to the web.
     options.setProperty(u"links"_s, false);
     options.setProperty(u"images"_s, false);
+    if (!style.series.isEmpty()) {
+        // Given as Mermaid's theme variables, Pele also picks text that reads on each fill.
+        QJSValue variables = m_js.newObject();
+        QStringList plot;
+        for (qsizetype i = 0; i < style.series.size(); ++i) {
+            const QString fill = style.series.at(i).name();
+            variables.setProperty(u"cScale%1"_s.arg(i), fill);
+            variables.setProperty(u"git%1"_s.arg(i), fill);
+            variables.setProperty(u"pie%1"_s.arg(i + 1), fill);
+            variables.setProperty(u"venn%1"_s.arg(i + 1), fill);
+            plot.append(fill);
+        }
+        variables.setProperty(u"plotColorPalette"_s, plot.join(u','));
+        QJSValue config = m_js.newObject();
+        config.setProperty(u"themeVariables"_s, variables);
+        options.setProperty(u"config"_s, config);
+    }
     const QJSValue result = [&] {
         const QuietEngine quiet;
         return m_render.call({source, options});

@@ -18,6 +18,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 - Removing a table row or column asks first: its X turns into a trash can in the same place, and
   a second click removes it.
+- Diagrams take every color from the theme: timeline sections, pie slices, chart series and git
+  branches come in the theme's sticker colors, with text that reads on each.
 
 ### Fixed
 

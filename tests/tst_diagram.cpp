@@ -18,6 +18,7 @@ private Q_SLOTS:
     void drawsEachKind();
     void writesOutWhatQtCannotRead();
     void drawsInTheThemeColors();
+    void fillsSectionsInTheThemeColors();
     void keepsEmojiWhole();
     void keepsLabelsAsWritten();
     void saysWhatIsWrong();
@@ -107,6 +108,29 @@ void TestDiagram::drawsInTheThemeColors()
             surface += image.pixelColor(x, y).name() == u"#f6e4ea"_s;
     }
     QVERIFY2(surface > image.width() * image.height() / 10, qPrintable(QString::number(surface)));
+}
+
+void TestDiagram::fillsSectionsInTheThemeColors()
+{
+    DiagramStyle themed = style();
+    themed.series = {QColor(u"#f2b8c9"_s), QColor(u"#b8e0c9"_s), QColor(u"#2b2450"_s)};
+    themed.onLight = QColor(u"#101010"_s);
+    themed.onDark = QColor(u"#fafafa"_s);
+    for (const QString &source :
+         {u"timeline\n  title Ashfall\n  Act one : Mara\n  Act two : Soren\n  Act three : Debt"_s,
+          u"pie title Notes\n  \"Work\" : 40\n  \"Home\" : 35\n  \"Play\" : 25"_s}) {
+        const QString svg = svgOf(jot::drawDiagram(source, themed));
+        for (const QColor &fill : themed.series)
+            QVERIFY2(svg.contains(fill.name()), qPrintable(source + u": "_s + fill.name()));
+        // None of Pele's own palette is left.
+        for (const QString &own : {u"#4c78a8"_s, u"#f58518"_s, u"#54a24b"_s})
+            QVERIFY2(!svg.contains(own), qPrintable(source + u": "_s + own));
+    }
+    // Section names are dark on light fills and light on the dark one.
+    const QString timeline =
+        svgOf(jot::drawDiagram(u"timeline\n  One : a\n  Two : b\n  Three : c"_s, themed));
+    QVERIFY(timeline.contains(u"fill=\"#101010\""_s));
+    QVERIFY(timeline.contains(u"fill=\"#fafafa\""_s));
 }
 
 void TestDiagram::keepsEmojiWhole()
