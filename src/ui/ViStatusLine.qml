@@ -3,7 +3,7 @@ import Jot.Ui
 import QtQuick
 
 /// Across the foot of the editor while vi mode is on: the mode in caps and in its own color, the
-/// file with its kind's icon, then where the cursor is, how far down the view is, and the clock.
+/// file with its kind's icon, then where the cursor is, how far through the file, and the clock.
 /// It is flat, without the edge buttons have, as nothing on it is clicked.
 Rectangle {
     id: root
@@ -19,7 +19,7 @@ Rectangle {
     property int line: 1
     property int column: 1
     property bool showCursor: true
-    /// How far down the view is, as vim says it: Top, Bot, All or a percentage.
+    /// How far through the file the cursor is, as a percentage.
     property string place
     /// Lines picked in Visual mode.
     property int pickedLines: 0

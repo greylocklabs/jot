@@ -456,6 +456,13 @@ int ViEditor::column() const
     return text ? cursor() - text->findBlock(cursor()).position() + 1 : 1;
 }
 
+int ViEditor::percent() const
+{
+    const QTextDocument *text = document();
+    const int last = text ? text->blockCount() - 1 : 0;
+    return last > 0 ? qRound(100.0 * (line() - 1) / last) : 0;
+}
+
 int ViEditor::pickedLines() const
 {
     const QTextDocument *text = document();

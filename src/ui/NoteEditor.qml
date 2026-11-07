@@ -1027,16 +1027,7 @@ Rectangle {
         line: vi.line
         column: vi.column
         pickedLines: vi.pickedLines
-        place: {
-            const range = flick.contentHeight - flick.height
-            if (range <= 0)
-                return qsTr("All")
-            if (flick.contentY <= 0)
-                return qsTr("Top")
-            if (flick.contentY >= range - 1)
-                return qsTr("Bot")
-            return Math.round(100 * flick.contentY / range) + "%"
-        }
+        place: vi.percent + "%"
     }
 
     ConflictResolver {

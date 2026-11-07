@@ -1465,9 +1465,15 @@ void TestNoteEditor::showsWhereViIsAlongTheFoot()
     body->setProperty("text", u"\nalpha\nbeta gamma"_s);
     body->setProperty("cursorPosition", 0);
     QCOMPARE(words(part("viCursor")), u"1:1"_s);
+    // How far through the file the cursor's line is, from 0% on the first to 100% on the last.
+    body->setProperty("text", u"a\nb\nc\nd\ne"_s);
+    QCOMPARE(words(part("viPlace")), u"0%"_s);
+    body->setProperty("cursorPosition", 4);
+    QCOMPARE(words(part("viPlace")), u"50%"_s);
+    body->setProperty("cursorPosition", 8);
+    QCOMPARE(words(part("viPlace")), u"100%"_s);
     body->setProperty("text", u"alpha\nbeta gamma"_s);
     body->setProperty("cursorPosition", 8);
-    QCOMPARE(words(part("viPlace")), u"Top"_s);
     // The day and time as the locale writes them.
     const auto clock = [] {
         const QDateTime now = QDateTime::currentDateTime();
