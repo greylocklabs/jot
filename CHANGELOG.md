@@ -11,6 +11,9 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   right-click menu.
 - Tasks has a ✅ emoji in the sidebar, which can be changed or removed from its right-click menu as
   Trash's can.
+- The + button makes a note straight away, as Ctrl+N does; a note's extension can be changed
+  after, and data files are still in a notebook's right-click menu. In Trash it is off, as there
+  is no notebook for the note to go in.
 
 ### Fixed
 
