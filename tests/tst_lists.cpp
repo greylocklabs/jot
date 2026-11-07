@@ -47,6 +47,7 @@ private Q_SLOTS:
     void trashAsksFirst();
     void trashShowsWhatWasDeletedAndBringsItBack();
     void trashSitsAtTheFootWithItsOwnHighlight();
+    void backlinkListsFoldUnderTheirHeadings();
     void columnBordersDragToResize();
     void deleteAsksFirstForNotesAndNotebooks();
     void searchHandsTheKeysBackToTheList();
@@ -532,6 +533,44 @@ void TestLists::trashSitsAtTheFootWithItsOwnHighlight()
     const qreal above = lines->mapToItem(row, {0, 0}).y();
     const qreal below = row->height() - above - lines->height();
     QVERIFY2(qAbs(above - below) <= 1, qPrintable(u"%1 above, %2 below"_s.arg(above).arg(below)));
+}
+
+void TestLists::backlinkListsFoldUnderTheirHeadings()
+{
+    m_vault->setCurrent(u"Ashfall/Characters/Mara Vey.md"_s);
+    QQmlComponent component(m_engine.get());
+    component.loadFromModule("Jot.Ui", "Backlinks");
+    std::unique_ptr<QObject> object(component.create());
+    QVERIFY2(object, qPrintable(component.errorString()));
+    auto *backlinks = qobject_cast<QQuickItem *>(object.get());
+    backlinks->setParentItem(m_window->contentItem());
+    backlinks->setWidth(320);
+    const auto shown = [&](bool mention) {
+        int count = 0;
+        for (QQuickItem *item : backlinks->childItems()) {
+            if (item->isVisible() && item->property("mention").isValid() &&
+                item->property("mention").toBool() == mention)
+                ++count;
+        }
+        return count;
+    };
+    const auto heading = [&](const char *name) {
+        return findItem(
+            [name](QQuickItem *item) { return item->objectName() == QLatin1String(name); },
+            backlinks);
+    };
+    // Both open to begin with.
+    QTRY_COMPARE(shown(false), 3);
+    QCOMPARE(shown(true), 3);
+
+    click(heading("linkedHeading"));
+    QTRY_COMPARE(shown(false), 0);
+    QCOMPARE(shown(true), 3);
+    click(heading("mentionedHeading"));
+    QTRY_COMPARE(shown(true), 0);
+    click(heading("linkedHeading"));
+    QTRY_COMPARE(shown(false), 3);
+    QCOMPARE(shown(true), 0);
 }
 
 void TestLists::columnBordersDragToResize()
