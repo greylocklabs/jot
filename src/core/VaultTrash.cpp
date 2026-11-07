@@ -163,6 +163,34 @@ std::optional<QString> VaultTrash::restore(const TrashedNote &note, QString *err
     return path;
 }
 
+std::optional<QString> VaultTrash::restoreFolder(const QString &location, const QString &path,
+                                                 QString *error) const
+{
+    if (!m_vault.writable()) {
+        *error = QObject::tr("this vault is from a newer Jot, so this one only reads it");
+        return std::nullopt;
+    }
+    if (!QDir::cleanPath(location).startsWith(folder() + u'/') || !QFileInfo(location).isDir()) {
+        *error = QObject::tr("%1 is not in the trash any more").arg(path);
+        return std::nullopt;
+    }
+    const QString inside = QDir::cleanPath(m_vault.absolute(path));
+    if (path.isEmpty() || inside.mid(m_vault.root().size() + 1) != path) {
+        *error = QObject::tr("%1 is not a place in this vault").arg(path);
+        return std::nullopt;
+    }
+    QString target = path;
+    for (int n = 2; QFileInfo::exists(m_vault.absolute(target)); ++n)
+        target = path + u' ' + QString::number(n);
+    if (!QDir().mkpath(QFileInfo(m_vault.absolute(target)).path()) ||
+        !QDir().rename(location, m_vault.absolute(target))) {
+        *error = QObject::tr("could not bring %1 back from the trash").arg(path);
+        return std::nullopt;
+    }
+    prune(QFileInfo(location).path());
+    return target;
+}
+
 bool VaultTrash::remove(const TrashedNote &note, QString *error) const
 {
     if (!m_vault.writable()) {

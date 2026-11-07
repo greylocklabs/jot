@@ -447,7 +447,7 @@ std::optional<QString> Vault::moveToTrash(const QString &relative, const QString
     return target;
 }
 
-bool Vault::trashFolder(const QString &path, QString *error) const
+bool Vault::trashFolder(const QString &path, QString *error, QString *trashedTo) const
 {
     if (!writable()) {
         *error = QObject::tr("this vault is from a newer Jot, so this one only reads it");
@@ -457,10 +457,14 @@ bool Vault::trashFolder(const QString &path, QString *error) const
         *error = QObject::tr("%1 is not a notebook in this vault").arg(path);
         return false;
     }
-    if (!moveToTrash(path, QDateTime::currentDateTime().toString(u"yyyyMMdd-HHmmss"_s))) {
+    const std::optional<QString> went =
+        moveToTrash(path, QDateTime::currentDateTime().toString(u"yyyyMMdd-HHmmss"_s));
+    if (!went) {
         *error = QObject::tr("could not move %1 to the trash").arg(path);
         return false;
     }
+    if (trashedTo)
+        *trashedTo = *went;
     return true;
 }
 

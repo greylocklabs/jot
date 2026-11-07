@@ -73,7 +73,7 @@ public:
                    QString *trashedTo = nullptr) const;
     /// Moves a notebook, with every note and attachment in it, to the trash as trashNote() does
     /// a note. Not the vault itself, nor a hidden folder such as `.jot`.
-    bool trashFolder(const QString &path, QString *error) const;
+    bool trashFolder(const QString &path, QString *error, QString *trashedTo = nullptr) const;
     /// Renames or moves a note, its `.assets` folder and its history. History that cannot follow
     /// is logged rather than failing the move. Links to it are the index's job.
     bool moveNote(const QString &from, const QString &to, QString *error) const;
