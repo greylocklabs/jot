@@ -9,6 +9,7 @@
 #include "TaskModel.h"
 #include "TrashModel.h"
 
+#include "jot/Layout.h"
 #include "jot/NoteTrail.h"
 #include "jot/Vault.h"
 #include "jot/VaultIndex.h"
@@ -53,6 +54,8 @@ class VaultController : public QObject
     Q_PROPERTY(QVariantList labels READ labels NOTIFY notesChanged)
     /// Each notebook's emoji, by its path, for those that have one.
     Q_PROPERTY(QVariantMap notebookEmoji READ notebookEmoji NOTIFY notesChanged)
+    /// The emoji before Trash in the sidebar, or empty for none.
+    Q_PROPERTY(QString trashEmoji READ trashEmoji NOTIFY notesChanged)
     Q_PROPERTY(jot::NotebookModel *notebooks READ notebooks CONSTANT)
     /// The tags, nested ones as a tree that folds.
     Q_PROPERTY(jot::TagModel *tagTree READ tagTree CONSTANT)
@@ -161,6 +164,8 @@ public:
     Q_INVOKABLE bool isPinned(const QString &path) const { return m_pinned.contains(path); }
     /// Shows `emoji` before the notebook's name, or no emoji when it is empty.
     Q_INVOKABLE bool setNotebookEmoji(const QString &path, const QString &emoji);
+    /// Shows `emoji` before Trash, or none when it is empty.
+    Q_INVOKABLE bool setTrashEmoji(const QString &emoji);
     /// Makes a notebook in `parent`, or at the top for none, and gives its path.
     Q_INVOKABLE QString newNotebook(const QString &parent = {});
     /// Renames the notebook at `path`, rewriting links to the notes in it.
@@ -296,6 +301,7 @@ public:
     [[nodiscard]] QStringList tags() const;
     [[nodiscard]] QVariantList labels() const;
     [[nodiscard]] QVariantMap notebookEmoji() const { return m_notebookEmoji; }
+    [[nodiscard]] QString trashEmoji() const { return m_trashEmoji; }
     [[nodiscard]] NotebookModel *notebooks() { return &m_notebooks; }
     [[nodiscard]] TagModel *tagTree() { return &m_tagTree; }
     [[nodiscard]] NoteListModel *notes() { return &m_notes; }
@@ -410,6 +416,7 @@ private:
     SyncController m_sync{m_settings};
     bool m_showingTasks = false;
     QVariantMap m_notebookEmoji;
+    QString m_trashEmoji = Layout::kTrashEmoji;
     QStringList m_pinned;
     QString m_indexPath;
     bool m_systemTrash = true;

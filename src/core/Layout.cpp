@@ -81,7 +81,16 @@ std::optional<Layout> Layout::read(const Vault &vault, QString *error)
                 layout.m_header.append(raw.trimmed());
             continue;
         }
-        if (section != u"order"_s && section != u"folders"_s && section != u"pinned"_s) {
+        if (section == u"trash"_s && !topLevel) {
+            const auto key = splitKey(line);
+            if (key && key->first == u"emoji"_s)
+                layout.m_trashEmoji = readYamlScalar(key->second);
+            else if (!line.isEmpty())
+                layout.m_trashLines.append(QString(at - 2 > 0 ? at - 2 : 0, u' ') + line);
+            continue;
+        }
+        if (section != u"order"_s && section != u"folders"_s && section != u"pinned"_s &&
+            section != u"trash"_s) {
             layout.m_other.append(raw);
             continue;
         }
@@ -166,6 +175,13 @@ QString Layout::text() const
         for (const QString &path : m_pinned)
             out += u"  - %1\n"_s.arg(yamlScalar(path));
     }
+    if (m_trashEmoji || !m_trashLines.isEmpty()) {
+        out += u"trash:\n"_s;
+        if (m_trashEmoji)
+            out += u"  emoji: %1\n"_s.arg(yamlScalar(*m_trashEmoji));
+        for (const QString &line : m_trashLines)
+            out += u"  "_s + line + u'\n';
+    }
     for (const QString &line : m_other)
         out += line + u'\n';
     return out;
@@ -198,6 +214,8 @@ bool Layout::write(const Vault &vault, QString *error) const
     }
     kept.m_header = m_header;
     kept.m_other = m_other;
+    kept.m_trashEmoji = m_trashEmoji;
+    kept.m_trashLines = m_trashLines;
     for (const QString &note : m_pinned) {
         if (QFileInfo(vault.absolute(note)).isFile())
             kept.m_pinned.append(note);
@@ -274,6 +292,18 @@ void Layout::setEmoji(const QString &folder, const QString &emoji)
         return;
     }
     m_folders[folder][u"emoji"_s] = emoji.trimmed();
+}
+
+QString Layout::trashEmoji() const
+{
+    return m_trashEmoji.value_or(kTrashEmoji);
+}
+
+void Layout::setTrashEmoji(const QString &emoji)
+{
+    m_trashEmoji = emoji.trimmed();
+    if (*m_trashEmoji == kTrashEmoji)
+        m_trashEmoji.reset();
 }
 
 QHash<QString, QString> Layout::emojis() const

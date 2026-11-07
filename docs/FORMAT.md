@@ -240,11 +240,14 @@ folders:
     emoji: 📚
 pinned:
   - Recipes/Pancakes.md
+trash:
+  emoji: ""
 ```
 
 - Paths are relative to the vault root and use `/`.
 - `emoji` is shown before the notebook's name.
 - `pinned` notes stay at the top of the note list, in whatever order it is in.
+- `trash` holds Trash's `emoji`, shown as 🗑️ when unset; `""` shows none.
 - Renaming or moving a note or notebook in Jot takes its entries with it.
 - Entries that no longer exist are ignored and pruned on the next write.
 - Jot keeps what it does not use as written: other sections, and values nested under a

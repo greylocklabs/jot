@@ -2,6 +2,7 @@
 #include "ThemeController.h"
 #include "VaultController.h"
 
+#include "jot/Layout.h"
 #include "jot/Settings.h"
 #include "jot/Vault.h"
 
@@ -45,6 +46,7 @@ private Q_SLOTS:
     void notebookMenuMakesADataFile();
     void trashAsksFirst();
     void trashShowsWhatWasDeletedAndBringsItBack();
+    void trashSitsAtTheFootWithItsOwnHighlight();
     void columnBordersDragToResize();
     void deleteAsksFirstForNotesAndNotebooks();
     void searchHandsTheKeysBackToTheList();
@@ -472,6 +474,60 @@ void TestLists::trashShowsWhatWasDeletedAndBringsItBack()
     QCOMPARE(m_vault->current(), u"Recipes/Sourdough.md"_s);
     // What it showed is gone, so the list chooses nothing.
     QTRY_COMPARE(list->property("chosen").toString(), QString());
+}
+
+void TestLists::trashSitsAtTheFootWithItsOwnHighlight()
+{
+    QQuickItem *trash = entry(u"Trash"_s);
+    QQuickItem *places = entry(u"Places"_s);
+    QVERIFY(trash && places);
+    const auto *sidebar = qobject_cast<QQuickItem *>(m_sidebar.get());
+    QVERIFY(trash->mapToItem(sidebar, {0, trash->height()}).y() > sidebar->height() - 40);
+
+    click(places);
+    QTRY_VERIFY(places->property("selected").toBool());
+    click(trash);
+    QTRY_VERIFY(m_vault->showingTrash());
+    QVERIFY(trash->property("selected").toBool());
+    QVERIFY(!places->property("selected").toBool());
+
+    // Its emoji changes and goes as a notebook's does.
+    const auto shown = [&] {
+        QQuickItem *text = findItem(
+            [](QQuickItem *item) { return item->property("text").toString().endsWith(u"Trash"_s); },
+            trash);
+        return text ? text->property("text").toString() : QString();
+    };
+    QCOMPARE(shown(), Layout::kTrashEmoji + u"  Trash"_s);
+    QVERIFY(m_vault->setTrashEmoji(u"\U0001F9FA"_s));
+    QTRY_COMPARE(shown(), u"\U0001F9FA  Trash"_s);
+    QVERIFY(m_vault->setTrashEmoji({}));
+    QTRY_COMPARE(shown(), u"Trash"_s);
+
+    // A trashed note's two lines sit in the middle of its row.
+    QVERIFY(m_vault->trashNote(u"Recipes/Sourdough.md"_s, false));
+    QQmlComponent listComponent(m_engine.get());
+    listComponent.loadFromModule("Jot.Ui", "TrashList");
+    std::unique_ptr<QObject> listObject(listComponent.create());
+    QVERIFY2(listObject, qPrintable(listComponent.errorString()));
+    auto *list = qobject_cast<QQuickItem *>(listObject.get());
+    list->setParentItem(m_window->contentItem());
+    list->setSize({320, 700});
+    m_vault->setShowingTrash(true);
+    QQuickItem *row = nullptr;
+    QTRY_VERIFY((row = findItem(
+                     [](QQuickItem *item) {
+                         return item->isVisible() &&
+                                item->property("title").toString() == u"Sourdough"_s;
+                     },
+                     list)));
+    QQuickItem *title = findItem(
+        [](QQuickItem *item) { return item->property("text").toString() == u"Sourdough"_s; }, row);
+    QVERIFY(title);
+    QQuickItem *lines = title->parentItem();
+    const qreal above = lines->mapToItem(row, {0, 0}).y();
+    const qreal below = row->height() - above - lines->height();
+    QVERIFY2(qAbs(above - below) <= 1, qPrintable(u"%1 above, %2 below"_s.arg(above).arg(below)));
 }
 
 void TestLists::columnBordersDragToResize()

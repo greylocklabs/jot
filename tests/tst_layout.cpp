@@ -24,6 +24,7 @@ private Q_SLOTS:
     void keepsWhatItDoesNotUse();
     void leavesAnUnreadableFileAlone();
     void keepsPinnedNotes();
+    void keepsTheTrashsEmoji();
 
 private:
     void write(const QString &path, const QString &text);
@@ -245,6 +246,31 @@ void TestLayout::keepsPinnedNotes()
     layout = Layout::read(*m_vault).value();
     layout.setPinned(u"Inbox/Ch 2.md"_s, false);
     QCOMPARE(layout.pinned(), QStringList{u"Saga/Chapters/Prologue.md"_s});
+}
+
+void TestLayout::keepsTheTrashsEmoji()
+{
+    // Trash has its emoji without the file saying so, and the file says nothing until it changes.
+    Layout layout;
+    QCOMPARE(layout.trashEmoji(), Layout::kTrashEmoji);
+    layout.setTrashEmoji(Layout::kTrashEmoji);
+    QCOMPARE(layout.text(), QString());
+
+    layout.setTrashEmoji(u"\U0001F9FA"_s);
+    QString error;
+    QVERIFY2(layout.write(*m_vault, &error), qPrintable(error));
+    QCOMPARE(read(Layout::kPath), u"trash:\n  emoji: \U0001F9FA\n"_s);
+    QCOMPARE(Layout::read(*m_vault).value().trashEmoji(), u"\U0001F9FA"_s);
+
+    // Taken away, it stays away.
+    layout.setTrashEmoji({});
+    QVERIFY(layout.write(*m_vault, &error));
+    QCOMPARE(read(Layout::kPath), u"trash:\n  emoji: \"\"\n"_s);
+    QCOMPARE(Layout::read(*m_vault).value().trashEmoji(), QString());
+
+    // What Jot does not use under it is kept.
+    write(Layout::kPath, u"trash:\n  emoji: x\n  color: red\n"_s);
+    QCOMPARE(Layout::read(*m_vault).value().text(), u"trash:\n  emoji: x\n  color: red\n"_s);
 }
 
 QTEST_GUILESS_MAIN(TestLayout)
