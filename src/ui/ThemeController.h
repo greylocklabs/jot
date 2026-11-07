@@ -237,7 +237,7 @@ public:
     /// The theme as diagrams in notes are drawn, in the note's own font and size.
     [[nodiscard]] DiagramStyle diagramStyle(const QString &family, int pixelSize) const
     {
-        DiagramStyle style;
+        DiagramStyle style = diagramColors();
         style.background = bg();
         style.text = text();
         style.muted = textMuted();
@@ -246,6 +246,7 @@ public:
         style.surfaceAlt = surface();
         style.border = border();
         style.accent = accent();
+        style.danger = danger();
         style.fontFamily = family.isEmpty() ? fontFamily() : family;
         style.monoFamily = monoFontFamily();
         style.pixelSize = pixelSize;
@@ -262,6 +263,7 @@ Q_SIGNALS:
 
 private:
     explicit ThemeController(QObject *parent = nullptr);
+    [[nodiscard]] DiagramStyle diagramColors() const;
     void reloadWatchedFile();
 
     greylock::ThemeSpec m_spec;
