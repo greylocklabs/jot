@@ -178,7 +178,9 @@ Rectangle {
                 stroke: Theme.fineGlyphStroke
             }
             Label {
-                text: Qt.formatDateTime(root.now, "ddd HH:mm")
+                // The day's short name and the time as the desktop's locale writes them.
+                text: Qt.locale().dayName(root.now.getDay(), Locale.ShortFormat) + " "
+                      + root.now.toLocaleTimeString(Qt.locale(), Locale.ShortFormat)
                 color: root.modeText
                 font.weight: Theme.weightHeavy
             }
