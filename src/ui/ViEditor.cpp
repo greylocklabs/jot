@@ -69,12 +69,20 @@ void ViEditor::setTarget(QQuickItem *target)
 {
     if (m_target == target)
         return;
-    if (m_target)
+    if (m_target) {
         m_target->removeEventFilter(this);
+        disconnect(m_target, nullptr, this, nullptr);
+    }
     m_target = target;
-    if (m_target)
+    if (m_target) {
         m_target->installEventFilter(this);
+        for (const char *changed :
+             {SIGNAL(cursorPositionChanged()), SIGNAL(selectionStartChanged()),
+              SIGNAL(selectionEndChanged()), SIGNAL(textChanged())})
+            connect(m_target, changed, this, SIGNAL(placeChanged()));
+    }
     Q_EMIT targetChanged();
+    Q_EMIT placeChanged();
 }
 
 void ViEditor::setEnabled(bool enabled)
@@ -434,6 +442,28 @@ QTextDocument *ViEditor::document() const
     const auto *text =
         m_target ? m_target->property("textDocument").value<QQuickTextDocument *>() : nullptr;
     return text ? text->textDocument() : nullptr;
+}
+
+int ViEditor::line() const
+{
+    const QTextDocument *text = document();
+    return text ? text->findBlock(cursor()).blockNumber() + 1 : 1;
+}
+
+int ViEditor::column() const
+{
+    const QTextDocument *text = document();
+    return text ? cursor() - text->findBlock(cursor()).position() + 1 : 1;
+}
+
+int ViEditor::pickedLines() const
+{
+    const QTextDocument *text = document();
+    const int start = m_target ? m_target->property("selectionStart").toInt() : 0;
+    const int end = m_target ? m_target->property("selectionEnd").toInt() : 0;
+    if (!text || end <= start)
+        return 0;
+    return text->findBlock(end).blockNumber() - text->findBlock(start).blockNumber() + 1;
 }
 
 int ViEditor::cursor() const

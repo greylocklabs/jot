@@ -1437,6 +1437,11 @@ void TestNoteEditor::showsWhereViIsAlongTheFoot()
     QCOMPARE(words(part("viMode")), u"NORMAL"_s);
     QCOMPARE(words(part("viFile")), u"Ashfall / Characters / Mara Vey.md"_s);
     QCOMPARE(words(part("viCursor")), u"2:3"_s);
+    body->setProperty("text", u"\nalpha\nbeta gamma"_s);
+    body->setProperty("cursorPosition", 0);
+    QCOMPARE(words(part("viCursor")), u"1:1"_s);
+    body->setProperty("text", u"alpha\nbeta gamma"_s);
+    body->setProperty("cursorPosition", 8);
     QCOMPARE(words(part("viPlace")), u"Top"_s);
     QVERIFY(!words(part("viClock")).isEmpty());
     const QColor normal = part("viMode")->property("fill").value<QColor>();
