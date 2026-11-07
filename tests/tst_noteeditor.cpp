@@ -79,6 +79,7 @@ private Q_SLOTS:
     void readsDiagramsAsPictures();
     void tickingARepeatingToDoWritesTheNext();
     void editsInViModes();
+    void showsWhereViIsAlongTheFoot();
     void jumpsAlongALineInVi();
     void takesTextInputOnlyInInsertMode();
     void staysQuickAndStillInALongNote();
@@ -1400,6 +1401,65 @@ void TestNoteEditor::editsInViModes()
     body->setProperty("cursorPosition", 0);
     type(u"j"_s);
     QCOMPARE(text(), u"jha big beta\n**z**"_s);
+}
+
+void TestNoteEditor::showsWhereViIsAlongTheFoot()
+{
+    QQuickItem *line = find(u"viStatusLine"_s);
+    QVERIFY(line);
+    QVERIFY(!line->isVisible());
+    m_settings->setViMode(true);
+    m_vault->setCurrent(u"Ashfall/Characters/Mara Vey.md"_s);
+    QTRY_VERIFY(line->isVisible());
+    QQuickItem *body = find(u"body"_s);
+    body->forceActiveFocus();
+    body->setProperty("text", u"alpha\nbeta gamma"_s);
+    body->setProperty("cursorPosition", 8);
+    // What a part of the line says, all its words together.
+    const std::function<QString(QQuickItem *)> words = [&words](QQuickItem *item) {
+        if (item->inherits("QQuickText"))
+            return item->isVisible() ? item->property("text").toString() : QString();
+        QStringList found;
+        for (QQuickItem *child : item->childItems()) {
+            if (!child->isVisible())
+                continue;
+            if (child->inherits("QQuickText"))
+                found << child->property("text").toString();
+            else if (const QString inner = words(child); !inner.isEmpty())
+                found << inner;
+        }
+        return found.join(u' ');
+    };
+    const auto part = [line](const char *name) {
+        return line->findChild<QQuickItem *>(QString::fromLatin1(name));
+    };
+
+    QCOMPARE(words(part("viMode")), u"NORMAL"_s);
+    QCOMPARE(words(part("viFile")), u"Ashfall / Characters / Mara Vey.md"_s);
+    QCOMPARE(words(part("viCursor")), u"2:3"_s);
+    QCOMPARE(words(part("viPlace")), u"Top"_s);
+    QVERIFY(!words(part("viClock")).isEmpty());
+    const QColor normal = part("viMode")->property("fill").value<QColor>();
+
+    // Each mode in its own color, the clock's too.
+    QTest::keyClick(m_window.get(), 'i');
+    QCOMPARE(words(part("viMode")), u"INSERT"_s);
+    const QColor insert = part("viMode")->property("fill").value<QColor>();
+    QVERIFY(insert != normal);
+    QCOMPARE(part("viClock")->property("fill").value<QColor>(), insert);
+    QTest::keyClick(m_window.get(), Qt::Key_Escape);
+
+    // Visual counts the lines it picks.
+    body->setProperty("cursorPosition", 0);
+    QTest::keyClick(m_window.get(), 'v');
+    QTest::keyClick(m_window.get(), 'j');
+    QCOMPARE(words(part("viMode")), u"VISUAL"_s);
+    QVERIFY(part("viMode")->property("fill").value<QColor>() != normal);
+    QTRY_COMPARE(words(part("viPicked")), u"2 lines"_s);
+    QTest::keyClick(m_window.get(), Qt::Key_Escape);
+
+    m_settings->setViMode(false);
+    QTRY_VERIFY(!line->isVisible());
 }
 
 void TestNoteEditor::takesTextInputOnlyInInsertMode()

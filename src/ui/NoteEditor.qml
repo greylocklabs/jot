@@ -286,7 +286,7 @@ Rectangle {
             left: parent.left
             right: parent.right
             top: formatBar.visible ? formatBar.bottom : parent.top
-            bottom: parent.bottom
+            bottom: statusLine.visible ? statusLine.top : parent.bottom
         }
         visible: Vault.current !== ""
         contentWidth: width
@@ -1009,21 +1009,36 @@ Rectangle {
         }
     }
 
-    // Which of vi's modes the note is in, while vi mode is on and the note has the keys.
-    Text {
+    ViStatusLine {
+        id: statusLine
+
+        objectName: "viStatusLine"
         anchors {
+            left: parent.left
             right: parent.right
             bottom: parent.bottom
-            margins: Theme.space4
         }
-        visible: Settings.viMode && body.activeFocus
-        text: vi.mode === "insert" ? qsTr("Insert") : vi.mode === "visual" ? qsTr("Visual") : vi.pending
-                                                                             !== "" ? vi.pending :
-                                                                                      qsTr("Normal")
-        color: Theme.textFaint
-        font.family: Theme.fontFamily
-        font.pixelSize: Theme.textSm
-        font.weight: Theme.weightHeavy
+        visible: Settings.viMode && Vault.current !== ""
+        mode: vi.mode
+        pending: vi.pending
+        path: Vault.current
+        kind: root.tableShown ? "table" : root.dataFile ? "data" : "note"
+        showCursor: body.visible
+        line: body.text.slice(0, body.cursorPosition).split("\n").length
+        column: body.cursorPosition - body.text.lastIndexOf("\n", body.cursorPosition - 1)
+        pickedLines: body.selectionEnd > body.selectionStart ? body.text.slice(body.selectionStart,
+                                                                               body.selectionEnd).split(
+                                                                   "\n").length : 0
+        place: {
+            const range = flick.contentHeight - flick.height
+            if (range <= 0)
+                return qsTr("All")
+            if (flick.contentY <= 0)
+                return qsTr("Top")
+            if (flick.contentY >= range - 1)
+                return qsTr("Bot")
+            return Math.round(100 * flick.contentY / range) + "%"
+        }
     }
 
     ConflictResolver {
