@@ -21,8 +21,9 @@ struct TrashedNote
     QDateTime deleted;
     /// Its `.assets` folder in the same trash, as an absolute path; empty when that did not go.
     QString assets;
-    /// The desktop trash's records of the two, removed once they are back.
-    QStringList records;
+    /// The desktop trash's records of it and of its attachments, each removed once that is back.
+    QString record;
+    QString assetsRecord;
 };
 
 /// What the desktop's trash and the vault's own `.jot/trash` hold from a vault, and bringing it
@@ -41,7 +42,8 @@ public:
     [[nodiscard]] QList<TrashedNote> list() const;
 
     /// Puts `note` back at its path, or a free one beside it when that is taken now, with its
-    /// attachments. Gives the vault path it went to.
+    /// attachments. Gives the vault path it went to. Attachments that cannot follow stay in the
+    /// trash, as the desktop can still restore them, and `error` says so though the note is back.
     std::optional<QString> restore(const TrashedNote &note, QString *error) const;
 
 private:

@@ -1086,6 +1086,9 @@ QString VaultController::restoreTrashed(const QString &location)
     reloadTrash();
     setShowingTrash(false);
     setCurrent(*path);
+    // Back, though without what it says here.
+    if (!error.isEmpty())
+        setProblem(error);
     return *path;
 }
 

@@ -139,11 +139,12 @@ void VaultTrash::listDesktop(QList<TrashedNote> &into) const
                                     relative + u'/' + inner,
                                     record->deleted,
                                     QFileInfo(assetsInside).isDir() ? assetsInside : QString(),
+                                    {},
                                     {}};
             }
         } else if (Vault::isListed(relative)) {
             notes << into.size();
-            into << TrashedNote{record->file, relative, record->deleted, {}, {record->info}};
+            into << TrashedNote{record->file, relative, record->deleted, {}, record->info, {}};
         }
     }
     // A note's attachments go to the trash on their own, a moment after it.
@@ -157,7 +158,7 @@ void VaultTrash::listDesktop(QList<TrashedNote> &into) const
         if (match == assets.end())
             continue;
         note.assets = match->file;
-        note.records << match->info;
+        note.assetsRecord = match->info;
         assets.erase(match);
     }
 }
@@ -176,6 +177,7 @@ void VaultTrash::listOwn(QList<TrashedNote> &into) const
                                 relative,
                                 deleted,
                                 QFileInfo(assets).isDir() ? assets : QString(),
+                                {},
                                 {}};
         }
     }
@@ -202,11 +204,17 @@ std::optional<QString> VaultTrash::restore(const TrashedNote &note, QString *err
         *error = QObject::tr("could not bring %1 back from the trash").arg(note.path);
         return std::nullopt;
     }
+    bool assetsBack = true;
     if (!note.assets.isEmpty() && QFileInfo(note.assets).isDir() &&
-        !QDir().rename(note.assets, m_vault.absolute(Vault::assetsFolderFor(path))))
+        !QDir().rename(note.assets, m_vault.absolute(Vault::assetsFolderFor(path)))) {
+        assetsBack = false;
         qCWarning(lcVault) << "could not bring the attachments of" << path << "back";
-    for (const QString &record : note.records)
-        QFile::remove(record);
+        *error = QObject::tr("%1 is back, but its attachments are still in the trash").arg(path);
+    }
+    if (!note.record.isEmpty())
+        QFile::remove(note.record);
+    if (assetsBack && !note.assetsRecord.isEmpty())
+        QFile::remove(note.assetsRecord);
     return path;
 }
 
