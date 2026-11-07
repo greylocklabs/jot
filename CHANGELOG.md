@@ -13,6 +13,9 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 - Trash in the sidebar lists the notes deleted from the vault, from the desktop's trash and Jot's
   own, newest first. Read one there, or restore it where it was, with its attachments. Jot never
   empties the trash.
+- With vi mode on, a status line across the foot of the editor shows the mode in caps and in its
+  own color, the file and its kind, the line and column, how far down the view is, and the day
+  and time.
 
 ### Changed
 

@@ -29,6 +29,11 @@ class ViEditor : public QObject
     Q_PROPERTY(QString mode READ mode WRITE setMode NOTIFY modeChanged)
     /// The start of a longer key, such as "d" before "dd", or empty.
     Q_PROPERTY(QString pending READ pending NOTIFY pendingChanged)
+    /// Where the cursor is, counted from 1 as vi does: the line, and the character on it.
+    Q_PROPERTY(int line READ line NOTIFY placeChanged)
+    Q_PROPERTY(int column READ column NOTIFY placeChanged)
+    /// The lines the selection touches, or 0 with nothing selected.
+    Q_PROPERTY(int pickedLines READ pickedLines NOTIFY placeChanged)
 
 public:
     explicit ViEditor(QObject *parent = nullptr);
@@ -40,6 +45,9 @@ public:
     [[nodiscard]] QString mode() const { return m_mode; }
     void setMode(const QString &mode);
     [[nodiscard]] QString pending() const { return m_pending; }
+    [[nodiscard]] int line() const;
+    [[nodiscard]] int column() const;
+    [[nodiscard]] int pickedLines() const;
 
 Q_SIGNALS:
     /// Escape in normal mode: the keyboard is done with the note.
@@ -50,6 +58,7 @@ Q_SIGNALS:
     void busyChanged();
     void modeChanged();
     void pendingChanged();
+    void placeChanged();
 
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
