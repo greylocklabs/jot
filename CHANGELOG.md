@@ -35,6 +35,7 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 - Choosing Trash no longer leaves the notebook or tag chosen before highlighted, and the trash
   list's rows are evenly padded.
+- Search results show when each note last changed, rather than 12/31/69.
 
 ## 0.4.0 - 2026-11-07
 

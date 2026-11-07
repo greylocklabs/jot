@@ -680,8 +680,8 @@ QList<SearchHit> VaultIndex::search(const QString &query, int limit) const
     if (!exec(select, "search"))
         return hits;
     while (select.next())
-        hits.append(
-            {select.value(0).toString(), select.value(1).toString(), select.value(2).toString()});
+        hits.append({select.value(0).toString(), select.value(1).toString(),
+                     select.value(2).toString(), select.value(3).toLongLong()});
     return hits;
 }
 

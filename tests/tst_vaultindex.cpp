@@ -148,6 +148,10 @@ void TestVaultIndex::searchesWordsAtTheStartOfWords()
     QCOMPARE(m_index->search(u"rio boats"_s).size(), 0);
     QCOMPARE(m_index->search(u"oman"_s).size(), 0); // words match from their start
     const SearchHit hit = m_index->search(u"dawn"_s).first();
+    // Dated as the list dates notes, by when the file last changed.
+    const QList<NoteInfo> notes = m_index->notesIn({});
+    QCOMPARE(hit.modified, std::ranges::find(notes, hit.path, &NoteInfo::path)->modified);
+    QVERIFY(hit.modified > 0);
     QCOMPARE(hit.path, u"Ferry.md"_s);
     QVERIFY2(hit.snippet.contains(u"<mark>dawn</mark>"_s), qPrintable(hit.snippet));
 }
