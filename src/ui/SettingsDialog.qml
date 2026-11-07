@@ -144,6 +144,7 @@ Popup {
                     width: tabs.width
                     height: Theme.listRowHeight + Theme.space2
                     hoverEnabled: true
+                    focusPolicy: Qt.StrongFocus
                     Accessible.name: modelData.label
                     Accessible.role: Accessible.PageTab
                     onClicked: root.tab = modelData.id
@@ -153,6 +154,9 @@ Popup {
                         color: tabButton.selected ? Theme.tint(Theme.accent, 0.18) :
                                                     tabButton.hovered ? Theme.surfaceAlt :
                                                                         "transparent"
+                        // Ringed while the keyboard is on it, as the pill buttons are.
+                        border.width: tabButton.visualFocus ? 2 : 0
+                        border.color: Theme.text
                     }
                     contentItem: Text {
                         leftPadding: Theme.space3
