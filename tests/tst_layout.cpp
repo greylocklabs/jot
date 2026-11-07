@@ -274,6 +274,21 @@ void TestLayout::keepsTheViewsEmojis()
     const Layout both = Layout::read(*m_vault).value();
     QCOMPARE(both.viewEmoji(u"tasks"_s), u"y"_s);
     QCOMPARE(both.text(), u"tasks:\n  emoji: y\ntrash:\n  emoji: x\n  color: red\n"_s);
+
+    // Indented its own way, it is written back with what is under it still under it.
+    write(Layout::kPath, u"trash:\n    emoji: x\n    color: red\n    nested:\n      a: 1\n"_s);
+    QCOMPARE(Layout::read(*m_vault).value().viewEmoji(u"trash"_s), u"x"_s);
+    QCOMPARE(Layout::read(*m_vault).value().text(),
+             u"trash:\n  emoji: x\n  color: red\n  nested:\n    a: 1\n"_s);
+
+    // A value on the section's own line is kept as written, until Jot sets one itself.
+    write(Layout::kPath, u"trash: {emoji: x}\npinned:\n  - Inbox/A.md\n"_s);
+    Layout inline_ = Layout::read(*m_vault).value();
+    QVERIFY(inline_.text().contains(u"trash: {emoji: x}\n"_s));
+    QVERIFY(inline_.text().contains(u"  - Inbox/A.md\n"_s));
+    inline_.setViewEmoji(u"trash"_s, u"z"_s);
+    QVERIFY(!inline_.text().contains(u"{emoji: x}"_s));
+    QVERIFY(inline_.text().contains(u"trash:\n  emoji: z\n"_s));
 }
 
 QTEST_GUILESS_MAIN(TestLayout)

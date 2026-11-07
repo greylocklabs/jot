@@ -81,12 +81,28 @@ std::optional<Layout> Layout::read(const Vault &vault, QString *error)
                 layout.m_header.append(raw.trimmed());
             continue;
         }
-        if (kViews.contains(section) && !topLevel) {
+        if (kViews.contains(section)) {
+            View &view = layout.m_views[section];
+            // A value on the section's own line, as `trash: {emoji: x}`, is not read but kept
+            // as written, with all under it.
+            if (topLevel) {
+                const QString value =
+                    splitKey(line).value_or(std::pair{QString(), QString()}).second;
+                view.verbatim = !value.isEmpty() && !value.startsWith(u'#');
+            }
+            if (view.verbatim) {
+                view.raw.append(raw);
+                continue;
+            }
+            if (topLevel || line.isEmpty())
+                continue;
+            if (view.indent < 0)
+                view.indent = at;
             const auto key = splitKey(line);
-            if (key && key->first == u"emoji"_s)
-                layout.m_views[section].emoji = readYamlScalar(key->second);
-            else if (!line.isEmpty())
-                layout.m_views[section].lines.append(QString(at - 2 > 0 ? at - 2 : 0, u' ') + line);
+            if (key && key->first == u"emoji"_s && at == view.indent)
+                view.emoji = readYamlScalar(key->second);
+            else
+                view.lines.append(QString(std::max<qsizetype>(0, at - view.indent), u' ') + line);
             continue;
         }
         if (section != u"order"_s && section != u"folders"_s && section != u"pinned"_s &&
@@ -135,6 +151,10 @@ std::optional<Layout> Layout::read(const Vault &vault, QString *error)
             layout.m_folders[entry][key->first] = readYamlScalar(key->second);
         }
     }
+    for (View &view : layout.m_views) {
+        while (!view.raw.isEmpty() && view.raw.last().trimmed().isEmpty())
+            view.raw.removeLast();
+    }
     while (!layout.m_other.isEmpty() && layout.m_other.last().trimmed().isEmpty())
         layout.m_other.removeLast();
     return layout;
@@ -177,6 +197,11 @@ QString Layout::text() const
     }
     for (const QString &name : kViews) {
         const View view = m_views.value(name);
+        if (view.verbatim) {
+            for (const QString &line : view.raw)
+                out += line + u'\n';
+            continue;
+        }
         if (!view.emoji && view.lines.isEmpty())
             continue;
         out += name + u":\n"_s;
@@ -314,7 +339,11 @@ void Layout::setViewEmoji(const QString &view, const QString &emoji)
 {
     if (!kViews.contains(view))
         return;
-    std::optional<QString> &kept = m_views[view].emoji;
+    // Jot's own value replaces one it could not read.
+    View &entry = m_views[view];
+    if (entry.verbatim)
+        entry = View();
+    std::optional<QString> &kept = entry.emoji;
     kept = emoji.trimmed();
     if (*kept == defaultEmoji(view))
         kept.reset();
