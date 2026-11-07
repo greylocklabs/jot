@@ -334,13 +334,70 @@ bool isNumber(const QString &text)
     return number.match(text).hasMatch();
 }
 
+/// Where libyaml's marks fall in a QString: libyaml counts characters, where QString counts
+/// UTF-16 units.
+class YamlMarks
+{
+public:
+    explicit YamlMarks(const QString &text) : m_size(text.size())
+    {
+        m_astral = std::ranges::any_of(text, [](QChar c) { return c.isSurrogate(); });
+        if (!m_astral)
+            return;
+        for (qsizetype i = 0; i < text.size(); ++i) {
+            if (!(text.at(i).isLowSurrogate() && i > 0 && text.at(i - 1).isHighSurrogate()))
+                m_units.append(i);
+        }
+        m_units.append(text.size());
+    }
+
+    [[nodiscard]] qsizetype at(const yaml_mark_t &mark) const
+    {
+        const auto index = qsizetype(mark.index);
+        return m_astral ? m_units.value(index, m_size) : std::min(index, m_size);
+    }
+
+private:
+    qsizetype m_size;
+    bool m_astral = false;
+    QList<qsizetype> m_units;
+};
+
+qsizetype lineStartIn(const QString &text, qsizetype at)
+{
+    return at <= 0 ? 0 : text.lastIndexOf(u'\n', at - 1) + 1;
+}
+
+/// Where a value over lines of its own ends: at its last word, before blank and comment lines.
+qsizetype trimmedEnd(const QString &text, qsizetype end)
+{
+    for (;;) {
+        while (end > 0 && text.at(end - 1).isSpace())
+            --end;
+        const qsizetype start = lineStartIn(text, end);
+        if (end == 0 || !text.sliced(start, end - start).trimmed().startsWith(u'#'))
+            return end;
+        end = start;
+    }
+}
+
+/// Where a list starts for reading on its own: its line, indent and all, when it starts a line,
+/// so its items keep their columns; else where it is, as after a key on one line.
+qsizetype listStart(const QString &text, qsizetype at)
+{
+    const qsizetype line = lineStartIn(text, at);
+    return text.sliced(line, at - line).trimmed().isEmpty() ? line : at;
+}
+
 } // namespace
 
-std::optional<DataTable> DataTable::read(const QString &kind, const QString &text, QString *why)
+std::optional<DataTable> DataTable::read(const QString &kind, const QString &text, QString *why,
+                                         const DataPart &part)
 {
     DataTable table;
     table.m_kind = kind;
     table.m_text = text;
+    table.m_part = part;
     QString reason;
     if (!table.parse(&reason)) {
         if (why)
@@ -350,11 +407,33 @@ std::optional<DataTable> DataTable::read(const QString &kind, const QString &tex
     return table;
 }
 
+QList<DataPart> DataTable::parts(const QString &kind, const QString &text)
+{
+    if (read(kind, text))
+        return {};
+    QList<DataPart> found;
+    for (const Located &where : locate(kind, text)) {
+        if (read(kind, text, nullptr, where.part))
+            found.append(where.part);
+    }
+    return found;
+}
+
 bool DataTable::parse(QString *why)
 {
     m_rows.clear();
     m_columns.clear();
     m_header = {};
+    m_depth = 0;
+    // A part is found again by its key or document each time, as an edit moves it.
+    if (!m_part.isWhole()) {
+        for (const Located &where : locate(m_kind, m_text)) {
+            if (where.part.key == m_part.key && where.part.document == m_part.document)
+                return parseRange(where, why);
+        }
+        *why = QObject::tr("no list of records called %1").arg(m_part.name);
+        return false;
+    }
     if (m_kind == u"json")
         return parseJson(why);
     if (m_kind == u"csv" || m_kind == u"tsv")
@@ -395,15 +474,76 @@ bool DataTable::parseJson(QString *why)
         }
         m_rows.append(row);
     }
-    // One level of indentation, from the first record's line; none for a file on one line.
-    m_indent.clear();
-    if (!m_rows.isEmpty() &&
-        m_text.sliced(m_array.start, m_array.end - m_array.start).contains(u'\n'))
-        m_indent = lineIndent(m_rows.first().span.start);
-    if (m_indent.isEmpty() && !m_rows.isEmpty() &&
-        m_text.sliced(m_array.start, m_array.end - m_array.start).contains(u'\n'))
-        m_indent = u"  "_s;
+    jsonIndent();
     return true;
+}
+
+void DataTable::jsonIndent()
+{
+    // One level of indentation, from the first record's line, less the list's own; none for a
+    // list on one line.
+    m_indent.clear();
+    if (m_rows.isEmpty() ||
+        !m_text.sliced(m_array.start, m_array.end - m_array.start).contains(u'\n'))
+        return;
+    const QString row = lineIndent(m_rows.first().span.start);
+    const QString list = lineIndent(m_array.start);
+    m_indent = row.startsWith(list) ? row.sliced(list.size()) : row;
+    if (m_indent.isEmpty())
+        m_indent = u"  "_s;
+}
+
+bool DataTable::parseRange(const Located &where, QString *why)
+{
+    const QString whole = m_text;
+    m_text = whole.sliced(where.range.start, where.range.end - where.range.start);
+    const bool read = m_kind == u"json" ? parseJson(why) : parseYaml(why);
+    m_text = whole;
+    if (!read)
+        return false;
+    shift(where.range.start);
+    m_depth = where.depth;
+    if (m_kind == u"json")
+        jsonIndent();
+    return true;
+}
+
+void DataTable::shift(qsizetype by)
+{
+    const auto move = [by](Span &span) {
+        span.start += by;
+        span.end += by;
+    };
+    move(m_array);
+    for (Row &row : m_rows) {
+        move(row.span);
+        if (row.dash >= 0)
+            row.dash += by;
+        for (Field &field : row.fields) {
+            move(field.key);
+            move(field.value);
+        }
+    }
+}
+
+QList<DataTable::Located> DataTable::locate(const QString &kind, const QString &text)
+{
+    QList<Located> found;
+    if (kind == u"json") {
+        JsonReader reader(text);
+        const std::optional<JsonNode> root = reader.readDocument();
+        if (!root || root->kind != JsonNode::Kind::Object)
+            return found;
+        for (const JsonMember &member : root->members) {
+            if (member.value.kind == JsonNode::Kind::Array)
+                found.append(
+                    {{member.key, member.key, -1}, {member.value.start, member.value.end}, 1});
+        }
+        return found;
+    }
+    if (kind == u"yaml")
+        return locateYaml(text);
+    return found;
 }
 
 bool DataTable::parseDelimited(QString *why)
@@ -821,12 +961,12 @@ bool DataTable::setValue(int row, int column, const DataValue &value, QString *e
         }
     }
     if (const Field *found = field(row, column))
-        return patch(found->value, jsonValue(value, 2));
+        return patch(found->value, jsonValue(value, 2 + m_depth));
 
     // A new member goes after the field before it in column order, or first.
     const Row &record = m_rows.at(row);
     const QString colon = m_indent.isEmpty() ? u":"_s : u": "_s;
-    const QString member = quoted(m_columns.at(column)) + colon + jsonValue(value, 2);
+    const QString member = quoted(m_columns.at(column)) + colon + jsonValue(value, 2 + m_depth);
     // A record on one line stays on one line; one over lines gets a line like its others.
     const bool oneLine =
         !m_text.sliced(record.span.start, record.span.end - record.span.start).contains(u'\n');
@@ -888,7 +1028,13 @@ bool DataTable::insertRow(int row)
         return false;
     const QString nl = newline();
     if (m_kind == u"yaml") {
-        // An empty mapping is written "{}" until it has a field.
+        // An empty mapping is written "{}" until it has a field. A key's empty list, "[]" after
+        // the key, becomes an item on a line of its own.
+        if (m_rows.isEmpty() && m_depth > 0) {
+            const bool spaced = m_array.start > 0 && m_text.at(m_array.start - 1) == u' ';
+            return patch({m_array.start - (spaced ? 1 : 0), m_array.end},
+                         nl + lineIndent(m_array.start) + u"  - {}"_s);
+        }
         if (m_rows.isEmpty())
             return patch(m_array, u"- {}"_s);
         const Row &near = m_rows.at(std::min<qsizetype>(row, m_rows.size() - 1));
@@ -910,7 +1056,10 @@ bool DataTable::insertRow(int row)
             return patch({m_text.size(), m_text.size()}, nl + nl);
         return patch({m_text.size(), m_text.size()}, endsInNewline ? line + nl : nl + line);
     }
-    const QString gap = m_indent.isEmpty() ? QString() : nl + m_indent;
+    // A new record goes at the records' indent, however deep the list sits.
+    const QString gap = m_indent.isEmpty() ? QString()
+                        : m_rows.isEmpty() ? nl + m_indent
+                                           : nl + lineIndent(m_rows.first().span.start);
     if (m_rows.isEmpty()) {
         const QString close = m_indent.isEmpty() ? QString() : nl + lineIndent(m_array.start);
         return patch(m_array, u'[' + gap + u"{}"_s + close + u']');
@@ -926,8 +1075,19 @@ bool DataTable::removeRow(int row)
         return false;
     const Row &record = m_rows.at(row);
     if (m_kind == u"yaml") {
-        if (m_rows.size() == 1)
+        if (m_rows.size() == 1) {
+            // A key's list over lines of its own empties to "[]" after its key, where YAML reads
+            // it whatever the list's indent was.
+            const qsizetype line = lineStart(m_array.start);
+            if (m_depth > 0 && line > 0 &&
+                m_text.sliced(line, m_array.start - line).trimmed().isEmpty()) {
+                qsizetype from = line - 1;
+                if (from > 0 && m_text.at(from - 1) == u'\r')
+                    --from;
+                return patch({from, m_array.end}, u" []"_s);
+            }
             return patch(m_array, u"[]"_s);
+        }
         if (row + 1 < m_rows.size())
             return patch({lineStart(record.dash), lineStart(m_rows.at(row + 1).dash)}, {});
         return patch({lineEnd(m_rows.at(row - 1).span.end), lineEnd(record.span.end)}, {});
@@ -1071,31 +1231,9 @@ qsizetype DataTable::lineEnd(qsizetype at) const
 bool DataTable::parseYaml(QString *why)
 {
     const QByteArray bytes = m_text.toUtf8();
-    // libyaml counts characters, where QString counts UTF-16 units.
-    const bool astral = std::ranges::any_of(m_text, [](QChar c) { return c.isSurrogate(); });
-    QList<qsizetype> units;
-    if (astral) {
-        for (qsizetype i = 0; i < m_text.size(); ++i) {
-            if (!(m_text.at(i).isLowSurrogate() && i > 0 && m_text.at(i - 1).isHighSurrogate()))
-                units.append(i);
-        }
-        units.append(m_text.size());
-    }
-    const auto at = [&](const yaml_mark_t &mark) {
-        const auto index = qsizetype(mark.index);
-        return astral ? units.value(index, m_text.size()) : std::min(index, m_text.size());
-    };
-    // A value over lines of its own ends at its last word, before blank and comment lines.
-    const auto trimmed = [this](qsizetype end) {
-        for (;;) {
-            while (end > 0 && m_text.at(end - 1).isSpace())
-                --end;
-            const qsizetype start = lineStart(end);
-            if (end == 0 || !m_text.sliced(start, end - start).trimmed().startsWith(u'#'))
-                return end;
-            end = start;
-        }
-    };
+    const YamlMarks marks(m_text);
+    const auto at = [&marks](const yaml_mark_t &mark) { return marks.at(mark); };
+    const auto trimmed = [this](qsizetype end) { return trimmedEnd(m_text, end); };
 
     yaml_parser_t parser;
     if (!yaml_parser_initialize(&parser)) {
@@ -1392,6 +1530,99 @@ std::optional<std::pair<DataTable::Span, QString>> DataTable::yamlRemoval(const 
         return std::pair{Span{here.key.start, record.fields.at(1).key.start}, QString()};
     return std::pair{Span{lineEnd(record.fields.at(at - 1).value.end), lineEnd(here.value.end)},
                      QString()};
+}
+
+QList<DataTable::Located> DataTable::locateYaml(const QString &text)
+{
+    QList<Located> found;
+    const QByteArray bytes = text.toUtf8();
+    const YamlMarks marks(text);
+    yaml_parser_t parser;
+    if (!yaml_parser_initialize(&parser))
+        return found;
+    yaml_parser_set_input_string(&parser, reinterpret_cast<const unsigned char *>(bytes.data()),
+                                 size_t(bytes.size()));
+    int document = -1;
+    int depth = 0;
+    bool rootMapping = false;
+    // Within the top-level mapping: a key comes next, rather than its value.
+    bool atKey = true;
+    // The collection open under the top level was a key, as a complex key is.
+    bool openKey = false;
+    QString key;
+    qsizetype opened = 0;
+    QList<Located> keys;
+    for (bool done = false; !done;) {
+        yaml_event_t event;
+        if (!yaml_parser_parse(&parser, &event))
+            break;
+        const qsizetype start = marks.at(event.start_mark);
+        const qsizetype end = marks.at(event.end_mark);
+        const yaml_event_type_t type = event.type;
+        const bool sequence = type == YAML_SEQUENCE_START_EVENT;
+        QString scalar;
+        if (type == YAML_SCALAR_EVENT)
+            scalar = QString::fromUtf8(reinterpret_cast<const char *>(event.data.scalar.value),
+                                       qsizetype(event.data.scalar.length));
+        yaml_event_delete(&event);
+        switch (type) {
+        case YAML_STREAM_END_EVENT: done = true; break;
+        case YAML_DOCUMENT_START_EVENT:
+            ++document;
+            depth = 0;
+            rootMapping = false;
+            atKey = true;
+            break;
+        case YAML_SEQUENCE_START_EVENT:
+        case YAML_MAPPING_START_EVENT:
+            if (depth == 0) {
+                rootMapping = !sequence;
+                opened = start;
+            } else if (depth == 1 && rootMapping) {
+                openKey = atKey;
+                opened = start;
+                if (!openKey && !sequence)
+                    opened = -1;
+            }
+            ++depth;
+            break;
+        case YAML_SEQUENCE_END_EVENT:
+        case YAML_MAPPING_END_EVENT: {
+            --depth;
+            // A list in brackets ends after its bracket; one over lines, at its last word.
+            const bool bracketed =
+                start < text.size() && (text.at(start) == u']' || text.at(start) == u'}');
+            const qsizetype finish = bracketed ? end : trimmedEnd(text, start);
+            if (depth == 0 && !rootMapping)
+                found.append({{QObject::tr("Document %1").arg(document + 1), {}, document},
+                              {listStart(text, opened), finish},
+                              0});
+            if (depth == 1 && rootMapping) {
+                if (!openKey && opened >= 0 && !key.isEmpty())
+                    keys.append({{key, key, -1}, {listStart(text, opened), finish}, 1});
+                atKey = !openKey;
+                key.clear();
+            }
+            break;
+        }
+        case YAML_SCALAR_EVENT:
+        case YAML_ALIAS_EVENT:
+            if (depth == 1 && rootMapping) {
+                if (atKey)
+                    key = scalar;
+                else
+                    key.clear();
+                atKey = !atKey;
+            }
+            break;
+        default: break;
+        }
+    }
+    yaml_parser_delete(&parser);
+    // Documents name the parts of a file of several; a single one's keys do.
+    if (document > 0)
+        return found;
+    return keys;
 }
 
 } // namespace jot

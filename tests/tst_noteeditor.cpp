@@ -70,6 +70,7 @@ private Q_SLOTS:
     void editsDataFilesAsPlainText();
     void colorsNumbersAndChecksDataFiles();
     void editsAListOfRecordsAsATable();
+    void showsEachListOfAFileAsATab();
     void checksATableAgainstItsSchema();
     void scrollsAWideTableAcross();
     void readsTheNoteWithLinksAndBoxesToTick();
@@ -994,6 +995,48 @@ void TestNoteEditor::colorsNumbersAndChecksDataFiles()
     QTest::mouseClick(m_window.get(), Qt::LeftButton, {}, middle.toPoint());
     QTRY_COMPARE(body->property("cursorPosition").toInt(), styler->problemPosition());
     QVERIFY(styler->problemPosition() > 0);
+}
+
+void TestNoteEditor::showsEachListOfAFileAsATab()
+{
+    const QByteArray text = "# The ferry\ntitle: Ashfall\ncast:\n  - name: Mara\n    age: 31\n"
+                            "crew:\n  - name: Ox\n    job: cook\n";
+    QFile file(m_root + u"/ensemble.yaml"_s);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write(text);
+    file.close();
+    m_vault->setCurrent(u"ensemble.yaml"_s);
+
+    // Several lists open as a table too, a tab for each, the first one shown.
+    QQuickItem *view = find(u"tableView"_s);
+    QTRY_VERIFY(view->isVisible());
+    auto *records = view->property("records").value<DataTableModel *>();
+    QCOMPARE(records->partNames(), (QStringList{u"cast"_s, u"crew"_s}));
+    QVERIFY(view->findChild<QQuickItem *>(u"partTabs"_s)->isVisible());
+    QCOMPARE(records->columns(), (QStringList{u"name"_s, u"age"_s}));
+
+    // Another tab is another list; an edit there rewrites its part alone, and the tab stays.
+    records->setPart(1);
+    QCOMPARE(records->columns(), (QStringList{u"name"_s, u"job"_s}));
+    QVERIFY(records->setCell(0, 1, u"captain"_s));
+    QTRY_COMPARE(m_vault->currentText(),
+                 QString::fromUtf8(text).replace(u"job: cook"_s, u"job: captain"_s));
+    QCOMPARE(records->part(), 1);
+    records->undo();
+    QCOMPARE(records->part(), 1);
+    QTRY_COMPARE(m_vault->currentText(), QString::fromUtf8(text));
+
+    // A schema describes the lists under their keys, and marks the tab's own cells.
+    QFile schema(m_root + u"/ensemble.schema.json"_s);
+    QVERIFY(schema.open(QIODevice::WriteOnly));
+    schema.write(R"({"properties": {"crew": {"items": {"properties": {
+        "job": {"enum": ["cook", "pilot"]}}}}}})");
+    schema.close();
+    QVERIFY(records->setCell(0, 1, u"captain"_s));
+    QCOMPARE(records->schemaFile(), m_root + u"/ensemble.schema.json"_s);
+    QCOMPARE(records->data(records->index(0, 1), DataTableModel::ProblemRole).toString(),
+             u"should be one of \"cook\", \"pilot\""_s);
+    QCOMPARE(records->choices(1), (QStringList{u"cook"_s, u"pilot"_s}));
 }
 
 void TestNoteEditor::editsAListOfRecordsAsATable()
