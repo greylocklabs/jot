@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QColor>
+#include <QList>
 #include <QSize>
 #include <QString>
 
@@ -16,6 +17,12 @@ struct DiagramStyle
     QColor surfaceAlt;
     QColor border;
     QColor accent;
+    QColor danger;
+    /// Fills for timeline sections and chart series, in order; Pele repeats them after the last.
+    QList<QColor> series;
+    /// Text on a light fill, and on a dark one.
+    QColor onLight;
+    QColor onDark;
     QString fontFamily;
     QString monoFamily;
     int pixelSize = 15;

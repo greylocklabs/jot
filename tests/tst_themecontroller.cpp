@@ -6,10 +6,12 @@
 #include <QDir>
 #include <QFile>
 #include <QFontDatabase>
+#include <QSet>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
 
+#include <algorithm>
 #include <cmath>
 
 using namespace jot;
@@ -110,6 +112,17 @@ void TestThemeController::everyBuiltInThemeReads()
         QVERIFY2(greylock::color::contrastRatio(theme->dangerText(), theme->danger()) >= 4.5,
                  qPrintable(id));
         QCOMPARE(theme->dangerText() == theme->text() || theme->dangerText() == theme->bg(), true);
+        // Diagram sections get eight colors of their own, each with text that reads on it.
+        const jot::DiagramStyle diagram = theme->diagramStyle({}, 15);
+        QSet<QString> distinct;
+        for (const QColor &fill : diagram.series)
+            distinct.insert(fill.name());
+        QCOMPARE(distinct.size(), 8);
+        for (const QColor &fill : diagram.series) {
+            const double reads = std::max(greylock::color::contrastRatio(diagram.onLight, fill),
+                                          greylock::color::contrastRatio(diagram.onDark, fill));
+            QVERIFY2(reads >= 4.5, qPrintable(id + u": "_s + fill.name()));
+        }
     }
     QVERIFY(theme->load(QStringLiteral("callie")).isEmpty());
 }

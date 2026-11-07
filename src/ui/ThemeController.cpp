@@ -10,6 +10,8 @@
 #include <QFontDatabase>
 #include <QTimer>
 
+#include <cmath>
+
 namespace jot {
 
 ThemeController::ThemeController(QObject *parent)
@@ -96,6 +98,21 @@ QColor ThemeController::tint(const QColor &color, qreal alpha) const
 QColor ThemeController::dangerEdge() const
 {
     return m_spec.colors.danger.darker(140);
+}
+
+DiagramStyle ThemeController::diagramColors() const
+{
+    // Sticker-colored like calendars: the accent's hue first, then hues 135 degrees on, so
+    // neighboring sections differ and all eight do.
+    const greylock::ThemeSpec::Calendar &sticker = m_spec.calendar;
+    const double hue = greylock::color::toOklch(accent()).hue;
+    DiagramStyle style;
+    for (int i = 0; i < 8; ++i)
+        style.series.append(greylock::color::fromOklch(
+            {sticker.lightness, sticker.chroma, std::fmod(hue + i * 135.0, 360.0)}));
+    style.onLight = m_spec.dark ? bg() : text();
+    style.onDark = m_spec.dark ? text() : bg();
+    return style;
 }
 
 QColor ThemeController::dangerText() const
