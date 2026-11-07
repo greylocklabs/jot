@@ -5,6 +5,11 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ## Unreleased
 
+### Added
+
+- The links to a note and its mentions without a link fold under their headings, open to begin
+  with.
+
 ### Changed
 
 - Trash sits at the foot of the sidebar with a 🗑️ emoji, which can be changed or removed from its

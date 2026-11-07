@@ -4,22 +4,59 @@ import QtQuick
 import QtQuick.Controls
 
 /// Under a note: the lines in other notes that link to it, and the notes that name it
-/// without a link. Each opens its note.
+/// without a link. Each opens its note, and each list folds under its heading.
 Column {
     id: root
 
     visible: Vault.backlinks.linked + Vault.backlinks.unlinked > 0
     spacing: Theme.space2
 
-    component Heading: Text {
+    // Folds the list under it, open to begin with. One with nothing under it does not fold.
+    component Heading: AbstractButton {
+        id: heading
+
+        property bool open: true
+        property bool folds: true
+
         topPadding: Theme.space5
         bottomPadding: Theme.space2
-        color: Theme.textFaint
-        font.family: Theme.fontFamily
-        font.pixelSize: Theme.textXs
-        font.weight: Theme.weightBold
-        font.capitalization: Font.AllUppercase
-        font.letterSpacing: 0.6
+        enabled: folds
+        hoverEnabled: true
+        focusPolicy: Qt.NoFocus
+        Accessible.name: text
+        Accessible.checkable: folds
+        Accessible.checked: open
+        onClicked: open = !open
+
+        HoverHandler {
+            enabled: heading.folds
+            cursorShape: Qt.PointingHandCursor
+        }
+
+        contentItem: Row {
+            spacing: Theme.space2
+
+            Glyph {
+                anchors.verticalCenter: parent.verticalCenter
+                visible: heading.folds
+                name: heading.open ? "chevron-down" : "chevron-right"
+                color: heading.hovered ? Theme.textMuted : Theme.textFaint
+                stroke: Theme.smallGlyphStroke
+                implicitWidth: Theme.smallGlyphSize
+                implicitHeight: Theme.smallGlyphSize
+            }
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: heading.text
+                color: heading.hovered ? Theme.textMuted : Theme.textFaint
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.textXs
+                font.weight: Theme.weightBold
+                font.capitalization: Font.AllUppercase
+                font.letterSpacing: 0.6
+            }
+        }
+        background: null
     }
 
     component Entry: AbstractButton {
@@ -81,6 +118,10 @@ Column {
     }
 
     Heading {
+        id: linkedHeading
+
+        objectName: "linkedHeading"
+        folds: Vault.backlinks.linked > 0
         text: Vault.backlinks.linked === 0 ? qsTr("No links to this note") : Vault.backlinks.linked
                                              === 1 ? qsTr("1 link to this note") : qsTr(
                                                          "%1 links to this note").arg(
@@ -91,11 +132,14 @@ Column {
         model: Vault.backlinks
 
         Entry {
-            visible: !mention
+            visible: !mention && linkedHeading.open
         }
     }
 
     Heading {
+        id: mentionedHeading
+
+        objectName: "mentionedHeading"
         visible: Vault.backlinks.unlinked > 0
         text: qsTr("Mentioned without a link")
     }
@@ -104,7 +148,7 @@ Column {
         model: Vault.backlinks
 
         Entry {
-            visible: mention
+            visible: mention && mentionedHeading.open
         }
     }
 }
