@@ -137,7 +137,7 @@ private:
     bool m_systemTrash = true;
 
     /// Moves the file or folder at vault path `relative` to the desktop's trash, or to the
-    /// vault's own `.jot/trash/<stamp>` where the desktop has none.
+    /// vault's own `.jot/trash/<stamp>/<relative>` where the desktop has none.
     bool moveToTrash(const QString &relative, const QString &stamp) const;
     /// Moves the history of the note or notebook at `from` to `to`.
     bool moveHistory(const QString &from, const QString &to) const;

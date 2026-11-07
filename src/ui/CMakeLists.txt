@@ -41,6 +41,8 @@ qt_add_qml_module(jotui
         TagModel.h
         TagModel.cpp
         TaskModel.h
+        TrashModel.h
+        TrashModel.cpp
         TaskModel.cpp
         QuickCapture.h
         QuickCapture.cpp
@@ -112,6 +114,8 @@ qt_add_qml_module(jotui
         TrashConfirm.qml
         JoplinImport.qml
         TaskList.qml
+        TrashList.qml
+        TrashPreview.qml
         Toggle.qml
         UpdateDialog.qml
         Welcome.qml

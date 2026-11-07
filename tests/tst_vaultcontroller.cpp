@@ -987,6 +987,32 @@ void TestVaultController::trashesTheNoteShown()
     QVERIFY(!QFileInfo::exists(m_root + u"/Recipes/Pancakes.md"_s));
     QCOMPARE(m_vault->current(), QString());
     QCOMPARE(m_vault->noteCount(), 14);
+
+    // Trash lists it, in place of the tasks, to read and bring back.
+    m_vault->setShowingTasks(true);
+    m_vault->setShowingTrash(true);
+    QVERIFY(!m_vault->showingTasks());
+    TrashModel *trash = m_vault->trash();
+    QCOMPARE(trash->rowCount(), 1);
+    const QModelIndex first = trash->index(0);
+    QCOMPARE(first.data(TrashModel::TitleRole).toString(), u"Pancakes"_s);
+    QCOMPARE(first.data(TrashModel::FolderRole).toString(), u"Recipes"_s);
+    QVERIFY(!first.data(TrashModel::DeletedRole).toString().isEmpty());
+    const QString location = first.data(TrashModel::LocationRole).toString();
+    QVERIFY(m_vault->trashedText(location).contains(u"flour"_s, Qt::CaseInsensitive));
+    // Only what is listed can be read through it.
+    QCOMPARE(m_vault->trashedText(m_root + u"/Recipes/Pasta.md"_s), QString());
+
+    QCOMPARE(m_vault->restoreTrashed(location), u"Recipes/Pancakes.md"_s);
+    QCOMPARE(m_vault->current(), u"Recipes/Pancakes.md"_s);
+    QVERIFY(!m_vault->showingTrash());
+    QCOMPARE(m_vault->noteCount(), 15);
+    QCOMPARE(trash->rowCount(), 0);
+    QCOMPARE(m_vault->restoreTrashed(location), QString());
+    // Tasks takes the column back from Trash.
+    m_vault->setShowingTrash(true);
+    m_vault->setShowingTasks(true);
+    QVERIFY(!m_vault->showingTrash());
 }
 
 void TestVaultController::followsLinksAndMakesMissingNotes()

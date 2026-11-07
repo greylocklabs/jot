@@ -44,6 +44,7 @@ private Q_SLOTS:
     void notebookMenuMakesANotebookInside();
     void notebookMenuMakesADataFile();
     void trashAsksFirst();
+    void trashShowsWhatWasDeletedAndBringsItBack();
     void columnBordersDragToResize();
     void deleteAsksFirstForNotesAndNotebooks();
     void searchHandsTheKeysBackToTheList();
@@ -422,6 +423,55 @@ void TestLists::trashAsksFirst()
                      m_window->contentItem())));
     click(confirm);
     QTRY_VERIFY(!QFileInfo::exists(m_root + u"/Recipes/Sourdough.md"_s));
+}
+
+void TestLists::trashShowsWhatWasDeletedAndBringsItBack()
+{
+    QVERIFY(m_vault->trashNote(u"Recipes/Sourdough.md"_s, false));
+    QTest::failOnWarning(QRegularExpression(u"qml|Error|Unable"_s));
+    QQmlComponent listComponent(m_engine.get());
+    listComponent.loadFromModule("Jot.Ui", "TrashList");
+    std::unique_ptr<QObject> listObject(listComponent.create());
+    QVERIFY2(listObject, qPrintable(listComponent.errorString()));
+    QQmlComponent previewComponent(m_engine.get());
+    previewComponent.loadFromModule("Jot.Ui", "TrashPreview");
+    std::unique_ptr<QObject> previewObject(previewComponent.create());
+    QVERIFY2(previewObject, qPrintable(previewComponent.errorString()));
+    m_window->resize(1100, 700);
+    auto *list = qobject_cast<QQuickItem *>(listObject.get());
+    list->setParentItem(m_window->contentItem());
+    list->setPosition({320, 0});
+    list->setSize({320, 700});
+    auto *preview = qobject_cast<QQuickItem *>(previewObject.get());
+    preview->setParentItem(m_window->contentItem());
+    preview->setPosition({640, 0});
+    preview->setSize({460, 700});
+    qobject_cast<QQuickItem *>(m_noteList.get())->setVisible(false);
+
+    click(entry(u"Trash"_s));
+    QTRY_VERIFY(m_vault->showingTrash());
+    QQuickItem *row = nullptr;
+    QTRY_VERIFY((row = findItem(
+                     [](QQuickItem *item) {
+                         return item->isVisible() &&
+                                item->property("title").toString() == u"Sourdough"_s;
+                     },
+                     list)));
+    click(row);
+    QTRY_VERIFY(!list->property("chosen").toString().isEmpty());
+    preview->setProperty("location", list->property("chosen"));
+    QQuickItem *text =
+        findItem([](QQuickItem *item) { return item->objectName() == u"trashedText"_s; }, preview);
+    QVERIFY(text);
+    QVERIFY(!text->property("text").toString().isEmpty());
+    QVERIFY(!QFileInfo::exists(m_root + u"/Recipes/Sourdough.md"_s));
+    click(findItem([](QQuickItem *item) { return item->objectName() == u"restoreTrashed"_s; },
+                   preview));
+    QTRY_VERIFY(QFileInfo::exists(m_root + u"/Recipes/Sourdough.md"_s));
+    QVERIFY(!m_vault->showingTrash());
+    QCOMPARE(m_vault->current(), u"Recipes/Sourdough.md"_s);
+    // What it showed is gone, so the list chooses nothing.
+    QTRY_COMPARE(list->property("chosen").toString(), QString());
 }
 
 void TestLists::columnBordersDragToResize()

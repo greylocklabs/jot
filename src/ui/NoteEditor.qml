@@ -115,6 +115,7 @@ Rectangle {
     function openLink(link) {
         if (link.startsWith("jot-tag:")) {
             Vault.showingTasks = false
+            Vault.showingTrash = false
             Vault.notes.tag = decodeURIComponent(link.slice("jot-tag:".length))
         } else if (link.startsWith("jot-note:")) {
             Vault.follow(decodeURIComponent(link.slice("jot-note:".length)), true)

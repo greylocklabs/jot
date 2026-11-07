@@ -406,7 +406,7 @@ ApplicationWindow {
 
                 onTitleEditRequested: editor.editTitle()
                 onHistoryRequested: window.run("history")
-                visible: Vault.isOpen && !Vault.showingTasks
+                visible: Vault.isOpen && !Vault.showingTasks && !Vault.showingTrash
                 anchors {
                     left: sidebar.right
                     top: parent.top
@@ -425,13 +425,34 @@ ApplicationWindow {
                 onResized: width => Settings.noteListWidth = width
                 onReset: Settings.resetNoteListWidth()
             }
+            TrashList {
+                id: trashList
+
+                visible: Vault.isOpen && Vault.showingTrash
+                anchors {
+                    left: sidebar.right
+                    top: parent.top
+                    bottom: parent.bottom
+                }
+                width: columns.noteListWidth
+            }
+            TrashPreview {
+                location: trashList.chosen
+                visible: Vault.isOpen && Vault.showingTrash
+                anchors {
+                    left: trashList.right
+                    right: parent.right
+                    top: parent.top
+                    bottom: parent.bottom
+                }
+            }
             NoteEditor {
                 id: editor
 
                 router: keys
                 onLeftNote: noteList.focusList()
 
-                visible: Vault.isOpen
+                visible: Vault.isOpen && !Vault.showingTrash
                 anchors {
                     left: noteList.right
                     right: parent.right
@@ -546,7 +567,7 @@ ApplicationWindow {
         case "previousNote":
         case "firstNote":
         case "lastNote":
-            return Vault.isOpen && !Vault.showingTasks
+            return Vault.isOpen && !Vault.showingTasks && !Vault.showingTrash
         case "editNote":
         case "readMode":
         case "copyLink":
@@ -558,8 +579,8 @@ ApplicationWindow {
         case "togglePin":
             return note && Vault.writable
         case "trash":
-            // Not while the tasks are shown, which hide the note it would ask about.
-            return note && Vault.writable && !Vault.showingTasks
+            // Not while the tasks or the trash are shown, which hide the note it would ask about.
+            return note && Vault.writable && !Vault.showingTasks && !Vault.showingTrash
         case "update":
             return Release.update !== ""
         case "whatsNew":

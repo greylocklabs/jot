@@ -176,8 +176,10 @@ Each `*.assets` folder belongs to the note with the same name. Jot hides it in t
 and shows its files under the note instead. One with no note of that name is a notebook.
 
 Where the drive has no trash, a deleted note, attachments folder or notebook goes to
-`.jot/trash/<yyyyMMdd-HHmmss>/` instead, with a number in front of a name already there:
-`2 Mara.md`.
+`.jot/trash/<yyyyMMdd-HHmmss>/` instead, with its path kept, as `A/Mara.md`. One path deleted twice
+in the same second goes to `<yyyyMMdd-HHmmss> 2/`. Jot 0.3 and earlier kept only the name, with a
+number in front of one already there (`2 Mara.md`). Jot lists what is in either trash under Trash,
+and puts it back where it was.
 
 ## Tasks
 

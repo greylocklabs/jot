@@ -113,6 +113,31 @@ Rectangle {
                 }
             }
 
+            Entry {
+                id: trashEntry
+
+                objectName: "trashEntry"
+                width: root.width
+                label: qsTr("Trash")
+                selected: Vault.showingTrash
+                onClicked: Vault.showingTrash = true
+
+                contentItem: Item {
+                    Text {
+                        anchors {
+                            left: parent.left
+                            leftMargin: Theme.space5
+                            verticalCenter: parent.verticalCenter
+                        }
+                        text: trashEntry.label
+                        color: trashEntry.selected ? Theme.text : Theme.textMuted
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.textMd
+                        font.weight: trashEntry.selected ? Theme.weightBold : Theme.weightStrong
+                    }
+                }
+            }
+
             Item {
                 width: root.width
                 height: notebooksHeading.height
@@ -188,6 +213,7 @@ Rectangle {
                               === path
                     onClicked: {
                         Vault.showingTasks = false
+                        Vault.showingTrash = false
                         Vault.notes.notebook = path
                     }
                     TapHandler {
@@ -527,6 +553,7 @@ Rectangle {
             enabled: Vault.writable
             onTriggered: {
                 Vault.showingTasks = false
+                Vault.showingTrash = false
                 Vault.notes.tag = ""
                 Vault.notes.notebook = notebookMenu.path
                 if (Vault.newNote() !== "")
@@ -547,6 +574,7 @@ Rectangle {
                     text: modelData.label
                     onTriggered: {
                         Vault.showingTasks = false
+                        Vault.showingTrash = false
                         Vault.notes.tag = ""
                         Vault.notes.notebook = notebookMenu.path
                         if (Vault.newFile(modelData.kind) !== "")
