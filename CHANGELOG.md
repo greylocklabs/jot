@@ -19,6 +19,11 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 - Removing a table row or column asks first: its X turns into a trash can in the same place, and
   a second click removes it.
 
+### Fixed
+
+- Shift and the mouse wheel scroll a table across over its column and row headers too, not only
+  over its cells.
+
 ## 0.3.0 - 2026-11-06
 
 ### Added
