@@ -7,6 +7,9 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ### Added
 
+- Trash in the sidebar lists the notes deleted from the vault, from the desktop's trash and Jot's
+  own, newest first. Read one there, or restore it where it was, with its attachments. Jot never
+  empties the trash.
 - JSON, CSV, TSV and YAML files in a vault show in the note list with their extension, count in
   their notebook, turn up in search and the switcher, and open in Jot from a link, to edit as
   text.

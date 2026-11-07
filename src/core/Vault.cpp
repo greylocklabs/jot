@@ -440,13 +440,13 @@ bool Vault::moveToTrash(const QString &relative, const QString &stamp) const
     const QString file = absolute(relative);
     if (m_systemTrash && QFile::moveToTrash(file))
         return true;
-    const QString folder = absolute(kSettingsFolder + u"/trash/"_s + stamp);
-    const QString name = relative.section(u'/', -1);
-    QString target = folder + u'/' + name;
-    // Two of one name trashed in the same second keep both.
+    // Its path is kept, as a sync keeps it, so it can go back where it was.
+    const QString trash = absolute(kSettingsFolder + u"/trash/"_s);
+    QString target = trash + stamp + u'/' + relative;
+    // One path trashed twice in the same second keeps both.
     for (int n = 2; QFileInfo::exists(target); ++n)
-        target = folder + u'/' + u"%1 %2"_s.arg(n).arg(name);
-    return QDir().mkpath(folder) && QDir().rename(file, target);
+        target = trash + stamp + u' ' + QString::number(n) + u'/' + relative;
+    return QDir().mkpath(QFileInfo(target).path()) && QDir().rename(file, target);
 }
 
 bool Vault::trashFolder(const QString &path, QString *error) const

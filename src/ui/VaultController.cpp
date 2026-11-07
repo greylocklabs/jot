@@ -1043,6 +1043,58 @@ void VaultController::setShowingTasks(bool showing)
         return;
     m_showingTasks = showing;
     Q_EMIT showingTasksChanged();
+    if (showing)
+        setShowingTrash(false);
+}
+
+void VaultController::setShowingTrash(bool showing)
+{
+    if (showing)
+        reloadTrash();
+    if (m_showingTrash == showing)
+        return;
+    m_showingTrash = showing;
+    Q_EMIT showingTrashChanged();
+    if (showing)
+        setShowingTasks(false);
+}
+
+void VaultController::reloadTrash()
+{
+    // Tests keep to the vault's own trash, so a test never reads the desktop's.
+    m_trash.setItems(m_vault
+                         ? VaultTrash(*m_vault, m_systemTrash ? m_desktopTrash : QString()).list()
+                         : QList<TrashedNote>());
+}
+
+QString VaultController::restoreTrashed(const QString &location)
+{
+    const std::optional<TrashedNote> item = m_trash.item(location);
+    if (!m_vault || !m_index || !item)
+        return {};
+    QString error;
+    const std::optional<QString> path =
+        VaultTrash(*m_vault, m_systemTrash ? m_desktopTrash : QString()).restore(*item, &error);
+    if (!path) {
+        qCWarning(lcVault) << "could not restore" << item->path << error;
+        setProblem(tr("Could not bring the note back: %1").arg(error));
+        reloadTrash();
+        return {};
+    }
+    m_index->update({*path});
+    reloadModels();
+    reloadTrash();
+    setShowingTrash(false);
+    setCurrent(*path);
+    return *path;
+}
+
+QString VaultController::trashedText(const QString &location) const
+{
+    if (!m_trash.item(location))
+        return {};
+    QString error;
+    return notefile::read(location, &error).value_or(QString());
 }
 
 bool VaultController::rewriteNote(
@@ -1236,6 +1288,8 @@ bool VaultController::trashNote(const QString &path, bool keepAttachments)
     if (path == m_current)
         setCurrent({});
     reloadModels();
+    if (m_showingTrash)
+        reloadTrash();
     return true;
 }
 

@@ -1,5 +1,6 @@
 #include "jot/FrontMatter.h"
 #include "jot/Vault.h"
+#include "jot/VaultTrash.h"
 
 #include <QDir>
 #include <QDirIterator>
@@ -7,6 +8,7 @@
 #include <QFileInfo>
 #include <QTemporaryDir>
 #include <QTest>
+#include <QUrl>
 
 #include <unistd.h>
 
@@ -19,6 +21,9 @@ class TestVault : public QObject
 
 private Q_SLOTS:
     void init();
+    void listsAndRestoresItsOwnTrash();
+    void readsEveryLayoutOfItsOwnTrash();
+    void findsTheVaultsNotesInTheDesktopTrash();
 
     void createRecordsTheFormat();
     void removesEmptyAttachmentFolders();
@@ -265,6 +270,115 @@ void TestVault::keepsItsOwnTrashWhereTheDriveHasNone()
     QVERIFY(!QFileInfo::exists(m_vault->absolute(u"A/Mara.assets"_s)));
     // The trash is out of sight: not a notebook, not a note.
     QCOMPARE(m_vault->entries(), (QList<VaultEntry>{{u"A"_s, true}, {u"B"_s, true}}));
+}
+
+void TestVault::listsAndRestoresItsOwnTrash()
+{
+    m_vault->setSystemTrash(false);
+    write(u"A/Mara.md"_s, "first\n");
+    write(u"A/Mara.assets/sketch.png"_s);
+    write(u"B/Mara.md"_s, "second\n");
+    QString error;
+    QVERIFY2(m_vault->trashNote(u"A/Mara.md"_s, &error), qPrintable(error));
+    QVERIFY2(m_vault->trashNote(u"B/Mara.md"_s, &error), qPrintable(error));
+    const VaultTrash trash(*m_vault, {});
+    QList<TrashedNote> found = trash.list();
+    QCOMPARE(found.size(), 2);
+    const auto at = [&found](const QString &path) {
+        return *std::ranges::find_if(found,
+                                     [&path](const TrashedNote &n) { return n.path == path; });
+    };
+    // Each keeps the folder it was in, and its attachments.
+    QVERIFY(!at(u"A/Mara.md"_s).assets.isEmpty());
+    QVERIFY(at(u"B/Mara.md"_s).assets.isEmpty());
+    QVERIFY(at(u"A/Mara.md"_s).deleted.isValid());
+
+    QCOMPARE(trash.restore(at(u"A/Mara.md"_s), &error), std::optional(u"A/Mara.md"_s));
+    QVERIFY(QFileInfo::exists(m_vault->absolute(u"A/Mara.assets/sketch.png"_s)));
+    QCOMPARE(trash.list().size(), 1);
+    // Its place taken since, it comes back beside the note there.
+    write(u"B/Mara.md"_s, "new\n");
+    QCOMPARE(trash.restore(at(u"B/Mara.md"_s), &error), std::optional(u"B/Mara 2.md"_s));
+    QFile back(m_vault->absolute(u"B/Mara 2.md"_s));
+    QVERIFY(back.open(QIODevice::ReadOnly));
+    QCOMPARE(back.readAll(), QByteArray("second\n"));
+    QVERIFY(trash.list().isEmpty());
+    // What is gone already cannot come back twice.
+    QVERIFY(!trash.restore(at(u"B/Mara.md"_s), &error));
+    QVERIFY(!error.isEmpty());
+}
+
+void TestVault::readsEveryLayoutOfItsOwnTrash()
+{
+    // As Jot 0.3 kept it, with only the name; as a sync keeps it, with the path; and a folder
+    // whose name is no stamp, which goes by when it was made.
+    write(u".jot/trash/20261001-120000/2 Mara.md"_s);
+    write(u".jot/trash/2026-10-02 120000 2/Story/Pitch.md"_s);
+    write(u".jot/trash/2026-10-02 120000 2/Story/Pitch.assets/face.png"_s);
+    write(u".jot/trash/2026-10-02 120000 2/Story/Pitch.assets/inside.md"_s);
+    write(u".jot/trash/odd/Notes/cast.yaml"_s);
+    write(u".jot/trash/odd/Notes/picture.png"_s);
+    const QList<TrashedNote> found = VaultTrash(*m_vault, {}).list();
+    QStringList paths;
+    for (const TrashedNote &note : found)
+        paths << note.path;
+    // Newest first; attachments are no notes of their own.
+    QCOMPARE(paths, (QStringList{u"Notes/cast.yaml"_s, u"Story/Pitch.md"_s, u"2 Mara.md"_s}));
+    QCOMPARE(found.at(1).deleted, QDateTime(QDate(2026, 10, 2), QTime(12, 0)));
+    QCOMPARE(found.at(2).deleted, QDateTime(QDate(2026, 10, 1), QTime(12, 0)));
+    QVERIFY(found.at(1).assets.endsWith(u"Story/Pitch.assets"_s));
+}
+
+void TestVault::findsTheVaultsNotesInTheDesktopTrash()
+{
+    QTemporaryDir desktop;
+    const QString root = m_vault->root();
+    // As the desktop records what it trashed: the old path, percent-encoded, and when.
+    const auto trashed = [&desktop](const QString &name, const QString &was, const QString &when,
+                                    bool folder = false) {
+        const QString file = desktop.filePath(u"files/"_s + name);
+        QVERIFY(QDir().mkpath(folder ? file : QFileInfo(file).path()));
+        if (!folder) {
+            QFile out(file);
+            QVERIFY(out.open(QIODevice::WriteOnly));
+            out.write("x\n");
+        }
+        QVERIFY(QDir().mkpath(desktop.filePath(u"info"_s)));
+        QFile info(desktop.filePath(u"info/"_s + name + u".trashinfo"_s));
+        QVERIFY(info.open(QIODevice::WriteOnly));
+        info.write("[Trash Info]\nPath=" + QUrl::toPercentEncoding(was, "/") +
+                   "\nDeletionDate=" + when.toUtf8() + "\n");
+    };
+    trashed(u"Big Day.md"_s, root + u"/Plans/Big Day.md"_s, u"2026-11-01T10:00:00"_s);
+    trashed(u"Big Day.assets"_s, root + u"/Plans/Big Day.assets"_s, u"2026-11-01T10:00:01"_s, true);
+    trashed(u"Cast"_s, root + u"/Story/Cast"_s, u"2026-11-02T09:00:00"_s, true);
+    QVERIFY(QDir().mkpath(desktop.filePath(u"files/Cast/Mara.assets"_s)));
+    QFile mara(desktop.filePath(u"files/Cast/Mara.md"_s));
+    QVERIFY(mara.open(QIODevice::WriteOnly));
+    mara.close();
+    // Not from this vault, or Jot's own folder.
+    trashed(u"Elsewhere.md"_s, u"/somewhere/else/Elsewhere.md"_s, u"2026-11-03T09:00:00"_s);
+    trashed(u"state.md"_s, root + u"/.jot/state.md"_s, u"2026-11-03T09:00:00"_s);
+
+    const VaultTrash trash(*m_vault, desktop.path());
+    const QList<TrashedNote> found = trash.list();
+    QCOMPARE(found.size(), 2);
+    QCOMPARE(found.at(0).path, u"Story/Cast/Mara.md"_s);
+    QVERIFY(found.at(0).assets.endsWith(u"Cast/Mara.assets"_s));
+    QCOMPARE(found.at(1).path, u"Plans/Big Day.md"_s);
+    QCOMPARE(found.at(1).deleted, QDateTime(QDate(2026, 11, 1), QTime(10, 0)));
+    QCOMPARE(found.at(1).records.size(), 2);
+
+    // Back with its attachments, and the desktop's records of both gone.
+    QString error;
+    QCOMPARE(trash.restore(found.at(1), &error), std::optional(u"Plans/Big Day.md"_s));
+    QVERIFY(QFileInfo(m_vault->absolute(u"Plans/Big Day.assets"_s)).isDir());
+    QVERIFY(!QFileInfo::exists(desktop.filePath(u"info/Big Day.md.trashinfo"_s)));
+    QVERIFY(!QFileInfo::exists(desktop.filePath(u"info/Big Day.assets.trashinfo"_s)));
+    // One note out of a trashed notebook.
+    QCOMPARE(trash.restore(found.at(0), &error), std::optional(u"Story/Cast/Mara.md"_s));
+    QVERIFY(QFileInfo::exists(desktop.filePath(u"info/Cast.trashinfo"_s)));
+    QCOMPARE(trash.list().size(), 0);
 }
 
 void TestVault::trashesANotebookWithEverythingInIt()
