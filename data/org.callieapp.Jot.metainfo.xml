@@ -36,6 +36,23 @@
   </categories>
 
   <releases>
+    <release version="0.3.0" date="2026-11-06">
+      <description>
+        <ul>
+          <li>JSON, CSV, TSV and YAML files in a vault show in the note list with their extension, count in their notebook, turn up in search and the switcher, and open in Jot from a link, to edit as text.</li>
+          <li>Data files are colored by their kind, JSON and YAML by their syntax and CSV and TSV column by column, with line numbers and the bracket by the cursor matched to its partner. When one stops reading as its kind, a line above it says where and why, and a click goes there.</li>
+          <li>A JSON, CSV or TSV file holding a list of records opens as a table: a row per record and a column per field. Edit cells in place, sort by a column, filter rows, add and remove rows and columns, rename columns, and undo. JSON keeps its numbers, booleans and nulls, and nested values open in an editor of their own. Saving rewrites only what changed, so the rest of the file keeps its formatting, key order, quoting and line endings. Values that differ in kind from the rest of their column are marked. "Edit as text" shows the file as it is.</li>
+          <li>A data file with a JSON Schema beside it, &lt;name&gt;.schema.json or the file its $schema names, is checked against it: the table marks each value that breaks it, says why, and offers the values the schema lists while you type. jot check data/*.json does the same from the command line, printing file:line:column: problem and exiting non-zero, for CI.</li>
+          <li>Mermaid diagrams in a mermaid code block are drawn in place, in the theme's colors and the note's font, in the editor and in Read. Put the cursor in the block to edit its text. A diagram with a mistake in it stays as code. Drawn by Pele, inside Jot: nothing is fetched from the web.</li>
+          <li>A YAML file holding a list of mappings opens as a table too. Edits keep its comments, key order and quoting wherever the values did not change, and nested lists and mappings edit as JSON.</li>
+          <li>New, in the title bar, and New file, in a notebook's menu, make a JSON, CSV, TSV or YAML file that starts with one example record, so it opens as a table. A new note still empty, named people.csv, becomes a CSV file the same way.</li>
+          <li>Ctrl+Q quits Jot, and F5 syncs.</li>
+          <li>Settings, Developer: Developer mode shows each note's file path under its title, to copy, and Log debug details writes Jot's debug lines to its log, as in Callie.</li>
+          <li>Back and forward sit beside the title, and the title bar's buttons are spaced as in Callie.</li>
+          <li>Delete, and Edit as table, line up with the first line of a note's title.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.0" date="2026-11-03">
       <description>
         <ul>
