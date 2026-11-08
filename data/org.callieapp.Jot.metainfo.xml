@@ -36,6 +36,28 @@
   </categories>
 
   <releases>
+    <release version="0.4.1" date="2026-11-07">
+      <description>
+        <ul>
+          <li>The links to a note and its mentions without a link fold under their headings, open to begin with.</li>
+          <li>Trash can permanently delete a note, or empty itself, each after asking.</li>
+          <li>Searching notes also finds those in the trash, listed under In the trash; choosing one shows it in Trash. A setting leaves the trash out. Trash has a search of its own, and right-clicking a note there restores or permanently deletes it.</li>
+          <li>Ctrl+Z and Ctrl+Shift+Z outside the editor undo and redo moving a note to the trash or bringing it back, as well as ticking to-dos. One that would move a note to the trash asks first.</li>
+          <li>Moving a notebook to the trash can be undone and redone too, bringing it back with everything left in it.</li>
+          <li>Resting on a button that is off says why, as on Edit as table when the text is no list of records, or New note in Trash.</li>
+          <li>Trash sits at the foot of the sidebar with a 🗑️ emoji, which can be changed or removed from its right-click menu.</li>
+          <li>Tasks has a ✅ emoji in the sidebar, which can be changed or removed from its right-click menu as Trash's can.</li>
+          <li>The + button makes a note straight away, as Ctrl+N does; a note's extension can be changed after, and data files are still in a notebook's right-click menu. In Trash it is off, as there is no notebook for the note to go in.</li>
+          <li>The Vi status line is flat, with only the mode on a color of its own, so nothing on it looks like a button.</li>
+          <li>The Vi status line says how far through the file the cursor is, from 0% on the first line to 100% on the last, rather than All, Top or Bot.</li>
+          <li>Jot keeps deleted notes in its own trash, in the vault's .jot/trash folder, rather than the desktop's. A setting under General either keeps them until they are deleted or hands them to the desktop's trash after 30 days.</li>
+          <li>Settings lists its tabs down the left, under its title, and keeps one size, scrolling a tab only when the window is too small for it.</li>
+          <li>Choosing Trash no longer leaves the notebook or tag chosen before highlighted, and the trash list's rows are evenly padded.</li>
+          <li>Search results show when each note last changed, rather than 12/31/69.</li>
+          <li>In vi mode, leaving Insert no longer can leave a second cursor drawn on the note.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.4.0" date="2026-11-07">
       <description>
         <ul>
