@@ -16,6 +16,7 @@ private Q_SLOTS:
     void initTestCase();
     void drawsFormulas();
     void saysWhatIsWrong();
+    void leavesDefinitionsAsWritten();
 
 private:
     QTemporaryDir m_dir;
@@ -59,6 +60,17 @@ void TestMath::saysWhatIsWrong()
     const MathRenderer::Drawn wrong = MathRenderer::instance().draw(u"x}"_s, false, 16, Qt::black);
     QVERIFY(!wrong.ok());
     QVERIFY(wrong.error.contains(u"'}'"_s));
+}
+
+void TestMath::leavesDefinitionsAsWritten()
+{
+    // A command that calls itself would never finish, and one defined would last for every
+    // formula after, so neither is drawn.
+    MathRenderer &math = MathRenderer::instance();
+    QVERIFY(!math.draw(u"\\newcommand{\\a}{\\a\\a}\\a"_s, false, 16, Qt::black).ok());
+    QVERIFY(!math.draw(u"\\def\\b{x}\\b"_s, true, 16, Qt::black).ok());
+    // A command that only starts the same way is drawn.
+    QVERIFY(math.draw(u"\\delta"_s, false, 16, Qt::black).ok());
 }
 
 QTEST_MAIN(TestMath)

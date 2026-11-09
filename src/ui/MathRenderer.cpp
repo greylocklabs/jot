@@ -10,6 +10,7 @@
 #include <QImage>
 #include <QPainter>
 #include <QPainterPath>
+#include <QRegularExpression>
 #include <QStandardPaths>
 
 #include <latex.h>
@@ -71,18 +72,28 @@ bool MathRenderer::start()
     // them, which the folder's name stands for: the commit in third_party/microtex/VENDORED.txt.
     const QString root =
         QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + u"/microtex/0e3707f"_s;
-    if (!QFileInfo::exists(root + u"/.clatexmath-res_root"_s)) {
+    if (!QFileInfo::exists(root)) {
+        // Unpacked beside it, then moved into place whole, so a failure halfway is tried again.
+        QDir unpacking(root + u".unpacking"_s);
+        unpacking.removeRecursively();
         QDirIterator files(u":/jot/microtex"_s, QDir::Files | QDir::Hidden,
                            QDirIterator::Subdirectories);
         while (files.hasNext()) {
             const QString from = files.next();
-            const QString to = root + from.mid(u":/jot/microtex"_s.size());
+            const QString to = unpacking.path() + from.mid(u":/jot/microtex"_s.size());
             QDir().mkpath(QFileInfo(to).path());
-            QFile::remove(to);
             if (!QFile::copy(from, to)) {
                 qCWarning(lcVault) << "could not unpack the math fonts to" << to;
+                unpacking.removeRecursively();
+                m_tried = false;
                 return false;
             }
+        }
+        if (!QDir().rename(unpacking.path(), root) && !QFileInfo::exists(root)) {
+            qCWarning(lcVault) << "could not put the math fonts in" << root;
+            unpacking.removeRecursively();
+            m_tried = false;
+            return false;
         }
     }
     try {
@@ -94,6 +105,11 @@ bool MathRenderer::start()
     return m_started;
 }
 
+QString MathRenderer::folder()
+{
+    return QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + u"/math"_s;
+}
+
 MathRenderer::Drawn MathRenderer::draw(const QString &latex, bool display, int pixelSize,
                                        const QColor &color)
 {
@@ -102,14 +118,20 @@ MathRenderer::Drawn MathRenderer::draw(const QString &latex, bool display, int p
     if (const auto found = m_drawn.constFind(key); found != m_drawn.cend())
         return *found;
     Drawn drawn;
+    // MicroTeX expands commands a formula defines without end when they call themselves, and
+    // keeps them for every formula after, so such formulas stay as written.
+    static const QRegularExpression defines(
+        uR"(\\(?:re)?new(?:command|environment)\b|\\def\b|\\let\b)"_s);
+    if (latex.contains(defines)) {
+        drawn.error = QObject::tr("Formulas that define commands are not drawn.");
+        return drawn;
+    }
     if (!start()) {
         drawn.error = QObject::tr("Math cannot be drawn here.");
         return drawn;
     }
-    const QString folder =
-        QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + u"/math"_s;
     const QString path =
-        folder + u'/' +
+        folder() + u'/' +
         QString::fromLatin1(
             QCryptographicHash::hash(key.toUtf8(), QCryptographicHash::Sha1).toHex()) +
         u"@2x.png"_s;
@@ -143,7 +165,7 @@ MathRenderer::Drawn MathRenderer::draw(const QString &latex, bool display, int p
             }
         }
         const QImage image = canvas.copy(inked);
-        QDir().mkpath(folder);
+        QDir().mkpath(folder());
         if (!QFileInfo::exists(path) && !image.save(path))
             throw std::runtime_error("could not save the drawing");
         drawn.path = path;
