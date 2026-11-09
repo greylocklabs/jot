@@ -122,7 +122,6 @@ Rectangle {
         }
         if (!recorder.available || body.readOnly)
             return false
-        recordAt = body.cursorPosition
         recordNote = Vault.current
         recordLeft = false
         recorder.start(qsTr("Recording %1").arg(new Date().toLocaleString(Qt.locale(),
@@ -133,9 +132,9 @@ Rectangle {
     /// command palette to know.
     readonly property bool canRecord: recorder.available
     readonly property bool recording: recorder.recording
-    /// Where the recording goes in, as the cursor was when it began, and in which note: the
-    /// note it began in, under its name now, or none once the notes folder changed.
-    property int recordAt: 0
+    /// The note the recording goes in: the one it began in, under its name now, or none once
+    /// the notes folder changed. It goes in at the cursor as it is when the recording ends, as
+    /// what was typed meanwhile moves where it began.
     property string recordNote
     /// Another note was opened while recording, which stops it.
     property bool recordLeft: false
@@ -161,7 +160,7 @@ Rectangle {
             }
             const markdown = Vault.attachFiles([url])
             if (markdown !== "")
-                body.insertBlock(root.recordAt, markdown)
+                body.insertBlock(body.cursorPosition, markdown)
         }
         onFailed: why => recordingProblem.text = qsTr("Could not record: %1").arg(why)
     }
