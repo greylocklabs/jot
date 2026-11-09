@@ -164,6 +164,8 @@ QList<Heading> allHeadingsOf(QStringView body)
     // A line of = or - under a line of text makes it a heading, in a quote or a list item too:
     // the quote marks before each, and the list item's mark, set the two lines apart.
     static const QRegularExpression underline(uR"(^( *)((?:>\s?)*)( *)(=+|-+)\s*$)"_s);
+    // A rule, or an underline, is no text to underline.
+    static const QRegularExpression rule(uR"(^[\s>]*(?:[-*_=]\s*)+$)"_s);
     static const QRegularExpression text(
         uR"(^ {0,3}((?:>\s?)*) {0,3}((?:[*+-]|\d+[.)])\s+)?((?![#>|])\S.*)$)"_s);
     QList<Heading> found;
@@ -175,7 +177,7 @@ QList<Heading> allHeadingsOf(QStringView body)
             found.append({int(m.capturedLength(2)), m.captured(3).trimmed(), start,
                           m.capturedLength(1) > 0});
         } else if (const QRegularExpressionMatch u = underline.match(line);
-                   u.hasMatch() && number == lastNumber + 1) {
+                   u.hasMatch() && number == lastNumber + 1 && !rule.match(last).hasMatch()) {
             const QRegularExpressionMatch t = text.match(last);
             const auto quotes = [](const QString &marks) { return marks.count(u'>'); };
             const bool listed = t.hasMatch() && t.capturedLength(2) > 0;

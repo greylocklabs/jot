@@ -217,6 +217,11 @@ void TestNoteScan::findsHeadingsForAContentsList()
     QVERIFY(nested.at(1).nested);
     QVERIFY(!nested.at(2).nested);
     QCOMPARE(headingsOf(u"> Quote\n> ===\n\n- Item\n  ---\n\n## Later\n"_s).size(), 1);
+    // A rule under an underline is a rule, not a heading named by the underline.
+    const QList<Heading> ruled = headingsOf(u"Title\n===\n---\nA\n---\n---\n"_s);
+    QCOMPARE(ruled.size(), 2);
+    QCOMPARE(ruled.at(0).text, u"Title"_s);
+    QCOMPARE(ruled.at(1).text, u"A"_s);
 
     QVERIFY(isTocMarker(u"  ${toc} "));
     QVERIFY(!isTocMarker(u"see ${toc}"));
