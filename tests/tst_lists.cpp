@@ -52,6 +52,7 @@ private Q_SLOTS:
     void trashSitsAtTheFootWithItsOwnHighlight();
     void backlinkListsFoldUnderTheirHeadings();
     void trashDeletesForGoodOnlyOnceAsked();
+    void confirmDialogOffersAThirdChoice();
     void searchLeadsIntoTheTrash();
     void columnBordersDragToResize();
     void deleteAsksFirstForNotesAndNotebooks();
@@ -645,6 +646,57 @@ void TestLists::trashDeletesForGoodOnlyOnceAsked()
     QTest::qWait(QGuiApplication::styleHints()->mouseDoubleClickInterval());
     click(confirm);
     QTRY_COMPARE(trash->rowCount(), 0);
+}
+
+void TestLists::confirmDialogOffersAThirdChoice()
+{
+    QQmlComponent component(m_engine.get());
+    component.setData(R"(import QtQuick
+import Jot.Ui
+Item {
+    property string picked
+    function ask() {
+        dialog.destructive = false
+        dialog.otherText = "Don't save"
+        dialog.onOther = () => picked = "other"
+        dialog.onDismiss = () => picked = "stay"
+        dialog.ask("Save changes?", "", "Save", () => picked = "save")
+    }
+    function askPlain() {
+        dialog.ask("Delete?", "", "Delete", null)
+    }
+    ConfirmDialog { id: dialog }
+})",
+                      QUrl());
+    std::unique_ptr<QObject> object(component.create());
+    QVERIFY2(object, qPrintable(component.errorString()));
+    auto *item = qobject_cast<QQuickItem *>(object.get());
+    item->setParentItem(m_window->contentItem());
+    const auto named = [this](const QString &name) {
+        return findItem(
+            [&name](QQuickItem *item) { return item->isVisible() && item->objectName() == name; },
+            m_window->contentItem());
+    };
+    const auto choose = [&](const QString &button) {
+        QVERIFY(QMetaObject::invokeMethod(object.get(), "ask"));
+        QQuickItem *found = nullptr;
+        QTRY_VERIFY((found = named(button)));
+        QTest::qWait(QGuiApplication::styleHints()->mouseDoubleClickInterval());
+        click(found);
+        QTRY_VERIFY(!named(button));
+    };
+
+    choose(u"otherButton"_s);
+    QCOMPARE(object->property("picked").toString(), u"other"_s);
+    choose(u"confirmButton"_s);
+    QCOMPARE(object->property("picked").toString(), u"save"_s);
+    choose(u"cancelButton"_s);
+    QCOMPARE(object->property("picked").toString(), u"stay"_s);
+
+    // A plain question afterward has no third button left over.
+    QVERIFY(QMetaObject::invokeMethod(object.get(), "askPlain"));
+    QTRY_VERIFY(named(u"confirmButton"_s));
+    QVERIFY(!named(u"otherButton"_s));
 }
 
 void TestLists::searchLeadsIntoTheTrash()

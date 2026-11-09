@@ -42,6 +42,7 @@ const QString kLeaderKey = u"keyboard/leaderKey"_s;
 const QString kLeaderTimeout = u"keyboard/leaderTimeout"_s;
 const QString kTrashDays = u"trash/days"_s;
 const QString kSearchTrash = u"trash/search"_s;
+const QString kAutosave = u"editor/autosave"_s;
 
 /// A saved width within its bounds; 0 stays 0, the theme's own.
 int bounded(int width, int lowest, int highest)
@@ -94,6 +95,7 @@ Settings::Settings(const QString &path, QObject *parent)
     m_leaderTimeout = std::max(0, m_store.value(kLeaderTimeout, 5000).toInt());
     m_trashDays = std::max(0, m_store.value(kTrashDays, 0).toInt());
     m_searchTrash = m_store.value(kSearchTrash, true).toBool();
+    m_autosave = m_store.value(kAutosave, true).toBool();
 }
 
 QString Settings::defaultPath()
@@ -410,6 +412,15 @@ void Settings::setSearchTrash(bool on)
     Q_EMIT trashChanged();
 }
 
+void Settings::setAutosave(bool on)
+{
+    if (m_autosave == on)
+        return;
+    m_autosave = on;
+    m_store.setValue(kAutosave, on);
+    Q_EMIT autosaveChanged();
+}
+
 void Settings::reset()
 {
     setTheme({});
@@ -430,6 +441,7 @@ void Settings::reset()
     setLeaderTimeout(5000);
     setTrashDays(0);
     setSearchTrash(true);
+    setAutosave(true);
 }
 
 } // namespace jot

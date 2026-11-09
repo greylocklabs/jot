@@ -245,6 +245,29 @@ Popup {
                 }
 
                 Section {
+                    title: qsTr("Saving")
+                    visible: root.tab === "general"
+
+                    Toggle {
+                        objectName: "autosave"
+                        width: parent.width
+                        text: qsTr("Save as you type")
+                        checked: Settings.autosave
+                        onToggled: Settings.autosave = checked
+                    }
+                    Text {
+                        width: parent.width
+                        wrapMode: Text.Wrap
+                        text: Settings.autosave ? qsTr(
+                                                      "Notes are written to their files moments after you stop typing.") :
+                                                  qsTr("Notes are written only when you save with Ctrl+S. Jot asks before leaving a note with changes not yet saved, and sync leaves them out.")
+                        color: Theme.textMuted
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.textSm
+                    }
+                }
+
+                Section {
                     title: qsTr("Sync")
                     visible: root.tab === "sync"
 
