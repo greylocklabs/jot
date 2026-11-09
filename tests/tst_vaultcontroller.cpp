@@ -58,6 +58,8 @@ private Q_SLOTS:
     void savesOnlyWhenAskedWithAutosaveOff();
     void asksBeforeLeavingUnsavedChanges();
     void keepsNotesOpenInTabs();
+    void makesNotesFromTemplates();
+    void opensTodaysNote();
     void keepsPastVersionsWhileEditing();
     void restoresAPastVersion();
     void saysWhenEachVersionIsFrom();
@@ -787,6 +789,55 @@ void TestVaultController::keepsNotesOpenInTabs()
     QTRY_COMPARE(m_vault->current(), u"Ashfall/Route.md"_s);
     QCOMPARE(m_vault->tabs(), (QStringList{u"Welcome.md"_s, u"Ashfall/Route.md"_s}));
     QCOMPARE(m_vault->tabIndex(), 1);
+}
+
+void TestVaultController::makesNotesFromTemplates()
+{
+    QVERIFY(QDir(m_root).mkpath(u"Templates"_s));
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Templates/Meeting.md"_s,
+                            u"---\ntags: [meeting]\n---\n# {{title}}\n\nOn {{date}}\n"_s, &error));
+    QVERIFY(m_vault->openPath(m_root));
+    const QVariantList templates = m_vault->templates();
+    QCOMPARE(templates.size(), 1);
+    QCOMPARE(templates.first().toMap().value(u"title"_s).toString(), u"Meeting"_s);
+
+    m_vault->notes()->setNotebook(u"Recipes"_s);
+    const QString made =
+        m_vault->newNoteFromTemplate(templates.first().toMap().value(u"path"_s).toString());
+    QCOMPARE(made, u"Recipes/Untitled.md"_s);
+    QCOMPARE(m_vault->current(), made);
+    const QString text = readFile(m_root + u"/"_s + made);
+    QVERIFY(text.contains(u"created: "_s));
+    QVERIFY(text.contains(u"tags: [meeting]"_s));
+    QVERIFY(text.contains(u"# Untitled\n\nOn "_s + QDate::currentDate().toString(Qt::ISODate)));
+    QVERIFY(!text.contains(u"{{"_s));
+}
+
+void TestVaultController::opensTodaysNote()
+{
+    QVERIFY(QDir(m_root).mkpath(u"Templates"_s));
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Templates/Daily.md"_s,
+                            u"# {{date:dddd D MMMM}}\n\n- [ ] \n"_s, &error));
+    QVERIFY(m_vault->openPath(m_root));
+    m_vault->setToday(QDate(2026, 11, 8));
+    QCOMPARE(m_vault->openDailyNote(), u"Daily/2026-11-08.md"_s);
+    QCOMPARE(m_vault->current(), u"Daily/2026-11-08.md"_s);
+    QVERIFY(readFile(m_root + u"/Daily/2026-11-08.md"_s).contains(u"# Sunday 8 November\n"_s));
+    QVERIFY(m_vault->notebookPaths().contains(u"Daily"_s));
+
+    // The second time it is the same note, as it was left.
+    m_vault->edit(u"Written\n"_s);
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QCOMPARE(m_vault->openDailyNote(), u"Daily/2026-11-08.md"_s);
+    QCOMPARE(m_vault->currentText(), u"Written\n"_s);
+
+    // Without a daily template, a new day starts empty but for when it was made.
+    QVERIFY(QFile::remove(m_root + u"/Templates/Daily.md"_s));
+    m_vault->setToday(QDate(2026, 11, 9));
+    QCOMPARE(m_vault->openDailyNote(), u"Daily/2026-11-09.md"_s);
+    QVERIFY(readFile(m_root + u"/Daily/2026-11-09.md"_s).startsWith(u"---\ncreated: "_s));
 }
 
 void TestVaultController::keepsPastVersionsWhileEditing()

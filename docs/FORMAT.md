@@ -332,12 +332,19 @@ they are, so it can be read without Jot.
 ```yaml
 format: 1
 inbox: Inbox.md # where quick add puts to-dos, as a checkbox at the end
+templates: Templates # the notebook whose notes are templates
+daily: Daily # where daily notes go, one per day as YYYY-MM-DD.md
 ```
 
 - `format` is the vault's format number, as [Versioning](#versioning) says. One that is missing
   or not a whole number is read as 1.
 - `inbox` is a note's path from the vault root, with or without `.md`. One starting with `/` or
   `.`, or containing `../`, is ignored, and `Inbox.md` used instead.
+- `templates` and `daily` are notebooks' paths from the vault root, `Templates` and `Daily` when
+  missing, and ignored on the same terms as `inbox`. A new note from a template takes the
+  template's front matter keys it does not have and its text, with `{{title}}`, `{{date}}`,
+  `{{time}}`, `{{date:FORMAT}}` and `{{time:FORMAT}}` filled in, FORMAT as Obsidian writes it.
+  A daily note is made from `Daily.md` in the templates notebook, when there is one.
 
 ## Versioning
 
