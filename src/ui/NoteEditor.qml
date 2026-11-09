@@ -1208,17 +1208,10 @@ Rectangle {
         visible: Settings.outlineShown && Vault.current !== "" && !root.dataFile && root.width
                  >= implicitWidth + 480
         width: implicitWidth
-        headings: styler.headings
-        current: {
-            if (Settings.readMode || !body.activeFocus)
-                return -1
-            let under = -1
-            for (let i = 0; i < headings.length; ++i) {
-                if (headings[i].position <= body.cursorPosition)
-                    under = i
-            }
-            return under
-        }
+        // Read only while shown, as it is the whole note again after each edit.
+        headings: visible ? styler.headings : []
+        current: Settings.readMode || !body.activeFocus ? -1 : styler.headingAt(headings,
+                                                                                body.cursorPosition)
         onChosen: index => root.goToHeading(index)
     }
 

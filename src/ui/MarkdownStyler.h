@@ -62,6 +62,9 @@ public:
     [[nodiscard]] QVariantList images() const;
     [[nodiscard]] QVariantList contents() const;
     [[nodiscard]] QVariantList headings() const;
+    /// Which of `headings`, as headings() gives them, `position` is under: the last starting at
+    /// or before it, or -1.
+    Q_INVOKABLE static int headingAt(const QVariantList &headings, int position);
     [[nodiscard]] QVariantMap frontMatter() const { return m_frontMatter; }
     [[nodiscard]] bool sourceMode() const { return m_sourceMode; }
     void setSourceMode(bool source);
