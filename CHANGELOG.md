@@ -3,6 +3,13 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## Unreleased
+
+### Added
+
+- A setting to save notes only on Ctrl+S instead of as you type. A dot by the title marks changes
+  not yet saved, and Jot asks before leaving a note or quitting with any.
+
 ## 0.4.1 - 2026-11-07
 
 ### Added

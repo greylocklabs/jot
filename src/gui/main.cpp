@@ -257,8 +257,12 @@ int main(int argc, char *argv[])
                 showWindow();
             else if (key == u"add")
                 showWindow(u"quickAdd"_s);
-            else if (key == u"quit")
-                QCoreApplication::quit();
+            else if (key == u"quit") {
+                // Edits waiting for Save are asked about in the window.
+                if (vault.asksBeforeLeaving())
+                    showWindow();
+                vault.quit();
+            }
         });
     }
 

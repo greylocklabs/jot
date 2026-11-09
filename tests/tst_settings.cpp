@@ -23,6 +23,7 @@ private Q_SLOTS:
     void keepsKeyboardChoices();
     void keepsTrashChoices();
     void keepsSearchingTheTrash();
+    void keepsTheSavingChoice();
     void keepsDeveloperChoices();
     void keepsTheTasksView();
     void keepsReminderChoices();
@@ -193,6 +194,21 @@ void TestSettings::keepsSearchingTheTrash()
     QVERIFY(!Settings(path).searchTrash());
     settings.reset();
     QVERIFY(settings.searchTrash());
+}
+
+void TestSettings::keepsTheSavingChoice()
+{
+    QTemporaryDir dir;
+    const QString path = dir.filePath(u"settings.ini"_s);
+    Settings settings(path);
+    QVERIFY(settings.autosave());
+    QSignalSpy changed(&settings, &Settings::autosaveChanged);
+    settings.setAutosave(false);
+    settings.setAutosave(false);
+    QCOMPARE(changed.size(), 1);
+    QVERIFY(!Settings(path).autosave());
+    settings.reset();
+    QVERIFY(settings.autosave());
 }
 
 void TestSettings::keepsDeveloperChoices()

@@ -352,7 +352,8 @@ Rectangle {
 
                     width: parent.width - trash.width - parent.spacing - (viewSwitch.visible
                                                                           ? viewSwitch.width
-                                                                            + parent.spacing : 0)
+                                                                            + parent.spacing : 0) - (
+                               unsavedMark.visible ? unsavedMark.width + parent.spacing : 0)
                     readOnly: !Vault.writable
                     wrapMode: TextInput.Wrap
                     color: Theme.text
@@ -373,6 +374,27 @@ Rectangle {
                     Keys.onEscapePressed: {
                         show(Vault.currentTitle)
                         root.editBody()
+                    }
+                }
+                // With saving manual, typing not yet saved.
+                Rectangle {
+                    id: unsavedMark
+
+                    objectName: "unsavedMark"
+                    y: parent.firstLineMiddle - height / 2
+                    width: 10
+                    height: 10
+                    radius: 5
+                    visible: Vault.unsaved && !Settings.autosave
+                    color: Theme.accent
+                    Accessible.name: qsTr("Not saved")
+
+                    HoverHandler {
+                        id: unsavedHover
+                    }
+                    Tip {
+                        visible: unsavedHover.hovered
+                        text: qsTr("Not saved yet. Ctrl+S saves.")
                     }
                 }
                 // A list of records shows as a table or as its text.

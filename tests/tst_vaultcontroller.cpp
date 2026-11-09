@@ -55,6 +55,8 @@ private Q_SLOTS:
     void followsChangesOnDisk();
     void savesShortlyAfterTypingStops();
     void savesBeforeSwitchingNotes();
+    void savesOnlyWhenAskedWithAutosaveOff();
+    void asksBeforeLeavingUnsavedChanges();
     void keepsPastVersionsWhileEditing();
     void restoresAPastVersion();
     void saysWhenEachVersionIsFrom();
@@ -634,6 +636,72 @@ void TestVaultController::savesBeforeSwitchingNotes()
     m_vault->setCurrent(u"Recipes/Pancakes.md"_s);
     QCOMPARE(readFile(m_root + u"/Welcome.md"_s), u"Kept\n"_s);
     QVERIFY(!m_vault->unsaved());
+}
+
+void TestVaultController::savesOnlyWhenAskedWithAutosaveOff()
+{
+    m_settings->setAutosave(false);
+    QVERIFY(m_vault->openPath(m_root));
+    m_vault->setSaveDelay(20);
+    const QString welcome = readFile(m_root + u"/Welcome.md"_s);
+    m_vault->setCurrent(u"Welcome.md"_s);
+    m_vault->edit(u"Draft\n"_s);
+    QTest::qWait(200);
+    QVERIFY(m_vault->unsaved());
+    QCOMPARE(readFile(m_root + u"/Welcome.md"_s), welcome);
+
+    m_vault->saveNow();
+    QVERIFY(!m_vault->unsaved());
+    QCOMPARE(readFile(m_root + u"/Welcome.md"_s), u"Draft\n"_s);
+
+    // Turning autosave back on writes what waits.
+    m_vault->edit(u"Second\n"_s);
+    m_settings->setAutosave(true);
+    QVERIFY(!m_vault->unsaved());
+    QCOMPARE(readFile(m_root + u"/Welcome.md"_s), u"Second\n"_s);
+}
+
+void TestVaultController::asksBeforeLeavingUnsavedChanges()
+{
+    m_settings->setAutosave(false);
+    QVERIFY(m_vault->openPath(m_root));
+    const QString welcome = readFile(m_root + u"/Welcome.md"_s);
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QSignalSpy asked(m_vault.get(), &VaultController::leavingUnsaved);
+
+    // Nothing typed: no question.
+    m_vault->setCurrent(u"Recipes/Pancakes.md"_s);
+    QCOMPARE(asked.size(), 0);
+    m_vault->setCurrent(u"Welcome.md"_s);
+
+    m_vault->edit(u"Typed\n"_s);
+    m_vault->setCurrent(u"Recipes/Pancakes.md"_s);
+    QCOMPARE(asked.size(), 1);
+    QCOMPARE(m_vault->current(), u"Welcome.md"_s);
+
+    m_vault->answerLeaving(u"stay"_s);
+    QCOMPARE(m_vault->current(), u"Welcome.md"_s);
+    QVERIFY(m_vault->unsaved());
+
+    m_vault->setCurrent(u"Recipes/Pancakes.md"_s);
+    m_vault->answerLeaving(u"discard"_s);
+    QCOMPARE(m_vault->current(), u"Recipes/Pancakes.md"_s);
+    QCOMPARE(readFile(m_root + u"/Welcome.md"_s), welcome);
+
+    m_vault->setCurrent(u"Welcome.md"_s);
+    m_vault->edit(u"Saved on the way out\n"_s);
+    QVERIFY(!m_vault->goBack());
+    QCOMPARE(asked.size(), 3);
+    m_vault->answerLeaving(u"save"_s);
+    QCOMPARE(m_vault->current(), u"Recipes/Pancakes.md"_s);
+    QCOMPARE(readFile(m_root + u"/Welcome.md"_s), u"Saved on the way out\n"_s);
+
+    // A new note waits for the answer too.
+    m_vault->edit(u"More\n"_s);
+    QCOMPARE(m_vault->newNote(), QString());
+    QCOMPARE(m_vault->current(), u"Recipes/Pancakes.md"_s);
+    m_vault->answerLeaving(u"discard"_s);
+    QVERIFY(m_vault->current() != u"Recipes/Pancakes.md"_s);
 }
 
 void TestVaultController::keepsPastVersionsWhileEditing()

@@ -10,6 +10,14 @@ Popup {
     property string body
     property string confirmText
     property var onConfirm: null
+    /// Whether the confirm button looks like it destroys something.
+    property bool destructive: true
+    /// A second choice beside confirming, such as "Don't save"; none when empty.
+    property string otherText
+    property var onOther: null
+    /// Runs when it closes without a choice, by Cancel, Escape or the X.
+    property var onDismiss: null
+    property var chosen: null
 
     /// Opens it; `confirm` runs if the destructive button is chosen.
     function ask(title, body, confirmText, confirm) {
@@ -26,7 +34,17 @@ Popup {
     modal: true
     focus: true
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-    onClosed: root.onConfirm = null
+    onClosed: {
+        const run = root.chosen ?? root.onDismiss
+        root.onConfirm = null
+        root.onOther = null
+        root.onDismiss = null
+        root.chosen = null
+        root.otherText = ""
+        root.destructive = true
+        if (run)
+            run()
+    }
 
     Overlay.modal: Scrim {}
 
@@ -78,13 +96,21 @@ Popup {
             StickerButton {
                 objectName: "confirmButton"
                 text: root.confirmText
-                destructive: true
+                destructive: root.destructive
                 armed: true
                 onClicked: {
-                    const confirm = root.onConfirm
+                    root.chosen = root.onConfirm ?? (() => {})
                     root.close()
-                    if (confirm)
-                        confirm()
+                }
+            }
+            StickerButton {
+                objectName: "otherButton"
+                visible: root.otherText !== ""
+                text: root.otherText
+                destructive: true
+                onClicked: {
+                    root.chosen = root.onOther ?? (() => {})
+                    root.close()
                 }
             }
             StickerButton {

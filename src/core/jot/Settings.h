@@ -65,6 +65,8 @@ class Settings : public QObject
     Q_PROPERTY(int trashDays READ trashDays WRITE setTrashDays NOTIFY trashChanged)
     /// Searching notes also finds those in the trash, marked as there.
     Q_PROPERTY(bool searchTrash READ searchTrash WRITE setSearchTrash NOTIFY trashChanged)
+    /// Notes are written as they are typed, or only on Save.
+    Q_PROPERTY(bool autosave READ autosave WRITE setAutosave NOTIFY autosaveChanged)
     /// The version that ran last, so a new one can say what changed.
     Q_PROPERTY(QString lastSeenVersion READ lastSeenVersion WRITE setLastSeenVersion NOTIFY
                    lastSeenVersionChanged)
@@ -124,6 +126,8 @@ public:
     void setTrashDays(int days);
     [[nodiscard]] bool searchTrash() const { return m_searchTrash; }
     void setSearchTrash(bool on);
+    [[nodiscard]] bool autosave() const { return m_autosave; }
+    void setAutosave(bool on);
     static inline const QStringList kLeaderKeys = {QStringLiteral(","), QStringLiteral(":"),
                                                    QStringLiteral(" ")};
     [[nodiscard]] QString lastSeenVersion() const { return m_lastSeenVersion; }
@@ -172,6 +176,7 @@ Q_SIGNALS:
     void remindersChanged();
     void quickCaptureKeyChanged();
     void trashChanged();
+    void autosaveChanged();
 
 private:
     QSettings m_store;
@@ -194,6 +199,7 @@ private:
     int m_leaderTimeout = 5000;
     int m_trashDays = 0;
     bool m_searchTrash = true;
+    bool m_autosave = true;
     QString m_lastSeenVersion;
     bool m_keepRunning = true;
     bool m_remindersOn = true;

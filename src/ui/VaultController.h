@@ -132,6 +132,18 @@ public:
     Q_INVOKABLE void edit(const QString &text);
     /// Writes any edits waiting, as before switching notes or quitting.
     Q_INVOKABLE void saveNow();
+    /// Drops the edits not yet written, going back to the note's file.
+    Q_INVOKABLE void discardChanges();
+    /// Whether the note shown can be left now. Not when saving is manual and it has edits
+    /// not yet written: then it asks with leavingUnsaved(), and once answered runs `retry`,
+    /// unless the answer is to stay.
+    bool readyToLeave(std::function<void()> retry);
+    /// How leavingUnsaved() was answered: "save", "discard" or "stay".
+    Q_INVOKABLE void answerLeaving(const QString &answer);
+    /// Quits Jot, asking first about edits not yet written.
+    Q_INVOKABLE void quit();
+    /// Whether leaving the note shown asks first.
+    Q_INVOKABLE bool asksBeforeLeaving() const;
     /// Makes a note in the notebook shown and shows it. Gives its path.
     Q_INVOKABLE QString newNote(const QString &title = {});
     /// Makes a data file of `kind` ("json", "csv", "tsv" or "yaml") in the notebook shown, with
@@ -363,6 +375,8 @@ Q_SIGNALS:
     /// note shown is renamed or moved, which keeps it the same note.
     void opening();
     void unsavedChanged();
+    /// Leaving the note shown waits for answerLeaving(), as it has edits not yet written.
+    void leavingUnsaved();
     void problemChanged();
     void showingTasksChanged();
     void showingTrashChanged();
@@ -384,6 +398,8 @@ private:
     void readCurrent();
     void fail(const QString &error);
     void setUnsaved(bool unsaved);
+    /// Saves after a short pause in typing, when saving is automatic.
+    void saveSoon();
     /// Keeps `before`, the text a write to the note at `path` replaces, as one of its past
     /// versions: always with `now`, otherwise once per history interval.
     void keepHistory(const QString &path, const QString &before, bool now = false);
@@ -496,6 +512,8 @@ private:
     NoteTrail m_trail;
     /// Going back or forward, which is no new visit.
     bool m_travelling = false;
+    /// What waits for leavingUnsaved() to be answered.
+    std::function<void()> m_afterLeaving;
     int m_cursorPosition = 0;
     int m_openingCursor = 0;
     QTimer m_saveTimer;

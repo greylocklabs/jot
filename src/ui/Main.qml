@@ -512,6 +512,30 @@ ApplicationWindow {
         id: changeConfirm
         objectName: "changeConfirm"
     }
+    // Saving is manual and the note shown has edits not yet written.
+    ConfirmDialog {
+        id: leaveConfirm
+        objectName: "leaveConfirm"
+    }
+    Connections {
+        target: Vault
+        function onLeavingUnsaved() {
+            leaveConfirm.destructive = false
+            leaveConfirm.otherText = qsTr("Don't save")
+            leaveConfirm.onOther = () => Vault.answerLeaving("discard")
+            leaveConfirm.onDismiss = () => Vault.answerLeaving("stay")
+            leaveConfirm.ask(qsTr("Save changes to %1?").arg(Vault.currentTitle), qsTr(
+                                 "Without saving, what was typed since the last save is lost."),
+                             qsTr("Save"), () => Vault.answerLeaving("save"))
+        }
+    }
+    // Closing the window quits unless Jot keeps running, so it asks first too.
+    onClosing: close => {
+        if (!Settings.keepRunning && Vault.asksBeforeLeaving()) {
+            close.accepted = false
+            Vault.quit()
+        }
+    }
 
     // After an update, says what changed, once the window has settled.
     Timer {
@@ -593,8 +617,8 @@ ApplicationWindow {
             Vault.sync.syncNow()
             break
         case "quit":
-            // Unsaved typing is saved as Jot closes, as from the tray's Quit.
-            Qt.quit()
+            // With saving manual, asks about unsaved typing first.
+            Vault.quit()
             break
         case "goForward":
             Vault.goForward()

@@ -26,6 +26,7 @@
 #include <QRegularExpression>
 
 #include <algorithm>
+#include <utility>
 
 using namespace Qt::StringLiterals;
 
@@ -43,6 +44,10 @@ VaultController::VaultController(Settings &settings, QObject *parent)
     m_saveTimer.setSingleShot(true);
     m_saveTimer.setInterval(m_saveDelay);
     connect(&m_saveTimer, &QTimer::timeout, this, &VaultController::saveNow);
+    connect(&settings, &Settings::autosaveChanged, this, [this] {
+        if (m_settings.autosave())
+            saveNow();
+    });
     connect(this, &VaultController::currentChanged, this, &VaultController::currentTitleChanged);
     // Saving changes the list's order and titles; a burst of saves reloads it once.
     m_reloadTimer.setSingleShot(true);
@@ -104,6 +109,8 @@ bool VaultController::openFolder(const QUrl &folder)
 
 bool VaultController::openPath(const QString &path)
 {
+    if (!readyToLeave([this, path] { openPath(path); }))
+        return false;
     // Closing drops the note shown, so edits that cannot be written keep this vault open.
     saveNow();
     if (m_unsaved) {
@@ -141,7 +148,11 @@ bool VaultController::openPath(const QString &path)
     }
     reloadModels();
     Q_EMIT openChanged();
-    m_sync.setVault(m_vault->root(), [this] { saveNow(); });
+    // Typing still waiting for Save stays out of the sync.
+    m_sync.setVault(m_vault->root(), [this] {
+        if (m_settings.autosave())
+            saveNow();
+    });
     expireTrash();
     reloadTrash();
     return true;
@@ -211,7 +222,7 @@ void VaultController::takeOutsideEdit(const QString &theirs)
         setUnsaved(false);
     } else {
         m_currentText = *merged;
-        m_saveTimer.start();
+        saveSoon();
     }
     Q_EMIT currentChanged();
 }
@@ -269,7 +280,57 @@ void VaultController::edit(const QString &edited)
         return;
     m_currentText = text;
     setUnsaved(true);
-    m_saveTimer.start();
+    saveSoon();
+}
+
+void VaultController::saveSoon()
+{
+    if (m_settings.autosave())
+        m_saveTimer.start();
+}
+
+void VaultController::discardChanges()
+{
+    m_saveTimer.stop();
+    if (!m_unsaved)
+        return;
+    m_currentText = m_savedText;
+    setUnsaved(false);
+    setProblem({});
+    Q_EMIT currentChanged();
+}
+
+bool VaultController::asksBeforeLeaving() const
+{
+    return m_unsaved && !m_settings.autosave() && m_vault && !m_current.isEmpty();
+}
+
+bool VaultController::readyToLeave(std::function<void()> retry)
+{
+    if (!asksBeforeLeaving())
+        return true;
+    m_afterLeaving = std::move(retry);
+    Q_EMIT leavingUnsaved();
+    return false;
+}
+
+void VaultController::answerLeaving(const QString &answer)
+{
+    std::function<void()> then = std::exchange(m_afterLeaving, {});
+    if (answer == u"save")
+        saveNow();
+    else if (answer == u"discard")
+        discardChanges();
+    // A save that failed keeps the note shown, as staying does.
+    if (answer == u"stay" || m_unsaved || !then)
+        return;
+    then();
+}
+
+void VaultController::quit()
+{
+    if (readyToLeave([this] { quit(); }))
+        QCoreApplication::quit();
 }
 
 void VaultController::saveNow()
@@ -534,7 +595,7 @@ void VaultController::scheduleModelReload()
 
 QString VaultController::newNote(const QString &title)
 {
-    if (!m_vault)
+    if (!m_vault || !readyToLeave([this, title] { newNote(title); }))
         return {};
     saveNow();
     // In the notebook shown; a tag or "All notes" puts it at the top of the vault.
@@ -564,7 +625,7 @@ QVariantList VaultController::dataKinds()
 
 QString VaultController::newFile(const QString &kind)
 {
-    if (!m_vault)
+    if (!m_vault || !readyToLeave([this, kind] { newFile(kind); }))
         return {};
     saveNow();
     const QString folder = m_notes.tag().isEmpty() ? m_notes.notebook() : QString();
@@ -1669,6 +1730,8 @@ bool VaultController::follow(const QString &target, bool wiki)
     const QString name = target.section(u'#', 0, 0).section(u'/', -1).trimmed();
     if (name.isEmpty())
         return false;
+    if (!readyToLeave([this, target, wiki] { follow(target, wiki); }))
+        return true;
     const QString folder = m_current.contains(u'/') ? m_current.section(u'/', 0, -2) : QString();
     saveNow();
     QString error;
@@ -1830,7 +1893,7 @@ QStringList VaultController::tags() const
 
 void VaultController::setCurrent(const QString &path)
 {
-    if (m_current == path)
+    if (m_current == path || !readyToLeave([this, path] { setCurrent(path); }))
         return;
     saveNow();
     if (!m_travelling) {
@@ -1858,7 +1921,7 @@ bool VaultController::goForward()
 
 bool VaultController::travel(int by)
 {
-    if (!m_vault)
+    if (!m_vault || !readyToLeave([this, by] { travel(by); }))
         return false;
     const auto exists = [this](const QString &path) {
         return QFileInfo::exists(m_vault->absolute(path));
