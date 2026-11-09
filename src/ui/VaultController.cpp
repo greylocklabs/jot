@@ -144,10 +144,12 @@ bool VaultController::openPath(const QString &path)
     connect(m_watcher.get(), &VaultWatcher::foldersChanged, this, &VaultController::reloadModels);
     m_watcher->start();
     m_settings.setVaultPath(m_vault->root());
+    // Named for the computer, to read, and by an id of its own, as two can share a name.
     QString computer = QSysInfo::machineHostName();
     computer.replace(QRegularExpression(u"[^\\w.-]"_s), u"-"_s);
     m_stats = std::make_unique<WritingStats>(m_vault->absolute(u".jot/stats"_s),
-                                             computer.isEmpty() ? u"computer"_s : computer);
+                                             (computer.isEmpty() ? u"computer"_s : computer) +
+                                                 u'-' + m_settings.computerId());
     Q_EMIT statsChanged();
     qCInfo(lcVault) << "opened" << m_vault->root() << "with" << m_index->noteCount() << "notes";
 

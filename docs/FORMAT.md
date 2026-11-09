@@ -43,7 +43,7 @@ My Notes/                    the vault: any folder
 - Opening a folder in Jot makes `.jot/vault.yaml` with `format: 1`, if it has none.
 - `.jot/stats/<computer>.yaml` holds `YYYY-MM-DD: words` lines: the words that computer's edits
   added to the vault's notes each day, less those they took away. Each computer writes only its
-  own file, and Jot adds them up.
+  own file, named for the computer and an id it keeps in its own settings, and Jot adds them up.
 - Jot's own machine-local state (search index, link index, caches) lives under
   `$XDG_STATE_HOME/jot` and `$XDG_CACHE_HOME/jot`, never in the vault. Deleting it loses nothing:
   Jot rebuilds it from the files.

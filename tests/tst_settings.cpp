@@ -238,6 +238,11 @@ void TestSettings::keepsTheDailyWordGoal()
     settings.setDailyWordGoal(500);
     settings.reset();
     QCOMPARE(settings.dailyWordGoal(), 0);
+
+    // The computer's id is made once and kept.
+    const QString id = settings.computerId();
+    QCOMPARE(id.size(), 8);
+    QCOMPARE(Settings(path).computerId(), id);
 }
 
 void TestSettings::keepsDeveloperChoices()
