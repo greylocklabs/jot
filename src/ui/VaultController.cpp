@@ -13,6 +13,7 @@
 #include "jot/Rename.h"
 #include "jot/Settings.h"
 #include "jot/TaskLine.h"
+#include "jot/Templates.h"
 
 #include <QBuffer>
 #include <QClipboard>
@@ -728,6 +729,95 @@ QString VaultController::newNote(const QString &title)
     reloadModels();
     setCurrent(*path);
     return *path;
+}
+
+QVariantList VaultController::templates() const
+{
+    QVariantList found;
+    if (!m_index || !m_vault)
+        return found;
+    for (const NoteInfo &note : m_index->notesIn(jot::templatesFolder(*m_vault))) {
+        if (!Vault::isDataFile(note.path))
+            found << QVariantMap{{u"path"_s, note.path}, {u"title"_s, note.title}};
+    }
+    std::ranges::sort(found, [](const QVariant &a, const QVariant &b) {
+        return a.toMap()
+                   .value(u"title"_s)
+                   .toString()
+                   .localeAwareCompare(b.toMap().value(u"title"_s).toString()) < 0;
+    });
+    return found;
+}
+
+QString VaultController::templatesFolder() const
+{
+    return m_vault ? jot::templatesFolder(*m_vault) : QString();
+}
+
+QString VaultController::newNoteFromTemplate(const QString &path)
+{
+    if (!m_vault || !readyToLeave([this, path] { newNoteFromTemplate(path); }))
+        return {};
+    QString error;
+    const std::optional<QString> pattern = notefile::read(m_vault->absolute(path), &error);
+    if (!pattern) {
+        setProblem(tr("Could not read the template: %1").arg(error));
+        return {};
+    }
+    saveNow();
+    const QString folder = m_notes.tag().isEmpty() ? m_notes.notebook() : QString();
+    const QDateTime now = QDateTime::currentDateTime();
+    const std::optional<QString> made =
+        m_vault->createNote(folder, tr("Untitled"), now.toUTC(), &error);
+    std::optional<QString> text =
+        made ? notefile::read(m_vault->absolute(*made), &error) : std::nullopt;
+    if (!made || !text ||
+        !notefile::write(
+            m_vault->absolute(*made),
+            noteFromTemplate(*text, fillTemplate(*pattern, Vault::titleFromPath(*made), now)),
+            &error)) {
+        qCWarning(lcVault) << "could not make a note from" << path << error;
+        setProblem(tr("Could not make a note from the template: %1").arg(error));
+        return {};
+    }
+    m_index->update({*made});
+    reloadModels();
+    setCurrent(*made);
+    return *made;
+}
+
+QString VaultController::openDailyNote()
+{
+    if (!m_vault || !readyToLeave([this] { openDailyNote(); }))
+        return {};
+    const QDate today = m_today.isValid() ? m_today : QDate::currentDate();
+    const QString path = dailyNotePath(*m_vault, today);
+    if (!QFileInfo::exists(m_vault->absolute(path))) {
+        saveNow();
+        QString error;
+        const QDateTime now(today, QTime::currentTime());
+        const std::optional<QString> made = m_vault->createNote(
+            dailyFolder(*m_vault), today.toString(Qt::ISODate), now.toUTC(), &error);
+        std::optional<QString> text =
+            made ? notefile::read(m_vault->absolute(*made), &error) : std::nullopt;
+        QString ignored;
+        if (const std::optional<QString> pattern =
+                notefile::read(m_vault->absolute(dailyTemplatePath(*m_vault)), &ignored);
+            text && pattern)
+            text = noteFromTemplate(*text, fillTemplate(*pattern, Vault::titleFromPath(path), now));
+        if (!made || *made != path || !text ||
+            !notefile::write(m_vault->absolute(path), *text, &error)) {
+            qCWarning(lcVault) << "could not make the daily note" << path << error;
+            setProblem(tr("Could not make today's note: %1").arg(error));
+            return {};
+        }
+        m_index->update({path});
+        if (m_watcher)
+            m_watcher->start();
+        reloadModels();
+    }
+    setCurrent(path);
+    return path;
 }
 
 QVariantList VaultController::dataKinds()

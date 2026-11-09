@@ -100,7 +100,7 @@ void TestKeyRouter::leaderTakesTheNextKey()
     QVERIFY(m_router->press(u"t"_s));
     // A key the leader does not know is swallowed, not acted on.
     m_router->press(u","_s);
-    QVERIFY(m_router->press(u"j"_s));
+    QVERIFY(m_router->press(u"z"_s));
     QCOMPARE(triggered(), QStringList{u"tasks"_s});
     QCOMPARE(m_router->pending(), QString());
     QCOMPARE(pending.size(), 4);

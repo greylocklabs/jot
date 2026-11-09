@@ -17,6 +17,9 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   one the cursor is under and goes to any of them.
 - Tabs: a middle click or Ctrl+click on a note, or Open in a new tab from its menu, opens it in a
   tab of its own. Ctrl+Tab and Ctrl+Shift+Tab move between tabs, and Ctrl+W closes one.
+- Templates: notes in a Templates notebook make new notes from a notebook's menu or the command
+  palette, with the title, date and time filled in. Today's note, from the palette, opens the
+  day's note in a Daily notebook, made from a Daily template when there is one.
 
 ## 0.4.1 - 2026-11-07
 

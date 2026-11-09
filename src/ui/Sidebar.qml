@@ -211,6 +211,7 @@ Rectangle {
                         // At the click, which Wayland does not share as a cursor position.
                         onTapped: eventPoint => {
                             notebookMenu.path = notebook.path
+                            notebookMenu.templates = Vault.templates()
                             notebookMenu.popup(notebook, eventPoint.position.x,
                                                eventPoint.position.y)
                         }
@@ -594,6 +595,8 @@ Rectangle {
 
         /// The notebook it is for; "" is All notes, the vault itself.
         property string path
+        /// The vault's templates, read as it opens.
+        property var templates: []
 
         MenuEntry {
             text: qsTr("New note")
@@ -605,6 +608,29 @@ Rectangle {
                 Vault.notes.notebook = notebookMenu.path
                 if (Vault.newNote() !== "")
                     root.noteMade()
+            }
+        }
+        // A note made from one of the vault's templates, in this notebook.
+        MenuCard {
+            title: qsTr("New from template")
+            enabled: Vault.writable && notebookMenu.templates.length > 0
+            minimumWidth: 160
+
+            Repeater {
+                model: notebookMenu.templates
+
+                MenuEntry {
+                    required property var modelData
+                    text: modelData.title
+                    onTriggered: {
+                        Vault.showingTasks = false
+                        Vault.showingTrash = false
+                        Vault.notes.tag = ""
+                        Vault.notes.notebook = notebookMenu.path
+                        if (Vault.newNoteFromTemplate(modelData.path) !== "")
+                            root.noteMade()
+                    }
+                }
             }
         }
         // A data file that opens as a table, in this notebook.

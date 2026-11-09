@@ -22,6 +22,8 @@
 #include <QUrl>
 #include <QVariantMap>
 
+#include <QDate>
+
 #include <functional>
 #include <memory>
 #include <optional>
@@ -162,6 +164,17 @@ public:
     /// Makes a data file of `kind` ("json", "csv", "tsv" or "yaml") in the notebook shown, with
     /// one example record, and shows it. Gives its path.
     Q_INVOKABLE QString newFile(const QString &kind);
+    /// The templates, as `{path, title}`: the notes in the vault's templates notebook.
+    Q_INVOKABLE QVariantList templates() const;
+    /// The notebook templates are kept in.
+    Q_INVOKABLE QString templatesFolder() const;
+    /// Makes a note in the notebook shown from the template at `path`, its variables filled
+    /// in, and shows it. Gives its path.
+    Q_INVOKABLE QString newNoteFromTemplate(const QString &path);
+    /// Shows today's daily note, making it from the daily template, or empty, the first time.
+    Q_INVOKABLE QString openDailyNote();
+    /// For tests: the day openDailyNote() takes as today.
+    void setToday(QDate today) { m_today = today; }
     /// Gives the note shown a new title, renaming its file and the links to it. A note still
     /// empty, named with a data file's extension ("people.csv"), becomes that kind of file.
     Q_INVOKABLE bool renameCurrent(const QString &title);
@@ -538,6 +551,7 @@ private:
     std::function<void()> m_afterLeaving;
     QStringList m_tabs;
     int m_tabIndex = -1;
+    QDate m_today;
     int m_cursorPosition = 0;
     int m_openingCursor = 0;
     QTimer m_saveTimer;

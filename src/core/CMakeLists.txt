@@ -94,6 +94,8 @@ add_library(jotcore STATIC
     Rename.cpp
     jot/Settings.h
     Settings.cpp
+    jot/Templates.h
+    Templates.cpp
     jot/Vault.h
     Vault.cpp
     jot/VaultTrash.h

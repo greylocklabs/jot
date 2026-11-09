@@ -508,6 +508,34 @@ ApplicationWindow {
         id: reportDialog
         sourceComponent: ReportDialog {}
     }
+    // The vault's templates, for a new note made from one.
+    MenuCard {
+        id: templateMenu
+
+        property var templates: []
+
+        minimumWidth: 200
+
+        Repeater {
+            model: templateMenu.templates
+
+            MenuEntry {
+                required property var modelData
+                text: modelData.title
+                onTriggered: {
+                    Vault.showingTasks = false
+                    if (Vault.newNoteFromTemplate(modelData.path) !== "")
+                        editor.editTitle()
+                }
+            }
+        }
+        MenuEntry {
+            visible: templateMenu.templates.length === 0
+            height: visible ? implicitHeight : 0
+            enabled: false
+            text: qsTr("No templates yet: notes in %1 are templates").arg(Vault.templatesFolder())
+        }
+    }
     ConfirmDialog {
         id: changeConfirm
         objectName: "changeConfirm"
@@ -553,7 +581,10 @@ ApplicationWindow {
         const note = Vault.current !== ""
         switch (id) {
         case "newNote":
+        case "newFromTemplate":
             return Vault.isOpen && Vault.writable && !Vault.showingTrash
+        case "dailyNote":
+            return Vault.isOpen && Vault.writable
         case "quickAdd":
         case "importJoplin":
             return Vault.isOpen && Vault.writable
@@ -612,6 +643,15 @@ ApplicationWindow {
         case "newNote":
             if (Vault.newNote() !== "")
                 editor.editTitle()
+            break
+        case "newFromTemplate":
+            templateMenu.templates = Vault.templates()
+            templateMenu.popup(newButton, 0, newButton.height + Theme.space1)
+            break
+        case "dailyNote":
+            Vault.showingTasks = false
+            Vault.showingTrash = false
+            Vault.openDailyNote()
             break
         case "goTo":
             switcher.open()
