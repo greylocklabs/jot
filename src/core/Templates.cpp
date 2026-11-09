@@ -114,7 +114,7 @@ QString fillTemplate(const QString &text, const QString &title, const QDateTime 
             out += now.toString(name == u"date" ? u"yyyy-MM-dd"_s : u"HH:mm"_s);
         at = m.capturedEnd();
     }
-    return out + QStringView(text).sliced(at);
+    return out + text.mid(at);
 }
 
 QString noteFromTemplate(const QString &made, const QString &filled)
