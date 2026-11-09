@@ -803,6 +803,18 @@ void TestNoteEditor::underlinesMisspelledWords()
     QVERIFY(wrong(u"qwzx\n"_s).isEmpty());
     QVERIFY(wrong(u"crossed"_s).isEmpty());
 
+    // A closing quote is not part of the word.
+    QCOMPARE(wrong(u"Recieve"_s).value(u"end"_s).toInt(), int(text.indexOf(u"Recieve"_s)) + 7);
+    body->setProperty("text", text + u"Say 'wrnoger' twice\n"_s);
+    QVariantMap quoted;
+    QTRY_VERIFY([&] {
+        QMetaObject::invokeMethod(styler, "misspelledAt", Q_RETURN_ARG(QVariantMap, quoted),
+                                  Q_ARG(int, int(text.size() + 12)));
+        return !quoted.isEmpty();
+    }());
+    QCOMPARE(quoted.value(u"word"_s).toString(), u"wrnoger"_s);
+    body->setProperty("text", text);
+
     // Ignored for now, it is no longer marked.
     QVERIFY(QMetaObject::invokeMethod(styler, "acceptWord", Q_ARG(QString, u"Recieve"_s),
                                       Q_ARG(bool, true)));
