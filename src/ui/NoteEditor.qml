@@ -337,14 +337,14 @@ Rectangle {
         boundsBehavior: Flickable.StopAtBounds
         ScrollBar.vertical: ScrollBar {}
 
-        /// Scrolls so the cursor stays in view while typing. Not before the editor has a
-        /// height, when every line would count as out of view.
         // A note that grows under the cursor, as with Return on its last line, is centered
         // again once its new height is known.
         onContentHeightChanged: {
             if (Settings.typewriter)
                 follow(body.cursorRectangle)
         }
+        /// Scrolls so the cursor stays in view while typing. Not before the editor has a
+        /// height, when every line would count as out of view.
         function follow(rect) {
             if (!body.activeFocus)
                 return
