@@ -1265,6 +1265,9 @@ QString VaultController::pasteImage()
 
 bool VaultController::attachToNoteEnd(const QString &note, const QUrl &file)
 {
+    // A note gone since gets no attachments folder of its own.
+    if (!m_vault || note.isEmpty() || !QFileInfo::exists(m_vault->absolute(note)))
+        return false;
     const QString markdown = attachFilesTo(note, {file});
     if (markdown.isEmpty())
         return false;
