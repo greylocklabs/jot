@@ -6,6 +6,8 @@
 #include <QHash>
 #include <QRegularExpression>
 
+#include <algorithm>
+
 using namespace Qt::StringLiterals;
 
 namespace jot {
@@ -13,7 +15,7 @@ namespace jot {
 namespace {
 
 /// A notebook named by `key` in `.jot/vault.yaml`, or `fallback`. Only one inside the vault
-/// and outside Jot's own folder counts.
+/// and outside Jot's own folder counts, with no part of its path hidden, as notebooks are.
 QString folderSetting(const Vault &vault, const QString &key, const QString &fallback)
 {
     QString ignored;
@@ -23,8 +25,10 @@ QString folderSetting(const Vault &vault, const QString &key, const QString &fal
         settings ? readFrontMatter(*settings).value(key).toString().trimmed() : QString();
     while (folder.endsWith(u'/'))
         folder.chop(1);
-    if (folder.isEmpty() || folder.startsWith(u'/') || folder.startsWith(u'.') ||
-        folder.contains(u"../"_s))
+    if (folder.isEmpty() || folder.startsWith(u'/') ||
+        std::ranges::any_of(folder.split(u'/'), [](const QString &part) {
+            return part.isEmpty() || part.startsWith(u'.');
+        }))
         return fallback;
     return folder;
 }

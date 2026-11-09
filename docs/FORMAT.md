@@ -341,7 +341,8 @@ daily: Daily # where daily notes go, one per day as YYYY-MM-DD.md
 - `inbox` is a note's path from the vault root, with or without `.md`. One starting with `/` or
   `.`, or containing `../`, is ignored, and `Inbox.md` used instead.
 - `templates` and `daily` are notebooks' paths from the vault root, `Templates` and `Daily` when
-  missing, and ignored on the same terms as `inbox`. A new note from a template takes the
+  missing, and ignored when they start with `/` or any part of them
+  starts with `.`. A new note from a template takes the
   template's front matter keys it does not have and its text, with `{{title}}`, `{{date}}`,
   `{{time}}`, `{{date:FORMAT}}` and `{{time:FORMAT}}` filled in, FORMAT as Obsidian writes it.
   A daily note is made from `Daily.md` in the templates notebook, when there is one.

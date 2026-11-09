@@ -67,6 +67,11 @@ void TestTemplates::findsItsNotebooksInTheVaultSettings()
                             u"templates: ../elsewhere\ndaily: .jot\n"_s, &error));
     QCOMPARE(templatesFolder(*vault), u"Templates"_s);
     QCOMPARE(dailyFolder(*vault), u"Daily"_s);
+    // Hidden or climbing anywhere in the path counts too.
+    QVERIFY(notefile::write(vault->absolute(u".jot/vault.yaml"_s),
+                            u"templates: Meta/.old\ndaily: a/..\n"_s, &error));
+    QCOMPARE(templatesFolder(*vault), u"Templates"_s);
+    QCOMPARE(dailyFolder(*vault), u"Daily"_s);
 }
 
 QTEST_GUILESS_MAIN(TestTemplates)
