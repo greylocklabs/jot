@@ -890,7 +890,9 @@ void VaultController::exportNote(const QString &path, const QString &format, con
         QFile::copy(u":/jot/export/"_s + name, work->filePath(name));
     bool toc = false;
     const QString markdown = exportMarkdown(
-        *note, [this](const QString &target) { return attachmentPath(target, true); }, &toc);
+        *note,
+        [this, path](const QString &target) { return attachmentPathFrom(path, target, true); },
+        &toc);
     const QString input = work->filePath(u"note.md"_s);
     if (!notefile::write(input, markdown, &error))
         return fail(tr("Could not write the note out for Pandoc: %1").arg(error));
@@ -1391,21 +1393,21 @@ int VaultController::movedCursor(const QString &shown, int cursor) const
     return movedPosition(shown, now, cursor);
 }
 
-QString VaultController::attachmentPath(const QString &target, bool wiki) const
+QString VaultController::attachmentPathFrom(const QString &from, const QString &target,
+                                            bool wiki) const
 {
-    if (!m_vault || !m_index || m_current.isEmpty())
+    if (!m_vault || !m_index || from.isEmpty())
         return {};
     // A path written in a Markdown link names the file outright, so the disk answers it.
     if (!wiki && !target.contains(u':')) {
-        const QString folder =
-            m_current.contains(u'/') ? m_current.section(u'/', 0, -2) : QString();
+        const QString folder = from.contains(u'/') ? from.section(u'/', 0, -2) : QString();
         const QString decoded = QUrl::fromPercentEncoding(target.section(u'#', 0, 0).toUtf8());
         const QString path = QDir::cleanPath(folder.isEmpty() ? decoded : folder + u'/' + decoded);
         if (!path.startsWith(u"../"_s) && !Vault::isListed(path) &&
             QFileInfo(m_vault->absolute(path)).isFile())
             return m_vault->absolute(path);
     }
-    const QString path = m_index->resolve(target, m_current);
+    const QString path = m_index->resolve(target, from);
     // Notes and data files open in Jot; anything else is an attachment.
     if (path.isEmpty() || Vault::isListed(path) || !(wiki || !target.contains(u':')))
         return {};

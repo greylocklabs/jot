@@ -869,11 +869,15 @@ void TestVaultController::countsTheWordsWrittenToday()
 
 void TestVaultController::exportsThroughPandoc()
 {
+    // A note with a picture of its own, to export while another is shown.
+    QString error;
+    QVERIFY(QDir(m_root).mkpath(u"Recipes/Pic.assets"_s));
+    QVERIFY(notefile::write(m_root + u"/Recipes/Pic.md"_s, u"![[photo.png]]\n"_s, &error));
+    QVERIFY(QImage(4, 4, QImage::Format_RGB32).save(m_root + u"/Recipes/Pic.assets/photo.png"_s));
     QVERIFY(m_vault->openPath(m_root));
     QSignalSpy exported(m_vault.get(), &VaultController::exported);
     // A Pandoc that writes what it was given into the file it was asked for.
     const QString pandoc = m_dir->filePath(u"pandoc"_s);
-    QString error;
     QVERIFY(
         notefile::write(pandoc,
                         u"#!/bin/sh\nfor a; do case $a in --output=*) out=${a#--output=};; esac;"
@@ -890,11 +894,21 @@ void TestVaultController::exportsThroughPandoc()
     QCOMPARE(exported.first(), (QVariantList{true, out}));
     QVERIFY(QFileInfo(out).size() > 0);
 
+    // A note exported from the list, with none shown, finds its own picture.
+    m_vault->setCurrent({});
+    const QString picture = m_dir->filePath(u"Pic.docx"_s);
+    m_vault->exportNote(u"Recipes/Pic.md"_s, u"docx"_s, u"standard"_s,
+                        QUrl::fromLocalFile(picture));
+    QTRY_COMPARE(exported.size(), 2);
+    QVERIFY(exported.last().first().toBool());
+    QCOMPARE(readFile(picture),
+             u"![photo.png](<%1>)\n"_s.arg(m_root + u"/Recipes/Pic.assets/photo.png"_s));
+
     // What Pandoc says on failing comes back.
     QVERIFY(
         notefile::write(pandoc, u"#!/bin/sh\necho 'pdflatex not found' >&2\nexit 47\n"_s, &error));
     m_vault->exportNote(u"Welcome.md"_s, u"pdf"_s, u"standard"_s, QUrl::fromLocalFile(out));
-    QTRY_COMPARE(exported.size(), 2);
+    QTRY_COMPARE(exported.size(), 3);
     QCOMPARE(exported.last().first().toBool(), false);
     QVERIFY(exported.last().last().toString().contains(u"pdflatex not found"_s));
 

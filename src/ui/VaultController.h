@@ -287,7 +287,13 @@ public:
     /// shown now that it has changed, such as by an outside edit merged in.
     Q_INVOKABLE int movedCursor(const QString &shown, int cursor) const;
     /// The file an image link in the note shown reaches, or empty for none.
-    Q_INVOKABLE QString attachmentPath(const QString &target, bool wiki) const;
+    Q_INVOKABLE QString attachmentPath(const QString &target, bool wiki) const
+    {
+        return attachmentPathFrom(m_current, target, wiki);
+    }
+    /// As attachmentPath(), for a link in the note at `from` rather than the one shown.
+    [[nodiscard]] QString attachmentPathFrom(const QString &from, const QString &target,
+                                             bool wiki) const;
     /// What a link in the note shown leads to, for a preview: `{path, title, text}`, where
     /// `text` is the start of the note without its front matter. Empty when it leads to no note.
     Q_INVOKABLE QVariantMap preview(const QString &target) const;
