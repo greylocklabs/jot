@@ -33,6 +33,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   in the desktop's language, a vault's or a note's own.
 - Record from the microphone into a note, from the format row or the command palette. A sound
   embedded on a line of its own plays there.
+- LaTeX math, `$...$` in a line and `$$` on lines of their own, is drawn off the cursor's line
+  and when reading, through MicroTeX.
 
 ## 0.4.1 - 2026-11-07
 

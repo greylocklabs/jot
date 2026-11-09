@@ -45,7 +45,13 @@ class TestNoteEditor : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
-    void initTestCase() { QQuickStyle::setStyle(u"Basic"_s); }
+    void initTestCase()
+    {
+        QQuickStyle::setStyle(u"Basic"_s);
+        // Drawn math is cached, never in the user's own cache; the folder lasts the whole run,
+        // as the fonts unpacked there are read as they are needed.
+        qputenv("XDG_CACHE_HOME", m_cache.path().toUtf8());
+    }
     void init();
     void cleanup();
 
@@ -73,6 +79,7 @@ private Q_SLOTS:
     void showsCriticCommentsInTheMargin();
     void underlinesMisspelledWords();
     void playsSoundsWhereTheyAreEmbedded();
+    void drawsMath();
     void switchingAwayFromAPictureLeavesNoStalePlace();
     void formatsAndUndoesInOneStep();
     void formatsFromTheKeyboard();
@@ -109,6 +116,7 @@ private:
     int blueInk();
     QQuickItem *find(const QString &name, QQuickItem *from = nullptr) const;
 
+    QTemporaryDir m_cache;
     std::unique_ptr<QTemporaryDir> m_dir;
     std::unique_ptr<Settings> m_settings;
     std::unique_ptr<VaultController> m_vault;
@@ -866,6 +874,39 @@ void TestNoteEditor::playsSoundsWhereTheyAreEmbedded()
     // On its own line, the link shows again, to edit.
     body->setProperty("cursorPosition", int(text.indexOf(u"Welcome.assets"_s)));
     QTRY_COMPARE(players().size(), 0);
+}
+
+void TestNoteEditor::drawsMath()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    auto *styler = m_editor->findChild<QObject *>(u"styler"_s);
+    const auto drawn = [styler](bool inLine) {
+        QVariantList found;
+        for (const QVariant &each : styler->property("images").toList()) {
+            if (each.toMap().value(u"inline"_s).toBool() == inLine &&
+                each.toMap().value(u"source"_s).toUrl().path().endsWith(u"@2x.png"_s))
+                found.append(each);
+        }
+        return found;
+    };
+    const QString text =
+        u"Einstein: $E = mc^2$ costs $5 and $10.\n\n$$\n\\int_0^1 x\\,dx\n$$\n\nend\n"_s;
+    body->forceActiveFocus();
+    body->setProperty("text", text);
+    body->setProperty("cursorPosition", int(text.size()) - 1);
+    // One formula in the line, prices left alone, and the display math drawn on its first line.
+    QTRY_COMPARE(drawn(true).size(), 1);
+    QCOMPARE(drawn(true).first().toMap().value(u"position"_s).toInt(), int(text.indexOf(u"$E"_s)));
+    QTRY_COMPARE(drawn(false).size(), 1);
+    QCOMPARE(drawn(false).first().toMap().value(u"position"_s).toInt(), int(text.indexOf(u"$$"_s)));
+    QVERIFY(drawn(false).first().toMap().value(u"height"_s).toInt() > 20);
+
+    // Where the cursor is, the TeX shows to edit.
+    body->setProperty("cursorPosition", int(text.indexOf(u"int_0"_s)));
+    QTRY_COMPARE(drawn(false).size(), 0);
+    body->setProperty("cursorPosition", int(text.indexOf(u"mc^2"_s)));
+    QTRY_COMPARE(drawn(true).size(), 0);
 }
 
 void TestNoteEditor::drawsDiagramsInPlaceOfTheirText()

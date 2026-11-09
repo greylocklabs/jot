@@ -1,0 +1,9 @@
+MicroTeX, which draws LaTeX math, from https://github.com/NanoMichael/MicroTeX at commit
+0e3707f6dafebb121d98b53c64364d16fefe481d, under its MIT license in LICENSE.
+
+Only what Jot builds is kept: the library's sources in src/ with its Qt drawing in
+src/platform/qt/, and the fonts in res/ with their licenses in res/fonts/licences/. Its samples,
+its other platforms' drawing, its build files and its documents are left out, and so are its
+Greek and Cyrillic text data, which are GPL-3.0; math draws Greek letters from Computer Modern
+without them. The code is as upstream wrote it; third_party/CMakeLists.txt
+builds it.

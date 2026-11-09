@@ -1134,8 +1134,9 @@ Rectangle {
                                                                      body.length))
                         }
 
-                        x: 0
-                        y: line.y
+                        // Math within a line sits where its room is, in the middle of the line.
+                        x: modelData.inline ? line.x : 0
+                        y: modelData.inline ? line.y + (line.height - height) / 2 : line.y
                         width: modelData.width
                         height: modelData.height
                         source: modelData.source
