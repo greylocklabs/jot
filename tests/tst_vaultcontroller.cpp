@@ -734,7 +734,17 @@ void TestVaultController::keepsNotesOpenInTabs()
     m_vault->stepTab(-1);
     QCOMPARE(m_vault->current(), u"Recipes/Sourdough.md"_s);
 
-    // A renamed note keeps its tab.
+    // A renamed note keeps its tab, in the middle of the row too.
+    m_vault->stepTab(-1);
+    QCOMPARE(m_vault->tabIndex(), 1);
+    QVERIFY(m_vault->renameCurrent(u"Hello"_s));
+    QCOMPARE(m_vault->tabs().size(), 3);
+    QCOMPARE(m_vault->tabIndex(), 1);
+    QCOMPARE(m_vault->tabs().at(1), m_vault->current());
+    QVERIFY(m_vault->current().endsWith(u"Hello.md"_s));
+    QVERIFY(m_vault->renameCurrent(u"Welcome"_s));
+    QCOMPARE(m_vault->tabs().at(1), u"Welcome.md"_s);
+    m_vault->stepTab(1);
     QVERIFY(m_vault->renameCurrent(u"Rye"_s));
     QCOMPARE(m_vault->tabs().at(2), m_vault->current());
     QVERIFY(m_vault->current().endsWith(u"Rye.md"_s));
