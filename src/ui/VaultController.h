@@ -416,6 +416,9 @@ private:
     void setUnsaved(bool unsaved);
     /// Saves after a short pause in typing, when saving is automatic.
     void saveSoon();
+    /// A note or notebook went from `from` to `to`: the trail back and forward, and the tabs,
+    /// follow it.
+    void moved(const QString &from, const QString &to);
     /// Puts the note shown in its tab: the one it has, or the tab shown, as when it was
     /// renamed. Tabs whose notes are gone close.
     void followCurrentInTabs();

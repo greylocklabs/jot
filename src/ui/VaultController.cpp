@@ -331,6 +331,20 @@ void VaultController::answerLeaving(const QString &answer)
     then();
 }
 
+void VaultController::moved(const QString &from, const QString &to)
+{
+    m_trail.moved(from, to);
+    const QStringList before = m_tabs;
+    for (QString &tab : m_tabs) {
+        if (tab == from)
+            tab = to;
+        else if (tab.startsWith(from + u'/'))
+            tab = to + tab.mid(from.size());
+    }
+    if (m_tabs != before)
+        Q_EMIT tabsChanged();
+}
+
 void VaultController::followCurrentInTabs()
 {
     const QStringList before = m_tabs;
@@ -781,7 +795,7 @@ bool VaultController::renameCurrent(const QString &title)
                 setProblem(tr("Could not rename the note: %1").arg(error));
                 return false;
             }
-            m_trail.moved(m_current, to);
+            moved(m_current, to);
             m_current = to;
             readCurrent();
             m_currentText = Vault::starterData(typed);
@@ -819,7 +833,7 @@ bool VaultController::renameCurrent(const QString &title)
             setProblem(tr("Could not rename the note: %1").arg(error));
             return false;
         }
-        m_trail.moved(m_current, to);
+        moved(m_current, to);
         m_current = to;
         readCurrent();
     }
@@ -981,7 +995,7 @@ void VaultController::followNotebook(const QString &from, const QString &to,
     collapsed.sort();
     m_settings.setCollapsedNotebooks(collapsed);
     m_notes.setNotebook(follow(m_notes.notebook()));
-    m_trail.moved(from, to);
+    moved(from, to);
     if (m_watcher)
         m_watcher->start();
     afterMove(follow(m_current), written);
@@ -1010,7 +1024,7 @@ bool VaultController::moveNoteTo(const QString &path, const QString &notebook)
         setProblem(tr("Could not move the note: %1").arg(error));
         return false;
     }
-    m_trail.moved(path, to);
+    moved(path, to);
     afterMove(m_current == path ? to : m_current, *written);
     return true;
 }
@@ -1619,7 +1633,7 @@ void VaultController::openAt(const QString &path, int line)
 void VaultController::resyncAfterRename(const QString &from, const QString &to)
 {
     if (!QFileInfo::exists(m_vault->absolute(from)) && QFileInfo::exists(m_vault->absolute(to))) {
-        m_trail.moved(from, to);
+        moved(from, to);
         m_current = to;
         readCurrent();
     }

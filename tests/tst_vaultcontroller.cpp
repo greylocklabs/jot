@@ -768,6 +768,16 @@ void TestVaultController::keepsNotesOpenInTabs()
     QVERIFY(m_vault->tabs().isEmpty());
     QCOMPARE(m_vault->current(), QString());
 
+    // A note open in a tab not shown keeps its tab when it moves to another notebook.
+    m_vault->setCurrent(u"Welcome.md"_s);
+    m_vault->openInNewTab(u"Ashfall/Crossings.md"_s);
+    m_vault->selectTab(0);
+    QVERIFY(m_vault->moveNoteTo(u"Ashfall/Crossings.md"_s, u"Recipes"_s));
+    QCOMPARE(m_vault->tabs(), (QStringList{u"Welcome.md"_s, u"Recipes/Crossings.md"_s}));
+    m_vault->selectTab(1);
+    QCOMPARE(m_vault->current(), u"Recipes/Crossings.md"_s);
+    m_vault->closeTab(1);
+
     // Trashing the note shown, with others open, shows the tab after it.
     m_vault->setCurrent(u"Welcome.md"_s);
     m_vault->openInNewTab(u"Ashfall/Pitch.md"_s);
