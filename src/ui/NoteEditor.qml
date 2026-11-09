@@ -662,6 +662,7 @@ Rectangle {
                         tableCheck.restart()
                     // Once the cursor has moved too, so it is read where the typing ended.
                     Qt.callLater(findLink)
+                    Qt.callLater(findEmoji)
                 }
                 onCursorRectangleChanged: flick.follow(cursorRectangle)
                 onActiveFocusChanged: {
@@ -704,15 +705,49 @@ Rectangle {
                         root.format("wikilink", item.target)
                 }
 
-                /// Handles a key while notes are offered; says whether it did.
-                function linkKey(event) {
-                    const count = linkPopup.items.length
+                /// Where the emoji name being typed starts, at its colon, or -1, and the one
+                /// Escape put away.
+                property int emojiStart: -1
+                property int dismissedEmoji: -1
+
+                /// Offers emoji for the name being typed after a colon, as for wikilinks.
+                function findEmoji() {
+                    const query = activeFocus && !readOnly && selectionStart === selectionEnd
+                          && linkStart < 0 ? styler.emojiAt(cursorPosition) : ({})
+                    emojiStart = query.start === undefined ? -1 : query.start
+                    if (emojiStart < 0 || emojiStart === dismissedEmoji) {
+                        if (emojiStart < 0)
+                            dismissedEmoji = -1
+                        emojiPopup.items = []
+                        return
+                    }
+                    emojiPopup.items = Emoji.suggestions(query.text, 8).map(each => ({
+                        "text": each.emoji,
+                        "detail": each.name
+                    }))
+                    emojiPopup.highlighted = 0
+                }
+
+                /// Puts the emoji itself in place of the colon and name, not a shortcode.
+                function pickEmoji(index) {
+                    const item = emojiPopup.items[index]
+                    if (!item)
+                        return
+                    const start = emojiStart
+                    emojiPopup.items = []
+                    styler.replace(start, cursorPosition, item.text)
+                    cursorPosition = start + item.text.length
+                }
+
+                /// Handles a key while `popup` offers something; says whether it did.
+                function suggestionKey(event, popup, pick, dismiss) {
+                    const count = popup.items.length
                     switch (event.key) {
                     case Qt.Key_Down:
-                        linkPopup.highlighted = (linkPopup.highlighted + 1) % count
+                        popup.highlighted = (popup.highlighted + 1) % count
                         return true
                     case Qt.Key_Up:
-                        linkPopup.highlighted = (linkPopup.highlighted + count - 1) % count
+                        popup.highlighted = (popup.highlighted + count - 1) % count
                         return true
                     case Qt.Key_Return:
                     case Qt.Key_Enter:
@@ -720,11 +755,10 @@ Rectangle {
                         if (event.modifiers !== Qt.NoModifier && event.modifiers
                                 !== Qt.KeypadModifier)
                             return false
-                        pickLink(linkPopup.highlighted)
+                        pick(popup.highlighted)
                         return true
                     case Qt.Key_Escape:
-                        dismissedLink = linkStart
-                        linkPopup.items = []
+                        dismiss()
                         return true
                     }
                     return false
@@ -737,6 +771,9 @@ Rectangle {
                     if (linkPopup.items.length > 0 && styler.wikilinkAt(cursorPosition).start
                             !== linkStart)
                         linkPopup.items = []
+                    if (emojiPopup.items.length > 0 && styler.emojiAt(cursorPosition).start
+                            !== emojiStart)
+                        emojiPopup.items = []
                 }
 
                 /// Puts `markdown` on lines of its own at `position`.
@@ -749,7 +786,22 @@ Rectangle {
                 Keys.onPressed: event => {
                     // While notes are offered for a wikilink, the arrows choose one and
                     // Return or Tab puts it in.
-                    if (linkPopup.visible && body.linkKey(event)) {
+                    if (linkPopup.visible && body.suggestionKey(event, linkPopup, body.pickLink, ()
+                                                                => {
+                                                                    body.dismissedLink
+                                                                            = body.linkStart
+                                                                    linkPopup.items = []
+                                                                })) {
+                        event.accepted = true
+                        return
+                    }
+                    // And the same for emoji after a colon.
+                    if (emojiPopup.visible && body.suggestionKey(event, emojiPopup, body.pickEmoji, (
+                                                                     ) => {
+                                                                         body.dismissedEmoji
+                                                                                 = body.emojiStart
+                                                                         emojiPopup.items = []
+                                                                     })) {
                         event.accepted = true
                         return
                     }
@@ -904,6 +956,12 @@ Rectangle {
                         id: linkPopup
                         wanted: body.activeFocus
                         onPicked: index => body.pickLink(index)
+                    }
+                    SuggestionPopup {
+                        id: emojiPopup
+                        objectName: "emojiPopup"
+                        wanted: body.activeFocus
+                        onPicked: index => body.pickEmoji(index)
                     }
                 }
 

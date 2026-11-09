@@ -94,6 +94,17 @@ QVariantMap MarkdownStyler::wikilinkAt(int position) const
     return {{u"start"_s, int(query->start)}, {u"text"_s, query->text}};
 }
 
+QVariantMap MarkdownStyler::emojiAt(int position) const
+{
+    if (!m_document || !m_document->textDocument())
+        return {};
+    const std::optional<markdownedit::EmojiQuery> query =
+        markdownedit::emojiAt(m_document->textDocument()->toPlainText(), position);
+    if (!query)
+        return {};
+    return {{u"start"_s, int(query->start)}, {u"text"_s, query->text}};
+}
+
 QVariantMap MarkdownStyler::format(const QString &action, int from, int to, const QString &argument)
 {
     using namespace markdownedit;

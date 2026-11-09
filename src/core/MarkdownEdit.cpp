@@ -835,6 +835,27 @@ std::optional<WikilinkQuery> wikilinkAt(const QString &text, qsizetype cursor)
     return WikilinkQuery{open + 2, typed};
 }
 
+std::optional<EmojiQuery> emojiAt(const QString &text, qsizetype cursor)
+{
+    cursor = std::clamp<qsizetype>(cursor, 0, text.size());
+    const qsizetype line = lineStartOf(text, cursor);
+    qsizetype colon = cursor;
+    const auto namePart = [](QChar c) {
+        return c.isLetterOrNumber() || c == u'_' || c == u'+' || c == u'-';
+    };
+    while (colon > line && namePart(text.at(colon - 1)))
+        --colon;
+    if (colon == line || text.at(colon - 1) != u':' || cursor - colon < 2)
+        return std::nullopt;
+    --colon;
+    static const QString openers = u"([{\"'"_s;
+    if (colon > line && !text.at(colon - 1).isSpace() && !openers.contains(text.at(colon - 1)))
+        return std::nullopt;
+    if (inCode(text, line) || text.mid(line, colon - line).count(u'`') % 2 == 1)
+        return std::nullopt;
+    return EmojiQuery{colon, text.mid(colon + 1, cursor - colon - 1).replace(u'_', u' ')};
+}
+
 std::optional<Edit> completeWikilink(const QString &text, qsizetype cursor, const QString &target)
 {
     const std::optional<WikilinkQuery> query = wikilinkAt(text, cursor);
