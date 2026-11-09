@@ -664,7 +664,9 @@ ApplicationWindow {
         case "export":
             return note && Vault.currentKind === "markdown"
         case "record":
-            return note && Vault.currentKind === "markdown" && Vault.writable
+            return note && Vault.currentKind === "markdown" && Vault.writable && (editor.canRecord
+                                                                                  || editor.recording)
+
         case "editNote":
         case "readMode":
         case "outline":

@@ -129,6 +129,10 @@ Rectangle {
                                                                           "yyyy-MM-dd HHmmss")))
         return true
     }
+    /// Whether there is a microphone to record from, and whether it is recording, for the
+    /// command palette to know.
+    readonly property bool canRecord: recorder.available
+    readonly property bool recording: recorder.recording
     /// Where the recording goes in, as the cursor was when it began, and in which note: the
     /// note it began in, under its name now, or none once the notes folder changed.
     property int recordAt: 0
