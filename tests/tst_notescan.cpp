@@ -179,6 +179,11 @@ void TestNoteScan::readsAsMarkdownWithLinks()
     // An image from the web is only linked to; one in the vault stays an image.
     QCOMPARE(readingMarkdown(u"![pixel](https://tracker.example/p.png) ![map](map.png)\n"_s, embed),
              u"[pixel](https://tracker.example/p.png) ![map](map.png)\n"_s);
+    // A sound is a link, to play elsewhere.
+    QCOMPARE(
+        readingMarkdown(u"![](Notes.assets/Take%201.ogg) ![[Take.wav]] ![Mara](m.mp3)\n"_s, embed),
+        u"[Take 1.ogg](Notes.assets/Take%201.ogg) [Take.wav](jot-note:Take.wav) "
+        "[Mara](m.mp3)\n"_s);
     // Code is left as it is.
     const QString code = u"`[[not]] #code`\n```\n[[Mara]] #tag\n```\n"_s;
     QCOMPARE(readingMarkdown(code, embed), code);

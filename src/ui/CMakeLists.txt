@@ -65,12 +65,15 @@ qt_add_qml_module(jotui
         KeyRouter.cpp
         ViEditor.h
         ViEditor.cpp
+        AudioRecorder.h
+        AudioRecorder.cpp
     QML_FILES
         Main.qml
         AboutDialog.qml
         Backlinks.qml
         CheckBox.qml
         CloseButton.qml
+        AudioPlayer.qml
         ConfirmDialog.qml
         ExportDialog.qml
         NoteTabs.qml
@@ -154,5 +157,5 @@ qt_add_resources(jotui "jot_export"
 
 target_include_directories(jotui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-target_link_libraries(jotui PUBLIC Qt6::Quick Qt6::QuickControls2 Qt6::DBus jotcore)
+target_link_libraries(jotui PUBLIC Qt6::Quick Qt6::QuickControls2 Qt6::DBus Qt6::Multimedia jotcore)
 target_link_libraries(jotui PRIVATE KF6::SyntaxHighlighting KF6::SonnetCore)

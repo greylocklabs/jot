@@ -4,6 +4,7 @@
 
 #include "jot/Diagram.h"
 #include "jot/FrontMatter.h"
+#include "jot/Vault.h"
 
 #include <Sonnet/Speller>
 
@@ -123,6 +124,14 @@ bool MarkdownHighlighter::imageLine(const QString &text)
         if (!path.isEmpty())
             m_resolved.insert(key, path);
     }
+    // A sound gets a player as wide as an image can be, at most 420.
+    if (!path.isEmpty() && Vault::isAudioFile(path)) {
+        if (m_cursorHere)
+            return false;
+        showImage(text, int(m.capturedLength(1)), path,
+                  QSize(std::min(m_look.imageWidth, 420), 2 * m_look.pixelSize + 16), true);
+        return true;
+    }
     const QSize natural = path.isEmpty() ? QSize() : imageSize(path);
     if (!natural.isValid() || natural.isEmpty())
         return false;
@@ -139,11 +148,13 @@ bool MarkdownHighlighter::imageLine(const QString &text)
     return true;
 }
 
-void MarkdownHighlighter::showImage(const QString &text, int bang, const QString &path, QSize shown)
+void MarkdownHighlighter::showImage(const QString &text, int bang, const QString &path, QSize shown,
+                                    bool audio)
 {
     auto *image = new Image;
     image->path = path;
     image->size = shown;
+    image->audio = audio;
     setCurrentBlockUserData(image);
     reserve(text, bang, shown.height());
 }

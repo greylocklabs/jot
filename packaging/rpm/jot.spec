@@ -29,6 +29,7 @@ BuildRequires:  cmake(Qt6Test)
 BuildRequires:  cmake(tomlplusplus)
 BuildRequires:  cmake(KF6SyntaxHighlighting)
 BuildRequires:  cmake(KF6Sonnet)
+BuildRequires:  cmake(Qt6Multimedia)
 BuildRequires:  cmake(Qt6Keychain)
 BuildRequires:  pkgconf-pkg-config
 BuildRequires:  pkgconfig(yaml-0.1)
@@ -39,6 +40,8 @@ BuildRequires:  qt6-qtsvg
 
 Requires:       hicolor-icon-theme
 Requires:       qt6-qtsvg
+# Recording and playing sounds, from QML too.
+Requires:       qt6-qtmultimedia
 # Syncing with a git repository runs git, and Git LFS for large files.
 Requires:       git-core
 Requires:       git-lfs

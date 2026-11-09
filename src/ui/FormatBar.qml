@@ -10,6 +10,9 @@ Rectangle {
 
     /// The note's front matter, from the styler.
     property var frontMatter: ({})
+    /// Whether there is a microphone, and whether it is recording.
+    property bool canRecord: false
+    property bool recording: false
 
     signal formatRequested(string action)
 
@@ -131,6 +134,21 @@ Rectangle {
             mono: true
             format: "codeblock"
             tip: qsTr("Code block")
+        }
+        // Records from the microphone into the note, where there is one.
+        WhyDisabled {
+            target: recordButton
+            reason: qsTr("No microphone found.")
+
+            FormatButton {
+                id: recordButton
+
+                objectName: "recordButton"
+                enabled: root.canRecord
+                label: root.recording ? qsTr("Stop") : qsTr("Rec")
+                format: "record"
+                tip: root.recording ? qsTr("Stop recording") : qsTr("Record from the microphone")
+            }
         }
     }
 

@@ -663,6 +663,8 @@ ApplicationWindow {
             return Vault.isOpen
         case "export":
             return note && Vault.currentKind === "markdown"
+        case "record":
+            return note && Vault.currentKind === "markdown" && Vault.writable
         case "editNote":
         case "readMode":
         case "outline":
@@ -782,6 +784,9 @@ ApplicationWindow {
             break
         case "export":
             exportNote(Vault.current)
+            break
+        case "record":
+            editor.format("record", "")
             break
         case "focusMode":
             Settings.focusMode = !Settings.focusMode

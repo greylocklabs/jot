@@ -94,6 +94,7 @@ QList<KeyAction> KeyRouter::actions()
         // Commands with no keys, for the palette.
         act(u"copyLink"_s, tr("Copy a link to the note"), window, {}),
         act(u"showInFiles"_s, tr("Show the note in Files"), window, {}),
+        act(u"record"_s, tr("Record from the microphone, or stop"), window, {}, {}, u"R"_s),
         act(u"export"_s, tr("Export the note..."), window, {}, {}, u"e"_s),
         act(u"history"_s, tr("Past versions of the note"), window, {}, {}, u"h"_s),
         act(u"togglePin"_s, tr("Pin the note to the top, or unpin it"), window, {}),

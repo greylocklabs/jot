@@ -43,6 +43,8 @@ Rectangle {
     function format(action, argument) {
         if (action === "schedule")
             return schedule()
+        if (action === "record")
+            return record()
         if (action === "source") {
             Settings.readMode = false
             Settings.sourceMode = !Settings.sourceMode
@@ -111,6 +113,33 @@ Rectangle {
     /// The file the editor's text came from. Until the next one is loaded, a change the editor
     /// reports, as when its font changes, belongs to no other file.
     property string loaded
+
+    /// Starts recording from the microphone, or stops and puts the recording in at the cursor.
+    function record() {
+        if (recorder.recording) {
+            recorder.stop()
+            return true
+        }
+        if (!recorder.available || body.readOnly)
+            return false
+        recordAt = body.cursorPosition
+        recorder.start(qsTr("Recording %1").arg(new Date().toLocaleString(Qt.locale(),
+                                                                          "yyyy-MM-dd HHmmss")))
+        return true
+    }
+    /// Where the recording goes in, as the cursor was when it began.
+    property int recordAt: 0
+
+    AudioRecorder {
+        id: recorder
+
+        onFinished: url => {
+            const markdown = Vault.attachFiles([url])
+            if (markdown !== "")
+                body.insertBlock(root.recordAt, markdown)
+        }
+        onFailed: why => recordingProblem.text = qsTr("Could not record: %1").arg(why)
+    }
 
     /// Brings the heading numbered `index`, from 0, to the top, with the cursor at its start
     /// when writing.
@@ -315,6 +344,8 @@ Rectangle {
         }
         visible: Vault.current !== "" && Vault.writable && !root.dataFile && !root.distractionFree
         frontMatter: styler.frontMatter
+        canRecord: recorder.available
+        recording: recorder.recording
         onFormatRequested: action => root.format(action, "")
     }
 
@@ -1046,7 +1077,7 @@ Rectangle {
                 }
 
                 Repeater {
-                    model: styler.images
+                    model: styler.images.filter(each => !each.audio)
 
                     Image {
                         required property var modelData
@@ -1068,6 +1099,27 @@ Rectangle {
                         asynchronous: true
                         smooth: true
                         mipmap: true
+                    }
+                }
+
+                // A sound embedded on a line of its own plays there.
+                Repeater {
+                    model: styler.images.filter(each => each.audio)
+
+                    AudioPlayer {
+                        required property var modelData
+
+                        readonly property rect line: {
+                            body.layoutTick
+                            return body.positionToRectangle(Math.min(modelData.position,
+                                                                     body.length))
+                        }
+
+                        objectName: "audioPlayer"
+                        y: line.y
+                        width: modelData.width
+                        height: modelData.height
+                        source: modelData.source
                     }
                 }
 
@@ -1374,6 +1426,59 @@ Rectangle {
 
             Backlinks {
                 width: parent.width - 2 * parent.padding
+            }
+        }
+    }
+
+    // While recording: for how long, and a way to stop.
+    Rectangle {
+        objectName: "recording"
+        anchors {
+            horizontalCenter: flick.horizontalCenter
+            bottom: wordCount.visible ? wordCount.top : statusLine.visible ? statusLine.top :
+                                                                             parent.bottom
+            bottomMargin: Theme.space3
+        }
+        visible: recorder.recording || recordingProblem.text !== ""
+        width: recordingRow.implicitWidth + 2 * Theme.space3
+        height: recordingRow.implicitHeight + 2 * Theme.space2
+        radius: Theme.radiusLg
+        color: Theme.surface
+        border.color: recorder.recording ? Theme.danger : Theme.border
+
+        Row {
+            id: recordingRow
+
+            anchors.centerIn: parent
+            spacing: Theme.space3
+
+            Text {
+                id: recordingProblem
+
+                anchors.verticalCenter: parent.verticalCenter
+                visible: text !== ""
+                color: Theme.danger
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.textSm
+            }
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                visible: recorder.recording
+                text: qsTr("Recording %1").arg(Math.floor(recorder.duration / 60000) + ":" + String(Math.floor(
+                                                                                                        recorder.duration
+                                                                                                        / 1000) % 60).padStart(
+                                                   2, "0"))
+                color: Theme.text
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.textSm
+                font.features: {
+                    "tnum": 1
+                }
+            }
+            StickerButton {
+                anchors.verticalCenter: parent.verticalCenter
+                text: recorder.recording ? qsTr("Stop") : qsTr("OK")
+                onClicked: recorder.recording ? recorder.stop() : recordingProblem.text = ""
             }
         }
     }
