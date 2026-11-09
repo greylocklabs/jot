@@ -110,6 +110,29 @@ Rectangle {
     /// reports, as when its font changes, belongs to no other file.
     property string loaded
 
+    /// Brings the heading numbered `index`, from 0, to the top, with the cursor at its start
+    /// when writing.
+    function goToHeading(index) {
+        if (Settings.readMode) {
+            const position = reading.headingPosition(index)
+            if (position >= 0)
+                scrollTo(reader.y + reader.positionToRectangle(position).y)
+            return
+        }
+        const heading = styler.headings[index]
+        if (!heading)
+            return
+        body.forceActiveFocus()
+        body.cursorPosition = heading.position
+        scrollTo(body.y + body.positionToRectangle(heading.position).y)
+    }
+
+    /// Scrolls so `y`, in the page, is near the top.
+    function scrollTo(y) {
+        flick.contentY = Math.max(0, Math.min(page.y + y - Theme.space6, flick.contentHeight
+                                              - flick.height))
+    }
+
     /// Opens what a link in the reading view leads to: a note, a tag's notes, or anything
     /// else with the desktop.
     function openLink(link) {
@@ -121,11 +144,7 @@ Rectangle {
             Vault.follow(decodeURIComponent(link.slice("jot-note:".length)), true)
         } else if (link.startsWith("jot-heading:")) {
             // A table of contents entry scrolls its heading to the top.
-            const position = reading.headingPosition(Number(link.slice("jot-heading:".length)))
-            if (position >= 0)
-                flick.contentY = Math.max(0, Math.min(page.y + reader.y + reader.positionToRectangle(
-                                                          position).y - Theme.space6,
-                                                      flick.contentHeight - flick.height))
+            goToHeading(Number(link.slice("jot-heading:".length)))
         } else {
             Vault.follow(link, false)
         }
@@ -291,7 +310,7 @@ Rectangle {
 
         anchors {
             left: parent.left
-            right: parent.right
+            right: outline.visible ? outline.left : parent.right
             top: formatBar.visible ? formatBar.bottom : parent.top
             bottom: statusLine.visible ? statusLine.top : parent.bottom
         }
@@ -1174,6 +1193,33 @@ Rectangle {
                 width: parent.width - 2 * parent.padding
             }
         }
+    }
+
+    Outline {
+        id: outline
+
+        objectName: "outline"
+        anchors {
+            right: parent.right
+            top: flick.top
+            bottom: flick.bottom
+        }
+        // Only where the note keeps room enough beside it.
+        visible: Settings.outlineShown && Vault.current !== "" && !root.dataFile && root.width
+                 >= implicitWidth + 480
+        width: implicitWidth
+        headings: styler.headings
+        current: {
+            if (Settings.readMode || !body.activeFocus)
+                return -1
+            let under = -1
+            for (let i = 0; i < headings.length; ++i) {
+                if (headings[i].position <= body.cursorPosition)
+                    under = i
+            }
+            return under
+        }
+        onChosen: index => root.goToHeading(index)
     }
 
     ViStatusLine {

@@ -579,6 +579,7 @@ ApplicationWindow {
             return Vault.isOpen && !Vault.showingTasks && !Vault.showingTrash
         case "editNote":
         case "readMode":
+        case "outline":
         case "copyLink":
         case "showInFiles":
         case "history":
@@ -680,6 +681,9 @@ ApplicationWindow {
             // Out of reading too, as the switch does, since the source is only seen writing.
             Settings.readMode = false
             Settings.sourceMode = !Settings.sourceMode
+            break
+        case "outline":
+            Settings.outlineShown = !Settings.outlineShown
             break
         case "readMode":
             if (Settings.readMode)

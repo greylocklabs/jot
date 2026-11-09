@@ -4,7 +4,7 @@ import QtQuick
 import QtQuick.Controls
 
 /// The row over a note: Markdown formatting for the selection or the line the cursor is
-/// on, and on the right, whether the note is a task.
+/// on, and on the right, how it shows, its outline, and whether the note is a task.
 Rectangle {
     id: root
 
@@ -168,6 +168,17 @@ Rectangle {
                 if (index < 2)
                     Settings.sourceMode = index === 1
             }
+        }
+
+        // The note's headings down the side.
+        Toggle {
+            objectName: "outlineToggle"
+            anchors.verticalCenter: parent.verticalCenter
+            text: qsTr("Outline")
+            checked: Settings.outlineShown
+            focusPolicy: Qt.NoFocus
+            Accessible.description: qsTr("Show the note's headings beside it (Ctrl+Shift+O)")
+            onToggled: Settings.outlineShown = checked
         }
 
         // A note that is a task shows in Tasks until it is done.

@@ -32,6 +32,7 @@ const QString kReminderTime = u"reminders/time"_s;
 const QString kLastReminderCheck = u"reminders/lastCheck"_s;
 const QString kSourceMode = u"editor/sourceMode"_s;
 const QString kReadMode = u"editor/readMode"_s;
+const QString kOutlineShown = u"editor/outline"_s;
 const QString kNoteFont = u"editor/font"_s;
 const QString kSidebarWidth = u"layout/sidebarWidth"_s;
 const QString kNoteListWidth = u"layout/noteListWidth"_s;
@@ -80,6 +81,7 @@ Settings::Settings(const QString &path, QObject *parent)
     m_lastReminderCheck = m_store.value(kLastReminderCheck).toDateTime();
     m_sourceMode = m_store.value(kSourceMode, false).toBool();
     m_readMode = m_store.value(kReadMode, false).toBool();
+    m_outlineShown = m_store.value(kOutlineShown, false).toBool();
     m_noteFont = m_store.value(kNoteFont).toString();
     m_sidebarWidth =
         bounded(m_store.value(kSidebarWidth, 0).toInt(), kMinSidebarWidth, kMaxSidebarWidth);
@@ -329,6 +331,15 @@ void Settings::setNoteFont(const QString &font)
     Q_EMIT noteFontChanged();
 }
 
+void Settings::setOutlineShown(bool shown)
+{
+    if (m_outlineShown == shown)
+        return;
+    m_outlineShown = shown;
+    m_store.setValue(kOutlineShown, shown);
+    Q_EMIT outlineShownChanged();
+}
+
 void Settings::setReadMode(bool read)
 {
     if (m_readMode == read)
@@ -428,6 +439,7 @@ void Settings::reset()
     setCheckForUpdates(true);
     setSourceMode(false);
     setReadMode(false);
+    setOutlineShown(false);
     setTasksView(u"today"_s);
     setKeepRunning(true);
     setRemindersOn(true);
