@@ -208,6 +208,15 @@ void TestNoteScan::findsHeadingsForAContentsList()
     QCOMPARE(underlined.at(1).text, u"2026 plans"_s);
     QCOMPARE(underlined.at(1).level, 2);
     QCOMPARE(underlined.at(1).position, qsizetype(18));
+    // In a quote or under a list item, an underline makes a heading the contents leave out.
+    const QList<Heading> nested = allHeadingsOf(u"> Quote\n> ===\n\n- Item\n  ---\n\n## Later\n"_s);
+    QCOMPARE(nested.size(), 3);
+    QCOMPARE(nested.at(0).text, u"Quote"_s);
+    QVERIFY(nested.at(0).nested);
+    QCOMPARE(nested.at(1).text, u"Item"_s);
+    QVERIFY(nested.at(1).nested);
+    QVERIFY(!nested.at(2).nested);
+    QCOMPARE(headingsOf(u"> Quote\n> ===\n\n- Item\n  ---\n\n## Later\n"_s).size(), 1);
 
     QVERIFY(isTocMarker(u"  ${toc} "));
     QVERIFY(!isTocMarker(u"see ${toc}"));

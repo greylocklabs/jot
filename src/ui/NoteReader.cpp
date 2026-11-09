@@ -186,6 +186,12 @@ int NoteReader::headingPosition(int index) const
     }
     if (drawn < 0)
         return -1;
+    // Should what is drawn have other headings than were found, none is the right one to go to.
+    int headings = 0;
+    for (QTextBlock block = doc->begin(); block.isValid(); block = block.next())
+        headings += block.blockFormat().headingLevel() > 0;
+    if (headings != all.size())
+        return -1;
     for (QTextBlock block = doc->begin(); block.isValid(); block = block.next()) {
         if (block.blockFormat().headingLevel() > 0 && drawn-- == 0)
             return block.position();
