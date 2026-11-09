@@ -908,6 +908,8 @@ void VaultController::exportNote(const QString &path, const QString &format, con
     for (const QString &variable : pandocEnvironment())
         environment.insert(variable.section(u'=', 0, 0), variable.section(u'=', 1));
     process->setProcessEnvironment(environment);
+    // TeX in paranoid mode still reads below the folder it runs in, so that is the throwaway one.
+    process->setWorkingDirectory(work->path());
     connect(process, &QProcess::finished, this,
             [this, process, work, output](int code, QProcess::ExitStatus status) {
                 process->deleteLater();

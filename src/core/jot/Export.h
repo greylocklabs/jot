@@ -39,8 +39,8 @@ struct ExportFormat
                                           const QString &presets);
 
 /// What Pandoc runs with besides the desktop's environment: TeX's paranoid setting, so making a
-/// PDF reads and writes no file outside the folder Pandoc makes it in, whatever a note's math
-/// asks for.
+/// PDF reads and writes no file outside the folder it runs in, nor a hidden one, whatever a
+/// note's math asks for. Pandoc is to run in a folder of the export's own.
 [[nodiscard]] QStringList pandocEnvironment();
 
 } // namespace jot
