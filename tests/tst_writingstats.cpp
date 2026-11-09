@@ -26,6 +26,8 @@ void TestWritingStats::countsWordsAndCharacters()
     QCOMPARE(count.characters, 46);
     QCOMPARE(countText(u""_s).words, 0);
     QCOMPARE(countText(u"café über naïve"_s).words, 3);
+    // An emoji is one character, though two UTF-16 units.
+    QCOMPARE(countText(u"\U0001F98A fox"_s).characters, 5);
 }
 
 void TestWritingStats::addsUpTheDaysOfEveryComputer()
