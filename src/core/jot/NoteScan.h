@@ -69,8 +69,9 @@ struct Heading
 /// ![[embeds]] images at the URL `embedUrl` gives for their target (links when it gives
 /// none), and #tags links to `jot-tag:` ones. Images from the web become links to them, so
 /// drawing the note fetches nothing. Targets are percent-encoded. A table of contents marker
-/// becomes a list of links to `jot-heading:` targets, each heading's number from 0. Code is
-/// left alone.
+/// becomes a list of links to `jot-heading:` targets, each heading's number from 0.
+/// CriticMarkup reads as its edits made, with deletions struck through and comments in
+/// italics. Code is left alone.
 [[nodiscard]] QString readingMarkdown(QStringView body,
                                       const std::function<QString(const QString &)> &embedUrl);
 

@@ -39,6 +39,8 @@ public:
         QColor muted;
         QColor faint;
         QColor accent;
+        /// What a CriticMarkup deletion is drawn in.
+        QColor danger;
         QColor codeBackground;
         /// The colors code is highlighted in.
         CodeColors code;
@@ -68,6 +70,13 @@ public:
     {
         int rows = 0;
         int rowHeight = 0;
+    };
+
+    /// The CriticMarkup comments, `{>>...<<}`, on a line of prose: where each starts in the
+    /// line, and what it says.
+    struct Comments : QTextBlockUserData
+    {
+        QList<std::pair<int, QString>> comments;
     };
 
     /// Finds the file an image link reaches: its target as written, and whether it is a
@@ -100,6 +109,8 @@ public:
     /// Works out the paragraph focus mode lights again, as after an edit, which can join or
     /// part paragraphs with the cursor where it was.
     void refreshFocus();
+    /// Folds CriticMarkup comments away, for the margin to show, but on the cursor's line.
+    void setFoldComments(bool fold);
 
     [[nodiscard]] Hit hitAt(int position) const;
     /// Redraws each table of contents, as after the headings changed.
@@ -125,6 +136,9 @@ private:
     void merge(int start, int length, const QTextCharFormat &format);
     void mark(int start, int length);
     void inlineStyles(const QString &text, int from);
+    /// Styles CriticMarkup's additions, deletions, substitutions, highlights and comments, and
+    /// gives where its comments are, which nothing else styles inside.
+    QList<std::pair<int, int>> criticStyles(const QString &text, int from);
     /// Shows the image a line links to, if the line is only that link; says whether it did.
     bool imageLine(const QString &text);
     [[nodiscard]] QSize imageSize(const QString &path);
@@ -146,6 +160,7 @@ private:
     bool m_cursorHere = false;
     bool m_source = false;
     bool m_focus = false;
+    bool m_foldComments = false;
     /// The first and last blocks of the paragraph the cursor is in, for focus mode.
     std::pair<int, int> m_paragraph{-1, -1};
     std::unique_ptr<CodeHighlighter> m_code;

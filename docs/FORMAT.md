@@ -136,6 +136,8 @@ CommonMark with the GitHub extensions (tables, task lists, strikethrough, autoli
   or `,`. Tags match without regard to case.
 - `${toc}` on a line of its own, as Joplin writes it, for a list of the note's `#` headings,
   drawn in its place and never written into the file.
+- CriticMarkup on one line: `{++added++}`, `{--deleted--}`, `{~~old~>new~~}`,
+  `{==highlighted==}` and `{>>comments<<}`, shown as edits, and comments as notes in the margin.
 
 Jot keeps any other Markdown as written, footnotes and math among them, and does not draw those
 yet.

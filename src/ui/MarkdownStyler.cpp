@@ -50,6 +50,7 @@ void MarkdownStyler::setDocument(QQuickTextDocument *document)
         m_highlighter->setSourceMode(m_sourceMode);
         m_highlighter->setCursorPosition(m_cursorPosition);
         m_highlighter->setFocusMode(m_focusMode);
+        m_highlighter->setFoldComments(m_foldComments);
         connect(document->textDocument(), &QTextDocument::contentsChanged, this,
                 &MarkdownStyler::scheduleImages);
         connect(document->textDocument(), &QTextDocument::contentsChanged, this,
@@ -205,6 +206,33 @@ void MarkdownStyler::setSourceMode(bool source)
     Q_EMIT sourceModeChanged();
     // Images come and go with the styling.
     scheduleImages();
+}
+
+void MarkdownStyler::setFoldComments(bool fold)
+{
+    if (m_foldComments == fold)
+        return;
+    m_foldComments = fold;
+    if (m_highlighter)
+        m_highlighter->setFoldComments(fold);
+    Q_EMIT foldCommentsChanged();
+    scheduleImages();
+}
+
+QVariantList MarkdownStyler::comments() const
+{
+    QVariantList comments;
+    if (!m_document || !m_document->textDocument())
+        return comments;
+    for (QTextBlock block = m_document->textDocument()->begin(); block.isValid();
+         block = block.next()) {
+        const auto *found = dynamic_cast<const MarkdownHighlighter::Comments *>(block.userData());
+        if (!found)
+            continue;
+        for (const auto &[at, text] : found->comments)
+            comments.append(QVariantMap{{u"position"_s, block.position() + at}, {u"text"_s, text}});
+    }
+    return comments;
 }
 
 void MarkdownStyler::setFocusMode(bool focus)
@@ -372,6 +400,7 @@ void MarkdownStyler::applyLook()
     look.muted = theme.textMuted();
     look.faint = theme.textFaint();
     look.accent = theme.accent();
+    look.danger = theme.danger();
     look.codeBackground = theme.surfaceAlt();
     look.code = codeColors(theme.spec());
     look.family = m_fontFamily.isEmpty() ? theme.fontFamily() : m_fontFamily;

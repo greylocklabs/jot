@@ -370,9 +370,13 @@ Rectangle {
         Column {
             id: page
 
-            width: root.dataFile ? flick.width : Math.min(flick.width, Theme.editorWidth + 2
-                                                          * Theme.space7)
-            x: (flick.width - width) / 2
+            /// Room kept on the right for comments in the margin, when the note has some.
+            readonly property real marginRoom: !root.dataFile && styler.comments.length > 0
+                                               && flick.width >= 640 ? 260 : 0
+
+            width: root.dataFile ? flick.width : Math.min(flick.width - marginRoom,
+                                                          Theme.editorWidth + 2 * Theme.space7)
+            x: Math.max(0, Math.min((flick.width - width) / 2, flick.width - width - marginRoom))
             padding: Theme.space7
             // Room under the last line for typewriter scrolling to bring it to the middle.
             bottomPadding: Settings.typewriter && !root.dataFile ? Math.max(Theme.space7,
@@ -1030,6 +1034,7 @@ Rectangle {
 
                     sourceMode: Settings.sourceMode
                     focusMode: Settings.focusMode
+                    foldComments: margin.room
                     fontFamily: root.noteFamily
                     cursorPosition: body.activeFocus ? body.cursorPosition : -1
                     pixelSize: body.font.pixelSize
@@ -1059,6 +1064,98 @@ Rectangle {
                         asynchronous: true
                         smooth: true
                         mipmap: true
+                    }
+                }
+
+                // CriticMarkup comments as notes in the margin beside their lines, where the
+                // window has room for them; otherwise they stay in the text.
+                Item {
+                    id: margin
+
+                    readonly property real space: flick.width - (page.x + page.width)
+                    readonly property bool room: space >= 180 && !root.dataFile
+                    readonly property real noteWidth: Math.min(240, space - Theme.space4)
+                    /// Each comment with where it goes, below the one before when they would meet.
+                    readonly property var placed: {
+                        body.layoutTick
+                        if (!room)
+                            return []
+                        const out = []
+                        let below = -Infinity
+                        for (const comment of styler.comments) {
+                            const line = body.positionToRectangle(Math.min(comment.position,
+                                                                           body.length))
+                            const lines = Math.min(3, Math.max(1, Math.ceil(noteMetrics.advanceWidth(
+                                                                                comment.text) / (
+                                                                                noteWidth - 2
+                                                                                * Theme.space2))))
+                            const height = lines * noteMetrics.height + 2 * Theme.space2
+                            const y = Math.max(line.y, below + Theme.space2)
+                            out.push({
+                                         "y": y,
+                                         "height": height,
+                                         "text": comment.text,
+                                         "position": comment.position
+                                     })
+                            below = y + height
+                        }
+                        return out
+                    }
+
+                    x: body.width + Theme.space7 + Theme.space3
+                    visible: room
+
+                    FontMetrics {
+                        id: noteMetrics
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.textSm
+                    }
+
+                    Repeater {
+                        model: margin.placed
+
+                        Rectangle {
+                            id: note
+
+                            required property var modelData
+
+                            objectName: "marginNote"
+                            y: modelData.y
+                            width: margin.noteWidth
+                            height: modelData.height
+                            radius: Theme.radiusMd
+                            color: noteHover.hovered ? Theme.surfaceAlt : Theme.surface
+                            border.color: Theme.border
+                            Accessible.role: Accessible.Note
+                            Accessible.name: modelData.text
+
+                            Text {
+                                anchors.fill: parent
+                                anchors.margins: Theme.space2
+                                wrapMode: Text.Wrap
+                                maximumLineCount: 3
+                                elide: Text.ElideRight
+                                textFormat: Text.PlainText
+                                text: note.modelData.text
+                                color: Theme.textMuted
+                                font: noteMetrics.font
+                            }
+                            HoverHandler {
+                                id: noteHover
+                                cursorShape: Qt.PointingHandCursor
+                            }
+                            Tip {
+                                visible: noteHover.hovered
+                                text: note.modelData.text
+                            }
+                            // To the comment, shown in its line to edit.
+                            TapHandler {
+                                onTapped: {
+                                    body.forceActiveFocus()
+                                    body.cursorPosition = note.modelData.position + 3
+                                }
+                            }
+                        }
                     }
                 }
 

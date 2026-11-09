@@ -208,8 +208,59 @@ bool isTocMarker(QStringView line)
     return line.trimmed() == u"${toc}";
 }
 
-QString readingMarkdown(QStringView body, const std::function<QString(const QString &)> &embedUrl)
+namespace {
+
+/// CriticMarkup read as Markdown: additions and highlights as their text, deletions struck
+/// through, a substitution as both, and a comment in italics in brackets. Code is left alone.
+QString criticForReading(QStringView body)
 {
+    static const QRegularExpression critic(
+        uR"(\{\+\+(.+?)\+\+\}|\{--(.+?)--\}|\{~~(.*?)~>(.*?)~~\}|\{==(.+?)==\}|\{>>(.*?)<<\})"_s);
+    if (!body.contains(u"{"_s))
+        return body.toString();
+    QString out;
+    qsizetype copied = 0;
+    forEachProseLine(body, 1, [&](int, qsizetype start, const QString &line) {
+        const QString prose = withoutCodeSpans(line);
+        qsizetype at = 0;
+        bool changed = false;
+        QString rewritten;
+        for (const QRegularExpressionMatch &m : critic.globalMatch(prose)) {
+            rewritten += QStringView(line).sliced(at, m.capturedStart() - at);
+            const auto part = [&](int n) {
+                return line.mid(m.capturedStart(n), m.capturedLength(n));
+            };
+            if (m.capturedLength(1) > 0)
+                rewritten += part(1);
+            else if (m.capturedLength(2) > 0)
+                rewritten += u"~~"_s + part(2) + u"~~"_s;
+            else if (m.capturedStart(3) >= 0)
+                rewritten +=
+                    (m.capturedLength(3) > 0 ? u"~~"_s + part(3) + u"~~ "_s : QString()) + part(4);
+            else if (m.capturedLength(5) > 0)
+                rewritten += part(5);
+            else if (const QString comment = part(6).trimmed(); !comment.isEmpty())
+                rewritten += u" *(%1)*"_s.arg(comment);
+            at = m.capturedEnd();
+            changed = true;
+        }
+        if (!changed)
+            return;
+        out += body.sliced(copied, start - copied);
+        out += rewritten + line.mid(at);
+        copied = start + line.size();
+    });
+    out += body.sliced(copied);
+    return out;
+}
+
+} // namespace
+
+QString readingMarkdown(QStringView original,
+                        const std::function<QString(const QString &)> &embedUrl)
+{
+    const QString accepted = criticForReading(original);
+    const QStringView body = accepted;
     // A wikilink with its label, after a bar, when it has one.
     static const QRegularExpression wiki(uR"((!?)\[\[([^\[\]|]*?)(?:\|([^\[\]]*))?\]\])"_s);
     const auto encode = [](const QString &target) {
