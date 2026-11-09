@@ -1263,16 +1263,30 @@ QString VaultController::pasteImage()
     return u"![](%1)"_s.arg(Vault::linkTarget(m_current, *path));
 }
 
-QString VaultController::attachFiles(const QList<QUrl> &files)
+bool VaultController::attachToNoteEnd(const QString &note, const QUrl &file)
 {
-    if (!m_vault || m_current.isEmpty())
+    const QString markdown = attachFilesTo(note, {file});
+    if (markdown.isEmpty())
+        return false;
+    return rewriteNote(note, [&markdown](const QString &text) -> std::optional<QString> {
+        const QString newline = text.contains(u"\r\n"_s) ? u"\r\n"_s : u"\n"_s;
+        QString changed = text;
+        if (!changed.isEmpty() && !changed.endsWith(u'\n'))
+            changed += newline;
+        return changed + newline + markdown + newline;
+    });
+}
+
+QString VaultController::attachFilesTo(const QString &note, const QList<QUrl> &files)
+{
+    if (!m_vault || note.isEmpty())
         return {};
     QStringList lines;
     QStringList refused;
     for (const QUrl &url : files) {
         QString error;
         const std::optional<QString> path =
-            url.isLocalFile() ? m_vault->copyAttachment(m_current, url.toLocalFile(), &error)
+            url.isLocalFile() ? m_vault->copyAttachment(note, url.toLocalFile(), &error)
                               : std::nullopt;
         if (!path) {
             refused.append(
@@ -1285,7 +1299,7 @@ QString VaultController::attachFiles(const QList<QUrl> &files)
         const bool image = !QImageReader::imageFormat(m_vault->absolute(*path)).isEmpty() ||
                            Vault::isAudioFile(*path);
         lines.append((image ? u"![](%1)"_s : u"[%2](%1)"_s)
-                         .arg(Vault::linkTarget(m_current, *path), QFileInfo(*path).fileName()));
+                         .arg(Vault::linkTarget(note, *path), QFileInfo(*path).fileName()));
     }
     if (!refused.isEmpty())
         setProblem(tr("Not attached: %1").arg(refused.join(u"; "_s)));
