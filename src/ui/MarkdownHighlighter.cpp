@@ -251,6 +251,47 @@ void MarkdownHighlighter::setCursorPosition(int position)
     if (before >= 0)
         refresh(before);
     refresh(block);
+    // Out of the editor, the paragraph last written in stays lit.
+    if (m_focus && block >= 0) {
+        const std::pair<int, int> paragraph = paragraphOf(block);
+        if (paragraph != m_paragraph) {
+            const std::pair<int, int> was = std::exchange(m_paragraph, paragraph);
+            rehighlightRange(was);
+            rehighlightRange(paragraph);
+        }
+    }
+}
+
+std::pair<int, int> MarkdownHighlighter::paragraphOf(int block) const
+{
+    const auto blank = [this](int number) {
+        const QTextBlock line = document()->findBlockByNumber(number);
+        return !line.isValid() || line.text().trimmed().isEmpty();
+    };
+    if (block < 0 || blank(block))
+        return {block, block};
+    int first = block;
+    int last = block;
+    while (first > 0 && !blank(first - 1))
+        --first;
+    while (last + 1 < document()->blockCount() && !blank(last + 1))
+        ++last;
+    return {first, last};
+}
+
+void MarkdownHighlighter::rehighlightRange(std::pair<int, int> range)
+{
+    for (int i = std::max(range.first, 0); i <= range.second; ++i)
+        rehighlightBlock(document()->findBlockByNumber(i));
+}
+
+void MarkdownHighlighter::setFocusMode(bool focus)
+{
+    if (m_focus == focus)
+        return;
+    m_focus = focus;
+    m_paragraph = focus && document() ? paragraphOf(m_cursorBlock) : std::pair{-1, -1};
+    rehighlight();
 }
 
 void MarkdownHighlighter::setSourceMode(bool source)
@@ -284,6 +325,22 @@ void MarkdownHighlighter::mark(int start, int length)
 }
 
 void MarkdownHighlighter::highlightBlock(const QString &text)
+{
+    styleBlock(text);
+    const int number = currentBlock().blockNumber();
+    if (!m_focus || (number >= m_paragraph.first && number <= m_paragraph.second))
+        return;
+    // Faded, apart from what is folded away and drawn over.
+    for (int i = 0; i < text.size(); ++i) {
+        QTextCharFormat current = format(i);
+        if (current.foreground().color().alpha() == 0)
+            continue;
+        current.setForeground(m_look.faint);
+        setFormat(i, 1, current);
+    }
+}
+
+void MarkdownHighlighter::styleBlock(const QString &text)
 {
     const int state = kindOf(previousBlockState());
     const bool first = currentBlock().blockNumber() == 0;

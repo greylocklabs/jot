@@ -95,6 +95,8 @@ public:
     /// Shows the Markdown exactly as written, in the monospace font: nothing folded, styled
     /// or shown as an image.
     void setSourceMode(bool source);
+    /// Fades every block but those of the paragraph the cursor is in.
+    void setFocusMode(bool focus);
 
     [[nodiscard]] Hit hitAt(int position) const;
     /// Redraws each table of contents, as after the headings changed.
@@ -109,6 +111,12 @@ public:
 
 protected:
     void highlightBlock(const QString &text) override;
+    /// Styles a block, as highlightBlock() does before focus mode fades it.
+    void styleBlock(const QString &text);
+    /// The blocks of the paragraph `block` is in: it and the lines next to it with text.
+    [[nodiscard]] std::pair<int, int> paragraphOf(int block) const;
+    /// Restyles the blocks from `range.first` to `range.second`.
+    void rehighlightRange(std::pair<int, int> range);
 
 private:
     void merge(int start, int length, const QTextCharFormat &format);
@@ -134,6 +142,9 @@ private:
     int m_cursorBlock = -1;
     bool m_cursorHere = false;
     bool m_source = false;
+    bool m_focus = false;
+    /// The first and last blocks of the paragraph the cursor is in, for focus mode.
+    std::pair<int, int> m_paragraph{-1, -1};
     std::unique_ptr<CodeHighlighter> m_code;
     Resolver m_resolver;
     QHash<QString, QSize> m_sizes;

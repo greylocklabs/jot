@@ -26,6 +26,7 @@ private Q_SLOTS:
     void keepsTheSavingChoice();
     void keepsTheOutlineShown();
     void keepsTheDailyWordGoal();
+    void keepsFocusAndTypewriterModes();
     void keepsDeveloperChoices();
     void keepsTheTasksView();
     void keepsReminderChoices();
@@ -243,6 +244,22 @@ void TestSettings::keepsTheDailyWordGoal()
     const QString id = settings.computerId();
     QCOMPARE(id.size(), 8);
     QCOMPARE(Settings(path).computerId(), id);
+}
+
+void TestSettings::keepsFocusAndTypewriterModes()
+{
+    QTemporaryDir dir;
+    const QString path = dir.filePath(u"settings.ini"_s);
+    Settings settings(path);
+    QSignalSpy changed(&settings, &Settings::focusChanged);
+    settings.setFocusMode(true);
+    settings.setTypewriter(true);
+    QCOMPARE(changed.size(), 2);
+    QVERIFY(Settings(path).focusMode());
+    QVERIFY(Settings(path).typewriter());
+    settings.reset();
+    QVERIFY(!settings.focusMode());
+    QVERIFY(!settings.typewriter());
 }
 
 void TestSettings::keepsDeveloperChoices()

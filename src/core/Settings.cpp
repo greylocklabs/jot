@@ -34,6 +34,8 @@ const QString kLastReminderCheck = u"reminders/lastCheck"_s;
 const QString kSourceMode = u"editor/sourceMode"_s;
 const QString kReadMode = u"editor/readMode"_s;
 const QString kOutlineShown = u"editor/outline"_s;
+const QString kFocusMode = u"editor/focusMode"_s;
+const QString kTypewriter = u"editor/typewriter"_s;
 const QString kNoteFont = u"editor/font"_s;
 const QString kSidebarWidth = u"layout/sidebarWidth"_s;
 const QString kNoteListWidth = u"layout/noteListWidth"_s;
@@ -85,6 +87,8 @@ Settings::Settings(const QString &path, QObject *parent)
     m_sourceMode = m_store.value(kSourceMode, false).toBool();
     m_readMode = m_store.value(kReadMode, false).toBool();
     m_outlineShown = m_store.value(kOutlineShown, false).toBool();
+    m_focusMode = m_store.value(kFocusMode, false).toBool();
+    m_typewriter = m_store.value(kTypewriter, false).toBool();
     m_noteFont = m_store.value(kNoteFont).toString();
     m_sidebarWidth =
         bounded(m_store.value(kSidebarWidth, 0).toInt(), kMinSidebarWidth, kMaxSidebarWidth);
@@ -344,6 +348,24 @@ void Settings::setOutlineShown(bool shown)
     Q_EMIT outlineShownChanged();
 }
 
+void Settings::setFocusMode(bool on)
+{
+    if (m_focusMode == on)
+        return;
+    m_focusMode = on;
+    m_store.setValue(kFocusMode, on);
+    Q_EMIT focusChanged();
+}
+
+void Settings::setTypewriter(bool on)
+{
+    if (m_typewriter == on)
+        return;
+    m_typewriter = on;
+    m_store.setValue(kTypewriter, on);
+    Q_EMIT focusChanged();
+}
+
 void Settings::setReadMode(bool read)
 {
     if (m_readMode == read)
@@ -464,6 +486,8 @@ void Settings::reset()
     setSourceMode(false);
     setReadMode(false);
     setOutlineShown(false);
+    setFocusMode(false);
+    setTypewriter(false);
     setTasksView(u"today"_s);
     setKeepRunning(true);
     setRemindersOn(true);

@@ -23,6 +23,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 - Word and character counts under each note, for the selection too, with progress toward a
   `target:` in its front matter, the words written today and a daily goal's streak, set in
   Settings.
+- Focus mode fades all but the paragraph being written, typewriter scrolling keeps its line in
+  the middle of the window, and F11 goes fullscreen with only the note.
 
 ## 0.4.1 - 2026-11-07
 

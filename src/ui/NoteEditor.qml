@@ -11,6 +11,8 @@ Rectangle {
 
     /// Where the leader key goes from the note in vi mode.
     property KeyRouter router: null
+    /// Only the note shows, without its format row or tabs.
+    property bool distractionFree: false
 
     /// Escape in vi's normal mode: the keyboard is done with the note.
     signal leftNote
@@ -298,7 +300,7 @@ Rectangle {
             right: parent.right
             top: parent.top
         }
-        visible: Vault.tabs.length > 1
+        visible: Vault.tabs.length > 1 && !root.distractionFree
         height: visible ? implicitHeight : 0
     }
 
@@ -311,7 +313,7 @@ Rectangle {
             right: parent.right
             top: noteTabs.bottom
         }
-        visible: Vault.current !== "" && Vault.writable && !root.dataFile
+        visible: Vault.current !== "" && Vault.writable && !root.dataFile && !root.distractionFree
         frontMatter: styler.frontMatter
         onFormatRequested: action => root.format(action, "")
     }
@@ -337,8 +339,20 @@ Rectangle {
 
         /// Scrolls so the cursor stays in view while typing. Not before the editor has a
         /// height, when every line would count as out of view.
+        // A note that grows under the cursor, as with Return on its last line, is centered
+        // again once its new height is known.
+        onContentHeightChanged: {
+            if (Settings.typewriter)
+                follow(body.cursorRectangle)
+        }
         function follow(rect) {
-            if (body.activeFocus)
+            if (!body.activeFocus)
+                return
+            // Typewriter scrolling keeps the line being written in the middle.
+            if (Settings.typewriter && !root.dataFile && height > 0)
+                contentY = Math.max(0, Math.min(page.y + body.y + rect.y + rect.height / 2 - height
+                                                / 2, contentHeight - height))
+            else
                 reveal(rect)
         }
         /// Scrolls so `rect`, in the body, is in view.
@@ -360,6 +374,10 @@ Rectangle {
                                                           * Theme.space7)
             x: (flick.width - width) / 2
             padding: Theme.space7
+            // Room under the last line for typewriter scrolling to bring it to the middle.
+            bottomPadding: Settings.typewriter && !root.dataFile ? Math.max(Theme.space7,
+                                                                            flick.height / 2) :
+                                                                   Theme.space7
             spacing: Theme.space5
 
             Row {
@@ -1011,6 +1029,7 @@ Rectangle {
                     objectName: "styler"
 
                     sourceMode: Settings.sourceMode
+                    focusMode: Settings.focusMode
                     fontFamily: root.noteFamily
                     cursorPosition: body.activeFocus ? body.cursorPosition : -1
                     pixelSize: body.font.pixelSize

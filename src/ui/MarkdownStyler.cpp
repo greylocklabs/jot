@@ -49,6 +49,7 @@ void MarkdownStyler::setDocument(QQuickTextDocument *document)
         applyLook();
         m_highlighter->setSourceMode(m_sourceMode);
         m_highlighter->setCursorPosition(m_cursorPosition);
+        m_highlighter->setFocusMode(m_focusMode);
         connect(document->textDocument(), &QTextDocument::contentsChanged, this,
                 &MarkdownStyler::scheduleImages);
         connect(document->textDocument(), &QTextDocument::contentsChanged, this,
@@ -204,6 +205,16 @@ void MarkdownStyler::setSourceMode(bool source)
     Q_EMIT sourceModeChanged();
     // Images come and go with the styling.
     scheduleImages();
+}
+
+void MarkdownStyler::setFocusMode(bool focus)
+{
+    if (m_focusMode == focus)
+        return;
+    m_focusMode = focus;
+    if (m_highlighter)
+        m_highlighter->setFocusMode(focus);
+    Q_EMIT focusModeChanged();
 }
 
 void MarkdownStyler::setCursorPosition(int position)

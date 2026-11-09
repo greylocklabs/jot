@@ -340,6 +340,20 @@ Popup {
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.textSm
                     }
+                    Toggle {
+                        objectName: "focusMode"
+                        width: parent.width
+                        text: qsTr("Fade all but the paragraph being written")
+                        checked: Settings.focusMode
+                        onToggled: Settings.focusMode = checked
+                    }
+                    Toggle {
+                        objectName: "typewriter"
+                        width: parent.width
+                        text: qsTr("Keep the line being written in the middle")
+                        checked: Settings.typewriter
+                        onToggled: Settings.typewriter = checked
+                    }
                 }
 
                 Section {

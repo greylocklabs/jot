@@ -15,6 +15,32 @@ ApplicationWindow {
     minimumHeight: 560
     visible: true
     title: qsTr("Jot")
+
+    /// Fullscreen with only the note: no title bar, sidebar, list or format row.
+    property bool distractionFree: false
+    /// How the window was before going distraction free, to go back to.
+    property int visibilityBefore: Window.Windowed
+
+    function setDistractionFree(on) {
+        if (on === distractionFree)
+            return
+        if (on) {
+            visibilityBefore = visibility
+            distractionFree = true
+            showFullScreen()
+        } else {
+            distractionFree = false
+            if (visibilityBefore === Window.Maximized)
+                showMaximized()
+            else
+                showNormal()
+        }
+    }
+    // Leaving fullscreen some other way, as from the desktop, brings the rest back.
+    onVisibilityChanged: {
+        if (distractionFree && visibility !== Window.FullScreen)
+            distractionFree = false
+    }
     // Transparent where the rounded frame leaves its corners.
     color: frame.rounded ? "transparent" : Theme.bg
     flags: Qt.Window | Qt.FramelessWindowHint
@@ -50,7 +76,8 @@ ApplicationWindow {
                 right: parent.right
                 top: parent.top
             }
-            height: Theme.titleBarHeight
+            visible: !window.distractionFree
+            height: visible ? Theme.titleBarHeight : 0
             color: Theme.surface
 
             // Behind the controls: dragging the bar moves the window, double-clicking
@@ -326,14 +353,16 @@ ApplicationWindow {
 
             // The columns give way on a narrow window, so the note keeps room to write in.
             readonly property int room: width - Theme.editorMinWidth
-            readonly property int sidebarWidth: Math.max(0, Math.min(Settings.sidebarWidth > 0
-                                                                     ? Settings.sidebarWidth :
-                                                                       Theme.sidebarWidth, room
-                                                                     - Settings.minNoteListWidth))
-            readonly property int noteListWidth: Math.max(0, Math.min(Settings.noteListWidth > 0
-                                                                      ? Settings.noteListWidth :
-                                                                        Theme.noteListWidth, room
-                                                                      - sidebarWidth))
+            readonly property int sidebarWidth: window.distractionFree ? 0 : Math.max(0, Math.min(
+                                                                                          Settings.sidebarWidth
+                                                                                          > 0 ? Settings.sidebarWidth :
+                                                                                                Theme.sidebarWidth,
+                                                                                          room - Settings.minNoteListWidth))
+            readonly property int noteListWidth: window.distractionFree ? 0 : Math.max(0, Math.min(
+                                                                                           Settings.noteListWidth
+                                                                                           > 0 ? Settings.noteListWidth :
+                                                                                                 Theme.noteListWidth,
+                                                                                           room - sidebarWidth))
 
             anchors {
                 left: parent.left
@@ -352,7 +381,7 @@ ApplicationWindow {
 
                 onNoteMade: editor.editTitle()
                 onJoplinImportRequested: folder => joplinImport.start(folder)
-                visible: Vault.isOpen
+                visible: Vault.isOpen && !window.distractionFree
                 anchors {
                     left: parent.left
                     top: parent.top
@@ -386,7 +415,9 @@ ApplicationWindow {
 
                 onTitleEditRequested: editor.editTitle()
                 onHistoryRequested: window.run("history")
-                visible: Vault.isOpen && !Vault.showingTasks && !Vault.showingTrash
+                visible: Vault.isOpen && !Vault.showingTasks && !Vault.showingTrash &&
+                         !window.distractionFree
+
                 anchors {
                     left: sidebar.right
                     top: parent.top
@@ -395,7 +426,7 @@ ApplicationWindow {
                 width: columns.noteListWidth
             }
             ColumnSplitter {
-                visible: Vault.isOpen
+                visible: Vault.isOpen && !window.distractionFree
                 anchors {
                     horizontalCenter: noteList.right
                     top: parent.top
@@ -431,6 +462,7 @@ ApplicationWindow {
 
                 router: keys
                 onLeftNote: noteList.focusList()
+                distractionFree: window.distractionFree
 
                 visible: Vault.isOpen && !Vault.showingTrash
                 anchors {
@@ -613,6 +645,10 @@ ApplicationWindow {
         case "nextTab":
         case "previousTab":
             return Vault.tabs.length > 1
+        case "focusMode":
+        case "typewriter":
+        case "distractionFree":
+            return Vault.isOpen
         case "editNote":
         case "readMode":
         case "outline":
@@ -729,6 +765,15 @@ ApplicationWindow {
             break
         case "outline":
             Settings.outlineShown = !Settings.outlineShown
+            break
+        case "focusMode":
+            Settings.focusMode = !Settings.focusMode
+            break
+        case "typewriter":
+            Settings.typewriter = !Settings.typewriter
+            break
+        case "distractionFree":
+            window.setDistractionFree(!window.distractionFree)
             break
         case "closeTab":
             Vault.closeTab(Vault.tabIndex)

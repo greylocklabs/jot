@@ -65,6 +65,9 @@ private Q_SLOTS:
     void outlinesTheNoteBesideIt();
     void showsTabsOverTheNote();
     void countsTheNotesWords();
+    void fadesAllButTheParagraphInFocusMode();
+    void keepsTheLineInTheMiddleForTypewriterScrolling();
+    void showsOnlyTheNoteWhenDistractionFree();
     void switchingAwayFromAPictureLeavesNoStalePlace();
     void formatsAndUndoesInOneStep();
     void formatsFromTheKeyboard();
@@ -629,6 +632,78 @@ void TestNoteEditor::countsTheNotesWords()
     // What is picked is counted against the whole.
     QVERIFY(QMetaObject::invokeMethod(body, "select", Q_ARG(int, 19), Q_ARG(int, 26)));
     QTRY_VERIFY(count->property("text").toString().startsWith(u"2 of 4 words"_s));
+}
+
+void TestNoteEditor::fadesAllButTheParagraphInFocusMode()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    QTextDocument *doc =
+        body->property("textDocument").value<QQuickTextDocument *>()->textDocument();
+    const QColor faint = ThemeController::instance()->textFaint();
+    // Whether every letter of the block holding `text` is drawn faint.
+    const auto faded = [&](const QString &text) {
+        const QTextBlock block = doc->findBlock(int(doc->toPlainText().indexOf(text)));
+        const QList<QTextLayout::FormatRange> formats = block.layout()->formats();
+        return !formats.isEmpty() && std::ranges::all_of(formats, [&](const auto &range) {
+            const QColor color = range.format.foreground().color();
+            return color == faint || color.alpha() == 0;
+        });
+    };
+    body->forceActiveFocus();
+    body->setProperty("text", u"First part\nstill first\n\nSecond part\n"_s);
+    body->setProperty("cursorPosition", 3);
+    m_settings->setFocusMode(true);
+    QTRY_VERIFY(faded(u"Second"_s));
+    QVERIFY(!faded(u"First"_s));
+    QVERIFY(!faded(u"still"_s));
+
+    body->setProperty("cursorPosition",
+                      int(body->property("text").toString().indexOf(u"Second"_s)));
+    QTRY_VERIFY(faded(u"First"_s));
+    QVERIFY(!faded(u"Second"_s));
+
+    m_settings->setFocusMode(false);
+    QTRY_VERIFY(!faded(u"First"_s));
+}
+
+void TestNoteEditor::keepsTheLineInTheMiddleForTypewriterScrolling()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    QQuickItem *scroll = find(u"scroll"_s);
+    QString text;
+    for (int i = 0; i < 120; ++i)
+        text += u"Line %1\n"_s.arg(i);
+    body->forceActiveFocus();
+    body->setProperty("text", text);
+    m_settings->setTypewriter(true);
+    const auto middleOf = [&](int line) {
+        const int position = int(text.indexOf(u"Line %1\n"_s.arg(line)));
+        body->setProperty("cursorPosition", position);
+        QRectF rect;
+        QMetaObject::invokeMethod(body, "positionToRectangle", Q_RETURN_ARG(QRectF, rect),
+                                  Q_ARG(int, position));
+        return body->mapToItem(scroll, rect.center()).y();
+    };
+    // A line near the middle of the note sits in the middle of the view.
+    int line = 60;
+    QTRY_VERIFY(std::abs(middleOf(line) - scroll->height() / 2) < 4);
+    // The last line too, as there is room under it.
+    line = 119;
+    QTRY_VERIFY(std::abs(middleOf(line) - scroll->height() / 2) < 4);
+}
+
+void TestNoteEditor::showsOnlyTheNoteWhenDistractionFree()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    m_vault->openInNewTab(u"Recipes/Pancakes.md"_s);
+    QTRY_VERIFY(find(u"formatBar"_s)->isVisible());
+    QVERIFY(find(u"noteTabs"_s)->isVisible());
+    m_editor->setProperty("distractionFree", true);
+    QVERIFY(!find(u"formatBar"_s)->isVisible());
+    QVERIFY(!find(u"noteTabs"_s)->isVisible());
+    QVERIFY(find(u"body"_s)->isVisible());
 }
 
 void TestNoteEditor::drawsDiagramsInPlaceOfTheirText()
