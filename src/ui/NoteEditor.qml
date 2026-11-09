@@ -1274,6 +1274,8 @@ Rectangle {
                         MenuEntry {
                             required property string modelData
                             text: modelData
+                            // A note Jot only reads stays as it is.
+                            enabled: !body.readOnly
                             onTriggered: {
                                 styler.replace(spellMenu.word.start, spellMenu.word.end, modelData)
                                 body.cursorPosition = spellMenu.word.start + modelData.length
