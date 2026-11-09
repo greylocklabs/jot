@@ -577,6 +577,11 @@ ApplicationWindow {
         case "firstNote":
         case "lastNote":
             return Vault.isOpen && !Vault.showingTasks && !Vault.showingTrash
+        case "closeTab":
+            return Vault.tabs.length > 0
+        case "nextTab":
+        case "previousTab":
+            return Vault.tabs.length > 1
         case "editNote":
         case "readMode":
         case "outline":
@@ -684,6 +689,15 @@ ApplicationWindow {
             break
         case "outline":
             Settings.outlineShown = !Settings.outlineShown
+            break
+        case "closeTab":
+            Vault.closeTab(Vault.tabIndex)
+            break
+        case "nextTab":
+            Vault.stepTab(1)
+            break
+        case "previousTab":
+            Vault.stepTab(-1)
             break
         case "readMode":
             if (Settings.readMode)

@@ -289,6 +289,19 @@ Rectangle {
         font.pixelSize: Theme.textBase
     }
 
+    NoteTabs {
+        id: noteTabs
+
+        objectName: "noteTabs"
+        anchors {
+            left: parent.left
+            right: parent.right
+            top: parent.top
+        }
+        visible: Vault.tabs.length > 1
+        height: visible ? implicitHeight : 0
+    }
+
     FormatBar {
         id: formatBar
 
@@ -296,7 +309,7 @@ Rectangle {
         anchors {
             left: parent.left
             right: parent.right
-            top: parent.top
+            top: noteTabs.bottom
         }
         visible: Vault.current !== "" && Vault.writable && !root.dataFile
         frontMatter: styler.frontMatter
@@ -311,7 +324,7 @@ Rectangle {
         anchors {
             left: parent.left
             right: outline.visible ? outline.left : parent.right
-            top: formatBar.visible ? formatBar.bottom : parent.top
+            top: formatBar.visible ? formatBar.bottom : noteTabs.bottom
             bottom: statusLine.visible ? statusLine.top : parent.bottom
         }
         visible: Vault.current !== ""

@@ -49,6 +49,7 @@ VaultController::VaultController(Settings &settings, QObject *parent)
             saveNow();
     });
     connect(this, &VaultController::currentChanged, this, &VaultController::currentTitleChanged);
+    connect(this, &VaultController::currentChanged, this, &VaultController::followCurrentInTabs);
     // Saving changes the list's order and titles; a burst of saves reloads it once.
     m_reloadTimer.setSingleShot(true);
     m_reloadTimer.setInterval(800);
@@ -174,6 +175,9 @@ void VaultController::close()
     Q_EMIT historyChanged();
     m_trail.clear();
     Q_EMIT trailChanged();
+    m_tabs.clear();
+    m_tabIndex = -1;
+    Q_EMIT tabsChanged();
     reloadTrash();
 }
 
@@ -325,6 +329,91 @@ void VaultController::answerLeaving(const QString &answer)
     if (answer == u"stay" || m_unsaved || !then)
         return;
     then();
+}
+
+void VaultController::followCurrentInTabs()
+{
+    const QStringList before = m_tabs;
+    const int beforeIndex = m_tabIndex;
+    if (m_vault) {
+        const QString shown = m_tabIndex >= 0 ? m_tabs.at(m_tabIndex) : QString();
+        m_tabs.removeIf([this](const QString &path) {
+            return path != m_current && !QFileInfo::exists(m_vault->absolute(path));
+        });
+        m_tabIndex = int(m_tabs.indexOf(shown));
+    }
+    if (!m_current.isEmpty()) {
+        if (const qsizetype open = m_tabs.indexOf(m_current); open >= 0) {
+            m_tabIndex = int(open);
+        } else if (m_tabIndex >= 0) {
+            m_tabs[m_tabIndex] = m_current;
+        } else {
+            m_tabs.append(m_current);
+            m_tabIndex = int(m_tabs.size()) - 1;
+        }
+    }
+    if (m_tabIndex < 0 && !m_tabs.isEmpty())
+        m_tabIndex = 0;
+    if (m_tabs != before || m_tabIndex != beforeIndex)
+        Q_EMIT tabsChanged();
+}
+
+void VaultController::openInNewTab(const QString &path)
+{
+    if (!m_vault || path.isEmpty())
+        return;
+    if (const qsizetype open = m_tabs.indexOf(path); open >= 0) {
+        selectTab(int(open));
+        return;
+    }
+    if (!readyToLeave([this, path] { openInNewTab(path); }))
+        return;
+    m_tabs.insert(m_tabIndex + 1, path);
+    ++m_tabIndex;
+    setCurrent(path);
+    Q_EMIT tabsChanged();
+}
+
+void VaultController::selectTab(int index)
+{
+    if (index < 0 || index >= m_tabs.size())
+        return;
+    const QString path = m_tabs.at(index);
+    if (m_vault && !QFileInfo::exists(m_vault->absolute(path))) {
+        closeTab(index);
+        return;
+    }
+    setCurrent(path);
+}
+
+void VaultController::closeTab(int index)
+{
+    if (index < 0 || index >= m_tabs.size())
+        return;
+    if (index != m_tabIndex) {
+        m_tabs.removeAt(index);
+        if (index < m_tabIndex)
+            --m_tabIndex;
+        Q_EMIT tabsChanged();
+        return;
+    }
+    if (!readyToLeave([this, index] { closeTab(index); }))
+        return;
+    const QString next = index + 1 < m_tabs.size() ? m_tabs.at(index + 1)
+                         : index > 0               ? m_tabs.at(index - 1)
+                                                   : QString();
+    m_tabs.removeAt(index);
+    m_tabIndex = next.isEmpty() ? -1 : int(m_tabs.indexOf(next));
+    Q_EMIT tabsChanged();
+    setCurrent(next);
+}
+
+void VaultController::stepTab(int by)
+{
+    if (m_tabs.size() < 2)
+        return;
+    const int count = int(m_tabs.size());
+    selectTab(((m_tabIndex + by) % count + count) % count);
 }
 
 void VaultController::quit()
