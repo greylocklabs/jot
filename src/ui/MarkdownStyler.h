@@ -40,6 +40,8 @@ class MarkdownStyler : public QObject
     /// The note's `#` headings, as `{text, level, position}` like a table of contents has
     /// them, for the outline.
     Q_PROPERTY(QVariantList headings READ headings NOTIFY imagesChanged)
+    /// The note's words and characters, front matter left out, as `{words, characters}`.
+    Q_PROPERTY(QVariantMap count READ count NOTIFY imagesChanged)
     /// The Markdown shown as written, without live preview.
     Q_PROPERTY(bool sourceMode READ sourceMode WRITE setSourceMode NOTIFY sourceModeChanged)
     /// The note's front matter keys, as the text has them now.
@@ -65,6 +67,9 @@ public:
     /// Which of `headings`, as headings() gives them, `position` is under: the last starting at
     /// or before it, or -1.
     Q_INVOKABLE static int headingAt(const QVariantList &headings, int position);
+    [[nodiscard]] QVariantMap count() const;
+    /// The words and characters in `text`, as `count` has them.
+    Q_INVOKABLE static QVariantMap countOf(const QString &text);
     [[nodiscard]] QVariantMap frontMatter() const { return m_frontMatter; }
     [[nodiscard]] bool sourceMode() const { return m_sourceMode; }
     void setSourceMode(bool source);

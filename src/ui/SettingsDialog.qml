@@ -268,6 +268,81 @@ Popup {
                 }
 
                 Section {
+                    title: qsTr("Writing")
+                    visible: root.tab === "general"
+
+                    Row {
+                        spacing: Theme.space3
+
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: qsTr("Daily word goal")
+                            color: Theme.text
+                            font.family: Theme.fontFamily
+                            font.pixelSize: Theme.textMd
+                        }
+                        Dropdown {
+                            objectName: "dailyWordGoal"
+                            anchors.verticalCenter: parent.verticalCenter
+                            minimumWidth: 160
+                            model: [
+                                {
+                                    "id": 0,
+                                    "name": qsTr("No goal")
+                                },
+                                {
+                                    "id": 250,
+                                    "name": qsTr("%1 words").arg(Number(250).toLocaleString(
+                                                                     Qt.locale(), "f", 0))
+                                },
+                                {
+                                    "id": 500,
+                                    "name": qsTr("%1 words").arg(Number(500).toLocaleString(
+                                                                     Qt.locale(), "f", 0))
+                                },
+                                {
+                                    "id": 750,
+                                    "name": qsTr("%1 words").arg(Number(750).toLocaleString(
+                                                                     Qt.locale(), "f", 0))
+                                },
+                                {
+                                    "id": 1000,
+                                    "name": qsTr("%1 words").arg(Number(1000).toLocaleString(
+                                                                     Qt.locale(), "f", 0))
+                                },
+                                {
+                                    "id": 1500,
+                                    "name": qsTr("%1 words").arg(Number(1500).toLocaleString(
+                                                                     Qt.locale(), "f", 0))
+                                },
+                                {
+                                    "id": 2000,
+                                    "name": qsTr("%1 words").arg(Number(2000).toLocaleString(
+                                                                     Qt.locale(), "f", 0))
+                                },
+                                {
+                                    "id": 3000,
+                                    "name": qsTr("%1 words").arg(Number(3000).toLocaleString(
+                                                                     Qt.locale(), "f", 0))
+                                }
+                            ]
+                            currentValue: Settings.dailyWordGoal
+                            Accessible.name: qsTr("Daily word goal")
+                            onActivated: value => Settings.dailyWordGoal = value
+                        }
+                    }
+                    Text {
+                        width: parent.width
+                        wrapMode: Text.Wrap
+                        text: qsTr(
+                                  "Under each note, its words, those written today and the days in a row you met the goal, on any computer syncing these notes. A note's own target is a target key in its front matter, such as target: 2000.")
+                        color: Theme.textMuted
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.textSm
+                    }
+                }
+
+                Section {
                     title: qsTr("Sync")
                     visible: root.tab === "sync"
 

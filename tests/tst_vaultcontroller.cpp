@@ -60,6 +60,7 @@ private Q_SLOTS:
     void keepsNotesOpenInTabs();
     void makesNotesFromTemplates();
     void opensTodaysNote();
+    void countsTheWordsWrittenToday();
     void keepsPastVersionsWhileEditing();
     void restoresAPastVersion();
     void saysWhenEachVersionIsFrom();
@@ -838,6 +839,31 @@ void TestVaultController::opensTodaysNote()
     m_vault->setToday(QDate(2026, 11, 9));
     QCOMPARE(m_vault->openDailyNote(), u"Daily/2026-11-09.md"_s);
     QVERIFY(readFile(m_root + u"/Daily/2026-11-09.md"_s).startsWith(u"---\ncreated: "_s));
+}
+
+void TestVaultController::countsTheWordsWrittenToday()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    m_vault->setToday(QDate(2026, 11, 8));
+    QCOMPARE(m_vault->wordsToday(), 0);
+    QSignalSpy changed(m_vault.get(), &VaultController::statsChanged);
+    m_vault->setCurrent(u"Welcome.md"_s);
+    const QString before = m_vault->currentText();
+    m_vault->edit(before + u"\nThree more words\n"_s);
+    m_vault->saveNow();
+    QCOMPARE(m_vault->wordsToday(), 3);
+    QVERIFY(!changed.isEmpty());
+    QCOMPARE(m_vault->streak(), 1);
+    QCOMPARE(QDir(m_root + u"/.jot/stats"_s).entryList(QDir::Files).size(), 1);
+
+    // Front matter is no writing; taking words away takes them off the day.
+    m_vault->edit(u"---\ntitle: Hello there\n---\n"_s + before + u"\nThree more\n"_s);
+    m_vault->saveNow();
+    QCOMPARE(m_vault->wordsToday(), 2);
+
+    // With a goal, the day counts toward a streak once it gets there.
+    m_settings->setDailyWordGoal(10);
+    QCOMPARE(m_vault->streak(), 0);
 }
 
 void TestVaultController::keepsPastVersionsWhileEditing()

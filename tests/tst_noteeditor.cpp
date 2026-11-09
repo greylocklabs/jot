@@ -64,6 +64,7 @@ private Q_SLOTS:
     void readingFindsTheHeadingAContentsEntryNames();
     void outlinesTheNoteBesideIt();
     void showsTabsOverTheNote();
+    void countsTheNotesWords();
     void switchingAwayFromAPictureLeavesNoStalePlace();
     void formatsAndUndoesInOneStep();
     void formatsFromTheKeyboard();
@@ -612,6 +613,22 @@ void TestNoteEditor::showsTabsOverTheNote()
                       close->mapToScene({close->width() / 2, close->height() / 2}).toPoint());
     QTRY_COMPARE(m_vault->tabs(), QStringList{u"Welcome.md"_s});
     QTRY_VERIFY(!tabs->isVisible());
+}
+
+void TestNoteEditor::countsTheNotesWords()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    QQuickItem *count = find(u"wordCount"_s);
+    QVERIFY(count);
+    QVERIFY(count->isVisible());
+    body->forceActiveFocus();
+    body->setProperty("text", u"---\ntarget: 8\n---\nOne two three four\n"_s);
+    QTRY_VERIFY(
+        count->property("text").toString().startsWith(u"4 words, 18 characters, 50% of 8"_s));
+    // What is picked is counted against the whole.
+    QVERIFY(QMetaObject::invokeMethod(body, "select", Q_ARG(int, 19), Q_ARG(int, 26)));
+    QTRY_VERIFY(count->property("text").toString().startsWith(u"2 of 4 words"_s));
 }
 
 void TestNoteEditor::drawsDiagramsInPlaceOfTheirText()

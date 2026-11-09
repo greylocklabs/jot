@@ -25,6 +25,7 @@ private Q_SLOTS:
     void keepsSearchingTheTrash();
     void keepsTheSavingChoice();
     void keepsTheOutlineShown();
+    void keepsTheDailyWordGoal();
     void keepsDeveloperChoices();
     void keepsTheTasksView();
     void keepsReminderChoices();
@@ -222,6 +223,21 @@ void TestSettings::keepsTheOutlineShown()
     QVERIFY(Settings(path).outlineShown());
     settings.reset();
     QVERIFY(!settings.outlineShown());
+}
+
+void TestSettings::keepsTheDailyWordGoal()
+{
+    QTemporaryDir dir;
+    const QString path = dir.filePath(u"settings.ini"_s);
+    Settings settings(path);
+    QCOMPARE(settings.dailyWordGoal(), 0);
+    settings.setDailyWordGoal(750);
+    QCOMPARE(Settings(path).dailyWordGoal(), 750);
+    settings.setDailyWordGoal(-5);
+    QCOMPARE(settings.dailyWordGoal(), 0);
+    settings.setDailyWordGoal(500);
+    settings.reset();
+    QCOMPARE(settings.dailyWordGoal(), 0);
 }
 
 void TestSettings::keepsDeveloperChoices()

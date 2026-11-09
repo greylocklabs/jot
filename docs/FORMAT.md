@@ -16,6 +16,7 @@ My Notes/                    the vault: any folder
     history/                 past versions of notes
     joplin.yaml              what imports from Joplin brought, once there has been one
     trash/                   what was deleted, in Jot and by sync
+    stats/                   words written each day, a file for each computer
   Inbox.md                   where quick add puts to-dos
   Recipes/
     Pancakes.md
@@ -40,6 +41,9 @@ My Notes/                    the vault: any folder
   checked.
 - Names starting with `.` are hidden from the app and the index, apart from `.jot/`.
 - Opening a folder in Jot makes `.jot/vault.yaml` with `format: 1`, if it has none.
+- `.jot/stats/<computer>.yaml` holds `YYYY-MM-DD: words` lines: the words that computer's edits
+  added to the vault's notes each day, less those they took away. Each computer writes only its
+  own file, and Jot adds them up.
 - Jot's own machine-local state (search index, link index, caches) lives under
   `$XDG_STATE_HOME/jot` and `$XDG_CACHE_HOME/jot`, never in the vault. Deleting it loses nothing:
   Jot rebuilds it from the files.
@@ -102,6 +106,7 @@ Keys Jot understands:
 | `done`    | ISO 8601 date-time         | When a task was completed                      |
 | `labels`  | list of strings            | A task's labels                                |
 | `type`    | string                     | The note's type; searchable as `type:` for now |
+| `target`  | whole number               | Words the note is meant to reach               |
 
 Rules:
 

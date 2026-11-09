@@ -44,6 +44,7 @@ const QString kLeaderTimeout = u"keyboard/leaderTimeout"_s;
 const QString kTrashDays = u"trash/days"_s;
 const QString kSearchTrash = u"trash/search"_s;
 const QString kAutosave = u"editor/autosave"_s;
+const QString kDailyWordGoal = u"writing/dailyGoal"_s;
 
 /// A saved width within its bounds; 0 stays 0, the theme's own.
 int bounded(int width, int lowest, int highest)
@@ -98,6 +99,7 @@ Settings::Settings(const QString &path, QObject *parent)
     m_trashDays = std::max(0, m_store.value(kTrashDays, 0).toInt());
     m_searchTrash = m_store.value(kSearchTrash, true).toBool();
     m_autosave = m_store.value(kAutosave, true).toBool();
+    m_dailyWordGoal = std::max(0, m_store.value(kDailyWordGoal, 0).toInt());
 }
 
 QString Settings::defaultPath()
@@ -432,6 +434,16 @@ void Settings::setAutosave(bool on)
     Q_EMIT autosaveChanged();
 }
 
+void Settings::setDailyWordGoal(int words)
+{
+    words = std::max(0, words);
+    if (m_dailyWordGoal == words)
+        return;
+    m_dailyWordGoal = words;
+    m_store.setValue(kDailyWordGoal, words);
+    Q_EMIT writingChanged();
+}
+
 void Settings::reset()
 {
     setTheme({});
@@ -454,6 +466,7 @@ void Settings::reset()
     setTrashDays(0);
     setSearchTrash(true);
     setAutosave(true);
+    setDailyWordGoal(0);
 }
 
 } // namespace jot

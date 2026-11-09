@@ -22,6 +22,8 @@
 #include <QUrl>
 #include <QVariantMap>
 
+#include "jot/WritingStats.h"
+
 #include <QDate>
 
 #include <functional>
@@ -113,6 +115,10 @@ class VaultController : public QObject
     /// The notes open in tabs, the note shown among them at `tabIndex`. Opening a note puts
     /// it in the tab shown, unless it is open in another already.
     Q_PROPERTY(QStringList tabs READ tabs NOTIFY tabsChanged)
+    /// Words written today in this vault, on every computer, and the days in a row the daily
+    /// goal was met, or any written without one.
+    Q_PROPERTY(int wordsToday READ wordsToday NOTIFY statsChanged)
+    Q_PROPERTY(int streak READ streak NOTIFY statsChanged)
     Q_PROPERTY(int tabIndex READ tabIndex NOTIFY tabsChanged)
     /// What went wrong with the note shown, such as a save that failed and is being
     /// retried; empty when all is well.
@@ -379,6 +385,8 @@ public:
     [[nodiscard]] QString currentText() const { return m_currentText; }
     [[nodiscard]] bool unsaved() const { return m_unsaved; }
     [[nodiscard]] QStringList tabs() const { return m_tabs; }
+    [[nodiscard]] int wordsToday() const;
+    [[nodiscard]] int streak() const;
     [[nodiscard]] int tabIndex() const { return m_tabIndex; }
     [[nodiscard]] QString problem() const { return m_problem; }
     [[nodiscard]] const VaultIndex *index() const { return m_index.get(); }
@@ -404,6 +412,7 @@ Q_SIGNALS:
     void opening();
     void unsavedChanged();
     void tabsChanged();
+    void statsChanged();
     /// Leaving the note shown waits for answerLeaving(), as it has edits not yet written.
     void leavingUnsaved();
     void problemChanged();
@@ -552,6 +561,7 @@ private:
     QStringList m_tabs;
     int m_tabIndex = -1;
     QDate m_today;
+    std::unique_ptr<WritingStats> m_stats;
     int m_cursorPosition = 0;
     int m_openingCursor = 0;
     QTimer m_saveTimer;
