@@ -6,6 +6,7 @@
 #include <QDir>
 #include <QStandardPaths>
 #include <QTime>
+#include <QUuid>
 
 #include <algorithm>
 
@@ -45,6 +46,7 @@ const QString kTrashDays = u"trash/days"_s;
 const QString kSearchTrash = u"trash/search"_s;
 const QString kAutosave = u"editor/autosave"_s;
 const QString kDailyWordGoal = u"writing/dailyGoal"_s;
+const QString kComputerId = u"app/computerId"_s;
 
 /// A saved width within its bounds; 0 stays 0, the theme's own.
 int bounded(int width, int lowest, int highest)
@@ -432,6 +434,16 @@ void Settings::setAutosave(bool on)
     m_autosave = on;
     m_store.setValue(kAutosave, on);
     Q_EMIT autosaveChanged();
+}
+
+QString Settings::computerId()
+{
+    QString id = m_store.value(kComputerId).toString();
+    if (id.isEmpty()) {
+        id = QUuid::createUuid().toString(QUuid::Id128).left(8);
+        m_store.setValue(kComputerId, id);
+    }
+    return id;
 }
 
 void Settings::setDailyWordGoal(int words)

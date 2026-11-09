@@ -134,6 +134,10 @@ public:
     void setSearchTrash(bool on);
     [[nodiscard]] bool autosave() const { return m_autosave; }
     void setAutosave(bool on);
+    /// An id for this computer, made the first time it is asked for and kept in these
+    /// settings, never in a vault, so files a computer writes for itself in a synced vault
+    /// have names no other computer uses.
+    [[nodiscard]] QString computerId();
     [[nodiscard]] int dailyWordGoal() const { return m_dailyWordGoal; }
     void setDailyWordGoal(int words);
     static inline const QStringList kLeaderKeys = {QStringLiteral(","), QStringLiteral(":"),
