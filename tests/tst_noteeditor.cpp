@@ -61,6 +61,7 @@ private Q_SLOTS:
     void showsImagesInPlaceOfTheirLinks();
     void drawsDiagramsInPlaceOfTheirText();
     void listsHeadingsInPlaceOfAContentsMarker();
+    void readingFindsTheHeadingAContentsEntryNames();
     void switchingAwayFromAPictureLeavesNoStalePlace();
     void formatsAndUndoesInOneStep();
     void formatsFromTheKeyboard();
@@ -506,6 +507,28 @@ void TestNoteEditor::listsHeadingsInPlaceOfAContentsMarker()
     // On the cursor's line it is the marker again, to edit.
     body->setProperty("cursorPosition", 1);
     QTRY_COMPARE(styler->property("contents").toList().size(), 0);
+}
+
+void TestNoteEditor::readingFindsTheHeadingAContentsEntryNames()
+{
+    // An underlined heading counts and one in a quote does not, in the list and the reader alike.
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Contents.md"_s,
+                            u"${toc}\n\nTitle\n=====\n\n> # Quoted\n\n## Later\n"_s, &error));
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Contents.md"_s), 3000);
+    m_vault->setCurrent(u"Contents.md"_s);
+    m_settings->setReadMode(true);
+    QQuickItem *reader = find(u"reader"_s);
+    QTRY_VERIFY(reader->isVisible());
+    auto *reading = m_editor->findChild<QObject *>(u"reading"_s);
+    QVERIFY(reading);
+    auto *doc = reader->property("textDocument").value<QQuickTextDocument *>()->textDocument();
+    QTRY_VERIFY(doc->toPlainText().contains(u"Later"_s));
+    int position = -1;
+    QMetaObject::invokeMethod(reading, "headingPosition", Q_RETURN_ARG(int, position),
+                              Q_ARG(int, 1));
+    QCOMPARE(doc->findBlock(position).text(), u"Later"_s);
+    m_settings->setReadMode(false);
 }
 
 void TestNoteEditor::drawsDiagramsInPlaceOfTheirText()

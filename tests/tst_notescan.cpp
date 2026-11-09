@@ -199,6 +199,16 @@ void TestNoteScan::findsHeadingsForAContentsList()
     QCOMPARE(found.at(1).position, note.indexOf(u"## Crossing"_s));
     QCOMPARE(found.at(2).text, u"[[Mara]] *aboard*"_s);
 
+    // Underlined headings count, as Markdown reads them; a rule after a list item does not.
+    const QList<Heading> underlined =
+        headingsOf(u"Part One\n========\n2026 plans\n---\n- item\n---\n\n> # quoted\n"_s);
+    QCOMPARE(underlined.size(), 2);
+    QCOMPARE(underlined.at(0).text, u"Part One"_s);
+    QCOMPARE(underlined.at(0).level, 1);
+    QCOMPARE(underlined.at(1).text, u"2026 plans"_s);
+    QCOMPARE(underlined.at(1).level, 2);
+    QCOMPARE(underlined.at(1).position, qsizetype(18));
+
     QVERIFY(isTocMarker(u"  ${toc} "));
     QVERIFY(!isTocMarker(u"see ${toc}"));
 

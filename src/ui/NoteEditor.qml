@@ -616,6 +616,7 @@ Rectangle {
 
                 NoteReader {
                     id: reading
+                    objectName: "reading"
 
                     document: reader.textDocument
                     text: Settings.readMode && !root.dataFile ? Vault.currentText : ""
