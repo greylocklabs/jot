@@ -7,7 +7,13 @@
 #include <QVariantList>
 #include <QVariantMap>
 
+#include <memory>
+
 class QTimer;
+
+namespace Sonnet {
+class Speller;
+}
 
 namespace jot {
 
@@ -50,6 +56,10 @@ class MarkdownStyler : public QObject
     Q_PROPERTY(bool foldComments READ foldComments WRITE setFoldComments NOTIFY foldCommentsChanged)
     /// The CriticMarkup comments, as `{position, text}` with where each `{>>` is.
     Q_PROPERTY(QVariantList comments READ comments NOTIFY imagesChanged)
+    /// Words the dictionary does not know are underlined.
+    Q_PROPERTY(bool spellcheck READ spellcheck WRITE setSpellcheck NOTIFY spellingChanged)
+    /// The dictionary's language, such as "en_US"; the desktop's when empty.
+    Q_PROPERTY(QString language READ language WRITE setLanguage NOTIFY spellingChanged)
     /// The note's front matter keys, as the text has them now.
     Q_PROPERTY(QVariantMap frontMatter READ frontMatter NOTIFY frontMatterChanged)
 
@@ -84,6 +94,16 @@ public:
     [[nodiscard]] bool foldComments() const { return m_foldComments; }
     void setFoldComments(bool fold);
     [[nodiscard]] QVariantList comments() const;
+    [[nodiscard]] bool spellcheck() const { return m_spellcheck; }
+    void setSpellcheck(bool on);
+    [[nodiscard]] QString language() const { return m_language; }
+    void setLanguage(const QString &language);
+
+    /// The misspelled word at `position`: `{start, end, word, suggestions}`, or empty.
+    Q_INVOKABLE QVariantMap misspelledAt(int position) const;
+    /// Takes `word` as spelled right: for good, in the desktop's own dictionary, or `forNow`,
+    /// until Jot closes.
+    Q_INVOKABLE void acceptWord(const QString &word, bool forNow);
 
     /// What is at `position`: `{kind, target, position}`, where kind is "", "link",
     /// "wikilink", "url" or "task"; for a task, `position` is where its mark is.
@@ -121,6 +141,7 @@ Q_SIGNALS:
     void sourceModeChanged();
     void focusModeChanged();
     void foldCommentsChanged();
+    void spellingChanged();
 
 private:
     void applyLook();
@@ -142,6 +163,11 @@ private:
     bool m_sourceMode = false;
     bool m_focusMode = false;
     bool m_foldComments = false;
+    bool m_spellcheck = false;
+    QString m_language;
+    std::unique_ptr<Sonnet::Speller> m_speller;
+    /// Hands the highlighter the speller, or none, as the settings say.
+    void applySpelling();
     /// Widths settle before images are fitted again, so a window being resized does
     /// not restyle the note on every frame.
     QTimer *m_widthSettle = nullptr;

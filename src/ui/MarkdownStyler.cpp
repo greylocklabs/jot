@@ -8,6 +8,8 @@
 #include "jot/MarkdownEdit.h"
 #include "jot/WritingStats.h"
 
+#include <Sonnet/Speller>
+
 #include <QDateTime>
 #include <QTextCursor>
 
@@ -33,6 +35,66 @@ MarkdownStyler::MarkdownStyler(QObject *parent) : QObject(parent), m_widthSettle
 
 MarkdownStyler::~MarkdownStyler() = default;
 
+void MarkdownStyler::setSpellcheck(bool on)
+{
+    if (m_spellcheck == on)
+        return;
+    m_spellcheck = on;
+    applySpelling();
+    Q_EMIT spellingChanged();
+}
+
+void MarkdownStyler::setLanguage(const QString &language)
+{
+    if (m_language == language)
+        return;
+    m_language = language;
+    applySpelling();
+    Q_EMIT spellingChanged();
+}
+
+void MarkdownStyler::applySpelling()
+{
+    if (m_spellcheck && !m_speller)
+        m_speller = std::make_unique<Sonnet::Speller>();
+    if (m_speller) {
+        // A language with no dictionary here falls back to the desktop's.
+        const QString wanted = QString(m_language).replace(u'-', u'_');
+        m_speller->setLanguage(!wanted.isEmpty() && m_speller->availableLanguages().contains(wanted)
+                                   ? wanted
+                                   : m_speller->defaultLanguage());
+    }
+    if (m_highlighter)
+        m_highlighter->setSpeller(
+            m_spellcheck && m_speller && m_speller->isValid() ? m_speller.get() : nullptr);
+}
+
+QVariantMap MarkdownStyler::misspelledAt(int position) const
+{
+    if (!m_highlighter || !m_spellcheck || !m_speller)
+        return {};
+    const auto [start, end] = m_highlighter->misspelledAt(position);
+    if (start < 0)
+        return {};
+    const QString word = m_document->textDocument()->toPlainText().mid(start, end - start);
+    return {{u"start"_s, start},
+            {u"end"_s, end},
+            {u"word"_s, word},
+            {u"suggestions"_s, m_speller->suggest(word).mid(0, 6)}};
+}
+
+void MarkdownStyler::acceptWord(const QString &word, bool forNow)
+{
+    if (!m_speller)
+        return;
+    if (forNow)
+        m_speller->addToSession(word);
+    else
+        m_speller->addToPersonal(word);
+    if (m_highlighter)
+        m_highlighter->rehighlight();
+}
+
 void MarkdownStyler::setDocument(QQuickTextDocument *document)
 {
     if (m_document == document)
@@ -51,6 +113,7 @@ void MarkdownStyler::setDocument(QQuickTextDocument *document)
         m_highlighter->setCursorPosition(m_cursorPosition);
         m_highlighter->setFocusMode(m_focusMode);
         m_highlighter->setFoldComments(m_foldComments);
+        applySpelling();
         connect(document->textDocument(), &QTextDocument::contentsChanged, this,
                 &MarkdownStyler::scheduleImages);
         connect(document->textDocument(), &QTextDocument::contentsChanged, this,

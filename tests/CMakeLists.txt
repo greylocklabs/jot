@@ -68,7 +68,7 @@ target_link_libraries(tst_todoreminders PRIVATE jotui)
 target_compile_definitions(tst_vaultcontroller PRIVATE
     JOT_SAMPLE_VAULT="${CMAKE_CURRENT_SOURCE_DIR}/data/sample-vault")
 jot_add_test(tst_noteeditor)
-target_link_libraries(tst_noteeditor PRIVATE jotui jotuiplugin Qt6::QuickControls2)
+target_link_libraries(tst_noteeditor PRIVATE jotui jotuiplugin Qt6::QuickControls2 KF6::SonnetCore)
 target_compile_definitions(tst_noteeditor PRIVATE
     JOT_SAMPLE_VAULT="${CMAKE_CURRENT_SOURCE_DIR}/data/sample-vault")
 jot_add_test(tst_lists)

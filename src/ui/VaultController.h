@@ -173,6 +173,11 @@ public:
     Q_INVOKABLE QString newFile(const QString &kind);
     /// The templates, as `{path, title}`: the notes in the vault's templates notebook.
     Q_INVOKABLE QVariantList templates() const;
+    /// The value of `key` in the vault's `.jot/vault.yaml`, such as `language`.
+    Q_INVOKABLE QString vaultSetting(const QString &key) const
+    {
+        return m_vault ? m_vault->setting(key) : QString();
+    }
     /// The notebook templates are kept in.
     Q_INVOKABLE QString templatesFolder() const;
     /// Makes a note in the notebook shown from the template at `path`, its variables filled

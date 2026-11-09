@@ -1035,6 +1035,10 @@ Rectangle {
                     sourceMode: Settings.sourceMode
                     focusMode: Settings.focusMode
                     foldComments: margin.room
+                    spellcheck: Settings.spellcheck && !root.dataFile
+                    // The note's own language, else the vault's, else the desktop's.
+                    language: styler.frontMatter.lang || (Vault.isOpen ? Vault.vaultSetting(
+                                                                             "language") : "")
                     fontFamily: root.noteFamily
                     cursorPosition: body.activeFocus ? body.cursorPosition : -1
                     pixelSize: body.font.pixelSize
@@ -1244,6 +1248,53 @@ Rectangle {
                     }
                 }
 
+                // A misspelled word's right click offers what it may have meant.
+                TapHandler {
+                    acceptedButtons: Qt.RightButton
+                    onTapped: point => {
+                        const at = body.positionAt(point.position.x, point.position.y)
+                        const word = styler.misspelledAt(at)
+                        if (word.word === undefined)
+                            return
+                        spellMenu.word = word
+                        spellMenu.popup(body, point.position.x, point.position.y)
+                    }
+                }
+                MenuCard {
+                    id: spellMenu
+
+                    property var word: ({})
+
+                    objectName: "spellMenu"
+                    minimumWidth: 180
+
+                    Repeater {
+                        model: spellMenu.word.suggestions || []
+
+                        MenuEntry {
+                            required property string modelData
+                            text: modelData
+                            onTriggered: {
+                                styler.replace(spellMenu.word.start, spellMenu.word.end, modelData)
+                                body.cursorPosition = spellMenu.word.start + modelData.length
+                            }
+                        }
+                    }
+                    MenuEntry {
+                        visible: (spellMenu.word.suggestions || []).length === 0
+                        height: visible ? implicitHeight : 0
+                        enabled: false
+                        text: qsTr("No suggestions")
+                    }
+                    MenuEntry {
+                        text: qsTr("Add \"%1\" to the dictionary").arg(spellMenu.word.word)
+                        onTriggered: styler.acceptWord(spellMenu.word.word, false)
+                    }
+                    MenuEntry {
+                        text: qsTr("Ignore it until Jot closes")
+                        onTriggered: styler.acceptWord(spellMenu.word.word, true)
+                    }
+                }
                 TapHandler {
                     acceptedModifiers: Qt.ControlModifier
                     onTapped: point => {

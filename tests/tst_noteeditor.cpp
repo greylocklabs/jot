@@ -22,12 +22,14 @@
 #include <QRegularExpression>
 #include <QSignalSpy>
 #include <QStyleHints>
+
 #include <QTemporaryDir>
 #include <QTest>
 #include <QTextBlock>
 #include <QTextDocument>
 #include <QTextLayout>
 #include <QtQml/qqmlextensionplugin.h>
+#include <Sonnet/Speller>
 
 #include <algorithm>
 
@@ -69,6 +71,7 @@ private Q_SLOTS:
     void keepsTheLineInTheMiddleForTypewriterScrolling();
     void showsOnlyTheNoteWhenDistractionFree();
     void showsCriticCommentsInTheMargin();
+    void underlinesMisspelledWords();
     void switchingAwayFromAPictureLeavesNoStalePlace();
     void formatsAndUndoesInOneStep();
     void formatsFromTheKeyboard();
@@ -770,6 +773,43 @@ void TestNoteEditor::showsCriticCommentsInTheMargin()
     qobject_cast<QQuickItem *>(m_editor.get())->setSize(m_window->size());
     QTRY_VERIFY(!styler->property("foldComments").toBool());
     QTRY_COMPARE(notes().size(), 0);
+}
+
+void TestNoteEditor::underlinesMisspelledWords()
+{
+    if (!Sonnet::Speller(u"en_US"_s).isValid() ||
+        !Sonnet::Speller().availableLanguages().contains(u"en_US"_s))
+        QSKIP("No English dictionary to check with");
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    auto *styler = m_editor->findChild<QObject *>(u"styler"_s);
+    const QString text =
+        u"---\nlang: en_US\n---\nRecieve **ferrie** crossed `wrnog` [[Qwzx]] #qwzx\n"_s;
+    body->forceActiveFocus();
+    body->setProperty("text", text);
+    body->setProperty("cursorPosition", 0);
+    const auto wrong = [&](const QString &word) {
+        QVariantMap found;
+        QMetaObject::invokeMethod(styler, "misspelledAt", Q_RETURN_ARG(QVariantMap, found),
+                                  Q_ARG(int, int(text.indexOf(word)) + 1));
+        return found;
+    };
+    QTRY_COMPARE(wrong(u"Recieve"_s).value(u"word"_s).toString(), u"Recieve"_s);
+    QVERIFY(wrong(u"Recieve"_s).value(u"suggestions"_s).toStringList().contains(u"Receive"_s));
+    // Bold is still prose; code, links and tags are not.
+    QCOMPARE(wrong(u"ferrie"_s).value(u"word"_s).toString(), u"ferrie"_s);
+    QVERIFY(wrong(u"wrnog"_s).isEmpty());
+    QVERIFY(wrong(u"Qwzx"_s).isEmpty());
+    QVERIFY(wrong(u"qwzx\n"_s).isEmpty());
+    QVERIFY(wrong(u"crossed"_s).isEmpty());
+
+    // Ignored for now, it is no longer marked.
+    QVERIFY(QMetaObject::invokeMethod(styler, "acceptWord", Q_ARG(QString, u"Recieve"_s),
+                                      Q_ARG(bool, true)));
+    QTRY_VERIFY(wrong(u"Recieve"_s).isEmpty());
+
+    m_settings->setSpellcheck(false);
+    QTRY_VERIFY(wrong(u"ferrie"_s).isEmpty());
 }
 
 void TestNoteEditor::drawsDiagramsInPlaceOfTheirText()

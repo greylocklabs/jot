@@ -5,6 +5,8 @@
 #include "jot/Diagram.h"
 #include "jot/FrontMatter.h"
 
+#include <Sonnet/Speller>
+
 #include <QFileInfo>
 #include <QFontMetricsF>
 #include <QImageReader>
@@ -291,6 +293,41 @@ void MarkdownHighlighter::rehighlightRange(std::pair<int, int> range)
 {
     for (int i = std::max(range.first, 0); i <= range.second; ++i)
         rehighlightBlock(document()->findBlockByNumber(i));
+}
+
+void MarkdownHighlighter::setSpeller(const Sonnet::Speller *speller)
+{
+    m_speller = speller;
+    rehighlight();
+}
+
+namespace {
+
+const QRegularExpression &wordPattern()
+{
+    static const QRegularExpression word(uR"([\p{L}][\p{L}\p{M}'\x{2019}]*)"_s);
+    return word;
+}
+
+} // namespace
+
+std::pair<int, int> MarkdownHighlighter::misspelledAt(int position) const
+{
+    const QTextBlock block = document() ? document()->findBlock(position) : QTextBlock();
+    if (!block.isValid() || !block.layout())
+        return {-1, -1};
+    const int at = position - block.position();
+    for (const QTextLayout::FormatRange &range : block.layout()->formats()) {
+        if (range.format.underlineStyle() != QTextCharFormat::SpellCheckUnderline ||
+            at < range.start || at > range.start + range.length)
+            continue;
+        for (const QRegularExpressionMatch &m : wordPattern().globalMatch(block.text())) {
+            if (at >= m.capturedStart() && at <= m.capturedEnd())
+                return {block.position() + int(m.capturedStart()),
+                        block.position() + int(m.capturedEnd())};
+        }
+    }
+    return {-1, -1};
 }
 
 void MarkdownHighlighter::setFoldComments(bool fold)
@@ -644,6 +681,9 @@ void MarkdownHighlighter::inlineStyles(const QString &text, int from)
         take(m);
     }
 
+    // Code, links and comments are not words to check; emphasized words are.
+    QList<Range> unchecked = taken;
+
     const auto emphasis = [&](const QRegularExpression &pattern, int delimiter,
                               const QTextCharFormat &format) {
         for (const QRegularExpressionMatch &m : pattern.globalMatch(text, from)) {
@@ -680,6 +720,30 @@ void MarkdownHighlighter::inlineStyles(const QString &text, int from)
     for (const QRegularExpressionMatch &m : tag.globalMatch(text, from)) {
         if (free(m))
             merge(int(m.capturedStart()), int(m.capturedLength()), tagged);
+        unchecked.append({int(m.capturedStart()), int(m.capturedEnd())});
+    }
+
+    if (!m_speller || m_source)
+        return;
+    QTextCharFormat misspelled;
+    misspelled.setUnderlineStyle(QTextCharFormat::SpellCheckUnderline);
+    misspelled.setUnderlineColor(m_look.danger);
+    for (const QRegularExpressionMatch &m : wordPattern().globalMatch(text, from)) {
+        const int start = int(m.capturedStart());
+        const int end = int(m.capturedEnd());
+        // A word joined to digits, a slash or an @ is a name or a path, not prose.
+        const auto joined = [&](int at) {
+            return at >= 0 && at < text.size() &&
+                   (text.at(at).isDigit() || text.at(at) == u'/' || text.at(at) == u'@' ||
+                    text.at(at) == u'_');
+        };
+        if (overlaps(unchecked, start, end) || joined(start - 1) || joined(end))
+            continue;
+        QString word = m.captured();
+        while (word.endsWith(u'\'') || word.endsWith(QChar(0x2019)))
+            word.chop(1);
+        if (m_speller->isMisspelled(word))
+            merge(start, int(word.size()), misspelled);
     }
 }
 

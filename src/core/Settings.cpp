@@ -47,6 +47,7 @@ const QString kLeaderTimeout = u"keyboard/leaderTimeout"_s;
 const QString kTrashDays = u"trash/days"_s;
 const QString kSearchTrash = u"trash/search"_s;
 const QString kAutosave = u"editor/autosave"_s;
+const QString kSpellcheck = u"editor/spellcheck"_s;
 const QString kDailyWordGoal = u"writing/dailyGoal"_s;
 const QString kComputerId = u"app/computerId"_s;
 
@@ -105,6 +106,7 @@ Settings::Settings(const QString &path, QObject *parent)
     m_trashDays = std::max(0, m_store.value(kTrashDays, 0).toInt());
     m_searchTrash = m_store.value(kSearchTrash, true).toBool();
     m_autosave = m_store.value(kAutosave, true).toBool();
+    m_spellcheck = m_store.value(kSpellcheck, true).toBool();
     m_dailyWordGoal = std::max(0, m_store.value(kDailyWordGoal, 0).toInt());
 }
 
@@ -468,6 +470,15 @@ QString Settings::computerId()
     return id;
 }
 
+void Settings::setSpellcheck(bool on)
+{
+    if (m_spellcheck == on)
+        return;
+    m_spellcheck = on;
+    m_store.setValue(kSpellcheck, on);
+    Q_EMIT spellcheckChanged();
+}
+
 void Settings::setDailyWordGoal(int words)
 {
     words = std::max(0, words);
@@ -502,6 +513,7 @@ void Settings::reset()
     setTrashDays(0);
     setSearchTrash(true);
     setAutosave(true);
+    setSpellcheck(true);
     setDailyWordGoal(0);
 }
 

@@ -107,6 +107,7 @@ Keys Jot understands:
 | `labels`  | list of strings            | A task's labels                                |
 | `type`    | string                     | The note's type; searchable as `type:` for now |
 | `target`  | whole number               | Words the note is meant to reach               |
+| `lang`    | language code, as `en_GB`  | The language spelling is checked in            |
 
 Rules:
 
@@ -341,6 +342,7 @@ format: 1
 inbox: Inbox.md # where quick add puts to-dos, as a checkbox at the end
 templates: Templates # the notebook whose notes are templates
 daily: Daily # where daily notes go, one per day as YYYY-MM-DD.md
+language: en_GB # spelling is checked in this, unless a note says otherwise
 ```
 
 - `format` is the vault's format number, as [Versioning](#versioning) says. One that is missing

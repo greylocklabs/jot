@@ -35,6 +35,8 @@ find_package(Qt6 6.8 REQUIRED COMPONENTS Core DBus Gui Network Qml Quick QuickCo
 # Colors fenced code by language; found here, where every target that links the UI sees it.
 # 6.13 is what Debian trixie ships.
 find_package(KF6SyntaxHighlighting 6.13 REQUIRED)
+# Checks spelling through the desktop's dictionaries.
+find_package(KF6Sonnet 6.13 REQUIRED)
 # Keeps sync's keys in the desktop's keyring.
 find_package(Qt6Keychain REQUIRED)
 # Reads YAML data files, with where each value sits, so edits can keep the rest as written.

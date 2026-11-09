@@ -29,6 +29,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   beside their lines, where the window has room.
 - Export a note to DOCX, ODT, PDF, ePub or HTML through Pandoc, from its menu or the command
   palette, in Pandoc's own look or standard manuscript format (Shunn).
+- Spellcheck underlines words the dictionary does not know, with suggestions on a right click,
+  in the desktop's language, a vault's or a note's own.
 
 ## 0.4.1 - 2026-11-07
 
