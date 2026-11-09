@@ -19,6 +19,9 @@ public:
     /// `{emoji, name}` for each emoji whose name has a word starting with each word of
     /// `query`, in the list's order; every emoji for an empty query.
     Q_INVOKABLE static QVariantList matching(const QString &query);
+    /// Up to `limit` of matching(), the likeliest first: a name that is the query, then
+    /// names starting with it, then the rest in the list's order.
+    Q_INVOKABLE static QVariantList suggestions(const QString &query, int limit);
 };
 
 } // namespace jot

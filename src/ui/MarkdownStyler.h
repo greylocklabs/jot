@@ -75,6 +75,10 @@ public:
     /// its `[[`. Empty when there is none.
     Q_INVOKABLE QVariantMap wikilinkAt(int position) const;
 
+    /// The emoji name being typed at `position`: `{start, text}`, where `start` is its colon.
+    /// Empty when there is none.
+    Q_INVOKABLE QVariantMap emojiAt(int position) const;
+
     /// Puts `text` in place of what is from `start` to `end`, as one step to undo.
     Q_INVOKABLE void replace(int start, int end, const QString &text);
 

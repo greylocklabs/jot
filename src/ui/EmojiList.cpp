@@ -57,4 +57,18 @@ QVariantList EmojiList::matching(const QString &query)
     return found;
 }
 
+QVariantList EmojiList::suggestions(const QString &query, int limit)
+{
+    const QString wanted = query.toCaseFolded().simplified();
+    QList<QVariantList> ranks(3);
+    for (const QVariant &each : matching(query)) {
+        const QString name = each.toMap().value(u"name"_s).toString().toCaseFolded();
+        ranks[name == wanted ? 0 : name.startsWith(wanted) ? 1 : 2].append(each);
+    }
+    QVariantList found = ranks[0] + ranks[1] + ranks[2];
+    if (found.size() > limit)
+        found.resize(limit);
+    return found;
+}
+
 } // namespace jot

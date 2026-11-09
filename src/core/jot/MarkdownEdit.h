@@ -79,6 +79,19 @@ struct WikilinkQuery
 /// before any `|` or `#` that ends the target. Nothing in code.
 [[nodiscard]] std::optional<WikilinkQuery> wikilinkAt(const QString &text, qsizetype cursor);
 
+/// An emoji name being typed after a colon, as `:thumbs`: where the colon is, and the name
+/// so far with its underscores as spaces.
+struct EmojiQuery
+{
+    qsizetype start = 0;
+    QString text;
+};
+
+/// The emoji name the cursor is typing: two or more letters, digits, `_`, `+` or `-` after a
+/// colon that starts the line or follows a space or an opening bracket or quote. Nothing in
+/// code, and nothing for a time such as 10:30 or a link such as https://.
+[[nodiscard]] std::optional<EmojiQuery> emojiAt(const QString &text, qsizetype cursor);
+
 /// Puts `target` in the wikilink being typed at the cursor, closing it with `]]` unless it
 /// is closed already, and leaves the cursor after the link. A `|label` or `#heading` the link
 /// has already stays.

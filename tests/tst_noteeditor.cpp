@@ -68,6 +68,7 @@ private Q_SLOTS:
     void continuesAndNestsLists();
     void fillsInTablesWithTheKeys();
     void completesWikilinksFromTheKeyboard();
+    void putsInEmojiTypedAfterAColon();
     void togglesSourceMode();
     void writesInTheChosenFont();
     void editsDataFilesAsPlainText();
@@ -719,6 +720,31 @@ void TestNoteEditor::completesWikilinksFromTheKeyboard()
     body->setProperty("cursorPosition", inside);
     QTest::keyClick(m_window.get(), Qt::Key_Return);
     QVERIFY(body->property("text").toString().contains(u"[[So\nurdough]]"_s));
+}
+
+void TestNoteEditor::putsInEmojiTypedAfterAColon()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    body->forceActiveFocus();
+    body->setProperty("cursorPosition", body->property("length"));
+    const QString before = body->property("text").toString();
+    const auto type = [this](const QString &text) {
+        for (const QChar c : text)
+            QTest::keyClick(m_window.get(), c.toLatin1());
+    };
+
+    type(u"Nice :fox"_s);
+    auto *popup = m_editor->findChild<QObject *>(u"emojiPopup"_s);
+    QVERIFY(popup);
+    QTRY_VERIFY(popup->property("visible").toBool());
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    // Escape leaves the name as typed, so Return breaks the line.
+    type(u" at 10:30 :thumbs"_s);
+    QTest::keyClick(m_window.get(), Qt::Key_Escape);
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+
+    QCOMPARE(body->property("text").toString().mid(before.size()), u"Nice 🦊 at 10:30 :thumbs\n"_s);
 }
 
 void TestNoteEditor::togglesSourceMode()

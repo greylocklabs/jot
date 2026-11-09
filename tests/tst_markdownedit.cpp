@@ -34,6 +34,8 @@ private Q_SLOTS:
     void findsTheWikilinkBeingTyped_data();
     void findsTheWikilinkBeingTyped();
     void completesWikilinks_data();
+    void findsTheEmojiBeingTyped_data();
+    void findsTheEmojiBeingTyped();
     void completesWikilinks();
     void setsFrontMatterKeepingTheSelection();
     void editsAreAsSmallAsTheyCanBe();
@@ -419,6 +421,34 @@ void TestMarkdownEdit::findsTheWikilinkBeingTyped()
     QCOMPARE(query ? query->text : u"-"_s, typed);
     if (query)
         QCOMPARE(text.mid(query->start - 2, 2), u"[["_s);
+}
+
+void TestMarkdownEdit::findsTheEmojiBeingTyped_data()
+{
+    QTest::addColumn<QString>("before");
+    QTest::addColumn<QString>("typed");
+    QTest::newRow("at the start") << u":thu|"_s << u"thu"_s;
+    QTest::newRow("after a word") << u"well done :thumbs_up|"_s << u"thumbs up"_s;
+    QTest::newRow("in brackets") << u"(:fox|"_s << u"fox"_s;
+    QTest::newRow("plus one") << u":+1|"_s << u"+1"_s;
+    QTest::newRow("one letter is too few") << u":t|"_s << u"-"_s;
+    QTest::newRow("a time") << u"at 10:30|"_s << u"-"_s;
+    QTest::newRow("a link") << u"https://x|"_s << u"-"_s;
+    QTest::newRow("a label") << u"Note: bring|"_s << u"-"_s;
+    QTest::newRow("in inline code") << u"`:fox|"_s << u"-"_s;
+    QTest::newRow("in a code block") << u"```\n:fox|\n```"_s << u"-"_s;
+}
+
+void TestMarkdownEdit::findsTheEmojiBeingTyped()
+{
+    QFETCH(QString, before);
+    QFETCH(QString, typed);
+    const qsizetype cursor = before.indexOf(u'|');
+    const QString text = QString(before).remove(cursor, 1);
+    const std::optional<EmojiQuery> query = emojiAt(text, cursor);
+    QCOMPARE(query ? query->text : u"-"_s, typed);
+    if (query)
+        QCOMPARE(text.at(query->start), u':');
 }
 
 void TestMarkdownEdit::completesWikilinks_data()

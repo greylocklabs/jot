@@ -11,6 +11,7 @@ class TestEmoji : public QObject
 
 private Q_SLOTS:
     void findsByTheStartsOfWords();
+    void suggestsTheLikeliestFirst();
 };
 
 void TestEmoji::findsByTheStartsOfWords()
@@ -31,6 +32,20 @@ void TestEmoji::findsByTheStartsOfWords()
     QVERIFY(emoji(u"zzzz"_s).isEmpty());
     // One drawn as text by default comes as an emoji.
     QVERIFY(emoji(u"heavy heart"_s).contains(u"❤️"_s));
+}
+
+void TestEmoji::suggestsTheLikeliestFirst()
+{
+    const auto names = [](const QString &query) {
+        QStringList found;
+        for (const QVariant &each : EmojiList::suggestions(query, 8))
+            found << each.toMap().value(u"name"_s).toString();
+        return found;
+    };
+    QCOMPARE(names(u"fox"_s).first(), u"fox face"_s);
+    QCOMPARE(names(u"thumbs up"_s).first(), u"thumbs up sign"_s);
+    QVERIFY(names(u"face"_s).size() == 8);
+    QVERIFY(names(u"zzzz"_s).isEmpty());
 }
 
 QTEST_GUILESS_MAIN(TestEmoji)

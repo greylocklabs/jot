@@ -9,6 +9,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 - A setting to save notes only on Ctrl+S instead of as you type. A dot by the title marks changes
   not yet saved, and Jot asks before leaving a note or quitting with any.
+- Typing a colon and part of an emoji's name, as `:fox`, offers matching emoji to put in, chosen
+  with the arrows and Return like wikilinks.
 
 ## 0.4.1 - 2026-11-07
 
