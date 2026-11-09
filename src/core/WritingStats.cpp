@@ -5,6 +5,8 @@
 #include <QDir>
 #include <QRegularExpression>
 
+#include <algorithm>
+
 using namespace Qt::StringLiterals;
 
 namespace jot {
@@ -15,7 +17,9 @@ TextCount countText(QStringView text)
     TextCount count;
     for (auto it = word.globalMatchView(text); it.hasNext(); it.next())
         ++count.words;
-    count.characters = int(text.size() - text.count(u'\n') - text.count(u'\r'));
+    // Characters, not UTF-16 units: an emoji is one.
+    count.characters = int(text.size() - text.count(u'\n') - text.count(u'\r') -
+                           std::ranges::count_if(text, [](QChar c) { return c.isLowSurrogate(); }));
     return count;
 }
 
