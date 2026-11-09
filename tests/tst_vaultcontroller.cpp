@@ -935,6 +935,10 @@ void TestVaultController::attachesARecordingToTheNoteItBeganIn()
     QVERIFY(readFile(m_root + u"/Recipes/Pancakes.md"_s)
                 .endsWith(u"\n\n![](Pancakes.assets/Take.wav)\n"_s));
     QCOMPARE(m_vault->currentText(), welcome);
+
+    // A note gone since gets nothing, and no folder for it.
+    QVERIFY(!m_vault->attachToNoteEnd(u"Recipes/Gone.md"_s, QUrl::fromLocalFile(sound.fileName())));
+    QVERIFY(!QFileInfo::exists(m_root + u"/Recipes/Gone.assets"_s));
 }
 
 void TestVaultController::keepsPastVersionsWhileEditing()

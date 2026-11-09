@@ -124,21 +124,35 @@ Rectangle {
             return false
         recordAt = body.cursorPosition
         recordNote = Vault.current
+        recordLeft = false
         recorder.start(qsTr("Recording %1").arg(new Date().toLocaleString(Qt.locale(),
                                                                           "yyyy-MM-dd HHmmss")))
         return true
     }
-    /// Where the recording goes in, as the cursor was when it began, and in which note.
+    /// Where the recording goes in, as the cursor was when it began, and in which note: the
+    /// note it began in, under its name now, or none once the notes folder changed.
     property int recordAt: 0
     property string recordNote
+    /// Another note was opened while recording, which stops it.
+    property bool recordLeft: false
 
     AudioRecorder {
         id: recorder
 
         // In the note it began in, at the cursor, or at that note's end once another is shown.
         onFinished: url => {
-            if (Vault.current !== root.recordNote) {
-                Vault.attachToNoteEnd(root.recordNote, url)
+            const note = root.recordNote
+            root.recordNote = ""
+            root.recordLeft = false
+            if (note === "") {
+                recordingProblem.text = qsTr(
+                            "The recording was not kept, as the notes folder changed.")
+                return
+            }
+            if (Vault.current !== note) {
+                if (!Vault.attachToNoteEnd(note, url))
+                    recordingProblem.text = qsTr("The recording could not be added to %1.").arg(
+                                Vault.titleOf(note))
                 return
             }
             const markdown = Vault.attachFiles([url])
@@ -151,8 +165,21 @@ Rectangle {
     Connections {
         target: Vault
         function onOpening() {
-            if (recorder.recording)
-                recorder.stop()
+            if (!recorder.recording)
+                return
+            root.recordLeft = true
+            recorder.stop()
+        }
+        // A rename keeps the note, so the recording follows it.
+        function onCurrentChanged() {
+            if (root.recordNote !== "" && !root.recordLeft && Vault.current !== "")
+                root.recordNote = Vault.current
+        }
+        function onOpenChanged() {
+            if (!recorder.recording)
+                return
+            root.recordNote = ""
+            recorder.stop()
         }
     }
 
