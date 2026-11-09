@@ -876,10 +876,12 @@ void TestVaultController::exportsThroughPandoc()
     QVERIFY(QImage(4, 4, QImage::Format_RGB32).save(m_root + u"/Recipes/Pic.assets/photo.png"_s));
     QVERIFY(m_vault->openPath(m_root));
     QSignalSpy exported(m_vault.get(), &VaultController::exported);
-    // A Pandoc that writes what it was given into the file it was asked for.
+    // A Pandoc that writes what it was given into the file it was asked for, run in the
+    // export's own folder, beside the note it reads, with TeX kept to it.
     const QString pandoc = m_dir->filePath(u"pandoc"_s);
     QVERIFY(notefile::write(pandoc,
                             u"#!/bin/sh\n[ \"$openin_any\" = p ] || exit 4\n"
+                            "[ -f note.md ] || exit 5\n"
                             "for a; do case $a in --output=*) out=${a#--output=};; esac;"
                             " last=$a; done\n[ -f \"${last%/*}/manuscript.css\" ] || exit 3\n"
                             "cat \"$last\" > \"$out\"\n"_s,
