@@ -891,7 +891,9 @@ void VaultController::exportNote(const QString &path, const QString &format, con
     bool toc = false;
     const QString markdown = exportMarkdown(
         *note,
-        [this, path](const QString &target) { return attachmentPathFrom(path, target, true); },
+        [this, path](const QString &target, bool wiki) {
+            return attachmentPathFrom(path, target, wiki);
+        },
         &toc);
     const QString input = work->filePath(u"note.md"_s);
     if (!notefile::write(input, markdown, &error))
