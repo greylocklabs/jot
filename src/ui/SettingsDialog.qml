@@ -341,6 +341,22 @@ Popup {
                         font.pixelSize: Theme.textSm
                     }
                     Toggle {
+                        objectName: "spellcheck"
+                        width: parent.width
+                        text: qsTr("Check spelling")
+                        checked: Settings.spellcheck
+                        onToggled: Settings.spellcheck = checked
+                    }
+                    Text {
+                        width: parent.width
+                        wrapMode: Text.Wrap
+                        text: qsTr(
+                                  "In the desktop's language, or a note's own as lang: en_GB in its front matter, or the vault's as language: in .jot/vault.yaml. Right-click a word to correct it.")
+                        color: Theme.textMuted
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.textSm
+                    }
+                    Toggle {
                         objectName: "focusMode"
                         width: parent.width
                         text: qsTr("Fade all but the paragraph being written")

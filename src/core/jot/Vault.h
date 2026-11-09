@@ -37,6 +37,8 @@ public:
     [[nodiscard]] bool exists() const;
     /// The format the vault says it has, 1 when it says nothing.
     [[nodiscard]] int format() const;
+    /// The value of `key` in `.jot/vault.yaml`, as text; empty when it is not there.
+    [[nodiscard]] QString setting(const QString &key) const;
     /// False for a vault from a newer Jot, which this one only reads.
     [[nodiscard]] bool writable() const { return format() <= kFormat; }
 

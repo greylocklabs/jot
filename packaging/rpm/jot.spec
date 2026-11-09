@@ -28,6 +28,7 @@ BuildRequires:  cmake(Qt6Sql)
 BuildRequires:  cmake(Qt6Test)
 BuildRequires:  cmake(tomlplusplus)
 BuildRequires:  cmake(KF6SyntaxHighlighting)
+BuildRequires:  cmake(KF6Sonnet)
 BuildRequires:  cmake(Qt6Keychain)
 BuildRequires:  pkgconf-pkg-config
 BuildRequires:  pkgconfig(yaml-0.1)
@@ -43,6 +44,8 @@ Requires:       git-core
 Requires:       git-lfs
 # Exporting a note runs Pandoc.
 Recommends:     pandoc
+# Spellcheck reads the desktop's Hunspell dictionaries.
+Recommends:     kf6-sonnet-hunspell
 
 %description
 Jot is a Markdown notes app for Linux. Notes are plain files in a folder

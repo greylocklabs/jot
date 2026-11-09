@@ -16,6 +16,10 @@
 #include <memory>
 #include <utility>
 
+namespace Sonnet {
+class Speller;
+}
+
 namespace jot {
 
 class CodeHighlighter;
@@ -111,6 +115,10 @@ public:
     void refreshFocus();
     /// Folds CriticMarkup comments away, for the margin to show, but on the cursor's line.
     void setFoldComments(bool fold);
+    /// Underlines words of prose `speller` does not know; none when it is null.
+    void setSpeller(const Sonnet::Speller *speller);
+    /// Where the misspelled word at `position` is, `{start, end}` in the document, or -1s.
+    [[nodiscard]] std::pair<int, int> misspelledAt(int position) const;
 
     [[nodiscard]] Hit hitAt(int position) const;
     /// Redraws each table of contents, as after the headings changed.
@@ -161,6 +169,7 @@ private:
     bool m_source = false;
     bool m_focus = false;
     bool m_foldComments = false;
+    const Sonnet::Speller *m_speller = nullptr;
     /// The first and last blocks of the paragraph the cursor is in, for focus mode.
     std::pair<int, int> m_paragraph{-1, -1};
     std::unique_ptr<CodeHighlighter> m_code;

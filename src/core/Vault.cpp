@@ -119,6 +119,14 @@ int Vault::format() const
     return ok ? format : 1;
 }
 
+QString Vault::setting(const QString &key) const
+{
+    QString ignored;
+    const std::optional<QString> settings =
+        notefile::read(absolute(kSettingsFolder + u"/vault.yaml"_s), &ignored);
+    return settings ? readFrontMatter(*settings).value(key).toString().trimmed() : QString();
+}
+
 QList<VaultEntry> Vault::entries() const
 {
     QList<VaultEntry> found;

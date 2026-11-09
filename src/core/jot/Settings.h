@@ -73,6 +73,8 @@ class Settings : public QObject
     Q_PROPERTY(bool searchTrash READ searchTrash WRITE setSearchTrash NOTIFY trashChanged)
     /// Notes are written as they are typed, or only on Save.
     Q_PROPERTY(bool autosave READ autosave WRITE setAutosave NOTIFY autosaveChanged)
+    /// Words the dictionary does not know are underlined.
+    Q_PROPERTY(bool spellcheck READ spellcheck WRITE setSpellcheck NOTIFY spellcheckChanged)
     /// Words to write each day, for a streak; 0 for no goal.
     Q_PROPERTY(int dailyWordGoal READ dailyWordGoal WRITE setDailyWordGoal NOTIFY writingChanged)
     /// The version that ran last, so a new one can say what changed.
@@ -146,6 +148,8 @@ public:
     /// settings, never in a vault, so files a computer writes for itself in a synced vault
     /// have names no other computer uses.
     [[nodiscard]] QString computerId();
+    [[nodiscard]] bool spellcheck() const { return m_spellcheck; }
+    void setSpellcheck(bool on);
     [[nodiscard]] int dailyWordGoal() const { return m_dailyWordGoal; }
     void setDailyWordGoal(int words);
     static inline const QStringList kLeaderKeys = {QStringLiteral(","), QStringLiteral(":"),
@@ -199,6 +203,7 @@ Q_SIGNALS:
     void quickCaptureKeyChanged();
     void trashChanged();
     void autosaveChanged();
+    void spellcheckChanged();
     void writingChanged();
 
 private:
@@ -226,6 +231,7 @@ private:
     int m_trashDays = 0;
     bool m_searchTrash = true;
     bool m_autosave = true;
+    bool m_spellcheck = true;
     int m_dailyWordGoal = 0;
     QString m_lastSeenVersion;
     bool m_keepRunning = true;
