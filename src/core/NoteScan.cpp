@@ -287,9 +287,13 @@ QString mathForReading(QStringView body,
                        const std::function<QString(const QString &, bool)> &mathUrl)
 {
     static const QRegularExpression fence(uR"(^\s{0,3}(```+|~~~+))"_s);
+    // The TeX is the picture's words, which Qt needs to place it at all, and a screen reader
+    // reads.
     const auto picture = [&](const QString &tex, bool display) {
         const QString url = mathUrl(tex, display);
-        return url.isEmpty() ? QString() : u"![](<%1>)"_s.arg(url);
+        QString words = tex.simplified();
+        words.replace(u'\\', u"\\\\"_s).replace(u'[', u"\\["_s).replace(u']', u"\\]"_s);
+        return url.isEmpty() ? QString() : u"![%1](<%2>)"_s.arg(words, url);
     };
     const QStringList lines = body.toString().split(u'\n');
     QStringList out;

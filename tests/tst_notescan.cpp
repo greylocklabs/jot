@@ -282,8 +282,9 @@ void TestNoteScan::findsMathAsPandocDoes()
     const auto drawn = [](const QString &tex, bool display) {
         return u"file:///m/%1%2.png"_s.arg(display ? u"d-"_s : QString()).arg(tex.size());
     };
-    QCOMPARE(readingMarkdown(u"So $a+b$ is.\n$$\nx\ny\n$$\n```\n$c$\n```\n"_s, none, drawn),
-             u"So ![](<file:///m/3.png>) is.\n\n![](<file:///m/d-3.png>)\n\n```\n$c$\n```\n"_s);
+    QCOMPARE(
+        readingMarkdown(u"So $a+b$ is.\n$$\nx\ny\n$$\n```\n$c$\n```\n"_s, none, drawn),
+        u"So ![a+b](<file:///m/3.png>) is.\n\n![x y](<file:///m/d-3.png>)\n\n```\n$c$\n```\n"_s);
     // Without a way to draw it, math stays as written.
     QCOMPARE(readingMarkdown(u"So $a$.\n"_s, none), u"So $a$.\n"_s);
 }
