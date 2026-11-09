@@ -335,6 +335,10 @@ void VaultController::followCurrentInTabs()
 {
     const QStringList before = m_tabs;
     const int beforeIndex = m_tabIndex;
+    // The note shown goes in its own tab, or else in the tab shown, in its place: as when it
+    // was opened there, or renamed or moved, which leaves that tab's old path gone.
+    if (!m_current.isEmpty() && !m_tabs.contains(m_current) && m_tabIndex >= 0)
+        m_tabs[m_tabIndex] = m_current;
     if (m_vault) {
         const QString shown = m_tabIndex >= 0 ? m_tabs.at(m_tabIndex) : QString();
         m_tabs.removeIf([this](const QString &path) {
@@ -345,8 +349,6 @@ void VaultController::followCurrentInTabs()
     if (!m_current.isEmpty()) {
         if (const qsizetype open = m_tabs.indexOf(m_current); open >= 0) {
             m_tabIndex = int(open);
-        } else if (m_tabIndex >= 0) {
-            m_tabs[m_tabIndex] = m_current;
         } else {
             m_tabs.append(m_current);
             m_tabIndex = int(m_tabs.size()) - 1;
