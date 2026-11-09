@@ -293,6 +293,14 @@ void MarkdownHighlighter::rehighlightRange(std::pair<int, int> range)
         rehighlightBlock(document()->findBlockByNumber(i));
 }
 
+void MarkdownHighlighter::setFoldComments(bool fold)
+{
+    if (m_foldComments == fold)
+        return;
+    m_foldComments = fold;
+    rehighlight();
+}
+
 void MarkdownHighlighter::setFocusMode(bool focus)
 {
     if (m_focus == focus)
@@ -506,6 +514,72 @@ void MarkdownHighlighter::styleBlock(const QString &text)
     inlineStyles(text, from);
 }
 
+QList<std::pair<int, int>> MarkdownHighlighter::criticStyles(const QString &text, int from)
+{
+    QList<std::pair<int, int>> comments;
+    if (!text.contains(u'{'))
+        return comments;
+    QTextCharFormat added;
+    added.setForeground(m_look.accent);
+    added.setFontUnderline(true);
+    QTextCharFormat removed;
+    removed.setForeground(m_look.danger);
+    removed.setFontStrikeOut(true);
+    QTextCharFormat highlighted;
+    QColor tint = m_look.accent;
+    tint.setAlphaF(0.25f);
+    highlighted.setBackground(tint);
+    // Marks of three characters each side: {++ and ++}, and the like.
+    const auto styled = [&](const QRegularExpression &pattern, const QTextCharFormat &format) {
+        for (const QRegularExpressionMatch &m : pattern.globalMatch(text, from)) {
+            mark(int(m.capturedStart()), 3);
+            merge(int(m.capturedStart(1)), int(m.capturedLength(1)), format);
+            mark(int(m.capturedEnd(1)), 3);
+        }
+    };
+    static const QRegularExpression addition(uR"(\{\+\+(.+?)\+\+\})"_s);
+    static const QRegularExpression deletion(uR"(\{--(.+?)--\})"_s);
+    static const QRegularExpression highlight(uR"(\{==(.+?)==\})"_s);
+    styled(addition, added);
+    styled(deletion, removed);
+    styled(highlight, highlighted);
+    static const QRegularExpression substitution(uR"(\{~~(.*?)~>(.*?)~~\})"_s);
+    for (const QRegularExpressionMatch &m : substitution.globalMatch(text, from)) {
+        mark(int(m.capturedStart()), 3);
+        merge(int(m.capturedStart(1)), int(m.capturedLength(1)), removed);
+        mark(int(m.capturedEnd(1)), 2);
+        merge(int(m.capturedStart(2)), int(m.capturedLength(2)), added);
+        mark(int(m.capturedEnd(2)), 3);
+    }
+
+    static const QRegularExpression comment(uR"(\{>>(.*?)<<\})"_s);
+    QList<std::pair<int, QString>> found;
+    for (const QRegularExpressionMatch &m : comment.globalMatch(text, from)) {
+        const int start = int(m.capturedStart());
+        const int length = int(m.capturedLength());
+        comments.append({start, start + length});
+        found.append({start, m.captured(1).trimmed()});
+        if (m_foldComments && !m_cursorHere) {
+            // Away to the margin, which shows it.
+            mark(start, length);
+            continue;
+        }
+        QTextCharFormat aside;
+        aside.setForeground(m_look.muted);
+        aside.setFontItalic(true);
+        aside.setBackground(tint);
+        mark(start, 3);
+        merge(int(m.capturedStart(1)), int(m.capturedLength(1)), aside);
+        mark(int(m.capturedEnd(1)), 3);
+    }
+    if (!found.isEmpty() && !currentBlockUserData()) {
+        auto *data = new Comments;
+        data->comments = found;
+        setCurrentBlockUserData(data);
+    }
+    return comments;
+}
+
 void MarkdownHighlighter::inlineStyles(const QString &text, int from)
 {
     QList<Range> taken;
@@ -528,6 +602,10 @@ void MarkdownHighlighter::inlineStyles(const QString &text, int from)
         mark(int(m.capturedStart(1)), int(m.capturedLength(1)));
         mark(int(m.capturedEnd(2)), int(m.capturedLength(1)));
         take(m);
+    }
+    for (const auto &[start, end] : criticStyles(text, from)) {
+        if (!overlaps(taken, start, end))
+            taken.append({start, end});
     }
 
     QTextCharFormat link;

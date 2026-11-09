@@ -14,6 +14,7 @@ private Q_SLOTS:
     void tickingARepeatingTaskWritesTheNext();
     void readsAsMarkdownWithLinks();
     void findsHeadingsForAContentsList();
+    void readsCriticMarkupWithItsEditsMade();
     void findsEveryKindOfLink();
     void leavesUrlsAndAnchorsOut();
     void findsNestedTagsButNotHeadingsOrNumbers();
@@ -236,6 +237,18 @@ void TestNoteScan::findsHeadingsForAContentsList()
     // Without headings there is nothing to list, and a marker in code stays.
     QCOMPARE(readingMarkdown(u"${toc}\nText\n"_s, none), u"\nText\n"_s);
     QCOMPARE(readingMarkdown(u"`${toc}`\n"_s, none), u"`${toc}`\n"_s);
+}
+
+void TestNoteScan::readsCriticMarkupWithItsEditsMade()
+{
+    const auto none = [](const QString &) { return QString(); };
+    QCOMPARE(readingMarkdown(u"A {++new++} and {--old--} {~~cat~>dog~~} {==bright==}"
+                             "{>> check this <<}\n"_s,
+                             none),
+             u"A new and ~~old~~ ~~cat~~ dog bright *(check this)*\n"_s);
+    // A link inside an addition is still a link; code keeps the marks as written.
+    QCOMPARE(readingMarkdown(u"{++see [[Mara]]++} `{--x--}`\n"_s, none),
+             u"see [Mara](jot-note:Mara) `{--x--}`\n"_s);
 }
 
 void TestNoteScan::tickingARepeatingTaskWritesTheNext()

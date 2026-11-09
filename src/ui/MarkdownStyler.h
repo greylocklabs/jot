@@ -46,6 +46,10 @@ class MarkdownStyler : public QObject
     Q_PROPERTY(bool sourceMode READ sourceMode WRITE setSourceMode NOTIFY sourceModeChanged)
     /// Everything but the paragraph the cursor is in faded.
     Q_PROPERTY(bool focusMode READ focusMode WRITE setFocusMode NOTIFY focusModeChanged)
+    /// CriticMarkup comments folded away for the margin to show, but on the cursor's line.
+    Q_PROPERTY(bool foldComments READ foldComments WRITE setFoldComments NOTIFY foldCommentsChanged)
+    /// The CriticMarkup comments, as `{position, text}` with where each `{>>` is.
+    Q_PROPERTY(QVariantList comments READ comments NOTIFY imagesChanged)
     /// The note's front matter keys, as the text has them now.
     Q_PROPERTY(QVariantMap frontMatter READ frontMatter NOTIFY frontMatterChanged)
 
@@ -77,6 +81,9 @@ public:
     void setSourceMode(bool source);
     [[nodiscard]] bool focusMode() const { return m_focusMode; }
     void setFocusMode(bool focus);
+    [[nodiscard]] bool foldComments() const { return m_foldComments; }
+    void setFoldComments(bool fold);
+    [[nodiscard]] QVariantList comments() const;
 
     /// What is at `position`: `{kind, target, position}`, where kind is "", "link",
     /// "wikilink", "url" or "task"; for a task, `position` is where its mark is.
@@ -113,6 +120,7 @@ Q_SIGNALS:
     void frontMatterChanged();
     void sourceModeChanged();
     void focusModeChanged();
+    void foldCommentsChanged();
 
 private:
     void applyLook();
@@ -133,6 +141,7 @@ private:
     QList<std::pair<int, QString>> m_headings;
     bool m_sourceMode = false;
     bool m_focusMode = false;
+    bool m_foldComments = false;
     /// Widths settle before images are fitted again, so a window being resized does
     /// not restyle the note on every frame.
     QTimer *m_widthSettle = nullptr;

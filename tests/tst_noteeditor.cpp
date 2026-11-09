@@ -68,6 +68,7 @@ private Q_SLOTS:
     void fadesAllButTheParagraphInFocusMode();
     void keepsTheLineInTheMiddleForTypewriterScrolling();
     void showsOnlyTheNoteWhenDistractionFree();
+    void showsCriticCommentsInTheMargin();
     void switchingAwayFromAPictureLeavesNoStalePlace();
     void formatsAndUndoesInOneStep();
     void formatsFromTheKeyboard();
@@ -720,6 +721,46 @@ void TestNoteEditor::showsOnlyTheNoteWhenDistractionFree()
     QVERIFY(!find(u"formatBar"_s)->isVisible());
     QVERIFY(!find(u"noteTabs"_s)->isVisible());
     QVERIFY(find(u"body"_s)->isVisible());
+}
+
+void TestNoteEditor::showsCriticCommentsInTheMargin()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    auto *styler = m_editor->findChild<QObject *>(u"styler"_s);
+    const auto notes = [this] {
+        QList<QQuickItem *> found;
+        const std::function<void(QQuickItem *)> look = [&](QQuickItem *item) {
+            if (item->objectName() == u"marginNote"_s && item->isVisible())
+                found.append(item);
+            for (QQuickItem *child : item->childItems())
+                look(child);
+        };
+        look(qobject_cast<QQuickItem *>(m_editor.get()));
+        return found;
+    };
+    const QString text = u"First line\n\nA claim{>>Source?<<} here.\n\nMore {++added++}.\n"_s;
+    body->forceActiveFocus();
+    body->setProperty("text", text);
+    body->setProperty("cursorPosition", 2);
+    QTRY_COMPARE(notes().size(), 1);
+    QVERIFY(styler->property("foldComments").toBool());
+    QCOMPARE(notes().first()->property("modelData").toMap().value(u"text"_s).toString(),
+             u"Source?"_s);
+    // The note sits beside its line, right of the text.
+    QVERIFY(notes().first()->mapToItem(body, {0, 0}).x() > body->width());
+
+    // Clicking it takes the cursor into the comment, to edit.
+    QQuickItem *note = notes().first();
+    QTest::mouseClick(m_window.get(), Qt::LeftButton, {},
+                      note->mapToScene({note->width() / 2, note->height() / 2}).toPoint());
+    QTRY_COMPARE(body->property("cursorPosition").toInt(), int(text.indexOf(u"Source"_s)));
+
+    // Without room beside the note, comments stay in the text.
+    m_window->resize(560, 700);
+    qobject_cast<QQuickItem *>(m_editor.get())->setSize(m_window->size());
+    QTRY_VERIFY(!styler->property("foldComments").toBool());
+    QTRY_COMPARE(notes().size(), 0);
 }
 
 void TestNoteEditor::drawsDiagramsInPlaceOfTheirText()

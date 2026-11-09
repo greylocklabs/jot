@@ -25,6 +25,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   Settings.
 - Focus mode fades all but the paragraph being written, typewriter scrolling keeps its line in
   the middle of the window, and F11 goes fullscreen with only the note.
+- CriticMarkup edits show as additions and deletions, and its comments as notes in the margin
+  beside their lines, where the window has room.
 
 ## 0.4.1 - 2026-11-07
 
