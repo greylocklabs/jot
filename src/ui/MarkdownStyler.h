@@ -44,6 +44,8 @@ class MarkdownStyler : public QObject
     Q_PROPERTY(QVariantMap count READ count NOTIFY imagesChanged)
     /// The Markdown shown as written, without live preview.
     Q_PROPERTY(bool sourceMode READ sourceMode WRITE setSourceMode NOTIFY sourceModeChanged)
+    /// Everything but the paragraph the cursor is in faded.
+    Q_PROPERTY(bool focusMode READ focusMode WRITE setFocusMode NOTIFY focusModeChanged)
     /// The note's front matter keys, as the text has them now.
     Q_PROPERTY(QVariantMap frontMatter READ frontMatter NOTIFY frontMatterChanged)
 
@@ -73,6 +75,8 @@ public:
     [[nodiscard]] QVariantMap frontMatter() const { return m_frontMatter; }
     [[nodiscard]] bool sourceMode() const { return m_sourceMode; }
     void setSourceMode(bool source);
+    [[nodiscard]] bool focusMode() const { return m_focusMode; }
+    void setFocusMode(bool focus);
 
     /// What is at `position`: `{kind, target, position}`, where kind is "", "link",
     /// "wikilink", "url" or "task"; for a task, `position` is where its mark is.
@@ -108,6 +112,7 @@ Q_SIGNALS:
     void imagesChanged();
     void frontMatterChanged();
     void sourceModeChanged();
+    void focusModeChanged();
 
 private:
     void applyLook();
@@ -127,6 +132,7 @@ private:
     /// The headings the tables of contents were last drawn with.
     QList<std::pair<int, QString>> m_headings;
     bool m_sourceMode = false;
+    bool m_focusMode = false;
     /// Widths settle before images are fitted again, so a window being resized does
     /// not restyle the note on every frame.
     QTimer *m_widthSettle = nullptr;
