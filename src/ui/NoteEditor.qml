@@ -123,22 +123,37 @@ Rectangle {
         if (!recorder.available || body.readOnly)
             return false
         recordAt = body.cursorPosition
+        recordNote = Vault.current
         recorder.start(qsTr("Recording %1").arg(new Date().toLocaleString(Qt.locale(),
                                                                           "yyyy-MM-dd HHmmss")))
         return true
     }
-    /// Where the recording goes in, as the cursor was when it began.
+    /// Where the recording goes in, as the cursor was when it began, and in which note.
     property int recordAt: 0
+    property string recordNote
 
     AudioRecorder {
         id: recorder
 
+        // In the note it began in, at the cursor, or at that note's end once another is shown.
         onFinished: url => {
+            if (Vault.current !== root.recordNote) {
+                Vault.attachToNoteEnd(root.recordNote, url)
+                return
+            }
             const markdown = Vault.attachFiles([url])
             if (markdown !== "")
                 body.insertBlock(root.recordAt, markdown)
         }
         onFailed: why => recordingProblem.text = qsTr("Could not record: %1").arg(why)
+    }
+    // Leaving the note stops recording into it.
+    Connections {
+        target: Vault
+        function onOpening() {
+            if (recorder.recording)
+                recorder.stop()
+        }
     }
 
     /// Brings the heading numbered `index`, from 0, to the top, with the cursor at its start

@@ -269,7 +269,14 @@ public:
     Q_INVOKABLE QString pasteImage();
     /// Copies files dropped on the note into its attachments and gives the Markdown that
     /// shows images and links the rest, a line each.
-    Q_INVOKABLE QString attachFiles(const QList<QUrl> &files);
+    Q_INVOKABLE QString attachFiles(const QList<QUrl> &files)
+    {
+        return attachFilesTo(m_current, files);
+    }
+    /// As attachFiles(), for the note at `note`, shown or not.
+    QString attachFilesTo(const QString &note, const QList<QUrl> &files);
+    /// Attaches `file` to the note at `note`, one not shown, and embeds it at the note's end.
+    Q_INVOKABLE bool attachToNoteEnd(const QString &note, const QUrl &file);
     /// Where to put `markdown` so it sits on lines of its own at `position` in `text`:
     /// `{position, text, cursor}`, the text padded with the line breaks it needs and the
     /// cursor just after it.

@@ -61,6 +61,7 @@ private Q_SLOTS:
     void makesNotesFromTemplates();
     void opensTodaysNote();
     void countsTheWordsWrittenToday();
+    void attachesARecordingToTheNoteItBeganIn();
     void exportsThroughPandoc();
     void keepsPastVersionsWhileEditing();
     void restoresAPastVersion();
@@ -916,6 +917,24 @@ void TestVaultController::exportsThroughPandoc()
 
     m_vault->setPandoc(m_dir->filePath(u"missing"_s));
     QVERIFY(!m_vault->pandocFound());
+}
+
+void TestVaultController::attachesARecordingToTheNoteItBeganIn()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    QFile sound(m_dir->filePath(u"Take.wav"_s));
+    QVERIFY(sound.open(QIODevice::WriteOnly));
+    sound.write("RIFF");
+    sound.close();
+    // Begun in Pancakes, finished with Welcome shown: it goes to the end of Pancakes.
+    m_vault->setCurrent(u"Welcome.md"_s);
+    const QString welcome = m_vault->currentText();
+    QVERIFY(
+        m_vault->attachToNoteEnd(u"Recipes/Pancakes.md"_s, QUrl::fromLocalFile(sound.fileName())));
+    QVERIFY(QFileInfo::exists(m_root + u"/Recipes/Pancakes.assets/Take.wav"_s));
+    QVERIFY(readFile(m_root + u"/Recipes/Pancakes.md"_s)
+                .endsWith(u"\n\n![](Pancakes.assets/Take.wav)\n"_s));
+    QCOMPARE(m_vault->currentText(), welcome);
 }
 
 void TestVaultController::keepsPastVersionsWhileEditing()
