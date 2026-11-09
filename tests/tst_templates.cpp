@@ -27,6 +27,12 @@ void TestTemplates::fillsInTheVariables()
     QCOMPARE(fillTemplate(u"{{date:dddd D MMMM YYYY}} {{time:h:mm a}}"_s, {}, now),
              u"Sunday 8 November 2026 9:05 am"_s);
     QCOMPARE(fillTemplate(u"{{date:[Day] D, [Week's] YY}}"_s, {}, now), u"Day 8, Week's 26"_s);
+    // h is the 12-hour clock, with or without AM or PM beside it.
+    const QDateTime afternoon(QDate(2026, 11, 8), QTime(15, 4));
+    QCOMPARE(fillTemplate(u"{{time:hh:mm}} {{time:h A}} {{time:HH}}"_s, {}, afternoon),
+             u"03:04 3 PM 15"_s);
+    QCOMPARE(fillTemplate(u"{{time:h}}"_s, {}, QDateTime(QDate(2026, 11, 8), QTime(0, 5))),
+             u"12"_s);
     // What it does not know stays as written.
     QCOMPARE(fillTemplate(u"{{weather}} {{title"_s, u"x"_s, now), u"{{weather}} {{title"_s);
 }

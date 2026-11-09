@@ -29,8 +29,8 @@ QString folderSetting(const Vault &vault, const QString &key, const QString &fal
     return folder;
 }
 
-/// A date format as Obsidian and moment.js write it, such as `dddd D MMMM YYYY`, as Qt's.
-QString qtFormat(const QString &format)
+/// `now` written in a format as Obsidian and moment.js write it, such as `dddd D MMMM YYYY`.
+QString formatted(const QString &format, const QDateTime &now)
 {
     // Text in square brackets is kept as it is, without them.
     static const QRegularExpression token(
@@ -39,31 +39,25 @@ QString qtFormat(const QString &format)
         {u"YYYY"_s, u"yyyy"_s}, {u"YY"_s, u"yy"_s},   {u"MMMM"_s, u"MMMM"_s}, {u"MMM"_s, u"MMM"_s},
         {u"MM"_s, u"MM"_s},     {u"M"_s, u"M"_s},     {u"DD"_s, u"dd"_s},     {u"D"_s, u"d"_s},
         {u"dddd"_s, u"dddd"_s}, {u"ddd"_s, u"ddd"_s}, {u"HH"_s, u"HH"_s},     {u"H"_s, u"H"_s},
-        {u"hh"_s, u"hh"_s},     {u"h"_s, u"h"_s},     {u"mm"_s, u"mm"_s},     {u"m"_s, u"m"_s},
-        {u"ss"_s, u"ss"_s},     {u"s"_s, u"s"_s},     {u"A"_s, u"AP"_s},      {u"a"_s, u"ap"_s}};
-    // Text between the tokens is quoted in one run, since two quoted runs side by side read
-    // as a quote mark.
+        {u"mm"_s, u"mm"_s},     {u"m"_s, u"m"_s},     {u"ss"_s, u"ss"_s},     {u"s"_s, u"s"_s},
+        {u"A"_s, u"AP"_s},      {u"a"_s, u"ap"_s}};
     QString out;
-    QString text;
-    const auto flush = [&] {
-        if (!text.isEmpty())
-            out += u"'"_s + text.replace(u"'"_s, u"''"_s) + u"'"_s;
-        text.clear();
-    };
     qsizetype at = 0;
     for (const QRegularExpressionMatch &m : token.globalMatch(format)) {
-        text += QStringView(format).sliced(at, m.capturedStart() - at);
-        if (m.captured().startsWith(u'[')) {
-            text += m.capturedView().sliced(1).chopped(1);
+        out += format.mid(at, m.capturedStart() - at);
+        const QString part = m.captured();
+        if (part.startsWith(u'[')) {
+            out += part.mid(1, part.size() - 2);
+        } else if (part == u"h" || part == u"hh") {
+            // Always the 12-hour clock, which Qt gives only beside AM or PM.
+            const int hour = now.time().hour() % 12 == 0 ? 12 : now.time().hour() % 12;
+            out += part == u"hh" ? u"%1"_s.arg(hour, 2, 10, u'0') : QString::number(hour);
         } else {
-            flush();
-            out += qt.value(m.captured());
+            out += now.toString(qt.value(part));
         }
         at = m.capturedEnd();
     }
-    text += QStringView(format).sliced(at);
-    flush();
-    return out;
+    return out + format.mid(at);
 }
 
 /// The key a front matter line starts, or nothing for a line that carries on the one above.
@@ -109,7 +103,7 @@ QString fillTemplate(const QString &text, const QString &title, const QDateTime 
         if (name == u"title")
             out += title;
         else if (!format.isEmpty())
-            out += now.toString(qtFormat(format));
+            out += formatted(format, now);
         else
             out += now.toString(name == u"date" ? u"yyyy-MM-dd"_s : u"HH:mm"_s);
         at = m.capturedEnd();
