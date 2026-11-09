@@ -13,6 +13,7 @@ class TestNoteScan : public QObject
 private Q_SLOTS:
     void tickingARepeatingTaskWritesTheNext();
     void readsAsMarkdownWithLinks();
+    void findsHeadingsForAContentsList();
     void findsEveryKindOfLink();
     void leavesUrlsAndAnchorsOut();
     void findsNestedTagsButNotHeadingsOrNumbers();
@@ -183,6 +184,34 @@ void TestNoteScan::readsAsMarkdownWithLinks()
     // A heading's # is not a tag, and lines keep their Windows line breaks.
     QCOMPARE(readingMarkdown(u"# Title\r\nA #tag\r\n"_s, embed),
              u"# Title\r\nA [#tag](jot-tag:tag)\r\n"_s);
+}
+
+void TestNoteScan::findsHeadingsForAContentsList()
+{
+    const QString note =
+        u"# Ferry\n${toc}\n## Crossing ##\n```\n# not one\n```\n### [[Mara]] *aboard*\n#tag\n"_s;
+    const QList<Heading> found = headingsOf(note);
+    QCOMPARE(found.size(), 3);
+    QCOMPARE(found.at(0).text, u"Ferry"_s);
+    QCOMPARE(found.at(1).level, 2);
+    // Closing marks go; the rest stays as written.
+    QCOMPARE(found.at(1).text, u"Crossing"_s);
+    QCOMPARE(found.at(1).position, note.indexOf(u"## Crossing"_s));
+    QCOMPARE(found.at(2).text, u"[[Mara]] *aboard*"_s);
+
+    QVERIFY(isTocMarker(u"  ${toc} "));
+    QVERIFY(!isTocMarker(u"see ${toc}"));
+
+    // Read as nested links to each heading by number, its brackets kept as text.
+    const auto none = [](const QString &) { return QString(); };
+    QCOMPARE(
+        readingMarkdown(note, none),
+        u"# Ferry\n\n- [Ferry](jot-heading:0)\n  - [Crossing](jot-heading:1)\n"
+        "    - [\\[\\[Mara\\]\\] *aboard*](jot-heading:2)\n\n## Crossing ##\n```\n# not one\n```\n"
+        "### [Mara](jot-note:Mara) *aboard*\n[#tag](jot-tag:tag)\n"_s);
+    // Without headings there is nothing to list, and a marker in code stays.
+    QCOMPARE(readingMarkdown(u"${toc}\nText\n"_s, none), u"\nText\n"_s);
+    QCOMPARE(readingMarkdown(u"`${toc}`\n"_s, none), u"`${toc}`\n"_s);
 }
 
 void TestNoteScan::tickingARepeatingTaskWritesTheNext()

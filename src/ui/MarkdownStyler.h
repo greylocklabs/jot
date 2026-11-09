@@ -33,6 +33,10 @@ class MarkdownStyler : public QObject
     /// The images shown in place of their links, as `{position, source, width, height}`,
     /// where `position` is where the link's line starts.
     Q_PROPERTY(QVariantList images READ images NOTIFY imagesChanged)
+    /// The tables of contents shown in place of `${toc}` lines, as `{position, rowHeight,
+    /// headings}`, each heading `{text, level, position}` with where its line starts and its
+    /// level from 1 for the note's highest. Told with the images, which they make room among.
+    Q_PROPERTY(QVariantList contents READ contents NOTIFY imagesChanged)
     /// The Markdown shown as written, without live preview.
     Q_PROPERTY(bool sourceMode READ sourceMode WRITE setSourceMode NOTIFY sourceModeChanged)
     /// The note's front matter keys, as the text has them now.
@@ -53,6 +57,7 @@ public:
     [[nodiscard]] int width() const { return m_width; }
     void setWidth(int width);
     [[nodiscard]] QVariantList images() const;
+    [[nodiscard]] QVariantList contents() const;
     [[nodiscard]] QVariantMap frontMatter() const { return m_frontMatter; }
     [[nodiscard]] bool sourceMode() const { return m_sourceMode; }
     void setSourceMode(bool source);
@@ -107,6 +112,8 @@ private:
     int m_width = 600;
     bool m_imagesPending = false;
     QVariantMap m_frontMatter;
+    /// The headings the tables of contents were last drawn with.
+    QList<std::pair<int, QString>> m_headings;
     bool m_sourceMode = false;
     /// Widths settle before images are fitted again, so a window being resized does
     /// not restyle the note on every frame.

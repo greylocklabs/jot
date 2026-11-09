@@ -129,6 +129,8 @@ CommonMark with the GitHub extensions (tables, task lists, strikethrough, autoli
 - inline tags: `#tag` and `#tag/nested`, outside code and links. A tag is letters, digits, `_`,
   `-` and `/`, with at least one that is not a digit, and starts the line or follows a space, `(`
   or `,`. Tags match without regard to case.
+- `${toc}` on a line of its own, as Joplin writes it, for a list of the note's `#` headings,
+  drawn in its place and never written into the file.
 
 Jot keeps any other Markdown as written, footnotes and math among them, and does not draw those
 yet.

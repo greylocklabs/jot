@@ -2,6 +2,7 @@
 
 #include "jot/CodeColors.h"
 #include "jot/Diagram.h"
+#include "jot/NoteScan.h"
 
 #include <QColor>
 #include <QHash>
@@ -61,6 +62,14 @@ public:
         QSize size;
     };
 
+    /// A table of contents shown in place of a `${toc}` line: room for `rows` headings,
+    /// each `rowHeight` tall.
+    struct Toc : QTextBlockUserData
+    {
+        int rows = 0;
+        int rowHeight = 0;
+    };
+
     /// Finds the file an image link reaches: its target as written, and whether it is a
     /// wikilink. Empty when it reaches none.
     using Resolver = std::function<QString(const QString &target, bool wiki)>;
@@ -88,6 +97,8 @@ public:
     void setSourceMode(bool source);
 
     [[nodiscard]] Hit hitAt(int position) const;
+    /// Redraws each table of contents, as after the headings changed.
+    void refreshContents();
 
     /// Block states, kept so code fences and front matter carry from line to line. A code
     /// line packs a hash of its language and parser state above these two bits, so a change
@@ -109,6 +120,10 @@ private:
     /// Makes the character at `bang` exactly as tall as `shown` and folds away the rest of the
     /// line, reserving the room the image at `path` is drawn into.
     void showImage(const QString &text, int bang, const QString &path, QSize shown);
+    /// Makes the character at `at` exactly `height` tall and folds away the rest of the line.
+    void reserve(const QString &text, int at, int height);
+    /// Shows the note's headings in place of a table of contents marker; says whether it did.
+    bool contentsLine(const QString &text);
     /// The first and last lines of the diagram fence `block` is in, or -1 for both when it
     /// is in none; a fence still open to the end of the note is not drawn yet.
     [[nodiscard]] std::pair<int, int> diagramFence(const QTextBlock &block) const;

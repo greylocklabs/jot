@@ -157,6 +157,22 @@ NoteScan scanNote(QStringView body, int firstLine)
     return scan;
 }
 
+QList<Heading> headingsOf(QStringView body)
+{
+    static const QRegularExpression heading(uR"(^ {0,3}(#{1,6})(?:\s+(.*?))?(?:\s+#+)?\s*$)"_s);
+    QList<Heading> found;
+    forEachProseLine(body, 1, [&](int, qsizetype start, const QString &line) {
+        if (const QRegularExpressionMatch m = heading.match(line); m.hasMatch())
+            found.append({int(m.capturedLength(1)), m.captured(2).trimmed(), start});
+    });
+    return found;
+}
+
+bool isTocMarker(QStringView line)
+{
+    return line.trimmed() == u"${toc}";
+}
+
 QString readingMarkdown(QStringView body, const std::function<QString(const QString &)> &embedUrl)
 {
     // A wikilink with its label, after a bar, when it has one.
@@ -167,9 +183,25 @@ QString readingMarkdown(QStringView body, const std::function<QString(const QStr
     const auto escape = [](QString label) {
         return label.replace(u'[', u"\\["_s).replace(u']', u"\\]"_s);
     };
+    const QList<Heading> headings = headingsOf(body);
+    QString contents;
+    if (!headings.isEmpty()) {
+        const int top = std::ranges::min(headings, {}, &Heading::level).level;
+        contents = u"\n"_s;
+        for (qsizetype i = 0; i < headings.size(); ++i)
+            contents += u"%1- [%2](jot-heading:%3)\n"_s.arg(
+                QString(2 * (headings.at(i).level - top), u' '), escape(headings.at(i).text),
+                QString::number(i));
+    }
     QString out;
     qsizetype copied = 0;
     forEachProseLine(body, 1, [&](int, qsizetype start, const QString &line) {
+        if (isTocMarker(line)) {
+            out += body.sliced(copied, start - copied);
+            out += contents;
+            copied = start + line.size();
+            return;
+        }
         // Each replacement by where it starts in the line, and how long a stretch it replaces.
         struct Change
         {

@@ -119,6 +119,13 @@ Rectangle {
             Vault.notes.tag = decodeURIComponent(link.slice("jot-tag:".length))
         } else if (link.startsWith("jot-note:")) {
             Vault.follow(decodeURIComponent(link.slice("jot-note:".length)), true)
+        } else if (link.startsWith("jot-heading:")) {
+            // A table of contents entry scrolls its heading to the top.
+            const position = reading.headingPosition(Number(link.slice("jot-heading:".length)))
+            if (position >= 0)
+                flick.contentY = Math.max(0, Math.min(page.y + reader.y + reader.positionToRectangle(
+                                                          position).y - Theme.space6,
+                                                      flick.contentHeight - flick.height))
         } else {
             Vault.follow(link, false)
         }
@@ -999,6 +1006,78 @@ Rectangle {
                         asynchronous: true
                         smooth: true
                         mipmap: true
+                    }
+                }
+
+                // Each table of contents, in the room its marker line keeps.
+                Repeater {
+                    model: styler.contents
+
+                    Column {
+                        id: contents
+
+                        required property var modelData
+
+                        readonly property rect line: {
+                            body.layoutTick
+                            return body.positionToRectangle(Math.min(modelData.position,
+                                                                     body.length))
+                        }
+
+                        objectName: "contents"
+                        y: line.y
+                        width: body.width
+
+                        Text {
+                            visible: contents.modelData.headings.length === 0
+                            height: contents.modelData.rowHeight
+                            verticalAlignment: Text.AlignVCenter
+                            text: qsTr("The note's headings will be listed here.")
+                            color: Theme.textFaint
+                            font.family: root.noteFamily
+                            font.pixelSize: body.font.pixelSize
+                        }
+                        Repeater {
+                            model: contents.modelData.headings
+
+                            // The whole row takes the click, its indent too.
+                            Item {
+                                id: entry
+
+                                required property var modelData
+
+                                objectName: "contentsEntry"
+                                width: contents.width
+                                height: contents.modelData.rowHeight
+                                Accessible.role: Accessible.Link
+                                Accessible.name: modelData.text
+
+                                Text {
+                                    anchors.fill: parent
+                                    leftPadding: (entry.modelData.level - 1) * Theme.space5
+                                    verticalAlignment: Text.AlignVCenter
+                                    elide: Text.ElideRight
+                                    textFormat: Text.PlainText
+                                    text: entry.modelData.text
+                                    color: entryHover.hovered ? Theme.accent : Theme.text
+                                    font.family: root.noteFamily
+                                    font.pixelSize: body.font.pixelSize
+                                    font.underline: entryHover.hovered
+                                }
+                                HoverHandler {
+                                    id: entryHover
+                                    cursorShape: Qt.PointingHandCursor
+                                }
+                                TapHandler {
+                                    // Holds the press, so the editor under it moves nothing.
+                                    gesturePolicy: TapHandler.ReleaseWithinBounds
+                                    onTapped: {
+                                        body.forceActiveFocus()
+                                        body.cursorPosition = entry.modelData.position
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 

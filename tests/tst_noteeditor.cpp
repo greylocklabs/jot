@@ -60,6 +60,7 @@ private Q_SLOTS:
     void anOutsideEditKeepsTheCursorWhereItWas();
     void showsImagesInPlaceOfTheirLinks();
     void drawsDiagramsInPlaceOfTheirText();
+    void listsHeadingsInPlaceOfAContentsMarker();
     void switchingAwayFromAPictureLeavesNoStalePlace();
     void formatsAndUndoesInOneStep();
     void formatsFromTheKeyboard();
@@ -455,6 +456,56 @@ void TestNoteEditor::showsImagesInPlaceOfTheirLinks()
 {
     m_vault->setCurrent(u"Ashfall/Places/The Ferry.md"_s);
     QTRY_VERIFY_WITH_TIMEOUT(blueInk() > 1000, 3000);
+}
+
+void TestNoteEditor::listsHeadingsInPlaceOfAContentsMarker()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    auto *styler = m_editor->findChild<QObject *>(u"styler"_s);
+    QVERIFY(styler);
+    const auto headings = [styler] {
+        const QVariantList contents = styler->property("contents").toList();
+        return contents.isEmpty() ? QVariantList{QVariant(u"none"_s)}
+                                  : contents.first().toMap().value(u"headings"_s).toList();
+    };
+    const QString text = u"${toc}\n\n# Plan\n\ntext\n\n## Later\n\nend\n"_s;
+    body->forceActiveFocus();
+    body->setProperty("text", text);
+    body->setProperty("cursorPosition", int(text.size()) - 1);
+    QTRY_COMPARE(headings().size(), 2);
+    QCOMPARE(headings().at(1).toMap().value(u"text"_s).toString(), u"Later"_s);
+    QCOMPARE(headings().at(1).toMap().value(u"level"_s).toInt(), 2);
+
+    // A heading added below shows in the list.
+    body->setProperty("cursorPosition", int(text.indexOf(u"end"_s)));
+    for (const QChar c : u"## Last"_s)
+        QTest::keyClick(m_window.get(), c.toLatin1());
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    QTRY_COMPARE(headings().size(), 3);
+
+    // Clicking an entry takes the cursor to its heading.
+    QQuickItem *entry = nullptr;
+    QTRY_VERIFY((entry = [&]() -> QQuickItem * {
+        QQuickItem *found = nullptr;
+        const std::function<void(QQuickItem *)> look = [&](QQuickItem *item) {
+            if (!found && item->objectName() == u"contentsEntry"_s &&
+                item->property("modelData").toMap().value(u"text"_s) == u"Later"_s)
+                found = item;
+            for (QQuickItem *child : item->childItems())
+                look(child);
+        };
+        look(body);
+        return found;
+    }()));
+    QTest::mouseClick(m_window.get(), Qt::LeftButton, {},
+                      entry->mapToScene({10, entry->height() / 2}).toPoint());
+    QTRY_COMPARE(body->property("cursorPosition").toInt(),
+                 int(body->property("text").toString().indexOf(u"## Later"_s)));
+
+    // On the cursor's line it is the marker again, to edit.
+    body->setProperty("cursorPosition", 1);
+    QTRY_COMPARE(styler->property("contents").toList().size(), 0);
 }
 
 void TestNoteEditor::drawsDiagramsInPlaceOfTheirText()

@@ -15,6 +15,8 @@
 #include <QTimer>
 #include <QUrl>
 
+#include <algorithm>
+
 using namespace Qt::StringLiterals;
 
 namespace jot {
@@ -248,8 +250,53 @@ void MarkdownStyler::scheduleImages()
     m_imagesPending = true;
     QTimer::singleShot(0, this, [this] {
         m_imagesPending = false;
+        // A heading changed elsewhere in the note redraws each table of contents.
+        if (m_highlighter && m_document && m_document->textDocument()) {
+            const QString text = m_document->textDocument()->toPlainText();
+            QList<std::pair<int, QString>> headings;
+            if (text.contains(u"${toc}"_s)) {
+                for (const Heading &heading : headingsOf(splitFrontMatter(text).body))
+                    headings.append({heading.level, heading.text});
+            }
+            if (headings != m_headings) {
+                m_headings = headings;
+                m_highlighter->refreshContents();
+            }
+        }
         Q_EMIT imagesChanged();
     });
+}
+
+QVariantList MarkdownStyler::contents() const
+{
+    QVariantList contents;
+    if (!m_document || !m_document->textDocument())
+        return contents;
+    QVariantList headings;
+    bool read = false;
+    for (QTextBlock block = m_document->textDocument()->begin(); block.isValid();
+         block = block.next()) {
+        const auto *toc = dynamic_cast<const MarkdownHighlighter::Toc *>(block.userData());
+        if (!toc)
+            continue;
+        if (!read) {
+            read = true;
+            const QString note = m_document->textDocument()->toPlainText();
+            const QStringView body = splitFrontMatter(note).body;
+            const QList<Heading> found = headingsOf(body);
+            const int top =
+                found.isEmpty() ? 1 : std::ranges::min(found, {}, &Heading::level).level;
+            for (const Heading &heading : found)
+                headings.append(QVariantMap{
+                    {u"text"_s, heading.text},
+                    {u"level"_s, heading.level - top + 1},
+                    {u"position"_s, int(heading.position + (body.data() - note.data()))}});
+        }
+        contents.append(QVariantMap{{u"position"_s, block.position()},
+                                    {u"rowHeight"_s, toc->rowHeight},
+                                    {u"headings"_s, headings}});
+    }
+    return contents;
 }
 
 QVariantList MarkdownStyler::images() const
