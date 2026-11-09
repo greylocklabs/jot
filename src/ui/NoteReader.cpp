@@ -357,7 +357,7 @@ void NoteReader::placeImages()
                             : natural;
                 reader.setScaledSize(shown * 2);
                 image = reader.read();
-            } else if (path.endsWith(u"@2x.png"_s)) {
+            } else if (path.startsWith(MathRenderer::folder() + u'/')) {
                 // Drawn at twice its size, as math is, and shown at half, in the line's middle.
                 image = QImage(path);
                 shown = image.size() / 2;

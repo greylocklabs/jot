@@ -10,6 +10,7 @@
 #include <QDir>
 #include <QDirIterator>
 #include <QElapsedTimer>
+#include <QImage>
 #include <QInputMethodEvent>
 #include <QLocale>
 #include <QPointer>
@@ -80,6 +81,7 @@ private Q_SLOTS:
     void underlinesMisspelledWords();
     void playsSoundsWhereTheyAreEmbedded();
     void drawsMath();
+    void readsMathAtHalfItsDrawnSize();
     void switchingAwayFromAPictureLeavesNoStalePlace();
     void formatsAndUndoesInOneStep();
     void formatsFromTheKeyboard();
@@ -907,6 +909,36 @@ void TestNoteEditor::drawsMath()
     QTRY_COMPARE(drawn(false).size(), 0);
     body->setProperty("cursorPosition", int(text.indexOf(u"mc^2"_s)));
     QTRY_COMPARE(drawn(true).size(), 0);
+}
+
+void TestNoteEditor::readsMathAtHalfItsDrawnSize()
+{
+    // A picture of the note's own named @2x keeps its size; drawn math is shown at half.
+    QString error;
+    QVERIFY(QDir(m_root).mkpath(u"Shots.assets"_s));
+    QVERIFY(QImage(40, 20, QImage::Format_RGB32).save(m_root + u"/Shots.assets/shot@2x.png"_s));
+    QVERIFY(notefile::write(m_root + u"/Shots.md"_s,
+                            u"![shot](Shots.assets/shot@2x.png) and $x$\n"_s, &error));
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Shots.md"_s), 3000);
+    m_vault->setCurrent(u"Shots.md"_s);
+    m_settings->setReadMode(true);
+    QQuickItem *reader = find(u"reader"_s);
+    QTRY_VERIFY(reader->isVisible());
+    auto *doc = reader->property("textDocument").value<QQuickTextDocument *>()->textDocument();
+    const auto widths = [doc] {
+        QList<int> found;
+        for (QTextBlock block = doc->begin(); block.isValid(); block = block.next()) {
+            for (auto it = block.begin(); !it.atEnd(); ++it) {
+                if (it.fragment().charFormat().isImageFormat())
+                    found << int(it.fragment().charFormat().toImageFormat().width());
+            }
+        }
+        return found;
+    };
+    QTRY_COMPARE(widths().size(), 2);
+    QCOMPARE(widths().first(), 40);
+    QVERIFY(widths().last() > 0 && widths().last() < 20);
+    m_settings->setReadMode(false);
 }
 
 void TestNoteEditor::drawsDiagramsInPlaceOfTheirText()
