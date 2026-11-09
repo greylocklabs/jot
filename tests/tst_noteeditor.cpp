@@ -756,6 +756,13 @@ void TestNoteEditor::showsCriticCommentsInTheMargin()
                       note->mapToScene({note->width() / 2, note->height() / 2}).toPoint());
     QTRY_COMPARE(body->property("cursorPosition").toInt(), int(text.indexOf(u"Source"_s)));
 
+    // In code, the marks are text: no note, nothing folded.
+    body->setProperty("text", text + u"`{>>not a note<<} {--kept--}`\n"_s);
+    body->setProperty("cursorPosition", 2);
+    QTest::qWait(100);
+    QTRY_COMPARE(notes().size(), 1);
+    QCOMPARE(styler->property("comments").toList().size(), 1);
+
     // Without room beside the note, comments stay in the text.
     m_window->resize(560, 700);
     qobject_cast<QQuickItem *>(m_editor.get())->setSize(m_window->size());

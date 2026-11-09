@@ -519,6 +519,11 @@ QList<std::pair<int, int>> MarkdownHighlighter::criticStyles(const QString &text
     QList<std::pair<int, int>> comments;
     if (!text.contains(u'{'))
         return comments;
+    // Code spans keep their marks as written, so they are blanked before matching.
+    static const QRegularExpression span(uR"((`+)(.+?)\1)"_s);
+    QString prose = text;
+    for (const QRegularExpressionMatch &m : span.globalMatch(text))
+        prose.replace(m.capturedStart(), m.capturedLength(), QString(m.capturedLength(), u' '));
     QTextCharFormat added;
     added.setForeground(m_look.accent);
     added.setFontUnderline(true);
@@ -531,7 +536,7 @@ QList<std::pair<int, int>> MarkdownHighlighter::criticStyles(const QString &text
     highlighted.setBackground(tint);
     // Marks of three characters each side: {++ and ++}, and the like.
     const auto styled = [&](const QRegularExpression &pattern, const QTextCharFormat &format) {
-        for (const QRegularExpressionMatch &m : pattern.globalMatch(text, from)) {
+        for (const QRegularExpressionMatch &m : pattern.globalMatch(prose, from)) {
             mark(int(m.capturedStart()), 3);
             merge(int(m.capturedStart(1)), int(m.capturedLength(1)), format);
             mark(int(m.capturedEnd(1)), 3);
@@ -544,7 +549,7 @@ QList<std::pair<int, int>> MarkdownHighlighter::criticStyles(const QString &text
     styled(deletion, removed);
     styled(highlight, highlighted);
     static const QRegularExpression substitution(uR"(\{~~(.*?)~>(.*?)~~\})"_s);
-    for (const QRegularExpressionMatch &m : substitution.globalMatch(text, from)) {
+    for (const QRegularExpressionMatch &m : substitution.globalMatch(prose, from)) {
         mark(int(m.capturedStart()), 3);
         merge(int(m.capturedStart(1)), int(m.capturedLength(1)), removed);
         mark(int(m.capturedEnd(1)), 2);
@@ -554,7 +559,7 @@ QList<std::pair<int, int>> MarkdownHighlighter::criticStyles(const QString &text
 
     static const QRegularExpression comment(uR"(\{>>(.*?)<<\})"_s);
     QList<std::pair<int, QString>> found;
-    for (const QRegularExpressionMatch &m : comment.globalMatch(text, from)) {
+    for (const QRegularExpressionMatch &m : comment.globalMatch(prose, from)) {
         const int start = int(m.capturedStart());
         const int length = int(m.capturedLength());
         comments.append({start, start + length});
