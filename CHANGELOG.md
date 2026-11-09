@@ -36,6 +36,10 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 - LaTeX math, `$...$` in a line and `$$` on lines of their own, is drawn off the cursor's line
   and when reading, through MicroTeX.
 
+### Fixed
+
+- Pictures added by dropping or pasting a file show when reading the note.
+
 ## 0.4.1 - 2026-11-07
 
 ### Added
