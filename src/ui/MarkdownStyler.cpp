@@ -267,6 +267,17 @@ void MarkdownStyler::scheduleImages()
     });
 }
 
+int MarkdownStyler::headingAt(const QVariantList &headings, int position)
+{
+    int under = -1;
+    for (int i = 0; i < headings.size(); ++i) {
+        if (headings.at(i).toMap().value(u"position"_s).toInt() > position)
+            break;
+        under = i;
+    }
+    return under;
+}
+
 QVariantList MarkdownStyler::headings() const
 {
     QVariantList headings;

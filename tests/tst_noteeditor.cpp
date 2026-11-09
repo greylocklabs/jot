@@ -554,6 +554,16 @@ void TestNoteEditor::outlinesTheNoteBesideIt()
     body->setProperty("cursorPosition", 2);
     QTRY_COMPARE(outline->property("headings").toList().size(), 2);
     QCOMPARE(outline->property("current").toInt(), 0);
+    // Above the first heading, under none; hidden, it reads nothing.
+    body->setProperty("text", u"---\ntitle: x\n---\nIntro\n"_s + text);
+    body->setProperty("cursorPosition", 18);
+    QTRY_COMPARE(outline->property("current").toInt(), -1);
+    m_settings->setOutlineShown(false);
+    QTRY_COMPARE(outline->property("headings").toList().size(), 0);
+    m_settings->setOutlineShown(true);
+    body->setProperty("text", text);
+    body->setProperty("cursorPosition", 2);
+    QTRY_COMPARE(outline->property("current").toInt(), 0);
 
     // Choosing a heading takes the cursor there and scrolls it into view.
     QVERIFY(QMetaObject::invokeMethod(outline, "chosen", Q_ARG(int, 1)));
