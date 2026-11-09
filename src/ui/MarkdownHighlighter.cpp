@@ -251,15 +251,23 @@ void MarkdownHighlighter::setCursorPosition(int position)
     if (before >= 0)
         refresh(before);
     refresh(block);
-    // Out of the editor, the paragraph last written in stays lit.
-    if (m_focus && block >= 0) {
-        const std::pair<int, int> paragraph = paragraphOf(block);
-        if (paragraph != m_paragraph) {
-            const std::pair<int, int> was = std::exchange(m_paragraph, paragraph);
-            rehighlightRange(was);
-            rehighlightRange(paragraph);
-        }
+    refreshFocus();
+}
+
+void MarkdownHighlighter::refreshFocus()
+{
+    // Out of the editor nothing is faded, as nothing is being written.
+    const std::pair<int, int> paragraph =
+        m_focus && m_cursorBlock >= 0 ? paragraphOf(m_cursorBlock) : std::pair{-1, -1};
+    if (paragraph == m_paragraph)
+        return;
+    const std::pair<int, int> was = std::exchange(m_paragraph, paragraph);
+    if (was.first < 0 || paragraph.first < 0) {
+        rehighlight();
+        return;
     }
+    rehighlightRange(was);
+    rehighlightRange(paragraph);
 }
 
 std::pair<int, int> MarkdownHighlighter::paragraphOf(int block) const
@@ -290,7 +298,8 @@ void MarkdownHighlighter::setFocusMode(bool focus)
     if (m_focus == focus)
         return;
     m_focus = focus;
-    m_paragraph = focus && document() ? paragraphOf(m_cursorBlock) : std::pair{-1, -1};
+    m_paragraph =
+        focus && document() && m_cursorBlock >= 0 ? paragraphOf(m_cursorBlock) : std::pair{-1, -1};
     rehighlight();
 }
 
@@ -328,7 +337,8 @@ void MarkdownHighlighter::highlightBlock(const QString &text)
 {
     styleBlock(text);
     const int number = currentBlock().blockNumber();
-    if (!m_focus || (number >= m_paragraph.first && number <= m_paragraph.second))
+    if (!m_focus || m_paragraph.first < 0 ||
+        (number >= m_paragraph.first && number <= m_paragraph.second))
         return;
     // Faded, apart from what is folded away and drawn over.
     for (int i = 0; i < text.size(); ++i) {

@@ -663,8 +663,24 @@ void TestNoteEditor::fadesAllButTheParagraphInFocusMode()
     QTRY_VERIFY(faded(u"First"_s));
     QVERIFY(!faded(u"Second"_s));
 
-    m_settings->setFocusMode(false);
+    // Typing on the blank line joins the paragraphs, all of it lit.
+    body->setProperty("cursorPosition",
+                      int(body->property("text").toString().indexOf(u"\n\nSecond"_s)) + 1);
+    QTest::keyClick(m_window.get(), Qt::Key_X);
     QTRY_VERIFY(!faded(u"First"_s));
+    QVERIFY(!faded(u"Second"_s));
+
+    // Out of the editor, nothing is faded.
+    body->setProperty("text", u"One\n\nTwo\n"_s);
+    body->setProperty("cursorPosition", 0);
+    QTRY_VERIFY(faded(u"Two"_s));
+    find(u"title"_s)->forceActiveFocus();
+    QTRY_VERIFY(!faded(u"Two"_s));
+
+    body->forceActiveFocus();
+    QTRY_VERIFY(faded(u"Two"_s));
+    m_settings->setFocusMode(false);
+    QTRY_VERIFY(!faded(u"Two"_s));
 }
 
 void TestNoteEditor::keepsTheLineInTheMiddleForTypewriterScrolling()
