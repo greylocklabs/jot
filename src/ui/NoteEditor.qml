@@ -1150,22 +1150,29 @@ Rectangle {
 
                 // A sound embedded on a line of its own plays there.
                 Repeater {
-                    model: styler.images.filter(each => each.audio)
+                    id: players
+
+                    /// The sounds, a fresh list after every edit. The players are counted from it
+                    /// rather than made from it, so typing elsewhere leaves one playing as it is.
+                    readonly property var sounds: styler.images.filter(each => each.audio)
+
+                    model: sounds.length
 
                     AudioPlayer {
-                        required property var modelData
+                        required property int index
+                        readonly property var sound: players.sounds[index] ?? ({})
 
                         readonly property rect line: {
                             body.layoutTick
-                            return body.positionToRectangle(Math.min(modelData.position,
+                            return body.positionToRectangle(Math.min(sound.position ?? 0,
                                                                      body.length))
                         }
 
                         objectName: "audioPlayer"
                         y: line.y
-                        width: modelData.width
-                        height: modelData.height
-                        source: modelData.source
+                        width: sound.width ?? 0
+                        height: sound.height ?? 0
+                        source: sound.source ?? ""
                     }
                 }
 

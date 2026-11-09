@@ -856,6 +856,13 @@ void TestNoteEditor::playsSoundsWhereTheyAreEmbedded()
     QTRY_COMPARE(players().size(), 1);
     QVERIFY(styler->property("images").toList().first().toMap().value(u"audio"_s).toBool());
     QVERIFY(players().first()->height() > 20);
+    // Typing elsewhere keeps the same player, so one playing plays on.
+    QPointer<QQuickItem> player = players().first();
+    body->setProperty("cursorPosition", 3);
+    QTest::keyClick(m_window.get(), Qt::Key_X);
+    QTest::qWait(100);
+    QVERIFY(player);
+    QCOMPARE(players().first(), player.data());
     // On its own line, the link shows again, to edit.
     body->setProperty("cursorPosition", int(text.indexOf(u"Welcome.assets"_s)));
     QTRY_COMPARE(players().size(), 0);
