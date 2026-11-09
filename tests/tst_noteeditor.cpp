@@ -513,8 +513,9 @@ void TestNoteEditor::readingFindsTheHeadingAContentsEntryNames()
 {
     // An underlined heading counts and one in a quote does not, in the list and the reader alike.
     QString error;
-    QVERIFY(notefile::write(m_root + u"/Contents.md"_s,
-                            u"${toc}\n\nTitle\n=====\n\n> # Quoted\n\n## Later\n"_s, &error));
+    QVERIFY(notefile::write(
+        m_root + u"/Contents.md"_s,
+        u"${toc}\n\nTitle\n=====\n\n> # Quoted\n\n> Also\n> ===\n\n## Later\n"_s, &error));
     QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Contents.md"_s), 3000);
     m_vault->setCurrent(u"Contents.md"_s);
     m_settings->setReadMode(true);

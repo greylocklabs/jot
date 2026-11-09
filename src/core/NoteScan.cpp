@@ -161,9 +161,11 @@ QList<Heading> allHeadingsOf(QStringView body)
 {
     static const QRegularExpression heading(
         uR"(^ {0,3}((?:>\s?|[*+-]\s+|\d+[.)]\s+)*)(#{1,6})(?:\s+(.*?))?(?:\s+#+)?\s*$)"_s);
-    static const QRegularExpression underline(uR"(^ {0,3}(=+|-+)\s*$)"_s);
-    // A line of text that a line of = or - under it makes a heading, as Markdown reads it.
-    static const QRegularExpression plain(uR"(^ {0,3}(?![#>|]|[*+-]\s|\d+[.)]\s)\S)"_s);
+    // A line of = or - under a line of text makes it a heading, in a quote or a list item too:
+    // the quote marks before each, and the list item's mark, set the two lines apart.
+    static const QRegularExpression underline(uR"(^( *)((?:>\s?)*)( *)(=+|-+)\s*$)"_s);
+    static const QRegularExpression text(
+        uR"(^ {0,3}((?:>\s?)*) {0,3}((?:[*+-]|\d+[.)])\s+)?((?![#>|])\S.*)$)"_s);
     QList<Heading> found;
     int lastNumber = -1;
     qsizetype lastStart = 0;
@@ -173,8 +175,17 @@ QList<Heading> allHeadingsOf(QStringView body)
             found.append({int(m.capturedLength(2)), m.captured(3).trimmed(), start,
                           m.capturedLength(1) > 0});
         } else if (const QRegularExpressionMatch u = underline.match(line);
-                   u.hasMatch() && number == lastNumber + 1 && plain.match(last).hasMatch()) {
-            found.append({u.captured(1).front() == u'=' ? 1 : 2, last.trimmed(), lastStart});
+                   u.hasMatch() && number == lastNumber + 1) {
+            const QRegularExpressionMatch t = text.match(last);
+            const auto quotes = [](const QString &marks) { return marks.count(u'>'); };
+            const bool listed = t.hasMatch() && t.capturedLength(2) > 0;
+            // Under a list item, only a line indented into the item underlines it; one at the
+            // margin is a rule after the list.
+            const qsizetype indent = u.capturedLength(1) + u.capturedLength(3);
+            if (t.hasMatch() && quotes(t.captured(1)) == quotes(u.captured(2)) &&
+                (listed ? indent >= 2 : indent <= 3))
+                found.append({u.captured(4).front() == u'=' ? 1 : 2, t.captured(3).trimmed(),
+                              lastStart, listed || quotes(u.captured(2)) > 0});
         }
         lastNumber = number;
         lastStart = start;
