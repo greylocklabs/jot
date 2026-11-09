@@ -177,6 +177,16 @@ public:
     /// Makes a note in the notebook shown from the template at `path`, its variables filled
     /// in, and shows it. Gives its path.
     Q_INVOKABLE QString newNoteFromTemplate(const QString &path);
+    /// The file types a note exports as, `{id, label, extension}`.
+    Q_INVOKABLE static QVariantList exportFormats();
+    /// Whether Pandoc, which export runs, is installed.
+    Q_INVOKABLE bool pandocFound() const;
+    /// Writes the note at `path` to `to` as `format` with Pandoc, in the background, in
+    /// `preset`'s look: "standard" or "manuscript". exported() says how it went.
+    Q_INVOKABLE void exportNote(const QString &path, const QString &format, const QString &preset,
+                                const QUrl &to);
+    /// For tests: the Pandoc to run.
+    void setPandoc(const QString &program) { m_pandoc = program; }
     /// Shows today's daily note, making it from the daily template, or empty, the first time.
     Q_INVOKABLE QString openDailyNote();
     /// For tests: the day openDailyNote() takes as today.
@@ -413,6 +423,8 @@ Q_SIGNALS:
     void unsavedChanged();
     void tabsChanged();
     void statsChanged();
+    /// An export finished; `message` says what went wrong, or where it went.
+    void exported(bool ok, const QString &message);
     /// Leaving the note shown waits for answerLeaving(), as it has edits not yet written.
     void leavingUnsaved();
     void problemChanged();
@@ -562,6 +574,7 @@ private:
     int m_tabIndex = -1;
     QDate m_today;
     std::unique_ptr<WritingStats> m_stats;
+    QString m_pandoc;
     int m_cursorPosition = 0;
     int m_openingCursor = 0;
     QTimer m_saveTimer;

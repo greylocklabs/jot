@@ -61,6 +61,7 @@ private Q_SLOTS:
     void makesNotesFromTemplates();
     void opensTodaysNote();
     void countsTheWordsWrittenToday();
+    void exportsThroughPandoc();
     void keepsPastVersionsWhileEditing();
     void restoresAPastVersion();
     void saysWhenEachVersionIsFrom();
@@ -864,6 +865,41 @@ void TestVaultController::countsTheWordsWrittenToday()
     // With a goal, the day counts toward a streak once it gets there.
     m_settings->setDailyWordGoal(10);
     QCOMPARE(m_vault->streak(), 0);
+}
+
+void TestVaultController::exportsThroughPandoc()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    QSignalSpy exported(m_vault.get(), &VaultController::exported);
+    // A Pandoc that writes what it was given into the file it was asked for.
+    const QString pandoc = m_dir->filePath(u"pandoc"_s);
+    QString error;
+    QVERIFY(
+        notefile::write(pandoc,
+                        u"#!/bin/sh\nfor a; do case $a in --output=*) out=${a#--output=};; esac;"
+                        " last=$a; done\n[ -f \"${last%/*}/manuscript.css\" ] || exit 3\n"
+                        "cat \"$last\" > \"$out\"\n"_s,
+                        &error));
+    QFile::setPermissions(pandoc, QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner);
+    m_vault->setPandoc(pandoc);
+    QVERIFY(m_vault->pandocFound());
+
+    const QString out = m_dir->filePath(u"Welcome.docx"_s);
+    m_vault->exportNote(u"Welcome.md"_s, u"docx"_s, u"manuscript"_s, QUrl::fromLocalFile(out));
+    QTRY_COMPARE(exported.size(), 1);
+    QCOMPARE(exported.first(), (QVariantList{true, out}));
+    QVERIFY(QFileInfo(out).size() > 0);
+
+    // What Pandoc says on failing comes back.
+    QVERIFY(
+        notefile::write(pandoc, u"#!/bin/sh\necho 'pdflatex not found' >&2\nexit 47\n"_s, &error));
+    m_vault->exportNote(u"Welcome.md"_s, u"pdf"_s, u"standard"_s, QUrl::fromLocalFile(out));
+    QTRY_COMPARE(exported.size(), 2);
+    QCOMPARE(exported.last().first().toBool(), false);
+    QVERIFY(exported.last().last().toString().contains(u"pdflatex not found"_s));
+
+    m_vault->setPandoc(m_dir->filePath(u"missing"_s));
+    QVERIFY(!m_vault->pandocFound());
 }
 
 void TestVaultController::keepsPastVersionsWhileEditing()

@@ -1,6 +1,7 @@
 #include "VaultController.h"
 
 #include "jot/Conflicts.h"
+#include "jot/Export.h"
 #include "jot/FrontMatter.h"
 #include "jot/JoplinExport.h"
 #include "jot/JoplinImport.h"
@@ -24,8 +25,11 @@
 #include <QImage>
 #include <QImageReader>
 #include <QLocale>
+#include <QProcess>
 #include <QRegularExpression>
+#include <QStandardPaths>
 #include <QSysInfo>
+#include <QTemporaryDir>
 
 #include <algorithm>
 #include <utility>
@@ -849,6 +853,73 @@ QString VaultController::openDailyNote()
     }
     setCurrent(path);
     return path;
+}
+
+QVariantList VaultController::exportFormats()
+{
+    QVariantList formats;
+    for (const ExportFormat &format : jot::exportFormats())
+        formats << QVariantMap{
+            {u"id"_s, format.id}, {u"label"_s, format.label}, {u"extension"_s, format.extension}};
+    return formats;
+}
+
+bool VaultController::pandocFound() const
+{
+    return !m_pandoc.isEmpty() ? QFileInfo(m_pandoc).isExecutable()
+                               : !QStandardPaths::findExecutable(u"pandoc"_s).isEmpty();
+}
+
+void VaultController::exportNote(const QString &path, const QString &format, const QString &preset,
+                                 const QUrl &to)
+{
+    const auto fail = [this](const QString &why) { Q_EMIT exported(false, why); };
+    if (!m_vault || !pandocFound())
+        return fail(tr("Export needs Pandoc, which is not installed."));
+    if (path == m_current)
+        saveNow();
+    QString error;
+    const std::optional<QString> note = notefile::read(m_vault->absolute(path), &error);
+    if (!note)
+        return fail(tr("Could not read the note: %1").arg(error));
+    auto work = std::make_shared<QTemporaryDir>();
+    if (!work->isValid())
+        return fail(tr("Could not make a folder to export in."));
+    // Pandoc reads the presets as files, not from inside Jot.
+    for (const QString &name : QDir(u":/jot/export"_s).entryList(QDir::Files))
+        QFile::copy(u":/jot/export/"_s + name, work->filePath(name));
+    bool toc = false;
+    const QString markdown = exportMarkdown(
+        *note, [this](const QString &target) { return attachmentPath(target, true); }, &toc);
+    const QString input = work->filePath(u"note.md"_s);
+    if (!notefile::write(input, markdown, &error))
+        return fail(tr("Could not write the note out for Pandoc: %1").arg(error));
+    const QString output = to.toLocalFile();
+    const QStringList arguments =
+        pandocArguments(format, preset, input, output, titleOf(path), toc,
+                        QFileInfo(m_vault->absolute(path)).path(), work->path());
+    auto *process = new QProcess(this);
+    process->setProcessChannelMode(QProcess::MergedChannels);
+    connect(process, &QProcess::finished, this,
+            [this, process, work, output](int code, QProcess::ExitStatus status) {
+                process->deleteLater();
+                const QString said = QString::fromUtf8(process->readAll()).trimmed();
+                if (status == QProcess::NormalExit && code == 0) {
+                    Q_EMIT exported(true, output);
+                    return;
+                }
+                qCWarning(lcVault) << "pandoc failed:" << said;
+                Q_EMIT exported(false, said.isEmpty()
+                                           ? tr("Pandoc stopped without saying why.")
+                                           : tr("Pandoc said: %1").arg(said.section(u'\n', 0, 2)));
+            });
+    connect(process, &QProcess::errorOccurred, this, [this, process](QProcess::ProcessError e) {
+        if (e != QProcess::FailedToStart)
+            return;
+        process->deleteLater();
+        Q_EMIT exported(false, tr("Pandoc did not start: %1").arg(process->errorString()));
+    });
+    process->start(m_pandoc.isEmpty() ? u"pandoc"_s : m_pandoc, arguments);
 }
 
 QVariantList VaultController::dataKinds()

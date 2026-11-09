@@ -415,6 +415,7 @@ ApplicationWindow {
 
                 onTitleEditRequested: editor.editTitle()
                 onHistoryRequested: window.run("history")
+                onExportRequested: path => window.exportNote(path)
                 visible: Vault.isOpen && !Vault.showingTasks && !Vault.showingTrash &&
                          !window.distractionFree
 
@@ -533,6 +534,10 @@ ApplicationWindow {
         sourceComponent: UpdateDialog {}
     }
     LazyPopup {
+        id: exportDialog
+        sourceComponent: ExportDialog {}
+    }
+    LazyPopup {
         id: history
         sourceComponent: HistoryDialog {}
     }
@@ -607,6 +612,13 @@ ApplicationWindow {
         }
     }
 
+    /// Asks how to export the note at `path`, and where.
+    function exportNote(path) {
+        exportDialog.active = true
+        exportDialog.popup.path = path
+        exportDialog.open()
+    }
+
     // ---- Keyboard ----------------------------------------------------------------
     /// Whether the command with this KeyRouter action id can run now.
     function can(id) {
@@ -649,6 +661,8 @@ ApplicationWindow {
         case "typewriter":
         case "distractionFree":
             return Vault.isOpen
+        case "export":
+            return note && Vault.currentKind === "markdown"
         case "editNote":
         case "readMode":
         case "outline":
@@ -765,6 +779,9 @@ ApplicationWindow {
             break
         case "outline":
             Settings.outlineShown = !Settings.outlineShown
+            break
+        case "export":
+            exportNote(Vault.current)
             break
         case "focusMode":
             Settings.focusMode = !Settings.focusMode

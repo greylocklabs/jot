@@ -40,6 +40,8 @@ add_library(jotcore STATIC
     DataTable.cpp
     jot/JsonSchema.h
     JsonSchema.cpp
+    jot/Export.h
+    Export.cpp
     jot/FrontMatter.h
     FrontMatter.cpp
     jot/Fuzzy.h

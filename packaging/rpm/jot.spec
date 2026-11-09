@@ -41,6 +41,8 @@ Requires:       qt6-qtsvg
 # Syncing with a git repository runs git, and Git LFS for large files.
 Requires:       git-core
 Requires:       git-lfs
+# Exporting a note runs Pandoc.
+Recommends:     pandoc
 
 %description
 Jot is a Markdown notes app for Linux. Notes are plain files in a folder

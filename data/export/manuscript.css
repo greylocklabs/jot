@@ -1,0 +1,19 @@
+/* Standard manuscript format (Shunn): Courier 12pt, double spaced, one-inch margins. */
+body {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 12pt;
+  line-height: 2;
+  max-width: 6.5in;
+  margin: 1in auto;
+}
+h1,
+h2,
+h3 {
+  font-size: 12pt;
+  font-weight: normal;
+  text-align: center;
+}
+p {
+  margin: 0;
+  text-indent: 0.5in;
+}
