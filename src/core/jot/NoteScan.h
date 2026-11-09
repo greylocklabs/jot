@@ -44,10 +44,27 @@ struct NoteScan
 /// Scans `body`, whose first line is line `firstLine` of the file.
 [[nodiscard]] NoteScan scanNote(QStringView body, int firstLine = 1);
 
+/// A heading in a note: its level, 1 to 6, its text without the marks, and where its line
+/// starts.
+struct Heading
+{
+    int level = 1;
+    QString text;
+    qsizetype position = 0;
+};
+
+/// The `#` headings of `body`, in order, leaving code alone.
+[[nodiscard]] QList<Heading> headingsOf(QStringView body);
+
+/// Whether `line` is a table of contents marker, `${toc}` as Joplin writes it.
+[[nodiscard]] bool isTocMarker(QStringView line);
+
 /// `body` as Markdown for reading: [[wikilinks]] become links to `jot-note:` targets,
 /// ![[embeds]] images at the URL `embedUrl` gives for their target (links when it gives
 /// none), and #tags links to `jot-tag:` ones. Images from the web become links to them, so
-/// drawing the note fetches nothing. Targets are percent-encoded. Code is left alone.
+/// drawing the note fetches nothing. Targets are percent-encoded. A table of contents marker
+/// becomes a list of links to `jot-heading:` targets, each heading's number from 0. Code is
+/// left alone.
 [[nodiscard]] QString readingMarkdown(QStringView body,
                                       const std::function<QString(const QString &)> &embedUrl);
 

@@ -11,6 +11,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   not yet saved, and Jot asks before leaving a note or quitting with any.
 - Typing a colon and part of an emoji's name, as `:fox`, offers matching emoji to put in, chosen
   with the arrows and Return like wikilinks.
+- A `${toc}` line, as Joplin writes it, shows the note's headings as links, kept up to date as
+  they change, in the editor and when reading.
 
 ## 0.4.1 - 2026-11-07
 

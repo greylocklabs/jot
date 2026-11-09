@@ -3,6 +3,7 @@
 #include "CodeHighlighter.h"
 
 #include "jot/Diagram.h"
+#include "jot/FrontMatter.h"
 
 #include <QFileInfo>
 #include <QFontMetricsF>
@@ -142,24 +143,52 @@ void MarkdownHighlighter::showImage(const QString &text, int bang, const QString
     image->path = path;
     image->size = shown;
     setCurrentBlockUserData(image);
+    reserve(text, bang, shown.height());
+}
 
-    // The line's one visible character is made exactly as tall as the image and no wider,
-    // which reserves the room the image is drawn into; the rest folds away.
+void MarkdownHighlighter::reserve(const QString &text, int at, int height)
+{
+    // The line's one visible character is made exactly as tall as what is drawn there and
+    // no wider, which reserves its room; the rest folds away.
     QFont font;
     if (!m_look.family.isEmpty())
         font.setFamily(m_look.family);
-    font.setPixelSize(std::max(shown.height(), 1));
+    font.setPixelSize(std::max(height, 1));
     const double lineHeight = QFontMetricsF(font).height();
-    const int pixelSize = std::max(1, int(shown.height() * shown.height() / lineHeight));
+    const int pixelSize = std::max(1, int(height * height / lineHeight));
     font.setPixelSize(pixelSize);
     QTextCharFormat tall;
     tall.setForeground(Qt::transparent);
     tall.setProperty(QTextFormat::FontPixelSize, pixelSize);
     tall.setFontLetterSpacingType(QFont::AbsoluteSpacing);
-    tall.setFontLetterSpacing(-QFontMetricsF(font).horizontalAdvance(u'!'));
-    setFormat(bang, 1, tall);
-    mark(0, bang);
-    mark(bang + 1, int(text.size()) - bang - 1);
+    tall.setFontLetterSpacing(-QFontMetricsF(font).horizontalAdvance(text.at(at)));
+    setFormat(at, 1, tall);
+    mark(0, at);
+    mark(at + 1, int(text.size()) - at - 1);
+}
+
+bool MarkdownHighlighter::contentsLine(const QString &text)
+{
+    if (m_cursorHere || !isTocMarker(text))
+        return false;
+    const QString note = document()->toPlainText();
+    auto *toc = new Toc;
+    // A note without headings yet still shows a row, saying so.
+    toc->rows = int(std::max<qsizetype>(headingsOf(splitFrontMatter(note).body).size(), 1));
+    toc->rowHeight = int(m_look.pixelSize * 1.8 + 0.5);
+    setCurrentBlockUserData(toc);
+    reserve(text, int(text.indexOf(u'$')), toc->rows * toc->rowHeight);
+    return true;
+}
+
+void MarkdownHighlighter::refreshContents()
+{
+    if (!document())
+        return;
+    for (QTextBlock block = document()->begin(); block.isValid(); block = block.next()) {
+        if (isTocMarker(block.text()))
+            rehighlightBlock(block);
+    }
 }
 
 std::pair<int, int> MarkdownHighlighter::diagramFence(const QTextBlock &block) const
@@ -345,7 +374,7 @@ void MarkdownHighlighter::highlightBlock(const QString &text)
         return;
     }
 
-    if (imageLine(text))
+    if (imageLine(text) || contentsLine(text))
         return;
 
     static const QRegularExpression heading(uR"(^(#{1,6})(\s+|$))"_s);

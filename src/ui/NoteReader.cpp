@@ -171,6 +171,18 @@ void NoteReader::render()
     placeImages();
 }
 
+int NoteReader::headingPosition(int index) const
+{
+    const QTextDocument *doc = m_document ? m_document->textDocument() : nullptr;
+    if (!doc || index < 0)
+        return -1;
+    for (QTextBlock block = doc->begin(); block.isValid(); block = block.next()) {
+        if (block.blockFormat().headingLevel() > 0 && index-- == 0)
+            return block.position();
+    }
+    return -1;
+}
+
 void NoteReader::style()
 {
     QTextDocument *doc = m_document->textDocument();

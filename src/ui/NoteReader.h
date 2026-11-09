@@ -43,6 +43,8 @@ public:
     /// The checkbox task drawn at `position`: `{line, done, text}`, with its line in the note's
     /// file, or empty when there is none there.
     Q_INVOKABLE QVariantMap taskAt(int position) const;
+    /// Where the heading numbered `index`, from 0, starts in the drawn document, or -1.
+    Q_INVOKABLE int headingPosition(int index) const;
 
 Q_SIGNALS:
     void changed();
