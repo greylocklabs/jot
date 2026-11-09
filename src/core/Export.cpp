@@ -140,4 +140,9 @@ QStringList pandocArguments(const QString &format, const QString &preset, const 
     return arguments;
 }
 
+QStringList pandocEnvironment()
+{
+    return {u"openin_any=p"_s, u"openout_any=p"_s};
+}
+
 } // namespace jot
