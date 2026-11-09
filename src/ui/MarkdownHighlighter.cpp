@@ -563,7 +563,8 @@ QList<std::pair<int, int>> MarkdownHighlighter::criticStyles(const QString &text
         const int start = int(m.capturedStart());
         const int length = int(m.capturedLength());
         comments.append({start, start + length});
-        found.append({start, m.captured(1).trimmed()});
+        // The words as written, code spans and all.
+        found.append({start, text.mid(m.capturedStart(1), m.capturedLength(1)).trimmed()});
         if (m_foldComments && !m_cursorHere) {
             // Away to the margin, which shows it.
             mark(start, length);
