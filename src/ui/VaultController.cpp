@@ -339,12 +339,17 @@ void VaultController::followCurrentInTabs()
     // was opened there, or renamed or moved, which leaves that tab's old path gone.
     if (!m_current.isEmpty() && !m_tabs.contains(m_current) && m_tabIndex >= 0)
         m_tabs[m_tabIndex] = m_current;
+    // Where the tab shown was, should its note have gone, as to the trash.
+    int gone = -1;
     if (m_vault) {
         const QString shown = m_tabIndex >= 0 ? m_tabs.at(m_tabIndex) : QString();
+        const int at = m_tabIndex;
         m_tabs.removeIf([this](const QString &path) {
             return path != m_current && !QFileInfo::exists(m_vault->absolute(path));
         });
         m_tabIndex = int(m_tabs.indexOf(shown));
+        if (at >= 0 && m_tabIndex < 0 && m_current.isEmpty())
+            gone = at;
     }
     if (!m_current.isEmpty()) {
         if (const qsizetype open = m_tabs.indexOf(m_current); open >= 0) {
@@ -354,8 +359,15 @@ void VaultController::followCurrentInTabs()
             m_tabIndex = int(m_tabs.size()) - 1;
         }
     }
-    if (m_tabIndex < 0 && !m_tabs.isEmpty())
+    // With the note shown gone and others open, the tab after it shows, or the one before, as
+    // when a tab is closed; once this change is done, as showing a note changes it again.
+    if (gone >= 0 && !m_tabs.isEmpty()) {
+        const QString next = m_tabs.at(std::min<qsizetype>(gone, m_tabs.size() - 1));
+        QMetaObject::invokeMethod(
+            this, [this, next] { selectTab(int(m_tabs.indexOf(next))); }, Qt::QueuedConnection);
+    } else if (m_tabIndex < 0 && !m_tabs.isEmpty() && !m_current.isEmpty()) {
         m_tabIndex = 0;
+    }
     if (m_tabs != before || m_tabIndex != beforeIndex)
         Q_EMIT tabsChanged();
 }

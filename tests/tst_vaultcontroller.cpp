@@ -767,6 +767,16 @@ void TestVaultController::keepsNotesOpenInTabs()
     m_vault->closeTab(0);
     QVERIFY(m_vault->tabs().isEmpty());
     QCOMPARE(m_vault->current(), QString());
+
+    // Trashing the note shown, with others open, shows the tab after it.
+    m_vault->setCurrent(u"Welcome.md"_s);
+    m_vault->openInNewTab(u"Ashfall/Pitch.md"_s);
+    m_vault->openInNewTab(u"Ashfall/Route.md"_s);
+    m_vault->selectTab(1);
+    QVERIFY(m_vault->trashNote(u"Ashfall/Pitch.md"_s, false));
+    QTRY_COMPARE(m_vault->current(), u"Ashfall/Route.md"_s);
+    QCOMPARE(m_vault->tabs(), (QStringList{u"Welcome.md"_s, u"Ashfall/Route.md"_s}));
+    QCOMPARE(m_vault->tabIndex(), 1);
 }
 
 void TestVaultController::keepsPastVersionsWhileEditing()
