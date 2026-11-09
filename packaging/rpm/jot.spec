@@ -7,12 +7,15 @@ Version:        0.4.1
 Release:        1%{?dist}
 Summary:        Plain-file notes for Linux
 
-# The bundled Nunito and Fraunces fonts are OFL-1.1; the bundled Pele is MIT.
-License:        MIT AND OFL-1.1
+# The bundled Nunito and Fraunces fonts are OFL-1.1; the bundled Pele and MicroTeX are MIT, and
+# MicroTeX's math fonts are under Knuth's license, OFL-1.1 and dsrom's own.
+License:        MIT AND OFL-1.1 AND Knuth-CTAN AND LicenseRef-dsrom
 URL:            https://jotwriter.org
 Source0:        https://github.com/greylocklabs/jot/releases/download/v%{version}/%{name}-%{version}.tar.xz
 # Draws Mermaid diagrams; built into the program for Qt's JavaScript engine.
 Provides:       bundled(js-pele) = 1.13.0
+# Draws LaTeX math; its sources, at commit 0e3707f, are built into the program.
+Provides:       bundled(microtex) = 0~git0e3707f
 
 BuildRequires:  cmake >= 3.28
 BuildRequires:  gcc-c++
@@ -30,6 +33,7 @@ BuildRequires:  cmake(tomlplusplus)
 BuildRequires:  cmake(KF6SyntaxHighlighting)
 BuildRequires:  cmake(KF6Sonnet)
 BuildRequires:  cmake(Qt6Multimedia)
+BuildRequires:  pkgconfig(tinyxml2)
 BuildRequires:  cmake(Qt6Keychain)
 BuildRequires:  pkgconf-pkg-config
 BuildRequires:  pkgconfig(yaml-0.1)
@@ -75,6 +79,7 @@ appstream-util validate-relax --nonet \
 %files
 %license LICENSE data/fonts/Nunito-OFL.txt data/fonts/Fraunces-OFL.txt
 %license third_party/pele/LICENSE
+%license third_party/microtex/LICENSE third_party/microtex/res/fonts/licences/*
 %doc README.md
 %{_bindir}/jot
 %{_bindir}/jot-gui

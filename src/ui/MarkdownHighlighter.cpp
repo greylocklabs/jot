@@ -1,6 +1,7 @@
 #include "MarkdownHighlighter.h"
 
 #include "CodeHighlighter.h"
+#include "MathRenderer.h"
 
 #include "jot/Diagram.h"
 #include "jot/FrontMatter.h"
@@ -250,10 +251,12 @@ void MarkdownHighlighter::setCursorPosition(int position)
         return;
     const int before = m_cursorBlock;
     m_cursorBlock = block;
-    // A diagram shows as its text while the cursor is anywhere in its fence.
+    // A diagram or display math shows as its text while the cursor is anywhere in it.
     const auto refresh = [this](int number) {
         const QTextBlock line = document()->findBlockByNumber(number);
-        const auto [first, last] = diagramFence(line);
+        auto [first, last] = diagramFence(line);
+        if (first < 0)
+            std::tie(first, last) = mathFence(line);
         if (first < 0) {
             rehighlightBlock(line);
             return;
@@ -502,7 +505,7 @@ void MarkdownHighlighter::styleBlock(const QString &text)
         return;
     }
 
-    if (imageLine(text) || contentsLine(text))
+    if (mathLine(text, state) || imageLine(text) || contentsLine(text))
         return;
 
     static const QRegularExpression heading(uR"(^(#{1,6})(\s+|$))"_s);
@@ -631,12 +634,135 @@ QList<std::pair<int, int>> MarkdownHighlighter::criticStyles(const QString &text
         merge(int(m.capturedStart(1)), int(m.capturedLength(1)), aside);
         mark(int(m.capturedEnd(1)), 3);
     }
-    if (!found.isEmpty() && !currentBlockUserData()) {
-        auto *data = new Comments;
+    if (Inlines *data = found.isEmpty() ? nullptr : inlines())
         data->comments = found;
-        setCurrentBlockUserData(data);
-    }
     return comments;
+}
+
+MarkdownHighlighter::Inlines *MarkdownHighlighter::inlines()
+{
+    if (auto *data = dynamic_cast<Inlines *>(currentBlockUserData()))
+        return data;
+    if (currentBlockUserData())
+        return nullptr;
+    auto *data = new Inlines;
+    setCurrentBlockUserData(data);
+    return data;
+}
+
+QList<std::pair<int, int>> MarkdownHighlighter::inlineMathStyles(const QString &text, int from)
+{
+    QList<std::pair<int, int>> spans;
+    for (const auto &[start, end] : inlineMath(text)) {
+        if (start < from)
+            continue;
+        spans.append({int(start), int(end)});
+        const QString latex = text.mid(start + 1, end - start - 2);
+        const MathRenderer::Drawn drawn =
+            m_cursorHere || m_source
+                ? MathRenderer::Drawn()
+                : MathRenderer::instance().draw(latex, false, m_look.pixelSize, m_look.text);
+        Inlines *data = drawn.ok() ? inlines() : nullptr;
+        if (!data) {
+            // Being written, or not drawn: the TeX as written, in the code font.
+            QTextCharFormat tex;
+            tex.setFontFamilies({m_look.monoFamily.isEmpty() ? u"monospace"_s : m_look.monoFamily});
+            merge(int(start), int(end - start), tex);
+            QTextCharFormat faint;
+            faint.setForeground(m_look.faint);
+            merge(int(start), 1, faint);
+            merge(int(end) - 1, 1, faint);
+            continue;
+        }
+        data->math.append({int(start), drawn.path, drawn.size});
+        // The first dollar sign takes the drawing's room, the rest folds away.
+        QFont font;
+        if (!m_look.family.isEmpty())
+            font.setFamily(m_look.family);
+        font.setPixelSize(std::max(drawn.size.height(), 1));
+        const double lineHeight = QFontMetricsF(font).height();
+        const int pixelSize =
+            std::max(m_look.pixelSize, int(drawn.size.height() * drawn.size.height() / lineHeight));
+        font.setPixelSize(pixelSize);
+        QTextCharFormat room;
+        room.setForeground(Qt::transparent);
+        room.setProperty(QTextFormat::FontPixelSize, pixelSize);
+        room.setFontLetterSpacingType(QFont::AbsoluteSpacing);
+        room.setFontLetterSpacing(drawn.size.width() - QFontMetricsF(font).horizontalAdvance(u'$'));
+        setFormat(int(start), 1, room);
+        mark(int(start) + 1, int(end - start) - 1);
+    }
+    return spans;
+}
+
+std::pair<int, int> MarkdownHighlighter::mathFence(const QTextBlock &block) const
+{
+    QTextBlock open = block;
+    if (!isMathFence(block.text()) && kindOf(block.previous().userState()) != InMath)
+        return {-1, -1};
+    // A line inside, or the closing line, finds its opening above.
+    while (open.previous().isValid() && kindOf(open.previous().userState()) == InMath)
+        open = open.previous();
+    QString single;
+    if (isMathFence(open.text(), &single) && !single.isEmpty())
+        return {open.blockNumber(), open.blockNumber()};
+    for (QTextBlock line = open.next(); line.isValid(); line = line.next()) {
+        if (isMathFence(line.text()))
+            return block.blockNumber() > line.blockNumber()
+                       ? std::pair{-1, -1}
+                       : std::pair{open.blockNumber(), line.blockNumber()};
+    }
+    return {-1, -1};
+}
+
+bool MarkdownHighlighter::mathLine(const QString &text, int state)
+{
+    QString single;
+    const bool fence = isMathFence(text, &single);
+    if (state != InMath && !fence)
+        return false;
+    const int number = currentBlock().blockNumber();
+    // Inside, or opening, the lines after are math until a closing $$.
+    const bool opening = state != InMath && fence && single.isEmpty();
+    if (opening || (state == InMath && !fence))
+        setCurrentBlockState(InMath);
+    const auto [first, last] = mathFence(currentBlock());
+    const bool away = first >= 0 && !m_source && (m_cursorBlock < first || m_cursorBlock > last);
+    if (away && number == first) {
+        QString latex = single;
+        if (latex.isEmpty()) {
+            QStringList lines;
+            for (QTextBlock line = currentBlock().next();
+                 line.isValid() && line.blockNumber() < last; line = line.next())
+                lines.append(line.text());
+            latex = lines.join(u'\n');
+        }
+        const MathRenderer::Drawn drawn =
+            MathRenderer::instance().draw(latex, true, m_look.pixelSize, m_look.text);
+        if (drawn.ok()) {
+            QSize shown = drawn.size;
+            if (shown.width() > m_look.imageWidth)
+                shown = QSize(m_look.imageWidth,
+                              drawn.size.height() * m_look.imageWidth / drawn.size.width());
+            showImage(text, int(text.indexOf(u'$')), drawn.path, shown);
+            return true;
+        }
+    }
+    // The rest of drawn math folds away under it.
+    if (away && number != first &&
+        dynamic_cast<const Image *>(document()->findBlockByNumber(first).userData())) {
+        mark(0, int(text.size()));
+        return true;
+    }
+    QTextCharFormat tex;
+    tex.setFontFamilies({m_look.monoFamily.isEmpty() ? u"monospace"_s : m_look.monoFamily});
+    merge(0, int(text.size()), tex);
+    if (fence) {
+        QTextCharFormat faint;
+        faint.setForeground(m_look.faint);
+        merge(0, int(text.size()), faint);
+    }
+    return true;
 }
 
 void MarkdownHighlighter::inlineStyles(const QString &text, int from)
@@ -661,6 +787,10 @@ void MarkdownHighlighter::inlineStyles(const QString &text, int from)
         mark(int(m.capturedStart(1)), int(m.capturedLength(1)));
         mark(int(m.capturedEnd(2)), int(m.capturedLength(1)));
         take(m);
+    }
+    for (const auto &[start, end] : inlineMathStyles(text, from)) {
+        if (!overlaps(taken, start, end))
+            taken.append({start, end});
     }
     for (const auto &[start, end] : criticStyles(text, from)) {
         if (!overlaps(taken, start, end))

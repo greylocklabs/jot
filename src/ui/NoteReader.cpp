@@ -1,6 +1,7 @@
 #include "NoteReader.h"
 
 #include "MarkdownHighlighter.h"
+#include "MathRenderer.h"
 #include "ThemeController.h"
 #include "VaultController.h"
 
@@ -140,12 +141,19 @@ void NoteReader::render()
     if (!doc)
         return;
     const NoteParts parts = splitFrontMatter(m_text);
-    QString markdown = readingMarkdown(parts.body, [](const QString &target) {
-        const VaultController *vault = VaultController::instance();
-        const QString path = vault ? vault->attachmentPath(target, true) : QString();
-        return path.isEmpty() ? QString() : QUrl::fromLocalFile(path).toString();
-    });
     const ThemeController &theme = *ThemeController::instance();
+    QString markdown = readingMarkdown(
+        parts.body,
+        [](const QString &target) {
+            const VaultController *vault = VaultController::instance();
+            const QString path = vault ? vault->attachmentPath(target, true) : QString();
+            return path.isEmpty() ? QString() : QUrl::fromLocalFile(path).toString();
+        },
+        [this, &theme](const QString &tex, bool display) {
+            const MathRenderer::Drawn drawn =
+                MathRenderer::instance().draw(tex, display, m_pixelSize, theme.text());
+            return drawn.ok() ? QUrl::fromLocalFile(drawn.path).toString() : QString();
+        });
     markdown = drawDiagrams(markdown, theme.diagramStyle(m_fontFamily, m_pixelSize));
     doc->setUndoRedoEnabled(false);
     // Image names resolve beside the note, as files, rather than inside the app's resources,
@@ -349,6 +357,13 @@ void NoteReader::placeImages()
                             : natural;
                 reader.setScaledSize(shown * 2);
                 image = reader.read();
+            } else if (path.endsWith(u"@2x.png"_s)) {
+                // Drawn at twice its size, as math is, and shown at half, in the line's middle.
+                image = QImage(path);
+                shown = image.size() / 2;
+                if (shown.width() > m_width)
+                    shown = QSize(m_width, shown.height() * m_width / shown.width());
+                format.setVerticalAlignment(QTextCharFormat::AlignMiddle);
             } else {
                 image = QImage(path);
                 if (image.width() > m_width)

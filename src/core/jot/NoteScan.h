@@ -62,6 +62,16 @@ struct Heading
 /// Code is left alone, and so are headings in quotes and lists.
 [[nodiscard]] QList<Heading> headingsOf(QStringView body);
 
+/// The `$...$` math in a line of prose, as Pandoc reads it: each span's start and end, its
+/// dollar signs included. The first has a character other than a space after it, the second
+/// one before it and no digit after it, so prices stay text; `\$` is a dollar sign, and
+/// nothing in code counts.
+[[nodiscard]] QList<std::pair<qsizetype, qsizetype>> inlineMath(QStringView line);
+
+/// Whether `line` opens or closes display math, being `$$` and nothing else but spaces, or
+/// holds all of it, as `$$x^2$$`. The math in the second is put in `math`.
+[[nodiscard]] bool isMathFence(QStringView line, QString *math = nullptr);
+
 /// Whether `line` is a table of contents marker, `${toc}` as Joplin writes it.
 [[nodiscard]] bool isTocMarker(QStringView line);
 
@@ -71,9 +81,11 @@ struct Heading
 /// drawing the note fetches nothing. Targets are percent-encoded. A table of contents marker
 /// becomes a list of links to `jot-heading:` targets, each heading's number from 0.
 /// CriticMarkup reads as its edits made, with deletions struck through and comments in
-/// italics. Code is left alone.
-[[nodiscard]] QString readingMarkdown(QStringView body,
-                                      const std::function<QString(const QString &)> &embedUrl);
+/// italics. Math becomes the picture at the URL `mathUrl` gives for its TeX, and whether it is
+/// set apart, and stays as written when it gives none. Code is left alone.
+[[nodiscard]] QString
+readingMarkdown(QStringView body, const std::function<QString(const QString &)> &embedUrl,
+                const std::function<QString(const QString &, bool)> &mathUrl = {});
 
 /// `body` with link targets changed: `replace` gets each link's target as written, without
 /// its label, and whether it is a [[wikilink]], and gives a new target or nothing to leave

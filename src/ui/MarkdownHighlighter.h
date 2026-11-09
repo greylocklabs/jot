@@ -78,11 +78,21 @@ public:
         int rowHeight = 0;
     };
 
-    /// The CriticMarkup comments, `{>>...<<}`, on a line of prose: where each starts in the
-    /// line, and what it says.
-    struct Comments : QTextBlockUserData
+    /// Math drawn in a line of prose, in the room its first `$` keeps: where that is in the
+    /// line, the drawing, and the size it is shown at.
+    struct Math
+    {
+        int at = 0;
+        QString path;
+        QSize size;
+    };
+
+    /// What a line of prose holds that is drawn beside or over it: its CriticMarkup comments,
+    /// `{>>...<<}`, where each starts and what it says, and its math.
+    struct Inlines : QTextBlockUserData
     {
         QList<std::pair<int, QString>> comments;
+        QList<Math> math;
     };
 
     /// Finds the file an image link reaches: its target as written, and whether it is a
@@ -129,7 +139,7 @@ public:
     /// Block states, kept so code fences and front matter carry from line to line. A code
     /// line packs a hash of its language and parser state above these two bits, so a change
     /// that reaches the next line makes it highlight again.
-    enum State { Normal = 0, InFence = 1, InFrontMatter = 2 };
+    enum State { Normal = 0, InFence = 1, InFrontMatter = 2, InMath = 3 };
     /// A block state without the code's own state packed above it.
     [[nodiscard]] static int kindOf(int state) { return state < 0 ? Normal : state & 3; }
 
@@ -165,6 +175,16 @@ private:
     [[nodiscard]] std::pair<int, int> diagramFence(const QTextBlock &block) const;
     /// Draws the diagram a fence opening at this line holds; says whether it did.
     bool diagramLine(const QString &text, int last);
+    /// The first and last lines of the display math `block` is in, between `$$` lines, or -1
+    /// for both; math still open to the end of the note is not drawn yet.
+    [[nodiscard]] std::pair<int, int> mathFence(const QTextBlock &block) const;
+    /// Styles a line of display math, drawing it on its first line when the cursor is
+    /// elsewhere; says whether the line was one.
+    bool mathLine(const QString &text, int state);
+    /// Draws `$...$` math in a line of prose off the cursor's line; gives where it is.
+    QList<std::pair<int, int>> inlineMathStyles(const QString &text, int from);
+    /// The line's Inlines, made if it has nothing else; null when it holds something else.
+    Inlines *inlines();
 
     Look m_look;
     int m_cursorBlock = -1;

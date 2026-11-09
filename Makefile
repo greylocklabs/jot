@@ -11,12 +11,12 @@ SHOT_PREPARE = cp -r tests/data/sample-vault $(SHOTS)/vault
 SHOT_APP = --size 1280x840 --vault $(SHOTS)/vault --note "Ashfall/Characters/Mara Vey.md"
 
 FEDORA_DEPS := gcc-c++ cmake ninja-build qt6-qtbase-devel qt6-qtdeclarative-devel \
-	qt6-qtquickcontrols2-devel tomlplusplus-devel kf6-syntax-highlighting-devel kf6-sonnet-devel qt6-qtmultimedia-devel qtkeychain-qt6-devel git-lfs qt6-qtsvg \
+	qt6-qtquickcontrols2-devel tomlplusplus-devel kf6-syntax-highlighting-devel kf6-sonnet-devel qt6-qtmultimedia-devel tinyxml2-devel qtkeychain-qt6-devel git-lfs qt6-qtsvg \
 	clang-tools-extra entr nodejs npm
 DEBIAN_DEPS := build-essential cmake ninja-build qt6-base-dev qt6-declarative-dev \
 	qt6-declarative-dev-tools qml6-module-qtquick-controls qml6-module-qtquick-templates \
 	qml6-module-qtquick-effects qml6-module-qtquick-dialogs libtomlplusplus-dev \
-	libkf6syntaxhighlighting-dev libkf6sonnet-dev qt6-multimedia-dev qml6-module-qtmultimedia qtkeychain-qt6-dev git-lfs qt6-svg-plugins \
+	libkf6syntaxhighlighting-dev libkf6sonnet-dev qt6-multimedia-dev qml6-module-qtmultimedia libtinyxml2-dev qtkeychain-qt6-dev git-lfs qt6-svg-plugins \
 	libqt6sql6-sqlite clang-format entr nodejs npm
 
 include core/tooling/common.mk

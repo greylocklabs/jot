@@ -204,6 +204,32 @@ QList<Heading> headingsOf(QStringView body)
     return found;
 }
 
+QList<std::pair<qsizetype, qsizetype>> inlineMath(QStringView line)
+{
+    static const QRegularExpression math(
+        uR"((?<![\\$])\$(?![\s$])((?:\\.|[^$\\])+?)(?<![\s\\])\$(?![\d$]))"_s);
+    QList<std::pair<qsizetype, qsizetype>> spans;
+    if (!line.contains(u'$'))
+        return spans;
+    const QString prose = withoutCodeSpans(line.toString());
+    for (const QRegularExpressionMatch &m : math.globalMatch(prose))
+        spans.append({m.capturedStart(), m.capturedEnd()});
+    return spans;
+}
+
+bool isMathFence(QStringView line, QString *math)
+{
+    const QStringView trimmed = line.trimmed();
+    if (trimmed == u"$$")
+        return true;
+    if (trimmed.size() > 4 && trimmed.startsWith(u"$$") && trimmed.endsWith(u"$$")) {
+        if (math)
+            *math = trimmed.sliced(2, trimmed.size() - 4).trimmed().toString();
+        return true;
+    }
+    return false;
+}
+
 bool isTocMarker(QStringView line)
 {
     return line.trimmed() == u"${toc}";
@@ -255,12 +281,74 @@ QString criticForReading(QStringView body)
     return out;
 }
 
+/// Math as the pictures `mathUrl` gives for it: display math on a paragraph of its own, and
+/// math within a line in its place. What it gives none for stays as written.
+QString mathForReading(QStringView body,
+                       const std::function<QString(const QString &, bool)> &mathUrl)
+{
+    static const QRegularExpression fence(uR"(^\s{0,3}(```+|~~~+))"_s);
+    const auto picture = [&](const QString &tex, bool display) {
+        const QString url = mathUrl(tex, display);
+        return url.isEmpty() ? QString() : u"![](<%1>)"_s.arg(url);
+    };
+    const QStringList lines = body.toString().split(u'\n');
+    QStringList out;
+    QString openFence;
+    for (qsizetype i = 0; i < lines.size(); ++i) {
+        const QString &line = lines.at(i);
+        if (const QRegularExpressionMatch m = fence.match(line);
+            m.hasMatch() || !openFence.isEmpty()) {
+            if (openFence.isEmpty())
+                openFence = m.captured(1);
+            else if (m.hasMatch() && m.captured(1).startsWith(openFence))
+                openFence.clear();
+            out << line;
+            continue;
+        }
+        QString single;
+        if (isMathFence(line, &single)) {
+            qsizetype last = i;
+            QString tex = single;
+            if (single.isEmpty()) {
+                last = i + 1;
+                while (last < lines.size() && !isMathFence(lines.at(last)))
+                    ++last;
+                if (last == lines.size()) {
+                    out << line;
+                    continue;
+                }
+                tex = lines.mid(i + 1, last - i - 1).join(u'\n');
+            }
+            if (const QString drawn = picture(tex, true); !drawn.isEmpty()) {
+                out << QString() << drawn << QString();
+                i = last;
+                continue;
+            }
+            out << line;
+            continue;
+        }
+        QString rewritten;
+        qsizetype at = 0;
+        for (const auto &[start, end] : inlineMath(line)) {
+            const QString drawn = picture(line.mid(start + 1, end - start - 2), false);
+            if (drawn.isEmpty())
+                continue;
+            rewritten += line.mid(at, start - at) + drawn;
+            at = end;
+        }
+        out << (at == 0 ? line : rewritten + line.mid(at));
+    }
+    return out.join(u'\n');
+}
+
 } // namespace
 
 QString readingMarkdown(QStringView original,
-                        const std::function<QString(const QString &)> &embedUrl)
+                        const std::function<QString(const QString &)> &embedUrl,
+                        const std::function<QString(const QString &, bool)> &mathUrl)
 {
-    const QString accepted = criticForReading(original);
+    const QString accepted =
+        criticForReading(mathUrl ? mathForReading(original, mathUrl) : original.toString());
     const QStringView body = accepted;
     // A wikilink with its label, after a bar, when it has one.
     static const QRegularExpression wiki(uR"((!?)\[\[([^\[\]|]*?)(?:\|([^\[\]]*))?\]\])"_s);

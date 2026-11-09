@@ -19,6 +19,18 @@ Files: third_party/pele/*
 Copyright: 2026 kepano (https://github.com/obsidianmd/pele)
 License: MIT
 
+Files: third_party/microtex/*
+Copyright: 2020 Nano Michael (https://github.com/NanoMichael/MicroTeX)
+License: MIT
+
+Files: third_party/microtex/res/fonts/*
+Copyright: Donald E. Knuth, the American Mathematical Society and others
+License: Knuth-CTAN and OFL-1.1 and other-dsrom
+ Each font's license is in third_party/microtex/res/fonts/licences/: the Computer Modern
+ fonts are under Knuth's license, which allows copying, changing and sharing them so long as
+ a changed font has another name; others are under the SIL Open Font License 1.1, and the
+ double-struck dsrom font may be used and shared freely, and changed under another name.
+
 License: MIT
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal

@@ -67,6 +67,8 @@ qt_add_qml_module(jotui
         ViEditor.cpp
         AudioRecorder.h
         AudioRecorder.cpp
+        MathRenderer.h
+        MathRenderer.cpp
     QML_FILES
         Main.qml
         AboutDialog.qml
@@ -158,4 +160,14 @@ qt_add_resources(jotui "jot_export"
 target_include_directories(jotui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_link_libraries(jotui PUBLIC Qt6::Quick Qt6::QuickControls2 Qt6::DBus Qt6::Multimedia jotcore)
-target_link_libraries(jotui PRIVATE KF6::SyntaxHighlighting KF6::SonnetCore)
+target_link_libraries(jotui PRIVATE KF6::SyntaxHighlighting KF6::SonnetCore microtex)
+
+# MicroTeX's fonts, unpacked to the cache the first time math is drawn.
+file(GLOB_RECURSE microtex_res RELATIVE "${PROJECT_SOURCE_DIR}/third_party/microtex/res"
+    "${PROJECT_SOURCE_DIR}/third_party/microtex/res/*")
+list(TRANSFORM microtex_res PREPEND "${PROJECT_SOURCE_DIR}/third_party/microtex/res/")
+qt_add_resources(jotui "jot_microtex"
+    PREFIX "/jot/microtex"
+    BASE "${PROJECT_SOURCE_DIR}/third_party/microtex/res"
+    FILES ${microtex_res}
+)

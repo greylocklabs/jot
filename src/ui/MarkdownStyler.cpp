@@ -289,7 +289,7 @@ QVariantList MarkdownStyler::comments() const
         return comments;
     for (QTextBlock block = m_document->textDocument()->begin(); block.isValid();
          block = block.next()) {
-        const auto *found = dynamic_cast<const MarkdownHighlighter::Comments *>(block.userData());
+        const auto *found = dynamic_cast<const MarkdownHighlighter::Inlines *>(block.userData());
         if (!found)
             continue;
         for (const auto &[at, text] : found->comments)
@@ -450,6 +450,15 @@ QVariantList MarkdownStyler::images() const
                                       {u"width"_s, image->size.width()},
                                       {u"height"_s, image->size.height()},
                                       {u"audio"_s, image->audio}});
+        if (const auto *line =
+                dynamic_cast<const MarkdownHighlighter::Inlines *>(block.userData())) {
+            for (const MarkdownHighlighter::Math &math : line->math)
+                images.append(QVariantMap{{u"position"_s, block.position() + math.at},
+                                          {u"source"_s, QUrl::fromLocalFile(math.path)},
+                                          {u"width"_s, math.size.width()},
+                                          {u"height"_s, math.size.height()},
+                                          {u"inline"_s, true}});
+        }
     }
     return images;
 }

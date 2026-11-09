@@ -15,6 +15,7 @@ private Q_SLOTS:
     void readsAsMarkdownWithLinks();
     void findsHeadingsForAContentsList();
     void readsCriticMarkupWithItsEditsMade();
+    void findsMathAsPandocDoes();
     void findsEveryKindOfLink();
     void leavesUrlsAndAnchorsOut();
     void findsNestedTagsButNotHeadingsOrNumbers();
@@ -256,6 +257,35 @@ void TestNoteScan::readsCriticMarkupWithItsEditsMade()
     // A link inside an addition is still a link; code keeps the marks as written.
     QCOMPARE(readingMarkdown(u"{++see [[Mara]]++} `{--x--}`\n"_s, none),
              u"see [Mara](jot-note:Mara) `{--x--}`\n"_s);
+}
+
+void TestNoteScan::findsMathAsPandocDoes()
+{
+    const auto spans = [](const QString &line) {
+        QStringList found;
+        for (const auto &[start, end] : inlineMath(line))
+            found << line.mid(start, end - start);
+        return found;
+    };
+    QCOMPARE(spans(u"Area $\\pi r^2$ and $a$."_s), (QStringList{u"$\\pi r^2$"_s, u"$a$"_s}));
+    // Prices, an escaped dollar, a space inside the signs and code are not math.
+    QCOMPARE(spans(u"$5 and $10, \\$x\\$, $ x $, `$y$`"_s), QStringList());
+    QCOMPARE(spans(u"$$x$$"_s), QStringList());
+
+    QString math;
+    QVERIFY(isMathFence(u"  $$ "));
+    QVERIFY(isMathFence(u"$$x^2$$", &math));
+    QCOMPARE(math, u"x^2"_s);
+    QVERIFY(!isMathFence(u"$$ x"));
+
+    const auto none = [](const QString &) { return QString(); };
+    const auto drawn = [](const QString &tex, bool display) {
+        return u"file:///m/%1%2.png"_s.arg(display ? u"d-"_s : QString()).arg(tex.size());
+    };
+    QCOMPARE(readingMarkdown(u"So $a+b$ is.\n$$\nx\ny\n$$\n```\n$c$\n```\n"_s, none, drawn),
+             u"So ![](<file:///m/3.png>) is.\n\n![](<file:///m/d-3.png>)\n\n```\n$c$\n```\n"_s);
+    // Without a way to draw it, math stays as written.
+    QCOMPARE(readingMarkdown(u"So $a$.\n"_s, none), u"So $a$.\n"_s);
 }
 
 void TestNoteScan::tickingARepeatingTaskWritesTheNext()
