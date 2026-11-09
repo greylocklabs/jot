@@ -51,7 +51,7 @@ QString formatted(const QString &format, const QDateTime &now)
         } else if (part == u"h" || part == u"hh") {
             // Always the 12-hour clock, which Qt gives only beside AM or PM.
             const int hour = now.time().hour() % 12 == 0 ? 12 : now.time().hour() % 12;
-            out += part == u"hh" ? u"%1"_s.arg(hour, 2, 10, u'0') : QString::number(hour);
+            out += part == u"hh" ? u"%1"_s.arg(hour, 2, 10, QChar(u'0')) : QString::number(hour);
         } else {
             out += now.toString(qt.value(part));
         }
