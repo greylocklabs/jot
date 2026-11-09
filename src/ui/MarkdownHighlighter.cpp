@@ -322,9 +322,14 @@ std::pair<int, int> MarkdownHighlighter::misspelledAt(int position) const
             at < range.start || at > range.start + range.length)
             continue;
         for (const QRegularExpressionMatch &m : wordPattern().globalMatch(block.text())) {
-            if (at >= m.capturedStart() && at <= m.capturedEnd())
-                return {block.position() + int(m.capturedStart()),
-                        block.position() + int(m.capturedEnd())};
+            if (at < m.capturedStart() || at > m.capturedEnd())
+                continue;
+            // The word as checked and underlined, without a closing quote.
+            qsizetype end = m.capturedEnd();
+            while (end > m.capturedStart() &&
+                   (block.text().at(end - 1) == u'\'' || block.text().at(end - 1) == QChar(0x2019)))
+                --end;
+            return {block.position() + int(m.capturedStart()), block.position() + int(end)};
         }
     }
     return {-1, -1};
