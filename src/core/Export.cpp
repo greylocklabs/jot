@@ -24,7 +24,7 @@ QString exportMarkdown(QStringView note,
                        const std::function<QString(const QString &, bool)> &embedPath, bool *toc)
 {
     static const QRegularExpression image(
-        uR"(!\[([^\]]*)\]\(\s*(<[^>]*>|[^\s)]+)(?:\s+"[^"]*")?\s*\))"_s);
+        uR"(!\[([^\]]*)\]\(\s*(<[^>]*>|[^\s)]+)(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*\))"_s);
     static const QRegularExpression reference(uR"(^( {0,3}\[[^\]]+\]:\s*)(<[^>]*>|\S+)(.*)$)"_s);
     static const QRegularExpression scheme(uR"(^[A-Za-z][A-Za-z0-9+.-]*:)"_s);
     const auto bare = [](const QString &target) {
@@ -81,13 +81,27 @@ QString exportMarkdown(QStringView note,
             for (const QRegularExpressionMatch &m : span.globalMatch(text))
                 prose.replace(m.capturedStart(), m.capturedLength(),
                               QString(m.capturedLength(), u' '));
+            // Between the pictures read, anything else written as one, which the pattern could
+            // not read, becomes a plain link, whose target Pandoc never opens; an `![[embed]]` is
+            // left for the wikilink pass.
+            const auto between = [&](qsizetype from, qsizetype to) {
+                QString kept = text.mid(from, to - from);
+                if (pattern != &image)
+                    return kept;
+                for (qsizetype i = to - 2; i >= from; --i) {
+                    if (prose.at(i) == u'!' && prose.at(i + 1) == u'[' &&
+                        (i + 2 >= prose.size() || prose.at(i + 2) != u'['))
+                        kept.remove(i - from, 1);
+                }
+                return kept;
+            };
             QString out;
             qsizetype at = 0;
             for (const QRegularExpressionMatch &m : pattern->globalMatch(prose)) {
                 const auto part = [&](int n) {
                     return text.mid(m.capturedStart(n), m.capturedLength(n));
                 };
-                out += QStringView(text).sliced(at, m.capturedStart() - at);
+                out += between(at, m.capturedStart());
                 if (pattern == &critic) {
                     // Edits made: what was added or put in, never what went or a comment.
                     out += part(1) + part(4) + part(5);
@@ -104,7 +118,7 @@ QString exportMarkdown(QStringView note,
                 }
                 at = m.capturedEnd();
             }
-            text = out + text.mid(at);
+            text = out + between(at, text.size());
         }
         lines << text;
     }

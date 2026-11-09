@@ -39,6 +39,12 @@ void TestExport::writesTheNoteForPandoc()
                  embed, &toc),
              u"![Map](</v/map.png>) key web\n[k]: #\n[m]: </v/map.png> \"Map\"\n"
              "[w]: https://x.example\n"_s);
+    // Every way of writing a picture's title is read, and one that cannot be read is a link.
+    QCOMPARE(
+        exportMarkdown(u"![a](/etc/a 'x') ![b](/etc/b (x)) ![c](/etc/c \"x\") ![d](map.png 'x')\n"
+                       "![e](/etc/e \"unclosed) ![[map.png]]\n"_s,
+                       embed, &toc),
+        u"a b c ![d](</v/map.png>)\n[e](/etc/e \"unclosed) ![map.png](</v/map.png>)\n"_s);
     // Code is left as written.
     const QString code = u"`[[not]] {++x++}`\n```\n[[Mara]] ${toc}\n~~~\n${toc}\n```\n"
                          "    [[indented]]\n"_s;
