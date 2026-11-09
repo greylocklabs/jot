@@ -176,8 +176,18 @@ int NoteReader::headingPosition(int index) const
     const QTextDocument *doc = m_document ? m_document->textDocument() : nullptr;
     if (!doc || index < 0)
         return -1;
+    // Its place among every heading drawn, nested ones in quotes and lists too.
+    int drawn = -1;
+    int listed = -1;
+    const QList<Heading> all = allHeadingsOf(splitFrontMatter(m_text).body);
+    for (int i = 0; i < all.size() && drawn < 0; ++i) {
+        if (!all.at(i).nested && ++listed == index)
+            drawn = i;
+    }
+    if (drawn < 0)
+        return -1;
     for (QTextBlock block = doc->begin(); block.isValid(); block = block.next()) {
-        if (block.blockFormat().headingLevel() > 0 && index-- == 0)
+        if (block.blockFormat().headingLevel() > 0 && drawn-- == 0)
             return block.position();
     }
     return -1;

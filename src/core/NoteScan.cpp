@@ -157,14 +157,36 @@ NoteScan scanNote(QStringView body, int firstLine)
     return scan;
 }
 
+QList<Heading> allHeadingsOf(QStringView body)
+{
+    static const QRegularExpression heading(
+        uR"(^ {0,3}((?:>\s?|[*+-]\s+|\d+[.)]\s+)*)(#{1,6})(?:\s+(.*?))?(?:\s+#+)?\s*$)"_s);
+    static const QRegularExpression underline(uR"(^ {0,3}(=+|-+)\s*$)"_s);
+    // A line of text that a line of = or - under it makes a heading, as Markdown reads it.
+    static const QRegularExpression plain(uR"(^ {0,3}(?![#>|]|[*+-]\s|\d+[.)]\s)\S)"_s);
+    QList<Heading> found;
+    int lastNumber = -1;
+    qsizetype lastStart = 0;
+    QString last;
+    forEachProseLine(body, 1, [&](int number, qsizetype start, const QString &line) {
+        if (const QRegularExpressionMatch m = heading.match(line); m.hasMatch()) {
+            found.append({int(m.capturedLength(2)), m.captured(3).trimmed(), start,
+                          m.capturedLength(1) > 0});
+        } else if (const QRegularExpressionMatch u = underline.match(line);
+                   u.hasMatch() && number == lastNumber + 1 && plain.match(last).hasMatch()) {
+            found.append({u.captured(1).front() == u'=' ? 1 : 2, last.trimmed(), lastStart});
+        }
+        lastNumber = number;
+        lastStart = start;
+        last = line;
+    });
+    return found;
+}
+
 QList<Heading> headingsOf(QStringView body)
 {
-    static const QRegularExpression heading(uR"(^ {0,3}(#{1,6})(?:\s+(.*?))?(?:\s+#+)?\s*$)"_s);
-    QList<Heading> found;
-    forEachProseLine(body, 1, [&](int, qsizetype start, const QString &line) {
-        if (const QRegularExpressionMatch m = heading.match(line); m.hasMatch())
-            found.append({int(m.capturedLength(1)), m.captured(2).trimmed(), start});
-    });
+    QList<Heading> found = allHeadingsOf(body);
+    found.removeIf([](const Heading &heading) { return heading.nested; });
     return found;
 }
 

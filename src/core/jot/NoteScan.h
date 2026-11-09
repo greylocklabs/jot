@@ -51,9 +51,15 @@ struct Heading
     int level = 1;
     QString text;
     qsizetype position = 0;
+    /// In a quote or a list, which a table of contents leaves out.
+    bool nested = false;
 };
 
-/// The `#` headings of `body`, in order, leaving code alone.
+/// Every heading a reader draws for `body`, nested ones too, in order.
+[[nodiscard]] QList<Heading> allHeadingsOf(QStringView body);
+
+/// The headings of `body`, in order: `#` ones, and a line of text underlined with `=` or `-`.
+/// Code is left alone, and so are headings in quotes and lists.
 [[nodiscard]] QList<Heading> headingsOf(QStringView body);
 
 /// Whether `line` is a table of contents marker, `${toc}` as Joplin writes it.
