@@ -32,7 +32,8 @@ void TestExport::writesTheNoteForPandoc()
              u"![map.png](</v/map.png>) gone.png\nA new dog bright\n"_s);
     QVERIFY(toc);
     // Code is left as written.
-    const QString code = u"`[[not]] {++x++}`\n```\n[[Mara]] ${toc}\n${toc}\n```\n"_s;
+    const QString code = u"`[[not]] {++x++}`\n```\n[[Mara]] ${toc}\n~~~\n${toc}\n```\n"
+                         "    [[indented]]\n"_s;
     QCOMPARE(exportMarkdown(code, embed, &toc), code);
     QVERIFY(!toc);
 }

@@ -29,12 +29,26 @@ QString exportMarkdown(QStringView note, const std::function<QString(const QStri
     const QString body = splitFrontMatter(note).body.toString();
     *toc = false;
     QStringList lines;
-    bool fenced = false;
+    // Code is left as written: a fence closes only with its own mark, at least as long, and a
+    // line four spaces or a tab in is code unless it is part of a list.
+    QString openFence;
     static const QRegularExpression fence(uR"(^\s{0,3}(```+|~~~+))"_s);
+    static const QRegularExpression indented(uR"(^(?: {4}|\t)(?!\s*(?:[-*+]|\d+[.)])\s))"_s);
     for (const QString &line : body.split(u'\n')) {
-        if (fence.match(line).hasMatch())
-            fenced = !fenced;
-        if (fenced || fence.match(line).hasMatch()) {
+        const QRegularExpressionMatch mark = fence.match(line);
+        if (!openFence.isEmpty()) {
+            if (mark.hasMatch() && mark.captured(1).front() == openFence.front() &&
+                mark.captured(1).size() >= openFence.size())
+                openFence.clear();
+            lines << line;
+            continue;
+        }
+        if (mark.hasMatch()) {
+            openFence = mark.captured(1);
+            lines << line;
+            continue;
+        }
+        if (indented.match(line).hasMatch()) {
             lines << line;
             continue;
         }
