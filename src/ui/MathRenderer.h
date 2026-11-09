@@ -7,8 +7,8 @@
 
 namespace jot {
 
-/// Draws LaTeX math with MicroTeX into PNG files in Jot's cache, named `<hash>@2x.png` as they
-/// are drawn at twice the size they are shown, to stay sharp on a dense screen.
+/// Draws LaTeX math with MicroTeX into PNG files in folder(), at twice the size they are shown,
+/// to stay sharp on a dense screen.
 class MathRenderer
 {
 public:
@@ -24,6 +24,8 @@ public:
     };
 
     static MathRenderer &instance();
+    /// Where drawings are kept; only files here are drawn math.
+    static QString folder();
 
     /// `latex` drawn `pixelSize` tall per em in `color`; `display` for math set apart on its
     /// own lines, which is drawn larger and centered on nothing.
