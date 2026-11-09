@@ -62,6 +62,7 @@ private Q_SLOTS:
     void drawsDiagramsInPlaceOfTheirText();
     void listsHeadingsInPlaceOfAContentsMarker();
     void readingFindsTheHeadingAContentsEntryNames();
+    void outlinesTheNoteBesideIt();
     void switchingAwayFromAPictureLeavesNoStalePlace();
     void formatsAndUndoesInOneStep();
     void formatsFromTheKeyboard();
@@ -530,6 +531,38 @@ void TestNoteEditor::readingFindsTheHeadingAContentsEntryNames()
                               Q_ARG(int, 1));
     QCOMPARE(doc->findBlock(position).text(), u"Later"_s);
     m_settings->setReadMode(false);
+void TestNoteEditor::outlinesTheNoteBesideIt()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    QQuickItem *outline = find(u"outline"_s);
+    QVERIFY(outline);
+    QVERIFY(!outline->isVisible());
+    m_settings->setOutlineShown(true);
+    QTRY_VERIFY(outline->isVisible());
+    // The note gives up the room the outline takes.
+    QVERIFY(find(u"scroll"_s)->width() <= m_window->width() - outline->width());
+
+    QString text = u"# Plan\n\n"_s;
+    for (int i = 0; i < 60; ++i)
+        text += u"line\n"_s;
+    text += u"## Later\n\nend\n"_s;
+    body->forceActiveFocus();
+    body->setProperty("text", text);
+    body->setProperty("cursorPosition", 2);
+    QTRY_COMPARE(outline->property("headings").toList().size(), 2);
+    QCOMPARE(outline->property("current").toInt(), 0);
+
+    // Choosing a heading takes the cursor there and scrolls it into view.
+    QVERIFY(QMetaObject::invokeMethod(outline, "chosen", Q_ARG(int, 1)));
+    QTRY_COMPARE(body->property("cursorPosition").toInt(), int(text.indexOf(u"## Later"_s)));
+    QCOMPARE(outline->property("current").toInt(), 1);
+    QVERIFY(find(u"scroll"_s)->property("contentY").toReal() > 0);
+
+    // Too narrow a window keeps the room for the note.
+    m_window->resize(600, 700);
+    qobject_cast<QQuickItem *>(m_editor.get())->setSize(m_window->size());
+    QTRY_VERIFY(!outline->isVisible());
 }
 
 void TestNoteEditor::drawsDiagramsInPlaceOfTheirText()

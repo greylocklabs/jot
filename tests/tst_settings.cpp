@@ -24,6 +24,7 @@ private Q_SLOTS:
     void keepsTrashChoices();
     void keepsSearchingTheTrash();
     void keepsTheSavingChoice();
+    void keepsTheOutlineShown();
     void keepsDeveloperChoices();
     void keepsTheTasksView();
     void keepsReminderChoices();
@@ -209,6 +210,18 @@ void TestSettings::keepsTheSavingChoice()
     QVERIFY(!Settings(path).autosave());
     settings.reset();
     QVERIFY(settings.autosave());
+}
+
+void TestSettings::keepsTheOutlineShown()
+{
+    QTemporaryDir dir;
+    const QString path = dir.filePath(u"settings.ini"_s);
+    Settings settings(path);
+    QVERIFY(!settings.outlineShown());
+    settings.setOutlineShown(true);
+    QVERIFY(Settings(path).outlineShown());
+    settings.reset();
+    QVERIFY(!settings.outlineShown());
 }
 
 void TestSettings::keepsDeveloperChoices()

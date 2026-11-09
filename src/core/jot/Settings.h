@@ -41,6 +41,8 @@ class Settings : public QObject
     Q_PROPERTY(bool sourceMode READ sourceMode WRITE setSourceMode NOTIFY sourceModeChanged)
     /// Notes are shown rendered, to read, rather than to write in.
     Q_PROPERTY(bool readMode READ readMode WRITE setReadMode NOTIFY readModeChanged)
+    /// The outline of the note's headings beside it.
+    Q_PROPERTY(bool outlineShown READ outlineShown WRITE setOutlineShown NOTIFY outlineShownChanged)
     /// Shows what is behind a note for debugging: its file's path in the vault, to copy.
     Q_PROPERTY(bool developerMode READ developerMode WRITE setDeveloperMode NOTIFY developerChanged)
     /// Writes Jot's debug lines to the log, as QT_LOGGING_RULES would.
@@ -111,6 +113,8 @@ public:
     void setSourceMode(bool source);
     [[nodiscard]] bool readMode() const { return m_readMode; }
     void setReadMode(bool read);
+    [[nodiscard]] bool outlineShown() const { return m_outlineShown; }
+    void setOutlineShown(bool shown);
     [[nodiscard]] bool developerMode() const { return m_developerMode; }
     void setDeveloperMode(bool on);
     [[nodiscard]] bool verboseLogging() const { return m_verboseLogging; }
@@ -170,6 +174,7 @@ Q_SIGNALS:
     void noteListWidthChanged();
     void sourceModeChanged();
     void readModeChanged();
+    void outlineShownChanged();
     void keyboardChanged();
     void lastSeenVersionChanged();
     void syncRemoteChanged();
@@ -192,6 +197,7 @@ private:
     int m_noteListWidth = 0;
     bool m_sourceMode = false;
     bool m_readMode = false;
+    bool m_outlineShown = false;
     bool m_developerMode = false;
     bool m_verboseLogging = false;
     bool m_viMode = false;

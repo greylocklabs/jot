@@ -13,6 +13,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   with the arrows and Return like wikilinks.
 - A `${toc}` line, as Joplin writes it, shows the note's headings as links, kept up to date as
   they change, in the editor and when reading.
+- An outline of the note's headings beside it, from the format row or Ctrl+Shift+O, marks the
+  one the cursor is under and goes to any of them.
 
 ## 0.4.1 - 2026-11-07
 

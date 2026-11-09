@@ -37,6 +37,9 @@ class MarkdownStyler : public QObject
     /// headings}`, each heading `{text, level, position}` with where its line starts and its
     /// level from 1 for the note's highest. Told with the images, which they make room among.
     Q_PROPERTY(QVariantList contents READ contents NOTIFY imagesChanged)
+    /// The note's `#` headings, as `{text, level, position}` like a table of contents has
+    /// them, for the outline.
+    Q_PROPERTY(QVariantList headings READ headings NOTIFY imagesChanged)
     /// The Markdown shown as written, without live preview.
     Q_PROPERTY(bool sourceMode READ sourceMode WRITE setSourceMode NOTIFY sourceModeChanged)
     /// The note's front matter keys, as the text has them now.
@@ -58,6 +61,7 @@ public:
     void setWidth(int width);
     [[nodiscard]] QVariantList images() const;
     [[nodiscard]] QVariantList contents() const;
+    [[nodiscard]] QVariantList headings() const;
     [[nodiscard]] QVariantMap frontMatter() const { return m_frontMatter; }
     [[nodiscard]] bool sourceMode() const { return m_sourceMode; }
     void setSourceMode(bool source);

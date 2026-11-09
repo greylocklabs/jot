@@ -267,6 +267,23 @@ void MarkdownStyler::scheduleImages()
     });
 }
 
+QVariantList MarkdownStyler::headings() const
+{
+    QVariantList headings;
+    if (!m_document || !m_document->textDocument())
+        return headings;
+    const QString note = m_document->textDocument()->toPlainText();
+    const QStringView body = splitFrontMatter(note).body;
+    const QList<Heading> found = headingsOf(body);
+    const int top = found.isEmpty() ? 1 : std::ranges::min(found, {}, &Heading::level).level;
+    for (const Heading &heading : found)
+        headings.append(
+            QVariantMap{{u"text"_s, heading.text},
+                        {u"level"_s, heading.level - top + 1},
+                        {u"position"_s, int(heading.position + (body.data() - note.data()))}});
+    return headings;
+}
+
 QVariantList MarkdownStyler::contents() const
 {
     QVariantList contents;
@@ -281,16 +298,7 @@ QVariantList MarkdownStyler::contents() const
             continue;
         if (!read) {
             read = true;
-            const QString note = m_document->textDocument()->toPlainText();
-            const QStringView body = splitFrontMatter(note).body;
-            const QList<Heading> found = headingsOf(body);
-            const int top =
-                found.isEmpty() ? 1 : std::ranges::min(found, {}, &Heading::level).level;
-            for (const Heading &heading : found)
-                headings.append(QVariantMap{
-                    {u"text"_s, heading.text},
-                    {u"level"_s, heading.level - top + 1},
-                    {u"position"_s, int(heading.position + (body.data() - note.data()))}});
+            headings = this->headings();
         }
         contents.append(QVariantMap{{u"position"_s, block.position()},
                                     {u"rowHeight"_s, toc->rowHeight},
