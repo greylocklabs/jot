@@ -27,6 +27,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   the middle of the window, and F11 goes fullscreen with only the note.
 - CriticMarkup edits show as additions and deletions, and its comments as notes in the margin
   beside their lines, where the window has room.
+- Export a note to DOCX, ODT, PDF, ePub or HTML through Pandoc, from its menu or the command
+  palette, in Pandoc's own look or standard manuscript format (Shunn).
 
 ## 0.4.1 - 2026-11-07
 

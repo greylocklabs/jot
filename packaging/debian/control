@@ -35,6 +35,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends},
          qt6-svg-plugins,
          git,
          git-lfs
+Recommends: pandoc
 Description: plain-file notes for Linux
  Jot is a Markdown notes app for Linux. Notes are plain files in a folder
  you choose, and sync is optional. It shares its look and its themes with

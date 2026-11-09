@@ -72,6 +72,7 @@ qt_add_qml_module(jotui
         CheckBox.qml
         CloseButton.qml
         ConfirmDialog.qml
+        ExportDialog.qml
         NoteTabs.qml
         Outline.qml
         WhyDisabled.qml
@@ -141,6 +142,14 @@ qt_add_resources(jotui "jot_emoji"
     PREFIX "/jot"
     BASE "${PROJECT_SOURCE_DIR}/data"
     FILES "${PROJECT_SOURCE_DIR}/data/emoji.txt"
+)
+# The files export presets hand Pandoc; data/export/manuscript.py makes the documents.
+qt_add_resources(jotui "jot_export"
+    PREFIX "/jot/export"
+    BASE "${PROJECT_SOURCE_DIR}/data/export"
+    FILES "${PROJECT_SOURCE_DIR}/data/export/manuscript.css"
+          "${PROJECT_SOURCE_DIR}/data/export/manuscript.docx"
+          "${PROJECT_SOURCE_DIR}/data/export/manuscript.odt"
 )
 
 target_include_directories(jotui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

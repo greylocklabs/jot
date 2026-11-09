@@ -72,6 +72,7 @@ void TestDialogs::opensCleanly_data()
     QTest::newRow("theme colors") << u"ThemeEditor {}"_s;
     QTest::newRow("report a problem") << u"ReportDialog {}"_s;
     QTest::newRow("past versions") << u"HistoryDialog {}"_s;
+    QTest::newRow("export") << u"ExportDialog { path: 'Welcome.md' }"_s;
     QTest::newRow("import from joplin")
         << uR"(JoplinImport { summary: ({ ok: true, created: 3, updated: 1, unchanged: 2, notebooks: 1,
               attachments: 1, keptEdits: ["Stories/Mara.md"], notBroughtBack: ["Old.md"],
