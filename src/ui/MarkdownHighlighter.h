@@ -95,8 +95,11 @@ public:
     /// Shows the Markdown exactly as written, in the monospace font: nothing folded, styled
     /// or shown as an image.
     void setSourceMode(bool source);
-    /// Fades every block but those of the paragraph the cursor is in.
+    /// Fades every block but those of the paragraph the cursor is in, while it is in one.
     void setFocusMode(bool focus);
+    /// Works out the paragraph focus mode lights again, as after an edit, which can join or
+    /// part paragraphs with the cursor where it was.
+    void refreshFocus();
 
     [[nodiscard]] Hit hitAt(int position) const;
     /// Redraws each table of contents, as after the headings changed.

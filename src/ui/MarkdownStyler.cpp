@@ -262,6 +262,8 @@ void MarkdownStyler::scheduleImages()
     m_imagesPending = true;
     QTimer::singleShot(0, this, [this] {
         m_imagesPending = false;
+        if (m_highlighter)
+            m_highlighter->refreshFocus();
         // A heading changed elsewhere in the note redraws each table of contents.
         if (m_highlighter && m_document && m_document->textDocument()) {
             const QString text = m_document->textDocument()->toPlainText();
