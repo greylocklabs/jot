@@ -227,6 +227,15 @@ bool Vault::isDataFile(const QString &path)
            kDataSuffixes.contains(path.sliced(dot + 1), Qt::CaseInsensitive);
 }
 
+bool Vault::isAudioFile(QStringView path)
+{
+    static const QStringList suffixes{u"ogg"_s, u"oga"_s, u"opus"_s, u"mp3"_s,
+                                      u"m4a"_s, u"aac"_s, u"wav"_s,  u"flac"_s};
+    const qsizetype dot = path.lastIndexOf(u'.');
+    return dot > path.lastIndexOf(u'/') + 1 &&
+           suffixes.contains(path.sliced(dot + 1).toString(), Qt::CaseInsensitive);
+}
+
 bool Vault::isListed(const QString &path)
 {
     return path.endsWith(kNoteSuffix) || isDataFile(path);

@@ -31,6 +31,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   palette, in Pandoc's own look or standard manuscript format (Shunn).
 - Spellcheck underlines words the dictionary does not know, with suggestions on a right click,
   in the desktop's language, a vault's or a note's own.
+- Record from the microphone into a note, from the format row or the command palette. A sound
+  embedded on a line of its own plays there.
 
 ## 0.4.1 - 2026-11-07
 

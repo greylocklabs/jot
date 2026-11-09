@@ -448,7 +448,8 @@ QVariantList MarkdownStyler::images() const
             images.append(QVariantMap{{u"position"_s, block.position()},
                                       {u"source"_s, QUrl::fromLocalFile(image->path)},
                                       {u"width"_s, image->size.width()},
-                                      {u"height"_s, image->size.height()}});
+                                      {u"height"_s, image->size.height()},
+                                      {u"audio"_s, image->audio}});
     }
     return images;
 }

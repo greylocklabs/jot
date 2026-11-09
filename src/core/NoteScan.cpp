@@ -1,6 +1,7 @@
 #include "jot/NoteScan.h"
 
 #include "jot/TaskLine.h"
+#include "jot/Vault.h"
 
 #include <QRegularExpression>
 #include <QUrl>
@@ -303,7 +304,7 @@ QString readingMarkdown(QStringView original,
             const QString target = m.captured(2).trimmed();
             const QString label = m.captured(3).isEmpty() ? target : m.captured(3).trimmed();
             QString text = u"[%1](jot-note:%2)"_s.arg(escape(label), encode(target));
-            if (!m.captured(1).isEmpty()) {
+            if (!m.captured(1).isEmpty() && !Vault::isAudioFile(target)) {
                 if (const QString url = embedUrl(target); !url.isEmpty())
                     text = u"![%1](<%2>)"_s.arg(escape(label), url);
             }
@@ -312,12 +313,22 @@ QString readingMarkdown(QStringView original,
         }
         // Tags, but not the # in a link's target or label, such as a heading's anchor.
         for (const QRegularExpressionMatch &m : markdownPattern().globalMatch(rest)) {
-            // An image from the web becomes a link to it, so reading fetches nothing.
             const QString target = m.captured(2);
+            const QString bare = target.startsWith(u'<') ? target.mid(1).chopped(1) : target;
+            // An image from the web, or a sound, is a link to it, the sound named for its file
+            // when it has no words, to open elsewhere.
+            const bool sound = Vault::isAudioFile(bare);
             if (!m.captured(1).isEmpty() &&
-                isUrl(target.startsWith(u'<') ? target.mid(1) : target) &&
-                !target.contains(u"file:"_s))
-                changes.append({m.capturedStart(), 1, {}});
+                ((isUrl(target.startsWith(u'<') ? target.mid(1) : target) &&
+                  !target.contains(u"file:"_s)) ||
+                 sound)) {
+                if (sound && m.captured().startsWith(u"![]("_s))
+                    changes.append({m.capturedStart(), 3,
+                                    u"[%1]"_s.arg(escape(QUrl::fromPercentEncoding(
+                                        bare.section(u'/', -1).toUtf8())))});
+                else
+                    changes.append({m.capturedStart(), 1, {}});
+            }
             rest.replace(m.capturedStart(), m.capturedLength(), QString(m.capturedLength(), u' '));
         }
         for (const QRegularExpressionMatch &m : tagPattern().globalMatch(rest)) {

@@ -72,6 +72,7 @@ private Q_SLOTS:
     void showsOnlyTheNoteWhenDistractionFree();
     void showsCriticCommentsInTheMargin();
     void underlinesMisspelledWords();
+    void playsSoundsWhereTheyAreEmbedded();
     void switchingAwayFromAPictureLeavesNoStalePlace();
     void formatsAndUndoesInOneStep();
     void formatsFromTheKeyboard();
@@ -822,6 +823,42 @@ void TestNoteEditor::underlinesMisspelledWords()
 
     m_settings->setSpellcheck(false);
     QTRY_VERIFY(wrong(u"ferrie"_s).isEmpty());
+}
+
+void TestNoteEditor::playsSoundsWhereTheyAreEmbedded()
+{
+    // A recording attached to the note is embedded, to play there.
+    QFile sound(m_dir->filePath(u"Take 1.wav"_s));
+    QVERIFY(sound.open(QIODevice::WriteOnly));
+    sound.write(QByteArray("RIFF") + QByteArray(40, '\0'));
+    sound.close();
+    m_vault->setCurrent(u"Welcome.md"_s);
+    const QString markdown = m_vault->attachFiles({QUrl::fromLocalFile(sound.fileName())});
+    QCOMPARE(markdown, u"![](Welcome.assets/Take%201.wav)"_s);
+
+    QQuickItem *body = find(u"body"_s);
+    auto *styler = m_editor->findChild<QObject *>(u"styler"_s);
+    const QString text = u"Before\n\n"_s + markdown + u"\n\nAfter\n"_s;
+    body->forceActiveFocus();
+    body->setProperty("text", text);
+    body->setProperty("cursorPosition", 1);
+    const auto players = [this] {
+        QList<QQuickItem *> found;
+        const std::function<void(QQuickItem *)> look = [&](QQuickItem *item) {
+            if (item->objectName() == u"audioPlayer"_s)
+                found.append(item);
+            for (QQuickItem *child : item->childItems())
+                look(child);
+        };
+        look(qobject_cast<QQuickItem *>(m_editor.get()));
+        return found;
+    };
+    QTRY_COMPARE(players().size(), 1);
+    QVERIFY(styler->property("images").toList().first().toMap().value(u"audio"_s).toBool());
+    QVERIFY(players().first()->height() > 20);
+    // On its own line, the link shows again, to edit.
+    body->setProperty("cursorPosition", int(text.indexOf(u"Welcome.assets"_s)));
+    QTRY_COMPARE(players().size(), 0);
 }
 
 void TestNoteEditor::drawsDiagramsInPlaceOfTheirText()
