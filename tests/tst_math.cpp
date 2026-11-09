@@ -69,6 +69,8 @@ void TestMath::leavesDefinitionsAsWritten()
     MathRenderer &math = MathRenderer::instance();
     QVERIFY(!math.draw(u"\\newcommand{\\a}{\\a\\a}\\a"_s, false, 16, Qt::black).ok());
     QVERIFY(!math.draw(u"\\def\\b{x}\\b"_s, true, 16, Qt::black).ok());
+    // A command defined by declaring an operator is one too.
+    QVERIFY(!math.draw(u"\\DeclareMathOperator{\\c}{\\c}\\c"_s, false, 16, Qt::black).ok());
     // A command that only starts the same way is drawn.
     QVERIFY(math.draw(u"\\delta"_s, false, 16, Qt::black).ok());
 }

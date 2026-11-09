@@ -121,7 +121,7 @@ MathRenderer::Drawn MathRenderer::draw(const QString &latex, bool display, int p
     // MicroTeX expands commands a formula defines without end when they call themselves, and
     // keeps them for every formula after, so such formulas stay as written.
     static const QRegularExpression defines(
-        uR"(\\(?:re)?new(?:command|environment)\b|\\def\b|\\let\b)"_s);
+        uR"(\\(?:re)?new(?:command|environment)\b|\\DeclareMathOperator\b|\\def\b|\\let\b)"_s);
     if (latex.contains(defines)) {
         drawn.error = QObject::tr("Formulas that define commands are not drawn.");
         return drawn;
