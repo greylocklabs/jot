@@ -531,6 +531,8 @@ void TestNoteEditor::readingFindsTheHeadingAContentsEntryNames()
                               Q_ARG(int, 1));
     QCOMPARE(doc->findBlock(position).text(), u"Later"_s);
     m_settings->setReadMode(false);
+}
+
 void TestNoteEditor::outlinesTheNoteBesideIt()
 {
     m_vault->setCurrent(u"Welcome.md"_s);
