@@ -314,7 +314,8 @@ QString readingMarkdown(QStringView original,
         // Tags, but not the # in a link's target or label, such as a heading's anchor.
         for (const QRegularExpressionMatch &m : markdownPattern().globalMatch(rest)) {
             const QString target = m.captured(2);
-            const QString bare = target.startsWith(u'<') ? target.mid(1).chopped(1) : target;
+            const QString bare =
+                target.startsWith(u'<') ? target.mid(1, target.size() - 2) : target;
             // An image from the web, or a sound, is a link to it, the sound named for its file
             // when it has no words, to open elsewhere.
             const bool sound = Vault::isAudioFile(bare);
