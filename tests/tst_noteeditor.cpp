@@ -913,12 +913,13 @@ void TestNoteEditor::drawsMath()
 
 void TestNoteEditor::readsMathAtHalfItsDrawnSize()
 {
-    // A picture of the note's own named @2x keeps its size; drawn math is shown at half.
+    // A picture of the note's own named @2x keeps its size, though it has no words; drawn
+    // math is shown at half.
     QString error;
     QVERIFY(QDir(m_root).mkpath(u"Shots.assets"_s));
     QVERIFY(QImage(40, 20, QImage::Format_RGB32).save(m_root + u"/Shots.assets/shot@2x.png"_s));
-    QVERIFY(notefile::write(m_root + u"/Shots.md"_s,
-                            u"![shot](Shots.assets/shot@2x.png) and $x$\n"_s, &error));
+    QVERIFY(notefile::write(m_root + u"/Shots.md"_s, u"![](Shots.assets/shot@2x.png) and $x$\n"_s,
+                            &error));
     QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Shots.md"_s), 3000);
     m_vault->setCurrent(u"Shots.md"_s);
     m_settings->setReadMode(true);

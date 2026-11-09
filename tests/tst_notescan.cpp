@@ -182,6 +182,9 @@ void TestNoteScan::readsAsMarkdownWithLinks()
              u"[pixel](https://tracker.example/p.png) ![map](map.png)\n"_s);
     // A target that is only an opening bracket reads as written.
     QCOMPARE(readingMarkdown(u"[x](<) ![](<)\n"_s, embed), u"[x](<) ![](<)\n"_s);
+    // An image without words is named for its file, which Qt needs to draw it.
+    QCOMPARE(readingMarkdown(u"![](Note.assets/my%20photo.png) ![kept](map.png)\n"_s, embed),
+             u"![my photo.png](Note.assets/my%20photo.png) ![kept](map.png)\n"_s);
     // A sound is a link, to play elsewhere.
     QCOMPARE(
         readingMarkdown(u"![](Notes.assets/Take%201.ogg) ![[Take.wav]] ![Mara](m.mp3)\n"_s, embed),

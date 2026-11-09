@@ -421,6 +421,12 @@ QString readingMarkdown(QStringView original,
                                         bare.section(u'/', -1).toUtf8())))});
                 else
                     changes.append({m.capturedStart(), 1, {}});
+            } else if (!m.captured(1).isEmpty() && m.captured().startsWith(u"![]("_s)) {
+                // Qt draws an image only once it reads its words, so one without any is named
+                // for its file.
+                changes.append({m.capturedStart(), 3,
+                                u"![%1]"_s.arg(escape(QUrl::fromPercentEncoding(
+                                    bare.section(u'#', 0, 0).section(u'/', -1).toUtf8())))});
             }
             rest.replace(m.capturedStart(), m.capturedLength(), QString(m.capturedLength(), u' '));
         }
