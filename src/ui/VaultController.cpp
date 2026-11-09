@@ -904,6 +904,10 @@ void VaultController::exportNote(const QString &path, const QString &format, con
                         QFileInfo(m_vault->absolute(path)).path(), work->path());
     auto *process = new QProcess(this);
     process->setProcessChannelMode(QProcess::MergedChannels);
+    QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
+    for (const QString &variable : pandocEnvironment())
+        environment.insert(variable.section(u'=', 0, 0), variable.section(u'=', 1));
+    process->setProcessEnvironment(environment);
     connect(process, &QProcess::finished, this,
             [this, process, work, output](int code, QProcess::ExitStatus status) {
                 process->deleteLater();

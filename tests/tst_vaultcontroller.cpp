@@ -878,12 +878,12 @@ void TestVaultController::exportsThroughPandoc()
     QSignalSpy exported(m_vault.get(), &VaultController::exported);
     // A Pandoc that writes what it was given into the file it was asked for.
     const QString pandoc = m_dir->filePath(u"pandoc"_s);
-    QVERIFY(
-        notefile::write(pandoc,
-                        u"#!/bin/sh\nfor a; do case $a in --output=*) out=${a#--output=};; esac;"
-                        " last=$a; done\n[ -f \"${last%/*}/manuscript.css\" ] || exit 3\n"
-                        "cat \"$last\" > \"$out\"\n"_s,
-                        &error));
+    QVERIFY(notefile::write(pandoc,
+                            u"#!/bin/sh\n[ \"$openin_any\" = p ] || exit 4\n"
+                            "for a; do case $a in --output=*) out=${a#--output=};; esac;"
+                            " last=$a; done\n[ -f \"${last%/*}/manuscript.css\" ] || exit 3\n"
+                            "cat \"$last\" > \"$out\"\n"_s,
+                            &error));
     QFile::setPermissions(pandoc, QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner);
     m_vault->setPandoc(pandoc);
     QVERIFY(m_vault->pandocFound());

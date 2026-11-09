@@ -68,6 +68,10 @@ void TestExport::asksPandocForTheLook()
     QVERIFY(args(u"odt"_s, u"manuscript"_s).contains(u"--reference-doc=/w/manuscript.odt"_s));
     QVERIFY(args(u"pdf"_s, u"manuscript"_s).contains(u"--variable=fontfamily:courier"_s));
     QVERIFY(args(u"epub"_s, u"manuscript"_s).contains(u"--css=/w/manuscript.css"_s));
+
+    // TeX, making a PDF, reads no file a note's math names outside its own folder.
+    QVERIFY(pandocEnvironment().contains(u"openin_any=p"_s));
+    QVERIFY(pandocEnvironment().contains(u"openout_any=p"_s));
 }
 
 QTEST_GUILESS_MAIN(TestExport)
