@@ -63,6 +63,7 @@ private Q_SLOTS:
     void listsHeadingsInPlaceOfAContentsMarker();
     void readingFindsTheHeadingAContentsEntryNames();
     void outlinesTheNoteBesideIt();
+    void showsTabsOverTheNote();
     void switchingAwayFromAPictureLeavesNoStalePlace();
     void formatsAndUndoesInOneStep();
     void formatsFromTheKeyboard();
@@ -575,6 +576,42 @@ void TestNoteEditor::outlinesTheNoteBesideIt()
     m_window->resize(600, 700);
     qobject_cast<QQuickItem *>(m_editor.get())->setSize(m_window->size());
     QTRY_VERIFY(!outline->isVisible());
+}
+
+void TestNoteEditor::showsTabsOverTheNote()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *tabs = find(u"noteTabs"_s);
+    QVERIFY(tabs);
+    // One note needs no tabs.
+    QVERIFY(!tabs->isVisible());
+    m_vault->openInNewTab(u"Recipes/Pancakes.md"_s);
+    QTRY_VERIFY(tabs->isVisible());
+
+    const auto tabAt = [tabs](int index) -> QQuickItem * {
+        QQuickItem *found = nullptr;
+        const std::function<void(QQuickItem *)> look = [&](QQuickItem *item) {
+            if (!found && item->objectName() == u"tab"_s && item->property("index") == index)
+                found = item;
+            for (QQuickItem *child : item->childItems())
+                look(child);
+        };
+        look(tabs);
+        return found;
+    };
+    QTRY_VERIFY(tabAt(0));
+    QTest::mouseClick(m_window.get(), Qt::LeftButton, {},
+                      tabAt(0)->mapToScene({20, tabAt(0)->height() / 2}).toPoint());
+    QTRY_COMPARE(m_vault->current(), u"Welcome.md"_s);
+
+    // Its X closes it, leaving one note and no tabs.
+    QQuickItem *close = find(u"closeTab"_s, tabAt(1));
+    QVERIFY(close);
+    QTest::qWait(QGuiApplication::styleHints()->mouseDoubleClickInterval());
+    QTest::mouseClick(m_window.get(), Qt::LeftButton, {},
+                      close->mapToScene({close->width() / 2, close->height() / 2}).toPoint());
+    QTRY_COMPARE(m_vault->tabs(), QStringList{u"Welcome.md"_s});
+    QTRY_VERIFY(!tabs->isVisible());
 }
 
 void TestNoteEditor::drawsDiagramsInPlaceOfTheirText()

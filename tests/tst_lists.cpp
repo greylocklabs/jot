@@ -45,6 +45,7 @@ private Q_SLOTS:
     void makesANotebookReadyToName();
     void dropsNotesAndNotebooksOnNotebooks();
     void noteMenuMakesATask();
+    void opensNotesInTabsFromTheList();
     void notebookMenuMakesANotebookInside();
     void notebookMenuMakesADataFile();
     void trashAsksFirst();
@@ -388,6 +389,37 @@ void TestLists::noteMenuMakesATask()
     QTRY_VERIFY(pancakes());
     click(pancakes(), Qt::RightButton);
     QTRY_VERIFY(menuEntry(u"Not a task"_s));
+}
+
+void TestLists::opensNotesInTabsFromTheList()
+{
+    const auto rowOf = [this](const QString &path) {
+        return findItem(
+            [&path](QQuickItem *item) {
+                return item->isVisible() && item->property("path").toString() == path;
+            },
+            qobject_cast<QQuickItem *>(m_noteList.get()));
+    };
+    const auto clickWith = [this](QQuickItem *item, Qt::MouseButton button,
+                                  Qt::KeyboardModifiers modifiers) {
+        QTest::mouseClick(m_window.get(), button, modifiers,
+                          item->mapToScene({item->width() / 2, item->height() / 2}).toPoint());
+    };
+    QTRY_VERIFY(rowOf(u"Recipes/Pancakes.md"_s));
+    click(rowOf(u"Recipes/Pancakes.md"_s));
+    QTRY_COMPARE(m_vault->current(), u"Recipes/Pancakes.md"_s);
+
+    QTest::qWait(QGuiApplication::styleHints()->mouseDoubleClickInterval());
+    clickWith(rowOf(u"Recipes/Sourdough.md"_s), Qt::LeftButton, Qt::ControlModifier);
+    QTRY_COMPARE(m_vault->tabs(),
+                 (QStringList{u"Recipes/Pancakes.md"_s, u"Recipes/Sourdough.md"_s}));
+    QCOMPARE(m_vault->current(), u"Recipes/Sourdough.md"_s);
+
+    QTest::qWait(QGuiApplication::styleHints()->mouseDoubleClickInterval());
+    QTRY_VERIFY(rowOf(u"Welcome.md"_s));
+    clickWith(rowOf(u"Welcome.md"_s), Qt::MiddleButton, {});
+    QTRY_COMPARE(m_vault->tabs().size(), 3);
+    QCOMPARE(m_vault->current(), u"Welcome.md"_s);
 }
 
 void TestLists::notebookMenuMakesANotebookInside()

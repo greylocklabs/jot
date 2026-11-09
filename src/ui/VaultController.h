@@ -108,6 +108,10 @@ class VaultController : public QObject
     Q_PROPERTY(int openingCursor READ openingCursor NOTIFY currentChanged)
     /// Edits not yet written to the note's file.
     Q_PROPERTY(bool unsaved READ unsaved NOTIFY unsavedChanged)
+    /// The notes open in tabs, the note shown among them at `tabIndex`. Opening a note puts
+    /// it in the tab shown, unless it is open in another already.
+    Q_PROPERTY(QStringList tabs READ tabs NOTIFY tabsChanged)
+    Q_PROPERTY(int tabIndex READ tabIndex NOTIFY tabsChanged)
     /// What went wrong with the note shown, such as a save that failed and is being
     /// retried; empty when all is well.
     Q_PROPERTY(QString problem READ problem NOTIFY problemChanged)
@@ -142,6 +146,15 @@ public:
     Q_INVOKABLE void answerLeaving(const QString &answer);
     /// Quits Jot, asking first about edits not yet written.
     Q_INVOKABLE void quit();
+    /// Opens the note at `path` in a tab of its own after the one shown, or shows its tab if
+    /// it has one.
+    Q_INVOKABLE void openInNewTab(const QString &path);
+    /// Shows the note in the tab at `index`; a tab whose note is gone closes instead.
+    Q_INVOKABLE void selectTab(int index);
+    /// Closes the tab at `index`. Closing the one shown shows the one after it, or before.
+    Q_INVOKABLE void closeTab(int index);
+    /// Shows the tab `by` places along, round from the last to the first.
+    Q_INVOKABLE void stepTab(int by);
     /// Whether leaving the note shown asks first.
     Q_INVOKABLE bool asksBeforeLeaving() const;
     /// Makes a note in the notebook shown and shows it. Gives its path.
@@ -352,6 +365,8 @@ public:
     [[nodiscard]] QString currentKind() const;
     [[nodiscard]] QString currentText() const { return m_currentText; }
     [[nodiscard]] bool unsaved() const { return m_unsaved; }
+    [[nodiscard]] QStringList tabs() const { return m_tabs; }
+    [[nodiscard]] int tabIndex() const { return m_tabIndex; }
     [[nodiscard]] QString problem() const { return m_problem; }
     [[nodiscard]] const VaultIndex *index() const { return m_index.get(); }
 
@@ -375,6 +390,7 @@ Q_SIGNALS:
     /// note shown is renamed or moved, which keeps it the same note.
     void opening();
     void unsavedChanged();
+    void tabsChanged();
     /// Leaving the note shown waits for answerLeaving(), as it has edits not yet written.
     void leavingUnsaved();
     void problemChanged();
@@ -400,6 +416,9 @@ private:
     void setUnsaved(bool unsaved);
     /// Saves after a short pause in typing, when saving is automatic.
     void saveSoon();
+    /// Puts the note shown in its tab: the one it has, or the tab shown, as when it was
+    /// renamed. Tabs whose notes are gone close.
+    void followCurrentInTabs();
     /// Keeps `before`, the text a write to the note at `path` replaces, as one of its past
     /// versions: always with `now`, otherwise once per history interval.
     void keepHistory(const QString &path, const QString &before, bool now = false);
@@ -514,6 +533,8 @@ private:
     bool m_travelling = false;
     /// What waits for leavingUnsaved() to be answered.
     std::function<void()> m_afterLeaving;
+    QStringList m_tabs;
+    int m_tabIndex = -1;
     int m_cursorPosition = 0;
     int m_openingCursor = 0;
     QTimer m_saveTimer;

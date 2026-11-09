@@ -15,6 +15,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   they change, in the editor and when reading.
 - An outline of the note's headings beside it, from the format row or Ctrl+Shift+O, marks the
   one the cursor is under and goes to any of them.
+- Tabs: a middle click or Ctrl+click on a note, or Open in a new tab from its menu, opens it in a
+  tab of its own. Ctrl+Tab and Ctrl+Shift+Tab move between tabs, and Ctrl+W closes one.
 
 ## 0.4.1 - 2026-11-07
 

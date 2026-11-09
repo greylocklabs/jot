@@ -194,6 +194,16 @@ Rectangle {
                 onTapped: eventPoint => root.showMenu(note.path, note, eventPoint.position.x,
                                                       eventPoint.position.y)
             }
+            // The middle button, or Ctrl with a click, opens the note in a tab of its own. The
+            // row's own click comes after and finds the note shown already.
+            TapHandler {
+                acceptedButtons: Qt.MiddleButton
+                onTapped: Vault.openInNewTab(note.path)
+            }
+            TapHandler {
+                acceptedModifiers: Qt.ControlModifier
+                onTapped: Vault.openInNewTab(note.path)
+            }
 
             // A note drags onto a notebook in the sidebar to move there.
             // The row itself floats under the pointer while it drags: a picture of it is
@@ -426,6 +436,10 @@ Rectangle {
         MenuEntry {
             text: qsTr("Open")
             onTriggered: Vault.current = noteMenu.path
+        }
+        MenuEntry {
+            text: qsTr("Open in a new tab")
+            onTriggered: Vault.openInNewTab(noteMenu.path)
         }
         MenuEntry {
             text: qsTr("Rename")

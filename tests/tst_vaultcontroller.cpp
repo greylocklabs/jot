@@ -57,6 +57,7 @@ private Q_SLOTS:
     void savesBeforeSwitchingNotes();
     void savesOnlyWhenAskedWithAutosaveOff();
     void asksBeforeLeavingUnsavedChanges();
+    void keepsNotesOpenInTabs();
     void keepsPastVersionsWhileEditing();
     void restoresAPastVersion();
     void saysWhenEachVersionIsFrom();
@@ -702,6 +703,60 @@ void TestVaultController::asksBeforeLeavingUnsavedChanges()
     QCOMPARE(m_vault->current(), u"Recipes/Pancakes.md"_s);
     m_vault->answerLeaving(u"discard"_s);
     QVERIFY(m_vault->current() != u"Recipes/Pancakes.md"_s);
+}
+
+void TestVaultController::keepsNotesOpenInTabs()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    QSignalSpy changed(m_vault.get(), &VaultController::tabsChanged);
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QCOMPARE(m_vault->tabs(), QStringList{u"Welcome.md"_s});
+
+    // Opening another note puts it in the tab shown.
+    m_vault->setCurrent(u"Recipes/Pancakes.md"_s);
+    QCOMPARE(m_vault->tabs(), QStringList{u"Recipes/Pancakes.md"_s});
+    QVERIFY(!changed.isEmpty());
+
+    // A new tab goes after the one shown, and shows.
+    m_vault->openInNewTab(u"Welcome.md"_s);
+    m_vault->openInNewTab(u"Recipes/Sourdough.md"_s);
+    QCOMPARE(m_vault->tabs(),
+             (QStringList{u"Recipes/Pancakes.md"_s, u"Welcome.md"_s, u"Recipes/Sourdough.md"_s}));
+    QCOMPARE(m_vault->tabIndex(), 2);
+    QCOMPARE(m_vault->current(), u"Recipes/Sourdough.md"_s);
+
+    // A note open in another tab shows that tab rather than a second one.
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QCOMPARE(m_vault->tabs().size(), 3);
+    QCOMPARE(m_vault->tabIndex(), 1);
+    m_vault->stepTab(2);
+    QCOMPARE(m_vault->current(), u"Recipes/Pancakes.md"_s);
+    m_vault->stepTab(-1);
+    QCOMPARE(m_vault->current(), u"Recipes/Sourdough.md"_s);
+
+    // A renamed note keeps its tab.
+    QVERIFY(m_vault->renameCurrent(u"Rye"_s));
+    QCOMPARE(m_vault->tabs().at(2), m_vault->current());
+    QVERIFY(m_vault->current().endsWith(u"Rye.md"_s));
+
+    // Closing the tab shown shows the one before it, at the end; closing another keeps it.
+    m_vault->closeTab(2);
+    QCOMPARE(m_vault->current(), u"Welcome.md"_s);
+    m_vault->closeTab(0);
+    QCOMPARE(m_vault->tabs(), QStringList{u"Welcome.md"_s});
+    QCOMPARE(m_vault->tabIndex(), 0);
+
+    // A tab whose note went elsewhere closes when it comes up.
+    m_vault->openInNewTab(u"Recipes/Pancakes.md"_s);
+    m_vault->selectTab(0);
+    QVERIFY(QFile::remove(m_root + u"/Recipes/Pancakes.md"_s));
+    m_vault->selectTab(1);
+    QCOMPARE(m_vault->tabs(), QStringList{u"Welcome.md"_s});
+    QCOMPARE(m_vault->current(), u"Welcome.md"_s);
+
+    m_vault->closeTab(0);
+    QVERIFY(m_vault->tabs().isEmpty());
+    QCOMPARE(m_vault->current(), QString());
 }
 
 void TestVaultController::keepsPastVersionsWhileEditing()
