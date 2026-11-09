@@ -20,9 +20,16 @@ QList<ExportFormat> exportFormats()
             {u"html"_s, QObject::tr("Web page (.html)"), u"html"_s}};
 }
 
-QString exportMarkdown(QStringView note, const std::function<QString(const QString &)> &embedPath,
-                       bool *toc)
+QString exportMarkdown(QStringView note,
+                       const std::function<QString(const QString &, bool)> &embedPath, bool *toc)
 {
+    static const QRegularExpression image(
+        uR"(!\[([^\]]*)\]\(\s*(<[^>]*>|[^\s)]+)(?:\s+"[^"]*")?\s*\))"_s);
+    static const QRegularExpression reference(uR"(^( {0,3}\[[^\]]+\]:\s*)(<[^>]*>|\S+)(.*)$)"_s);
+    static const QRegularExpression scheme(uR"(^[A-Za-z][A-Za-z0-9+.-]*:)"_s);
+    const auto bare = [](const QString &target) {
+        return target.startsWith(u'<') ? target.mid(1, target.size() - 2) : target;
+    };
     static const QRegularExpression critic(
         uR"(\{\+\+(.+?)\+\+\}|\{--(.+?)--\}|\{~~(.*?)~>(.*?)~~\}|\{==(.+?)==\}|\{>>(.*?)<<\})"_s);
     static const QRegularExpression wiki(uR"((!?)\[\[([^\[\]|]*?)(?:\|([^\[\]]*))?\]\])"_s);
@@ -56,9 +63,19 @@ QString exportMarkdown(QStringView note, const std::function<QString(const QStri
             *toc = true;
             continue;
         }
+        // A reference's path on this computer, outside the vault, is no target for Pandoc.
+        if (const QRegularExpressionMatch m = reference.match(line); m.hasMatch()) {
+            const QString target = bare(m.captured(2));
+            if (!scheme.match(target).hasMatch() && !target.startsWith(u'#')) {
+                const QString path = embedPath(target, false);
+                lines << m.captured(1) + (path.isEmpty() ? u"#"_s : u"<%1>"_s.arg(path)) +
+                             m.captured(3);
+                continue;
+            }
+        }
         // Code spans keep what is in them, so matches are found with them blanked.
         QString text = line;
-        for (const QRegularExpression *pattern : {&critic, &wiki}) {
+        for (const QRegularExpression *pattern : {&critic, &image, &wiki}) {
             static const QRegularExpression span(uR"((`+)(.+?)\1)"_s);
             QString prose = text;
             for (const QRegularExpressionMatch &m : span.globalMatch(text))
@@ -74,10 +91,15 @@ QString exportMarkdown(QStringView note, const std::function<QString(const QStri
                 if (pattern == &critic) {
                     // Edits made: what was added or put in, never what went or a comment.
                     out += part(1) + part(4) + part(5);
+                } else if (pattern == &image) {
+                    const QString target = bare(part(2));
+                    const QString path =
+                        scheme.match(target).hasMatch() ? QString() : embedPath(target, false);
+                    out += path.isEmpty() ? part(1) : u"![%1](<%2>)"_s.arg(part(1), path);
                 } else {
                     const QString target = part(2).trimmed();
                     const QString label = part(3).isEmpty() ? target : part(3).trimmed();
-                    const QString path = part(1).isEmpty() ? QString() : embedPath(target);
+                    const QString path = part(1).isEmpty() ? QString() : embedPath(target, true);
                     out += path.isEmpty() ? label : u"![%1](<%2>)"_s.arg(label, path);
                 }
                 at = m.capturedEnd();
@@ -93,7 +115,8 @@ QStringList pandocArguments(const QString &format, const QString &preset, const 
                             const QString &output, const QString &title, bool toc,
                             const QString &resources, const QString &presets)
 {
-    QStringList arguments{u"--from=markdown"_s,
+    // A note's raw TeX or HTML could have Pandoc read any file it can, so neither is let in.
+    QStringList arguments{u"--from=markdown-raw_tex-raw_html-raw_attribute"_s,
                           u"--to=%1"_s.arg(format == u"pdf"_s ? u"pdf"_s : format),
                           u"--output=%1"_s.arg(output), u"--resource-path=%1"_s.arg(resources),
                           u"--metadata=title:%1"_s.arg(title)};

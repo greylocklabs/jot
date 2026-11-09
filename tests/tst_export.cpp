@@ -16,7 +16,7 @@ private Q_SLOTS:
 
 void TestExport::writesTheNoteForPandoc()
 {
-    const auto embed = [](const QString &target) {
+    const auto embed = [](const QString &target, bool) {
         return target == u"map.png"_s ? u"/v/map.png"_s : QString();
     };
     bool toc = true;
@@ -31,6 +31,14 @@ void TestExport::writesTheNoteForPandoc()
                             embed, &toc),
              u"![map.png](</v/map.png>) gone.png\nA new dog bright\n"_s);
     QVERIFY(toc);
+    // Only pictures in the vault reach Pandoc; others, on this computer or the web, are their
+    // words, and a reference to a file outside the vault loses its path.
+    QCOMPARE(exportMarkdown(
+                 u"![Map](map.png) ![key](/home/me/.ssh/id_rsa) ![web](https://x.example/p.png)\n"
+                 "[k]: /etc/hostname\n[m]: map.png \"Map\"\n[w]: https://x.example\n"_s,
+                 embed, &toc),
+             u"![Map](</v/map.png>) key web\n[k]: #\n[m]: </v/map.png> \"Map\"\n"
+             "[w]: https://x.example\n"_s);
     // Code is left as written.
     const QString code = u"`[[not]] {++x++}`\n```\n[[Mara]] ${toc}\n~~~\n${toc}\n```\n"
                          "    [[indented]]\n"_s;
@@ -45,7 +53,8 @@ void TestExport::asksPandocForTheLook()
                                u"Ferry"_s, toc, u"/v/Places"_s, u"/w"_s);
     };
     const QStringList docx = args(u"docx"_s, u"standard"_s);
-    QCOMPARE(docx.first(), u"--from=markdown"_s);
+    // Raw TeX and HTML are never read, as they could reach the computer's files.
+    QCOMPARE(docx.first(), u"--from=markdown-raw_tex-raw_html-raw_attribute"_s);
     QVERIFY(docx.contains(u"--to=docx"_s));
     QVERIFY(docx.contains(u"--output=/out/Ferry.docx"_s));
     QVERIFY(docx.contains(u"--resource-path=/v/Places"_s));
