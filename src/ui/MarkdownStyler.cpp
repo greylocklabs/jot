@@ -6,6 +6,7 @@
 
 #include "jot/FrontMatter.h"
 #include "jot/MarkdownEdit.h"
+#include "jot/WritingStats.h"
 
 #include <QDateTime>
 #include <QTextCursor>
@@ -276,6 +277,20 @@ int MarkdownStyler::headingAt(const QVariantList &headings, int position)
         under = i;
     }
     return under;
+}
+
+QVariantMap MarkdownStyler::countOf(const QString &text)
+{
+    const TextCount count = countText(text);
+    return {{u"words"_s, count.words}, {u"characters"_s, count.characters}};
+}
+
+QVariantMap MarkdownStyler::count() const
+{
+    if (!m_document || !m_document->textDocument())
+        return countOf({});
+    const QString note = m_document->textDocument()->toPlainText();
+    return countOf(splitFrontMatter(note).body.toString());
 }
 
 QVariantList MarkdownStyler::headings() const

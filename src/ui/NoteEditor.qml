@@ -325,7 +325,8 @@ Rectangle {
             left: parent.left
             right: outline.visible ? outline.left : parent.right
             top: formatBar.visible ? formatBar.bottom : noteTabs.bottom
-            bottom: statusLine.visible ? statusLine.top : parent.bottom
+            bottom: wordCount.visible ? wordCount.top : statusLine.visible ? statusLine.top :
+                                                                             parent.bottom
         }
         visible: Vault.current !== ""
         contentWidth: width
@@ -1205,6 +1206,59 @@ Rectangle {
             Backlinks {
                 width: parent.width - 2 * parent.padding
             }
+        }
+    }
+
+    // How long the note is, or what is picked of it, against its target and the day's goal.
+    Text {
+        id: wordCount
+
+        readonly property var count: styler.count
+        readonly property int picked: body.activeFocus && body.selectedText !== "" ? styler.countOf(
+                                                                                         body.selectedText).words :
+                                                                                     -1
+        readonly property int target: Number(styler.frontMatter.target) || 0
+
+        objectName: "wordCount"
+        anchors {
+            left: parent.left
+            right: outline.visible ? outline.left : parent.right
+            bottom: statusLine.visible ? statusLine.top : parent.bottom
+        }
+        visible: Vault.current !== "" && !root.dataFile
+        topPadding: Theme.space1
+        bottomPadding: Theme.space1
+        leftPadding: Theme.space4
+        rightPadding: Theme.space4
+        horizontalAlignment: Text.AlignRight
+        elide: Text.ElideLeft
+        color: Theme.textFaint
+        font.family: Theme.fontFamily
+        font.pixelSize: Theme.textXs
+        font.features: {
+            "tnum": 1
+        }
+        text: {
+            const words = count.words.toLocaleString(Qt.locale(), "f", 0)
+            const parts = [picked >= 0 ? qsTr("%1 of %2 words").arg(picked.toLocaleString(Qt.locale(),
+                                                                                          "f", 0)).arg(
+                                             words) : count.words === 1 ? qsTr("1 word") : qsTr(
+                                                                              "%1 words").arg(
+                                                                              words)]
+            parts.push(qsTr("%1 characters").arg(count.characters.toLocaleString(Qt.locale(), "f",
+                                                                                 0)))
+
+            if (target > 0)
+                parts.push(qsTr("%1% of %2").arg(Math.floor(100 * count.words / target)).arg(
+                               target.toLocaleString(Qt.locale(), "f", 0)))
+            const today = Vault.wordsToday.toLocaleString(Qt.locale(), "f", 0)
+            parts.push(Settings.dailyWordGoal > 0 ? qsTr("today %1 of %2").arg(today).arg(Settings.dailyWordGoal.toLocaleString(
+                                                                                              Qt.locale(
+                                                                                                  ), "f", 0)) :
+                                                    qsTr("today %1").arg(today))
+            if (Vault.streak > 1)
+                parts.push(qsTr("%1 days in a row").arg(Vault.streak))
+            return parts.join(", ")
         }
     }
 

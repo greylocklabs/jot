@@ -25,6 +25,7 @@
 #include <QImageReader>
 #include <QLocale>
 #include <QRegularExpression>
+#include <QSysInfo>
 
 #include <algorithm>
 #include <utility>
@@ -45,6 +46,7 @@ VaultController::VaultController(Settings &settings, QObject *parent)
     m_saveTimer.setSingleShot(true);
     m_saveTimer.setInterval(m_saveDelay);
     connect(&m_saveTimer, &QTimer::timeout, this, &VaultController::saveNow);
+    connect(&settings, &Settings::writingChanged, this, &VaultController::statsChanged);
     connect(&settings, &Settings::autosaveChanged, this, [this] {
         if (m_settings.autosave())
             saveNow();
@@ -142,6 +144,11 @@ bool VaultController::openPath(const QString &path)
     connect(m_watcher.get(), &VaultWatcher::foldersChanged, this, &VaultController::reloadModels);
     m_watcher->start();
     m_settings.setVaultPath(m_vault->root());
+    QString computer = QSysInfo::machineHostName();
+    computer.replace(QRegularExpression(u"[^\\w.-]"_s), u"-"_s);
+    m_stats = std::make_unique<WritingStats>(m_vault->absolute(u".jot/stats"_s),
+                                             computer.isEmpty() ? u"computer"_s : computer);
+    Q_EMIT statsChanged();
     qCInfo(lcVault) << "opened" << m_vault->root() << "with" << m_index->noteCount() << "notes";
 
     if (!m_error.isEmpty()) {
@@ -179,6 +186,8 @@ void VaultController::close()
     m_tabs.clear();
     m_tabIndex = -1;
     Q_EMIT tabsChanged();
+    m_stats.reset();
+    Q_EMIT statsChanged();
     reloadTrash();
 }
 
@@ -346,6 +355,18 @@ void VaultController::moved(const QString &from, const QString &to)
         Q_EMIT tabsChanged();
 }
 
+int VaultController::wordsToday() const
+{
+    return m_stats ? m_stats->wordsOn(m_today.isValid() ? m_today : QDate::currentDate()) : 0;
+}
+
+int VaultController::streak() const
+{
+    return m_stats ? m_stats->streak(m_today.isValid() ? m_today : QDate::currentDate(),
+                                     m_settings.dailyWordGoal())
+                   : 0;
+}
+
 void VaultController::followCurrentInTabs()
 {
     const QStringList before = m_tabs;
@@ -472,6 +493,14 @@ void VaultController::saveNow()
         return;
     }
     m_saveTimer.setInterval(m_saveDelay);
+    if (m_stats && !Vault::isDataFile(m_current)) {
+        const int words = countText(splitFrontMatter(m_currentText).body).words -
+                          countText(splitFrontMatter(m_savedText).body).words;
+        if (!m_stats->add(m_today.isValid() ? m_today : QDate::currentDate(), words, &error))
+            qCWarning(lcVault) << "could not count the words written:" << error;
+        if (words != 0)
+            Q_EMIT statsChanged();
+    }
     m_savedText = m_currentText;
     setUnsaved(false);
     setProblem({});

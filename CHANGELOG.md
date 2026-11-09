@@ -20,6 +20,9 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 - Templates: notes in a Templates notebook make new notes from a notebook's menu or the command
   palette, with the title, date and time filled in. Today's note, from the palette, opens the
   day's note in a Daily notebook, made from a Daily template when there is one.
+- Word and character counts under each note, for the selection too, with progress toward a
+  `target:` in its front matter, the words written today and a daily goal's streak, set in
+  Settings.
 
 ## 0.4.1 - 2026-11-07
 
