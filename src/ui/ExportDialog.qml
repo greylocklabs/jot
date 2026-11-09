@@ -1,6 +1,5 @@
 pragma ComponentBehavior: Bound
 import Jot.Ui
-import QtCore
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs
@@ -161,8 +160,7 @@ Popup {
                     saveDialog.defaultSuffix = format.extension
                     saveDialog.nameFilters = [format.label + " (*." + format.extension + ")"]
                     // Named for the note, in Documents to begin with.
-                    saveDialog.selectedFile = StandardPaths.writableLocation(
-                                StandardPaths.DocumentsLocation) + "/" + encodeURIComponent(
+                    saveDialog.selectedFile = Vault.documentsFolder() + "/" + encodeURIComponent(
                                 Vault.titleOf(root.path)) + "." + format.extension
                     saveDialog.open()
                 }

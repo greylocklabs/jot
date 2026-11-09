@@ -18,6 +18,7 @@
 #include <QFile>
 #include <QObject>
 #include <QQmlEngine>
+#include <QStandardPaths>
 #include <QTimer>
 #include <QUrl>
 #include <QVariantMap>
@@ -179,6 +180,13 @@ public:
     Q_INVOKABLE QString newNoteFromTemplate(const QString &path);
     /// The file types a note exports as, `{id, label, extension}`.
     Q_INVOKABLE static QVariantList exportFormats();
+    /// The desktop's Documents folder, where exports go to begin with. Asked of Jot rather than
+    /// QML's QtCore, which not every desktop installs.
+    Q_INVOKABLE static QUrl documentsFolder()
+    {
+        return QUrl::fromLocalFile(
+            QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation));
+    }
     /// Whether Pandoc, which export runs, is installed.
     Q_INVOKABLE bool pandocFound() const;
     /// Writes the note at `path` to `to` as `format` with Pandoc, in the background, in
