@@ -26,6 +26,7 @@ Item {
     Text {
         id: title
 
+        objectName: "outlineTitle"
         x: Theme.space4
         y: Theme.space4
         text: qsTr("Outline")
@@ -90,7 +91,8 @@ Item {
             }
             Text {
                 anchors.fill: parent
-                leftPadding: Theme.space2 + (row.modelData.level - 1) * Theme.space4
+                // A top heading's words start under the title's, past the list's margin.
+                leftPadding: Theme.space4 - Theme.space2 + (row.modelData.level - 1) * Theme.space4
                 rightPadding: Theme.space2
                 verticalAlignment: Text.AlignVCenter
                 elide: Text.ElideRight
