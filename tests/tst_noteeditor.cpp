@@ -113,6 +113,7 @@ private Q_SLOTS:
     void showsWhereViIsAlongTheFoot();
     void keepsOneCursorAcrossViModes();
     void jumpsAlongALineInVi();
+    void flashesWhatViYanks();
     void takesTextInputOnlyInInsertMode();
     void staysQuickAndStillInALongNote();
     void composesWithAnInputMethod();
@@ -2327,6 +2328,47 @@ void TestNoteEditor::takesTextInputOnlyInInsertMode()
     QCOMPARE(takesInput(), QVariant(false));
     m_settings->setViMode(false);
     QCOMPARE(takesInput(), QVariant(true));
+}
+
+void TestNoteEditor::flashesWhatViYanks()
+{
+    m_settings->setViMode(true);
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    QTextDocument *doc =
+        body->property("textDocument").value<QQuickTextDocument *>()->textDocument();
+    body->forceActiveFocus();
+    body->setProperty("text", u"plain first line\nplain second line\n"_s);
+    body->setProperty("cursorPosition", 0);
+    QColor tint = ThemeController::instance()->accent();
+    tint.setAlphaF(0.4f);
+    // Whether the text at `position` is painted as a flash.
+    const auto flashed = [&](int position) {
+        const QTextBlock block = doc->findBlock(position);
+        const int at = position - block.position();
+        for (const QTextLayout::FormatRange &range : block.layout()->formats()) {
+            if (at >= range.start && at < range.start + range.length &&
+                range.format.background().color() == tint)
+                return true;
+        }
+        return false;
+    };
+
+    // yy flashes the line, and only it, then the flash goes.
+    QTest::keyClick(m_window.get(), 'y');
+    QTest::keyClick(m_window.get(), 'y');
+    QTRY_VERIFY(flashed(3));
+    QVERIFY(!flashed(20));
+    QTRY_VERIFY_WITH_TIMEOUT(!flashed(3), 2000);
+
+    // So does a selection yanked in visual mode.
+    body->setProperty("cursorPosition", 17);
+    for (const char key : QByteArrayView("vwy"))
+        QTest::keyClick(m_window.get(), key);
+    QTRY_VERIFY(flashed(18));
+    QVERIFY(!flashed(3));
+    QTRY_VERIFY_WITH_TIMEOUT(!flashed(18), 2000);
+    m_settings->setViMode(false);
 }
 
 void TestNoteEditor::jumpsAlongALineInVi()

@@ -55,6 +55,8 @@ public:
 Q_SIGNALS:
     /// Escape in normal mode: the keyboard is done with the note.
     void leaveRequested();
+    /// The text from `start` to `end` was yanked, to flash it.
+    void yanked(int start, int end);
     void targetChanged();
     void routerChanged();
     void enabledChanged();

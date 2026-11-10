@@ -1038,6 +1038,7 @@ Rectangle {
                     enabled: Settings.viMode
                     busy: linkPopup.visible
                     onLeaveRequested: root.leftNote()
+                    onYanked: (start, end) => styler.flash(start, end)
                 }
 
                 // The text is read for a table once typing pauses, so Edit as table can say

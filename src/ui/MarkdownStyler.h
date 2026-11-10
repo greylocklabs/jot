@@ -130,6 +130,9 @@ public:
 
     /// Puts `text` in place of what is from `start` to `end`, as one step to undo.
     Q_INVOKABLE void replace(int start, int end, const QString &text);
+    /// Paints the text from `start` to `end` in the selection's color for half a second, as
+    /// vi does to what it yanked.
+    Q_INVOKABLE void flash(int start, int end);
 
 Q_SIGNALS:
     void documentChanged();
@@ -172,6 +175,8 @@ private:
     /// Widths settle before images are fitted again, so a window being resized does
     /// not restyle the note on every frame.
     QTimer *m_widthSettle = nullptr;
+    /// Ends a yank's flash.
+    QTimer *m_flashEnd = nullptr;
 };
 
 } // namespace jot
