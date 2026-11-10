@@ -45,6 +45,9 @@ void TestExport::writesTheNoteForPandoc()
                        "![e](/etc/e \"unclosed) ![[map.png]]\n"_s,
                        embed, &toc),
         u"a b c ![d](</v/map.png>)\n[e](/etc/e \"unclosed) ![map.png](</v/map.png>)\n"_s);
+    // A footnote is no reference: its words stay.
+    QCOMPARE(exportMarkdown(u"See[^1].\n\n[^1]: Some words here.\n"_s, embed, &toc),
+             u"See[^1].\n\n[^1]: Some words here.\n"_s);
     // Code is left as written.
     const QString code = u"`[[not]] {++x++}`\n```\n[[Mara]] ${toc}\n~~~\n${toc}\n```\n"
                          "    [[indented]]\n"_s;
