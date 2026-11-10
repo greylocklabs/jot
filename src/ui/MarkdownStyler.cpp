@@ -24,8 +24,15 @@ using namespace Qt::StringLiterals;
 
 namespace jot {
 
-MarkdownStyler::MarkdownStyler(QObject *parent) : QObject(parent), m_widthSettle(new QTimer(this))
+MarkdownStyler::MarkdownStyler(QObject *parent)
+    : QObject(parent), m_widthSettle(new QTimer(this)), m_flashEnd(new QTimer(this))
 {
+    m_flashEnd->setSingleShot(true);
+    m_flashEnd->setInterval(500);
+    connect(m_flashEnd, &QTimer::timeout, this, [this] {
+        if (m_highlighter)
+            m_highlighter->setFlash(-1, -1);
+    });
     m_widthSettle->setSingleShot(true);
     m_widthSettle->setInterval(150);
     connect(m_widthSettle, &QTimer::timeout, this, &MarkdownStyler::applyLook);
@@ -139,6 +146,14 @@ void MarkdownStyler::readFrontMatter()
         return;
     m_frontMatter = keys;
     Q_EMIT frontMatterChanged();
+}
+
+void MarkdownStyler::flash(int start, int end)
+{
+    if (!m_highlighter)
+        return;
+    m_highlighter->setFlash(start, end);
+    m_flashEnd->start();
 }
 
 void MarkdownStyler::replace(int start, int end, const QString &text)

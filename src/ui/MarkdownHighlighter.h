@@ -125,6 +125,9 @@ public:
     /// Works out the paragraph focus mode lights again, as after an edit, which can join or
     /// part paragraphs with the cursor where it was.
     void refreshFocus();
+    /// Paints the text from `start` to `end` in the selection's color, as after a yank, or
+    /// nothing when `end` is not past `start`.
+    void setFlash(int start, int end);
     /// Folds CriticMarkup comments away, for the margin to show, but on the cursor's line.
     void setFoldComments(bool fold);
     /// Underlines words of prose `speller` does not know; none when it is null.
@@ -194,6 +197,8 @@ private:
     bool m_source = false;
     bool m_focus = false;
     bool m_foldComments = false;
+    /// The text painted after a yank, `{start, end}` in the document, or -1s.
+    std::pair<int, int> m_flash{-1, -1};
     const Sonnet::Speller *m_speller = nullptr;
     /// The first and last blocks of the paragraph the cursor is in, for focus mode.
     std::pair<int, int> m_paragraph{-1, -1};

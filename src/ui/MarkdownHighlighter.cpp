@@ -357,6 +357,22 @@ void MarkdownHighlighter::setFoldComments(bool fold)
     rehighlight();
 }
 
+void MarkdownHighlighter::setFlash(int start, int end)
+{
+    QTextDocument *doc = document();
+    if (!doc)
+        return;
+    const std::pair<int, int> before = m_flash;
+    m_flash = end > start ? std::pair{start, end} : std::pair{-1, -1};
+    // The lines painted before and now, drawn again.
+    for (const auto &[from, to] : {before, m_flash}) {
+        if (to <= from)
+            continue;
+        rehighlightRange({doc->findBlock(from).blockNumber(),
+                          doc->findBlock(std::min(to, doc->characterCount() - 1)).blockNumber()});
+    }
+}
+
 void MarkdownHighlighter::setFocusMode(bool focus)
 {
     if (m_focus == focus)
@@ -400,6 +416,19 @@ void MarkdownHighlighter::mark(int start, int length)
 void MarkdownHighlighter::highlightBlock(const QString &text)
 {
     styleBlock(text);
+    // A yank's flash, over whatever the line is styled as.
+    if (m_flash.second > m_flash.first) {
+        const int at = currentBlock().position();
+        const int start = std::max(m_flash.first - at, 0);
+        const int end = std::min(m_flash.second - at, int(text.size()));
+        if (end > start) {
+            QTextCharFormat flash;
+            QColor tint = m_look.accent;
+            tint.setAlphaF(0.4f);
+            flash.setBackground(tint);
+            merge(start, end - start, flash);
+        }
+    }
     const int number = currentBlock().blockNumber();
     if (!m_focus || m_paragraph.first < 0 ||
         (number >= m_paragraph.first && number <= m_paragraph.second))

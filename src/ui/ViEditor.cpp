@@ -380,6 +380,7 @@ bool ViEditor::run(const QString &id)
         setCursor(edit.position());
     } else if (id == u"copyLine") {
         keep(block.text() + u'\n', true);
+        Q_EMIT yanked(block.position(), blockEnd);
     } else if (id == u"pasteAfter" || id == u"pasteBefore") {
         if (writable())
             paste(id == u"pasteAfter");
@@ -392,7 +393,10 @@ bool ViEditor::run(const QString &id)
     } else if (id == u"copySelection" || id == u"cutSelection") {
         const bool cut = id == u"cutSelection" && writable();
         const int start = m_target->property("selectionStart").toInt();
+        const int end = m_target->property("selectionEnd").toInt();
         QMetaObject::invokeMethod(m_target, cut ? "cut" : "copy");
+        if (!cut)
+            Q_EMIT yanked(start, end);
         m_lines.clear();
         setMode(kNormal);
         setCursor(start);

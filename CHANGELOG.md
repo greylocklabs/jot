@@ -10,6 +10,7 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 - The notebooks and the note list put themselves away as the window narrows, the notebooks first,
   and come back as it widens. A button at the left of the title bar, or Ctrl+\, puts them away or
   brings them back by hand.
+- In vi mode, what a yank takes flashes in the selection's color for half a second.
 
 ### Changed
 
