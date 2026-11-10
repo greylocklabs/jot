@@ -36,6 +36,26 @@
   </categories>
 
   <releases>
+    <release version="0.5.0" date="2026-11-09">
+      <description>
+        <ul>
+          <li>A setting to save notes only on Ctrl+S instead of as you type. A dot by the title marks changes not yet saved, and Jot asks before leaving a note or quitting with any.</li>
+          <li>Typing a colon and part of an emoji's name, as :fox, offers matching emoji to put in, chosen with the arrows and Return like wikilinks.</li>
+          <li>A ${toc} line, as Joplin writes it, shows the note's headings as links, kept up to date as they change, in the editor and when reading.</li>
+          <li>An outline of the note's headings beside it, from the format row or Ctrl+Shift+O, marks the one the cursor is under and goes to any of them.</li>
+          <li>Tabs: a middle click or Ctrl+click on a note, or Open in a new tab from its menu, opens it in a tab of its own. Ctrl+Tab and Ctrl+Shift+Tab move between tabs, and Ctrl+W closes one.</li>
+          <li>Templates: notes in a Templates notebook make new notes from a notebook's menu or the command palette, with the title, date and time filled in. Today's note, from the palette, opens the day's note in a Daily notebook, made from a Daily template when there is one.</li>
+          <li>Word and character counts under each note, for the selection too, with progress toward a target: in its front matter, the words written today and a daily goal's streak, set in Settings.</li>
+          <li>Focus mode fades all but the paragraph being written, typewriter scrolling keeps its line in the middle of the window, and F11 goes fullscreen with only the note.</li>
+          <li>CriticMarkup edits show as additions and deletions, and its comments as notes in the margin beside their lines, where the window has room.</li>
+          <li>Export a note to DOCX, ODT, PDF, ePub or HTML through Pandoc, from its menu or the command palette, in Pandoc's own look or standard manuscript format (Shunn).</li>
+          <li>Spellcheck underlines words the dictionary does not know, with suggestions on a right click, in the desktop's language, a vault's or a note's own.</li>
+          <li>Record from the microphone into a note, from the format row or the command palette. A sound embedded on a line of its own plays there.</li>
+          <li>LaTeX math, $...$ in a line and $$ on lines of their own, is drawn off the cursor's line and when reading, through MicroTeX.</li>
+          <li>Pictures added by dropping or pasting a file show when reading the note.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.4.1" date="2026-11-07">
       <description>
         <ul>
