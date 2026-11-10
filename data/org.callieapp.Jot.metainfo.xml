@@ -36,6 +36,21 @@
   </categories>
 
   <releases>
+    <release version="0.5.1" date="2026-11-09">
+      <description>
+        <ul>
+          <li>Source mode highlights the Markdown as written: heading, list and task marks, emphasis, links, front matter, and code by its language, with every mark shown and nothing resized.</li>
+          <li>A sound embedded on a line of its own plays in place in Read mode, as in the editor.</li>
+          <li>A notebook can have a word target and a deadline, set from its menu. Under its notes, the footer shows the words so far and how many a day it takes to make the deadline.</li>
+          <li>Settings has Writing and Reminders tabs, so each tab fits without scrolling.</li>
+          <li>Exporting a note keeps the first word of each footnote.</li>
+          <li>Restore is off, saying why, for a past version the same as the note now.</li>
+          <li>The outline's headings line up under its title.</li>
+          <li>Read mode draws checkboxes like the rest of Jot's, with ticked tasks struck through.</li>
+          <li>On a narrow window the format row moves its switches below the formatting buttons instead of piling the buttons into a column, and a long notes folder name is cut short in the title bar.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.5.0" date="2026-11-09">
       <description>
         <ul>
