@@ -9,6 +9,7 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 - Source mode highlights the Markdown as written: heading, list and task marks, emphasis, links,
   front matter, and code by its language, with every mark shown and nothing resized.
+- A sound embedded on a line of its own plays in place in Read mode, as in the editor.
 
 ### Changed
 

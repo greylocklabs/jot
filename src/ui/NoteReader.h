@@ -25,6 +25,9 @@ class NoteReader : public QObject
     Q_PROPERTY(int pixelSize READ pixelSize WRITE setPixelSize NOTIFY changed)
     /// The width of the text, which images fit within.
     Q_PROPERTY(int width READ width WRITE setWidth NOTIFY changed)
+    /// The sounds embedded on lines of their own, each `{position, source, width, height}`: where
+    /// in the document the room kept for its player is, and the file it plays.
+    Q_PROPERTY(QVariantList sounds READ sounds NOTIFY soundsChanged)
 
 public:
     explicit NoteReader(QObject *parent = nullptr);
@@ -39,6 +42,7 @@ public:
     void setPixelSize(int size);
     [[nodiscard]] int width() const { return m_width; }
     void setWidth(int width);
+    [[nodiscard]] QVariantList sounds() const { return m_sounds; }
 
     /// The checkbox task drawn at `position`: `{line, done, text, textStart}`, with its line in
     /// the note's file and where its text starts after the box, or empty when there is none there.
@@ -52,6 +56,7 @@ public:
 
 Q_SIGNALS:
     void changed();
+    void soundsChanged();
 
 private:
     void schedule();
@@ -59,6 +64,7 @@ private:
     void style();
     void drawTasks();
     void placeImages();
+    void placeSounds();
 
     QPointer<QQuickTextDocument> m_document;
     QString m_text;
@@ -75,6 +81,7 @@ private:
     };
     QList<Task> m_tasks;
     QList<int> m_taskBlocks;
+    QVariantList m_sounds;
 };
 
 } // namespace jot

@@ -219,6 +219,7 @@ void NoteReader::render()
 
     style();
     placeImages();
+    placeSounds();
 }
 
 int NoteReader::headingPosition(int index) const
@@ -480,6 +481,63 @@ void NoteReader::copy(int start, int end) const
     QString text = selection.selection().toPlainText();
     text.remove(QChar::ObjectReplacementCharacter);
     QGuiApplication::clipboard()->setText(text);
+}
+
+void NoteReader::placeSounds()
+{
+    QTextDocument *doc = m_document->textDocument();
+    const VaultController *vault = VaultController::instance();
+    QVariantList sounds;
+    // The player is as wide as an image can be, at most 420, and as tall as in the editor.
+    const QSize room(std::min(m_width, 420), 2 * m_pixelSize + 16);
+    for (QTextBlock block = doc->begin(); block.isValid(); block = block.next()) {
+        // A line of its own: one sound's link and nothing else.
+        QString href;
+        bool alone = true;
+        for (auto it = block.begin(); !it.atEnd() && alone; ++it) {
+            const QTextFragment fragment = it.fragment();
+            const QString link = fragment.charFormat().anchorHref();
+            if (link.isEmpty())
+                alone = fragment.text().trimmed().isEmpty();
+            else if (href.isEmpty() || href == link)
+                href = link;
+            else
+                alone = false;
+        }
+        const bool wiki = href.startsWith(u"jot-wiki-sound:"_s);
+        if (!alone || !(wiki || href.startsWith(u"jot-sound:"_s)) || !vault)
+            continue;
+        const QString target = QUrl::fromPercentEncoding(href.section(u':', 1).toUtf8());
+        const QUrl beside = doc->baseUrl().resolved(QUrl(target));
+        const QString path =
+            !wiki && beside.isLocalFile() && QFileInfo::exists(beside.toLocalFile())
+                ? beside.toLocalFile()
+                : vault->attachmentPath(target, wiki);
+        if (path.isEmpty())
+            continue;
+        // The line keeps the player's room with a clear picture in place of the link.
+        const QString name = u"jot-sound-room:%1x%2"_s.arg(room.width()).arg(room.height());
+        if (doc->resource(QTextDocument::ImageResource, QUrl(name)).isNull()) {
+            QImage clear(room, QImage::Format_ARGB32_Premultiplied);
+            clear.fill(Qt::transparent);
+            doc->addResource(QTextDocument::ImageResource, QUrl(name), clear);
+        }
+        QTextCursor line(block);
+        line.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
+        QTextImageFormat format;
+        format.setName(name);
+        format.setWidth(room.width());
+        format.setHeight(room.height());
+        line.insertImage(format);
+        sounds.append(QVariantMap{{u"position"_s, block.position()},
+                                  {u"source"_s, QUrl::fromLocalFile(path)},
+                                  {u"width"_s, room.width()},
+                                  {u"height"_s, room.height()}});
+    }
+    if (sounds != m_sounds) {
+        m_sounds = sounds;
+        Q_EMIT soundsChanged();
+    }
 }
 
 QVariantMap NoteReader::taskAt(int position) const
