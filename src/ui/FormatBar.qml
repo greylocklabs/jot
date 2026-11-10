@@ -162,7 +162,7 @@ Rectangle {
 
                 objectName: "recordButton"
                 enabled: root.canRecord
-                label: root.recording ? qsTr("Stop") : qsTr("Rec")
+                glyph: root.recording ? "stop" : "mic"
                 format: "record"
                 tip: root.recording ? qsTr("Stop recording") : qsTr("Record from the microphone")
             }

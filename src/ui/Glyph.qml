@@ -5,7 +5,7 @@ import QtQuick
 /// A small line icon drawn from rounded bars, so icons need no image files and
 /// take the text color: chevron-left, chevron-right, chevron-down, minimize, maximize,
 /// restore, close, check, plus, refresh, bell, search, settings, menu, video, more,
-/// list-bullet, list-number, task, quote, table, pin, trash, note, braces or clock.
+/// list-bullet, list-number, task, quote, table, pin, trash, note, braces, clock, mic or stop.
 Item {
     id: root
 
@@ -118,6 +118,8 @@ Item {
                               "video": videoShape,
                               "braces": bracesShape,
                               "clock": clockShape,
+                              "mic": micShape,
+                              "stop": stopShape,
                               "maximize": frameShape,
                               "restore": frameShape
                           })[root.name] ?? null
@@ -376,6 +378,63 @@ Item {
                     y: root.height * modelData[3] - height / 2
                     rotation: modelData[1]
                 }
+            }
+        }
+    }
+
+    // A microphone: its head, the cradle around it, and the stand.
+    Component {
+        id: micShape
+
+        Canvas {
+            id: mic
+            antialiasing: true
+            onPaint: {
+                const ctx = getContext("2d")
+                ctx.reset()
+                const w = width, h = height, s = root.stroke
+                ctx.strokeStyle = root.color
+                ctx.lineWidth = s
+                ctx.lineCap = "round"
+                ctx.lineJoin = "round"
+                // The head, a capsule.
+                const r = w * 0.16
+                ctx.beginPath()
+                ctx.arc(w * 0.5, h * 0.06 + r, r, Math.PI, 0)
+                ctx.lineTo(w * 0.5 + r, h * 0.52 - r)
+                ctx.arc(w * 0.5, h * 0.52 - r, r, 0, Math.PI)
+                ctx.closePath()
+                ctx.stroke()
+                // The cradle, the stem and the foot.
+                ctx.beginPath()
+                ctx.arc(w * 0.5, h * 0.42, w * 0.3, 0, Math.PI)
+                ctx.moveTo(w * 0.5, h * 0.72)
+                ctx.lineTo(w * 0.5, h * 0.92)
+                ctx.moveTo(w * 0.32, h * 0.92)
+                ctx.lineTo(w * 0.68, h * 0.92)
+                ctx.stroke()
+            }
+
+            Connections {
+                target: root
+                function onColorChanged() {
+                    mic.requestPaint()
+                }
+            }
+        }
+    }
+
+    // A filled square, to stop.
+    Component {
+        id: stopShape
+
+        Item {
+            Rectangle {
+                anchors.centerIn: parent
+                width: parent.width * 0.64
+                height: width
+                radius: root.stroke
+                color: root.color
             }
         }
     }

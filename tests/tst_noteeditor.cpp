@@ -76,6 +76,7 @@ private Q_SLOTS:
     void outlinesTheNoteBesideIt();
     void showsTabsOverTheNote();
     void countsTheNotesWords();
+    void recordsUnderAMicrophone();
     void fadesAllButTheParagraphInFocusMode();
     void keepsTheLineInTheMiddleForTypewriterScrolling();
     void showsOnlyTheNoteWhenDistractionFree();
@@ -655,6 +656,26 @@ void TestNoteEditor::showsTabsOverTheNote()
                       close->mapToScene({close->width() / 2, close->height() / 2}).toPoint());
     QTRY_COMPARE(m_vault->tabs(), QStringList{u"Welcome.md"_s});
     QTRY_VERIFY(!tabs->isVisible());
+}
+
+void TestNoteEditor::recordsUnderAMicrophone()
+{
+    // The record button shows a microphone, drawn rather than spelled out.
+    QQuickItem *record = find(u"recordButton"_s);
+    QVERIFY(record);
+    QCOMPARE(record->property("glyph").toString(), u"mic"_s);
+    QCOMPARE(record->property("label").toString(), QString());
+    const std::function<bool(QQuickItem *)> drawn = [&drawn](QQuickItem *at) {
+        for (QQuickItem *child : at->childItems()) {
+            if (QString::fromLatin1(child->metaObject()->className()).contains(u"Canvas"_s) &&
+                child->isVisible() && child->width() > 0)
+                return true;
+            if (drawn(child))
+                return true;
+        }
+        return false;
+    };
+    QTRY_VERIFY(drawn(record));
 }
 
 void TestNoteEditor::countsTheNotesWords()
