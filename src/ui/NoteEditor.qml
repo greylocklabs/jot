@@ -742,6 +742,10 @@ Rectangle {
                     if (event.key === Qt.Key_Slash && event.modifiers === Qt.ControlModifier) {
                         root.format("source", "")
                         event.accepted = true
+                    } else if (event.matches(StandardKey.Copy) && reader.selectedText !== "") {
+                        // Without the characters standing in for task boxes and pictures.
+                        reading.copy(reader.selectionStart, reader.selectionEnd)
+                        event.accepted = true
                     }
                 }
 

@@ -24,6 +24,7 @@
 #include <QSignalSpy>
 #include <QStyleHints>
 
+#include <QClipboard>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QTextBlock>
@@ -1374,6 +1375,14 @@ void TestNoteEditor::readsTheNoteWithLinksAndBoxesToTick()
     }
     QVERIFY(unticked());
     QTRY_COMPARE(drawnBox(u"Patch the hull"_s), u"jot-task:open"_s);
+    // Copied, the boxes leave nothing behind in the text.
+    reader->forceActiveFocus();
+    QMetaObject::invokeMethod(reader, "selectAll");
+    QTest::keySequence(m_window.get(), QKeySequence::Copy);
+    const QString copied = QGuiApplication::clipboard()->text();
+    QVERIFY2(copied.contains(u"\nBuy rope"_s) && copied.contains(u"\nPatch the hull"_s),
+             qPrintable(copied));
+    QVERIFY(!copied.contains(QChar::ObjectReplacementCharacter));
 
     // Its links lead to the note, and to the tag's notes.
     QMetaObject::invokeMethod(reader, "linkActivated", Q_ARG(QString, u"jot-tag:ferry"_s));
