@@ -423,18 +423,7 @@ void MarkdownHighlighter::styleBlock(const QString &text)
     setCurrentBlockUserData(nullptr);
 
     if (m_source) {
-        QTextCharFormat mono;
-        mono.setFontFamilies({m_look.monoFamily.isEmpty() ? u"monospace"_s : m_look.monoFamily});
-        setFormat(0, int(text.size()), mono);
-        // Still knows code and front matter, so clicks there tick and follow nothing.
-        const QString trimmed = text.trimmed();
-        const bool fence = fencePattern().match(text).hasMatch();
-        if (first && (text == u"---" || text == u"\ufeff---"))
-            setCurrentBlockState(InFrontMatter);
-        else if (state == InFrontMatter && trimmed != u"---" && trimmed != u"...")
-            setCurrentBlockState(InFrontMatter);
-        else if (state != InFrontMatter && (state == InFence ? !fence : fence))
-            setCurrentBlockState(InFence);
+        sourceBlock(text, state, first);
         return;
     }
 
@@ -570,6 +559,103 @@ void MarkdownHighlighter::styleBlock(const QString &text)
     inlineStyles(text, from);
 }
 
+void MarkdownHighlighter::sourceBlock(const QString &text, int state, bool first)
+{
+    // Every mark shows, faded, and nothing changes size, so the text lines up as written.
+    m_cursorHere = true;
+    QTextCharFormat mono;
+    mono.setFontFamilies({m_look.monoFamily.isEmpty() ? u"monospace"_s : m_look.monoFamily});
+    setFormat(0, int(text.size()), mono);
+    QTextCharFormat faint;
+    faint.setForeground(m_look.faint);
+    QTextCharFormat accent;
+    accent.setForeground(m_look.accent);
+    accent.setFontWeight(m_look.boldWeight);
+
+    const QString trimmed = text.trimmed();
+    if (first && (text == u"---" || text == u"\ufeff---")) {
+        merge(0, int(text.size()), faint);
+        setCurrentBlockState(InFrontMatter);
+        return;
+    }
+    if (state == InFrontMatter) {
+        merge(0, int(text.size()), faint);
+        if (trimmed != u"---" && trimmed != u"...")
+            setCurrentBlockState(InFrontMatter);
+        return;
+    }
+
+    const QRegularExpressionMatch fence = fencePattern().match(text);
+    if (state == InFence || fence.hasMatch()) {
+        if (fence.hasMatch()) {
+            merge(0, int(text.size()), faint);
+            if (state != InFence) {
+                auto *line = new CodeHighlighter::Line;
+                line->language = fence.captured(2);
+                setCurrentBlockState(fenceState(line->language, line->state));
+                setCurrentBlockUserData(line);
+            }
+            return;
+        }
+        const auto *above =
+            dynamic_cast<const CodeHighlighter::Line *>(currentBlock().previous().userData());
+        auto *line = new CodeHighlighter::Line;
+        if (above) {
+            line->language = above->language;
+            line->state = above->state;
+        }
+        for (const CodeHighlighter::Span &span :
+             m_code->highlight(text, line->language, line->state))
+            merge(span.start, span.length, span.format);
+        setCurrentBlockState(fenceState(line->language, line->state));
+        setCurrentBlockUserData(line);
+        return;
+    }
+
+    static const QRegularExpression heading(uR"(^(#{1,6})(\s+|$))"_s);
+    static const QRegularExpression quote(uR"(^(\s*>\s?)+)"_s);
+    static const QRegularExpression rule(uR"(^\s*([-*_])(\s*\1){2,}\s*$)"_s);
+    int from = 0;
+    if (const QRegularExpressionMatch m = heading.match(text); m.hasMatch()) {
+        QTextCharFormat bold;
+        bold.setFontWeight(m_look.boldWeight);
+        merge(0, int(text.size()), bold);
+        merge(0, int(m.capturedLength(1)), accent);
+        from = int(m.capturedLength());
+    } else if (rule.match(text).hasMatch()) {
+        merge(0, int(text.size()), faint);
+        return;
+    } else if (trimmed.startsWith(u'|')) {
+        for (qsizetype i = text.indexOf(u'|'); i >= 0; i = text.indexOf(u'|', i + 1))
+            merge(int(i), 1, faint);
+        static const QRegularExpression delimiter(uR"(^\s*\|[\s:|-]*$)"_s);
+        if (delimiter.match(text).hasMatch()) {
+            merge(0, int(text.size()), faint);
+            return;
+        }
+    } else if (const QRegularExpressionMatch m = quote.match(text); m.hasMatch()) {
+        QTextCharFormat quoted;
+        quoted.setForeground(m_look.muted);
+        quoted.setFontItalic(true);
+        merge(0, int(text.size()), quoted);
+        merge(0, int(m.capturedLength()), accent);
+        from = int(m.capturedLength());
+    } else if (const QRegularExpressionMatch m = listPattern().match(text); m.hasMatch()) {
+        merge(int(m.capturedStart(2)), int(m.capturedLength(2)), accent);
+        from = int(m.capturedEnd(3));
+        if (m.capturedLength(4) > 0) {
+            merge(int(m.capturedStart(4)), int(m.capturedEnd(6) - m.capturedStart(4)), accent);
+            from = int(m.capturedEnd());
+            if (m.captured(5) != u" ") {
+                QTextCharFormat done = faint;
+                done.setFontStrikeOut(true);
+                merge(from, int(text.size()) - from, done);
+            }
+        }
+    }
+    inlineStyles(text, from);
+}
+
 QList<std::pair<int, int>> MarkdownHighlighter::criticStyles(const QString &text, int from)
 {
     QList<std::pair<int, int>> comments;
@@ -634,7 +720,8 @@ QList<std::pair<int, int>> MarkdownHighlighter::criticStyles(const QString &text
         merge(int(m.capturedStart(1)), int(m.capturedLength(1)), aside);
         mark(int(m.capturedEnd(1)), 3);
     }
-    if (Inlines *data = found.isEmpty() ? nullptr : inlines())
+    // Source mode leaves comments in the text, out of the margin.
+    if (Inlines *data = found.isEmpty() || m_source ? nullptr : inlines())
         data->comments = found;
     return comments;
 }

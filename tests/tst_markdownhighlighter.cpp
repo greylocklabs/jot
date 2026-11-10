@@ -237,13 +237,39 @@ void TestMarkdownHighlighter::sourceModeShowsTheMarkdownAsWritten()
     setText(u"# Title\nSome **bold** text.\n"_s);
     QCOMPARE(formatAt(find(u"**bold"_s)).foreground().color(), QColor(Qt::transparent));
 
+    // Highlighted, with every mark shown, faded or colored, and nothing resized.
     m_highlighter->setSourceMode(true);
     const QTextCharFormat mark = formatAt(find(u"**bold"_s));
     QCOMPARE(mark.fontFamilies().toStringList(), QStringList{u"Mono Sample"_s});
     QVERIFY(!mark.hasProperty(QTextFormat::FontPixelSize));
-    QVERIFY(!mark.hasProperty(QTextFormat::ForegroundBrush));
+    QCOMPARE(mark.foreground().color(), m_look.faint);
+    QCOMPARE(formatAt(find(u"bold"_s)).fontWeight(), m_look.boldWeight);
+    QCOMPARE(formatAt(find(u"# "_s)).foreground().color(), m_look.accent);
+    QVERIFY(!formatAt(find(u"# "_s)).hasProperty(QTextFormat::FontPixelSize));
     QVERIFY(!formatAt(find(u"Title"_s)).hasProperty(QTextFormat::FontPixelSize));
-    QVERIFY(formatAt(find(u"bold"_s)).fontWeight() != m_look.boldWeight);
+    QCOMPARE(formatAt(find(u"Title"_s)).fontFamilies().toStringList(),
+             QStringList{u"Mono Sample"_s});
+    setText(u"See [the ferry](Ferry.md) and [[Mara|her]].\n- [x] done\n> said\n"
+            u"```cpp\nreturn 42;\n```\n"_s);
+    QCOMPARE(formatAt(find(u"the ferry"_s)).foreground().color(), m_look.accent);
+    QCOMPARE(formatAt(find(u"Ferry.md"_s)).foreground().color(), m_look.faint);
+    QCOMPARE(formatAt(find(u"Mara|"_s)).foreground().color(), m_look.faint);
+    QCOMPARE(formatAt(find(u"her]"_s)).foreground().color(), m_look.accent);
+    QCOMPARE(formatAt(find(u"[x]"_s)).foreground().color(), m_look.accent);
+    QVERIFY(formatAt(find(u"done"_s)).fontStrikeOut());
+    QCOMPARE(formatAt(find(u"> said"_s)).foreground().color(), m_look.accent);
+    QCOMPARE(formatAt(find(u"```cpp"_s)).foreground().color(), m_look.faint);
+    QCOMPARE(formatAt(find(u"return"_s)).foreground().color(), m_look.code.keyword);
+    QCOMPARE(formatAt(find(u"return"_s)).fontFamilies().toStringList(),
+             QStringList{u"Mono Sample"_s});
+    for (const QString &line : m_document->toPlainText().split(u'\n')) {
+        const int at = find(line);
+        for (int i = 0; i < line.size(); ++i)
+            QVERIFY2(formatAt(at + i).foreground().color().alpha() > 0 &&
+                         !formatAt(at + i).hasProperty(QTextFormat::FontPixelSize),
+                     qPrintable(line));
+    }
+    setText(u"# Title\nSome **bold** text.\n"_s);
 
     m_highlighter->setSourceMode(false);
     QCOMPARE(formatAt(find(u"**bold"_s)).foreground().color(), QColor(Qt::transparent));

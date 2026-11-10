@@ -5,6 +5,11 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ## Unreleased
 
+### Added
+
+- Source mode highlights the Markdown as written: heading, list and task marks, emphasis, links,
+  front matter, and code by its language, with every mark shown and nothing resized.
+
 ### Changed
 
 - Settings has Writing and Reminders tabs, so each tab fits without scrolling.
