@@ -36,6 +36,18 @@
   </categories>
 
   <releases>
+    <release version="0.5.2" date="2026-11-10">
+      <description>
+        <ul>
+          <li>The notebooks and the note list put themselves away as the window narrows, the notebooks first, and come back as it widens. A button at the left of the title bar, or Ctrl+, puts them away or brings them back by hand.</li>
+          <li>In vi mode, what a yank takes flashes in the selection's color for half a second.</li>
+          <li>In vi mode, f, F, t and T reach past the line, as in flash.nvim: the character's other matches that way are marked, and pressing f, F, t or T again steps on or back through them.</li>
+          <li>The format row's record button is a microphone, and a stop square while recording.</li>
+          <li>Formatting buttons that do not fit the format row go into a more menu at its end, instead of wrapping onto more lines.</li>
+          <li>On a narrow note, Delete becomes a trash can and the title gets a little smaller as needed, so the title keeps its words whole.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.5.1" date="2026-11-09">
       <description>
         <ul>
