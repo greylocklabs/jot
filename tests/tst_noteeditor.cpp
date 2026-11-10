@@ -900,6 +900,38 @@ void TestNoteEditor::playsSoundsWhereTheyAreEmbedded()
     // On its own line, the link shows again, to edit.
     body->setProperty("cursorPosition", int(text.indexOf(u"Welcome.assets"_s)));
     QTRY_COMPARE(players().size(), 0);
+
+    // Read, it plays in place too, between the lines around it; a sound only linked to, or
+    // sharing its line, stays a link.
+    body->setProperty("text",
+                      text + u"\nHear [it](Welcome.assets/Take%201.wav) and ![[Take 1.wav]]\n"_s);
+    m_settings->setReadMode(true);
+    QQuickItem *reader = find(u"reader"_s);
+    QTRY_VERIFY(reader->isVisible());
+    const auto readPlayers = [this] {
+        QList<QQuickItem *> found;
+        const std::function<void(QQuickItem *)> look = [&](QQuickItem *item) {
+            if (item->objectName() == u"readAudioPlayer"_s)
+                found.append(item);
+            for (QQuickItem *child : item->childItems())
+                look(child);
+        };
+        look(qobject_cast<QQuickItem *>(m_editor.get()));
+        return found;
+    };
+    QTRY_COMPARE(readPlayers().size(), 1);
+    QQuickItem *played = readPlayers().first();
+    QVERIFY(played->property("source").toUrl().toLocalFile().endsWith(u"/Take 1.wav"_s));
+    auto *doc = reader->property("textDocument").value<QQuickTextDocument *>()->textDocument();
+    const auto top = [&](const QString &words) {
+        QRectF line;
+        QMetaObject::invokeMethod(reader, "positionToRectangle", Q_RETURN_ARG(QRectF, line),
+                                  Q_ARG(int, int(doc->toPlainText().indexOf(words))));
+        return line.y();
+    };
+    QTRY_VERIFY(played->y() > top(u"Before"_s) &&
+                played->y() + played->height() <= top(u"After"_s));
+    m_settings->setReadMode(false);
 }
 
 void TestNoteEditor::drawsMath()

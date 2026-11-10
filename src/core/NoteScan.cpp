@@ -396,7 +396,9 @@ QString readingMarkdown(QStringView original,
             const QString target = m.captured(2).trimmed();
             const QString label = m.captured(3).isEmpty() ? target : m.captured(3).trimmed();
             QString text = u"[%1](jot-note:%2)"_s.arg(escape(label), encode(target));
-            if (!m.captured(1).isEmpty() && !Vault::isAudioFile(target)) {
+            if (!m.captured(1).isEmpty() && Vault::isAudioFile(target)) {
+                text = u"[%1](jot-wiki-sound:%2)"_s.arg(escape(label), encode(target));
+            } else if (!m.captured(1).isEmpty()) {
                 if (const QString url = embedUrl(target); !url.isEmpty())
                     text = u"![%1](<%2>)"_s.arg(escape(label), url);
             }
@@ -408,19 +410,19 @@ QString readingMarkdown(QStringView original,
             const QString target = m.captured(2);
             const QString bare =
                 target.startsWith(u'<') ? target.mid(1, target.size() - 2) : target;
-            // An image from the web, or a sound, is a link to it, the sound named for its file
-            // when it has no words, to open elsewhere.
-            const bool sound = Vault::isAudioFile(bare);
-            if (!m.captured(1).isEmpty() &&
-                ((isUrl(target.startsWith(u'<') ? target.mid(1) : target) &&
-                  !target.contains(u"file:"_s)) ||
-                 sound)) {
-                if (sound && m.captured().startsWith(u"![]("_s))
-                    changes.append({m.capturedStart(), 3,
-                                    u"[%1]"_s.arg(escape(QUrl::fromPercentEncoding(
-                                        bare.section(u'/', -1).toUtf8())))});
-                else
-                    changes.append({m.capturedStart(), 1, {}});
+            // A sound is a link the reader can play, named for its file when it has no words.
+            if (!m.captured(1).isEmpty() && Vault::isAudioFile(bare)) {
+                static const QRegularExpression words(uR"(^!\[((?:[^\[\]]|\[[^\[\]]*\])*)\])"_s);
+                QString label = words.match(m.captured()).captured(1);
+                if (label.isEmpty())
+                    label = escape(QUrl::fromPercentEncoding(bare.section(u'/', -1).toUtf8()));
+                changes.append({m.capturedStart(), m.capturedLength(),
+                                u"[%1](jot-sound:%2)"_s.arg(label, encode(bare))});
+            } else if (!m.captured(1).isEmpty() &&
+                       isUrl(target.startsWith(u'<') ? target.mid(1) : target) &&
+                       !target.contains(u"file:"_s)) {
+                // An image from the web is a link to it, to open elsewhere.
+                changes.append({m.capturedStart(), 1, {}});
             } else if (!m.captured(1).isEmpty() && m.captured().startsWith(u"![]("_s)) {
                 // Qt draws an image only once it reads its words, so one without any is named
                 // for its file.

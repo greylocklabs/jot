@@ -185,11 +185,13 @@ void TestNoteScan::readsAsMarkdownWithLinks()
     // An image without words is named for its file, which Qt needs to draw it.
     QCOMPARE(readingMarkdown(u"![](Note.assets/my%20photo.png) ![kept](map.png)\n"_s, embed),
              u"![my photo.png](Note.assets/my%20photo.png) ![kept](map.png)\n"_s);
-    // A sound is a link, to play elsewhere.
-    QCOMPARE(
-        readingMarkdown(u"![](Notes.assets/Take%201.ogg) ![[Take.wav]] ![Mara](m.mp3)\n"_s, embed),
-        u"[Take 1.ogg](Notes.assets/Take%201.ogg) [Take.wav](jot-note:Take.wav) "
-        "[Mara](m.mp3)\n"_s);
+    // A sound is a link the reader can play, with its target as written; a link to one is not.
+    QCOMPARE(readingMarkdown(u"![](Notes.assets/Take%201.ogg) ![[My Take.wav]] ![Mara](<m 1.mp3>) "
+                             u"[plain](m.mp3)\n"_s,
+                             embed),
+             u"[Take 1.ogg](jot-sound:Notes.assets/Take%25201.ogg) "
+             u"[My Take.wav](jot-wiki-sound:My%20Take.wav) [Mara](jot-sound:m%201.mp3) "
+             u"[plain](m.mp3)\n"_s);
     // Code is left as it is.
     const QString code = u"`[[not]] #code`\n```\n[[Mara]] #tag\n```\n"_s;
     QCOMPARE(readingMarkdown(code, embed), code);

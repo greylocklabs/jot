@@ -78,11 +78,12 @@ struct Heading
 /// `body` as Markdown for reading: [[wikilinks]] become links to `jot-note:` targets,
 /// ![[embeds]] images at the URL `embedUrl` gives for their target (links when it gives
 /// none), and #tags links to `jot-tag:` ones. Images from the web become links to them, so
-/// drawing the note fetches nothing. Targets are percent-encoded. A table of contents marker
-/// becomes a list of links to `jot-heading:` targets, each heading's number from 0.
-/// CriticMarkup reads as its edits made, with deletions struck through and comments in
-/// italics. Math becomes the picture at the URL `mathUrl` gives for its TeX, and whether it is
-/// set apart, and stays as written when it gives none. Code is left alone.
+/// drawing the note fetches nothing. Embedded sounds become links to `jot-sound:` targets, or
+/// `jot-wiki-sound:` for wikilinks, named for their file when they have no words. Targets are
+/// percent-encoded. A table of contents marker becomes a list of links to `jot-heading:` targets,
+/// each heading's number from 0. CriticMarkup reads as its edits made, with deletions struck
+/// through and comments in italics. Math becomes the picture at the URL `mathUrl` gives for its
+/// TeX, and whether it is set apart, and stays as written when it gives none. Code is left alone.
 [[nodiscard]] QString
 readingMarkdown(QStringView body, const std::function<QString(const QString &)> &embedUrl,
                 const std::function<QString(const QString &, bool)> &mathUrl = {});

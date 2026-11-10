@@ -218,6 +218,10 @@ Rectangle {
             Vault.notes.tag = decodeURIComponent(link.slice("jot-tag:".length))
         } else if (link.startsWith("jot-note:")) {
             Vault.follow(decodeURIComponent(link.slice("jot-note:".length)), true)
+        } else if (link.startsWith("jot-wiki-sound:")) {
+            Vault.follow(decodeURIComponent(link.slice("jot-wiki-sound:".length)), true)
+        } else if (link.startsWith("jot-sound:")) {
+            Vault.follow(decodeURIComponent(link.slice("jot-sound:".length)), false)
         } else if (link.startsWith("jot-heading:")) {
             // A table of contents entry scrolls its heading to the top.
             goToHeading(Number(link.slice("jot-heading:".length)))
@@ -761,6 +765,28 @@ Rectangle {
                 }
                 HoverHandler {
                     cursorShape: reader.hoveredLink !== "" ? Qt.PointingHandCursor : Qt.IBeamCursor
+                }
+                // A sound embedded on a line of its own plays there, as in the editor.
+                Repeater {
+                    id: readPlayers
+
+                    model: reading.sounds.length
+
+                    AudioPlayer {
+                        required property int index
+                        readonly property var sound: reading.sounds[index] ?? ({})
+                        readonly property rect line: {
+                            reader.width
+                            reader.contentHeight
+                            return reader.positionToRectangle(sound.position ?? 0)
+                        }
+
+                        objectName: "readAudioPlayer"
+                        y: line.y + (line.height - height) / 2
+                        width: sound.width ?? 0
+                        height: sound.height ?? 0
+                        source: sound.source ?? ""
+                    }
                 }
                 // A click on a checkbox, left of its text, ticks it in the note.
                 TapHandler {
