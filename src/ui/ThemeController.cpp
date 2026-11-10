@@ -8,6 +8,8 @@
 #include <QFileInfo>
 #include <QFileSystemWatcher>
 #include <QFontDatabase>
+#include <QFontMetricsF>
+#include <QTextBoundaryFinder>
 #include <QTimer>
 
 #include <cmath>
@@ -187,6 +189,29 @@ QString ThemeController::noteFontFamily(const QString &choice) const
         return m_spec.type.displayFamily.isEmpty() ? QStringLiteral("serif")
                                                    : m_spec.type.displayFamily;
     return editorFontFamily();
+}
+
+qreal ThemeController::widestUnbreakable(const QString &text, const QFont &font) const
+{
+    const QFontMetricsF metrics(font);
+    QTextBoundaryFinder breaks(QTextBoundaryFinder::Line, text);
+    qreal widest = 0;
+    qsizetype from = 0;
+    for (qsizetype at = breaks.toNextBoundary(); at >= 0; at = breaks.toNextBoundary()) {
+        widest = std::max(widest, metrics.horizontalAdvance(text.mid(from, at - from).trimmed()));
+        from = at;
+    }
+    return widest;
+}
+
+int ThemeController::fittingPixelSize(const QString &text, const QFont &font, qreal width,
+                                      int smallest) const
+{
+    const int full = font.pixelSize() > 0 ? font.pixelSize() : smallest;
+    const qreal widest = widestUnbreakable(text, font);
+    if (widest <= width || widest <= 0)
+        return full;
+    return std::clamp(int(std::floor(full * width / widest)), std::min(smallest, full), full);
 }
 
 } // namespace jot
