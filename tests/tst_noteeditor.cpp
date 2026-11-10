@@ -2368,6 +2368,17 @@ void TestNoteEditor::flashesWhatViYanks()
     QTRY_VERIFY(flashed(18));
     QVERIFY(!flashed(3));
     QTRY_VERIFY_WITH_TIMEOUT(!flashed(18), 2000);
+
+    // A line deleted above during the flash moves it up with the yanked line, and it still goes.
+    body->setProperty("cursorPosition", 17);
+    QTest::keyClick(m_window.get(), 'y');
+    QTest::keyClick(m_window.get(), 'y');
+    QTRY_VERIFY(flashed(20));
+    for (const char key : QByteArrayView("ggdd"))
+        QTest::keyClick(m_window.get(), key);
+    QCOMPARE(doc->toPlainText().indexOf(u"plain second"_s), 0);
+    QVERIFY(flashed(3));
+    QTRY_VERIFY_WITH_TIMEOUT(!flashed(3), 2000);
     m_settings->setViMode(false);
 }
 

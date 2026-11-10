@@ -11,6 +11,7 @@
 #include <QTextBlock>
 #include <QTextBlockUserData>
 #include <QTextCharFormat>
+#include <QTextCursor>
 
 #include <functional>
 #include <memory>
@@ -197,8 +198,10 @@ private:
     bool m_source = false;
     bool m_focus = false;
     bool m_foldComments = false;
-    /// The text painted after a yank, `{start, end}` in the document, or -1s.
-    std::pair<int, int> m_flash{-1, -1};
+    /// The text painted after a yank, its ends kept as cursors so they move with edits; null
+    /// cursors when there is none.
+    QTextCursor m_flashStart;
+    QTextCursor m_flashEnd;
     const Sonnet::Speller *m_speller = nullptr;
     /// The first and last blocks of the paragraph the cursor is in, for focus mode.
     std::pair<int, int> m_paragraph{-1, -1};
