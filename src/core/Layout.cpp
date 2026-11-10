@@ -326,6 +326,35 @@ void Layout::setEmoji(const QString &folder, const QString &emoji)
     m_folders[folder][u"emoji"_s] = emoji.trimmed();
 }
 
+Layout::Target Layout::target(const QString &folder) const
+{
+    const QMap<QString, QString> keys = m_folders.value(folder);
+    Target target;
+    target.words = std::max(0, keys.value(u"target"_s).toInt());
+    if (target.words > 0)
+        target.deadline = QDate::fromString(keys.value(u"deadline"_s), Qt::ISODate);
+    return target;
+}
+
+void Layout::setTarget(const QString &folder, const Target &target)
+{
+    if (target.words > 0) {
+        QMap<QString, QString> &keys = m_folders[folder];
+        keys[u"target"_s] = QString::number(target.words);
+        if (target.deadline.isValid())
+            keys[u"deadline"_s] = target.deadline.toString(Qt::ISODate);
+        else
+            keys.remove(u"deadline"_s);
+        return;
+    }
+    if (!m_folders.contains(folder))
+        return;
+    m_folders[folder].remove(u"target"_s);
+    m_folders[folder].remove(u"deadline"_s);
+    if (m_folders[folder].isEmpty())
+        m_folders.remove(folder);
+}
+
 QString Layout::defaultEmoji(const QString &view)
 {
     if (view == u"tasks"_s)

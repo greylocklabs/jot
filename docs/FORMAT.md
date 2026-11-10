@@ -12,7 +12,7 @@ Status: final, format 1, as of Jot 0.1. Changes follow [Versioning](#versioning)
 My Notes/                    the vault: any folder
   .jot/                      Jot's files for the vault, synced with the notes
     vault.yaml               vault settings and the format number
-    layout.yaml              notebook emoji and pinned notes
+    layout.yaml              notebook emoji, word targets and pinned notes
     history/                 past versions of notes
     joplin.yaml              what imports from Joplin brought, once there has been one
     trash/                   what was deleted, in Jot and by sync
@@ -250,6 +250,8 @@ computer's own setting, not part of the vault. The notebook tree sorts in natura
 folders:
   Ashfall:
     emoji: 📚
+    target: 90000
+    deadline: 2027-01-30
 pinned:
   - Recipes/Pancakes.md
 trash:
@@ -258,6 +260,9 @@ trash:
 
 - Paths are relative to the vault root and use `/`.
 - `emoji` is shown before the notebook's name.
+- `target` is the words the notebook's notes, and those of the notebooks inside it, are to come
+  to, and `deadline` the day, YYYY-MM-DD, to reach it by. A deadline without a target means
+  nothing.
 - `pinned` notes stay at the top of the note list, in whatever order it is in.
 - `tasks` and `trash` hold the `emoji` of Tasks and Trash in the sidebar, shown as ✅ and 🗑️ when
   unset; `""` shows none.

@@ -2,6 +2,7 @@
 
 #include "jot/Vault.h"
 
+#include <QDate>
 #include <QHash>
 #include <QMap>
 #include <QString>
@@ -12,8 +13,8 @@
 namespace jot {
 
 /// How the vault's notes and notebooks are shown, as `.jot/layout.yaml` keeps it beside them,
-/// so it syncs with the notes: each folder's manual order, each notebook's emoji, icon and
-/// color, and the notes pinned to the top of the list. docs/FORMAT.md describes the file.
+/// so it syncs with the notes: each folder's manual order, each notebook's emoji, icon, color
+/// and word target, and the notes pinned to the top of the list. docs/FORMAT.md describes the file.
 class Layout
 {
 public:
@@ -39,6 +40,18 @@ public:
     void setEmoji(const QString &folder, const QString &emoji);
     /// Every notebook's emoji, by its path.
     [[nodiscard]] QHash<QString, QString> emojis() const;
+
+    /// What a notebook, its notebooks inside included, is to come to: a number of words, and
+    /// the day to reach it by when there is one.
+    struct Target
+    {
+        int words = 0;
+        QDate deadline;
+    };
+    /// The notebook's word target, none when it has no words.
+    [[nodiscard]] Target target(const QString &folder) const;
+    /// Sets the notebook's word target, or takes it away, deadline and all, at 0 words.
+    void setTarget(const QString &folder, const Target &target);
 
     /// The sidebar's own entries, Tasks and Trash, by the section that keeps each one.
     static inline const QStringList kViews = {QStringLiteral("tasks"), QStringLiteral("trash")};

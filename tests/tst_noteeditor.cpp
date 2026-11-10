@@ -671,6 +671,27 @@ void TestNoteEditor::countsTheNotesWords()
     // What is picked is counted against the whole.
     QVERIFY(QMetaObject::invokeMethod(body, "select", Q_ARG(int, 19), Q_ARG(int, 26)));
     QTRY_VERIFY(count->property("text").toString().startsWith(u"2 of 4 words"_s));
+
+    // In a notebook with a target, its words so far, this note's as it is now among them, and
+    // with a deadline ten days away, counting today, the words a day still needed.
+    QString error;
+    QVERIFY(QDir(m_root).mkpath(u"Novel"_s));
+    QVERIFY(notefile::write(m_root + u"/Novel/Ch 1.md"_s, u"One two three.\n"_s, &error));
+    QVERIFY(notefile::write(m_root + u"/Novel/Ch 2.md"_s, u"Four five six seven.\n"_s, &error));
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Novel/Ch 2.md"_s), 3000);
+    const QDate due = QDate::currentDate().addDays(9);
+    QVERIFY(m_vault->setNotebookTarget(u"Novel"_s, 107, due.toString(Qt::ISODate)));
+    m_vault->setCurrent(u"Novel/Ch 2.md"_s);
+    QTRY_VERIFY2(
+        count->property("text").toString().contains(u"Novel: 7 of 107, 10 a day to make %1"_s.arg(
+            QLocale(QLocale::English).toString(due, u"MMM d"_s))),
+        qPrintable(count->property("text").toString()));
+    body->forceActiveFocus();
+    body->setProperty("cursorPosition", 0);
+    for (const char key : QByteArrayView("Eight "))
+        QTest::keyClick(m_window.get(), key);
+    QTRY_VERIFY2(count->property("text").toString().contains(u"Novel: 8 of 107"_s),
+                 qPrintable(count->property("text").toString()));
 }
 
 void TestNoteEditor::fadesAllButTheParagraphInFocusMode()

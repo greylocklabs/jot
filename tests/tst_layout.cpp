@@ -25,6 +25,7 @@ private Q_SLOTS:
     void leavesAnUnreadableFileAlone();
     void keepsPinnedNotes();
     void keepsTheViewsEmojis();
+    void keepsNotebookTargets();
 
 private:
     void write(const QString &path, const QString &text);
@@ -300,3 +301,35 @@ void TestLayout::keepsTheViewsEmojis()
 
 QTEST_GUILESS_MAIN(TestLayout)
 #include "tst_layout.moc"
+
+void TestLayout::keepsNotebookTargets()
+{
+    QVERIFY(QDir(m_dir->path()).mkpath(u"Novel"_s) && QDir(m_dir->path()).mkpath(u"Essays"_s));
+    Layout layout;
+    layout.setEmoji(u"Novel"_s, u"\U0001F4DA"_s);
+    layout.setTarget(u"Novel"_s, {90000, QDate(2027, 1, 30)});
+    layout.setTarget(u"Essays"_s, {5000, {}});
+    QString error;
+    QVERIFY2(layout.write(*m_vault, &error), qPrintable(error));
+    QCOMPARE(read(Layout::kPath), u"folders:\n"
+                                  "  Essays:\n"
+                                  "    target: 5000\n"
+                                  "  Novel:\n"
+                                  "    deadline: 2027-01-30\n"
+                                  "    emoji: \U0001F4DA\n"
+                                  "    target: 90000\n"_s);
+    const Layout kept = Layout::read(*m_vault).value();
+    QCOMPARE(kept.target(u"Novel"_s).words, 90000);
+    QCOMPARE(kept.target(u"Novel"_s).deadline, QDate(2027, 1, 30));
+    QCOMPARE(kept.target(u"Essays"_s).words, 5000);
+    QVERIFY(!kept.target(u"Essays"_s).deadline.isValid());
+    QCOMPARE(kept.target(u"Other"_s).words, 0);
+
+    // Taken away, the deadline goes with it and the emoji stays.
+    layout.setTarget(u"Novel"_s, {});
+    layout.setTarget(u"Essays"_s, {});
+    QVERIFY(layout.write(*m_vault, &error));
+    QCOMPARE(read(Layout::kPath), u"folders:\n"
+                                  "  Novel:\n"
+                                  "    emoji: \U0001F4DA\n"_s);
+}
