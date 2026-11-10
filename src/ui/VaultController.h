@@ -261,6 +261,10 @@ public:
     /// Sets the notebook's word target and the day, YYYY-MM-DD, to reach it by, or none when
     /// `deadline` is empty; 0 words takes the target away.
     Q_INVOKABLE bool setNotebookTarget(const QString &path, int words, const QString &deadline);
+    /// How the shown note's notebook stands against its target, with `noteWords` for the note
+    /// as it is now: "Novel: 41,200 of 90,000, 1,630 a day to make Jan 30", today counting as
+    /// a day. Empty when there is no target.
+    Q_INVOKABLE QString targetProgress(int noteWords) const;
     /// Makes a notebook in `parent`, or at the top for none, and gives its path.
     Q_INVOKABLE QString newNotebook(const QString &parent = {});
     /// Renames the notebook at `path`, rewriting links to the notes in it.
@@ -561,6 +565,9 @@ private:
     bool m_showingTasks = false;
     QVariantMap m_notebookEmoji;
     QVariantMap m_currentTarget;
+    /// Each note's words, front matter aside, by its file and when that last changed, so a
+    /// notebook's count reads only what changed since.
+    QHash<QString, std::pair<QDateTime, int>> m_noteWords;
     QVariantMap m_viewEmoji;
     QStringList m_pinned;
     QString m_indexPath;

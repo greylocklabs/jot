@@ -324,6 +324,16 @@ void TestLayout::keepsNotebookTargets()
     QCOMPARE(kept.target(u"Essays"_s).words, 5000);
     QVERIFY(!kept.target(u"Essays"_s).deadline.isValid());
     QCOMPARE(kept.target(u"Other"_s).words, 0);
+    // A target that is no number of words, or fewer than none, is none.
+    QFile odd(m_vault->absolute(Layout::kPath));
+    QVERIFY(odd.open(QIODevice::WriteOnly));
+    odd.write("folders:\n  Novel:\n    target: lots\n  Essays:\n    target: -5\n"
+              "    deadline: 2027-01-30\n");
+    odd.close();
+    const Layout oddly = Layout::read(*m_vault).value();
+    QCOMPARE(oddly.target(u"Novel"_s).words, 0);
+    QCOMPARE(oddly.target(u"Essays"_s).words, 0);
+    QVERIFY(!oddly.target(u"Essays"_s).deadline.isValid());
 
     // Taken away, the deadline goes with it and the emoji stays.
     layout.setTarget(u"Novel"_s, {});
