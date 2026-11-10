@@ -9,6 +9,11 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 - The format row's record button is a microphone, and a stop square while recording.
 
+### Fixed
+
+- On a narrow note, Delete becomes a trash can and the title gets a little smaller as needed, so
+  the title keeps its words whole.
+
 ## 0.5.1 - 2026-11-09
 
 ### Added

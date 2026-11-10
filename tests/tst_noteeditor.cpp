@@ -10,6 +10,7 @@
 #include <QDir>
 #include <QDirIterator>
 #include <QElapsedTimer>
+#include <QFontMetricsF>
 #include <QImage>
 #include <QInputMethodEvent>
 #include <QLocale>
@@ -77,6 +78,7 @@ private Q_SLOTS:
     void showsTabsOverTheNote();
     void countsTheNotesWords();
     void recordsUnderAMicrophone();
+    void keepsTheTitlesWordsWholeBesideDelete();
     void fadesAllButTheParagraphInFocusMode();
     void keepsTheLineInTheMiddleForTypewriterScrolling();
     void showsOnlyTheNoteWhenDistractionFree();
@@ -676,6 +678,31 @@ void TestNoteEditor::recordsUnderAMicrophone()
         return false;
     };
     QTRY_VERIFY(drawn(record));
+}
+
+void TestNoteEditor::keepsTheTitlesWordsWholeBesideDelete()
+{
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Crossings.md"_s, u"Text.\n"_s, &error));
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Crossings.md"_s), 3000);
+    m_vault->setCurrent(u"Crossings.md"_s);
+    QQuickItem *title = find(u"title"_s);
+    QQuickItem *trash = find(u"trash"_s);
+    QVERIFY(title && trash);
+    QTRY_COMPARE(title->property("text").toString(), u"Crossings"_s);
+    const qreal line = QFontMetricsF(title->property("font").value<QFont>()).height();
+    auto *editor = qobject_cast<QQuickItem *>(m_editor.get());
+
+    // As narrow as the note gets, Delete is a trash can and the title stays on one line.
+    editor->setWidth(240);
+    QTRY_COMPARE(trash->property("glyph").toString(), u"trash"_s);
+    QCOMPARE(trash->property("text").toString(), QString());
+    QTRY_VERIFY2(title->property("contentHeight").toReal() < 1.5 * line,
+                 qPrintable(QString::number(title->property("contentHeight").toReal())));
+    // With room, it says Delete again.
+    editor->setWidth(900);
+    QTRY_COMPARE(trash->property("text").toString(), u"Delete"_s);
+    QCOMPARE(trash->property("glyph").toString(), QString());
 }
 
 void TestNoteEditor::countsTheNotesWords()
