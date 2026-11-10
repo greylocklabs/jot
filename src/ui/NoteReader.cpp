@@ -10,8 +10,10 @@
 #include "jot/NoteScan.h"
 
 #include <QFileInfo>
+#include <QGuiApplication>
 #include <QImage>
 #include <QImageReader>
+#include <QPainter>
 #include <QRegularExpression>
 #include <QTextBlock>
 #include <QTextCursor>
@@ -21,6 +23,10 @@
 #include <QTextTable>
 #include <QTimer>
 #include <QUrl>
+#include <QtMath>
+
+#include <array>
+#include <cmath>
 
 using namespace Qt::StringLiterals;
 
@@ -73,6 +79,40 @@ bool isTask(const QTextBlock &block)
     const auto marker = block.blockFormat().marker();
     return block.textList() && (marker == QTextBlockFormat::MarkerType::Checked ||
                                 marker == QTextBlockFormat::MarkerType::Unchecked);
+}
+
+/// A task's box as the app draws its own checkboxes, `side` pixels square, with `gap` clear
+/// pixels to its right.
+QImage checkBox(bool done, int side, int gap, const ThemeController &theme)
+{
+    const qreal scale = std::max(2.0, qGuiApp->devicePixelRatio());
+    QImage image(QSizeF((side + gap) * scale, side * scale).toSize(),
+                 QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+    QPainter paint(&image);
+    paint.setRenderHint(QPainter::Antialiasing);
+    paint.scale(scale, scale);
+    const qreal stroke = 2;
+    paint.setPen(QPen(done ? theme.accent() : theme.border(), stroke));
+    paint.setBrush(done ? theme.accent() : theme.surface());
+    paint.drawRoundedRect(QRectF(stroke / 2, stroke / 2, side - stroke, side - stroke),
+                          theme.radiusSm(), theme.radiusSm());
+    if (done) {
+        // The check of Glyph.qml: bars of a length, an angle and a center, in its inner square.
+        const qreal inset = 2;
+        const qreal inner = side - 2 * inset;
+        paint.setPen(QPen(theme.accentText(), stroke, Qt::SolidLine, Qt::RoundCap));
+        for (const auto &[length, angle, x, y] : {std::array<qreal, 4>{0.34, 45, 0.33, 0.6},
+                                                  std::array<qreal, 4>{0.62, -50, 0.6, 0.47}}) {
+            const QPointF center(inset + inner * x, inset + inner * y);
+            const qreal half = (inner * length - stroke) / 2;
+            const QPointF along(half * std::cos(qDegreesToRadians(angle)),
+                                half * std::sin(qDegreesToRadians(angle)));
+            paint.drawLine(center - along, center + along);
+        }
+    }
+    image.setDevicePixelRatio(scale);
+    return image;
 }
 
 } // namespace
@@ -326,7 +366,49 @@ void NoteReader::style()
             }
         }
     }
+    drawTasks();
     cursor.endEditBlock();
+}
+
+void NoteReader::drawTasks()
+{
+    QTextDocument *doc = m_document->textDocument();
+    const ThemeController &theme = *ThemeController::instance();
+    // Qt draws a task's box as a character; each is taken out of its list and drawn as the app's
+    // own box instead, hanging left of the text where the marker was.
+    const int side = m_pixelSize + 2;
+    const int gap = theme.space3();
+    for (const int number : std::as_const(m_taskBlocks)) {
+        const QTextBlock block = doc->findBlockByNumber(number);
+        QTextList *list = block.textList();
+        if (!list)
+            continue;
+        const bool done = block.blockFormat().marker() == QTextBlockFormat::MarkerType::Checked;
+        const int indent = list->format().indent();
+        list->remove(block);
+        QTextCursor line(block);
+        QTextBlockFormat hanging = block.blockFormat();
+        hanging.setIndent(indent);
+        hanging.setTextIndent(-(side + gap));
+        line.setBlockFormat(hanging);
+        if (done) {
+            line.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
+            QTextCharFormat finished;
+            finished.setForeground(theme.textMuted());
+            finished.setFontStrikeOut(true);
+            line.mergeCharFormat(finished);
+        }
+        const QString name = done ? u"jot-task:done"_s : u"jot-task:open"_s;
+        doc->addResource(QTextDocument::ImageResource, QUrl(name),
+                         checkBox(done, side, gap, theme));
+        QTextImageFormat box;
+        box.setName(name);
+        box.setWidth(side + gap);
+        box.setHeight(side);
+        box.setVerticalAlignment(QTextCharFormat::AlignMiddle);
+        QTextCursor start(block);
+        start.insertImage(box);
+    }
 }
 
 void NoteReader::placeImages()
@@ -339,6 +421,8 @@ void NoteReader::placeImages()
             if (!fragment.charFormat().isImageFormat())
                 continue;
             QTextImageFormat format = fragment.charFormat().toImageFormat();
+            if (format.name().startsWith(u"jot-task:"_s))
+                continue;
             const QUrl url(format.name());
             // A path or file URL as written, else an attachment the vault finds by its name.
             const QUrl resolved = doc->baseUrl().resolved(url);
@@ -394,7 +478,8 @@ QVariantMap NoteReader::taskAt(int position) const
         return {};
     return {{u"line"_s, m_tasks.at(index).line},
             {u"done"_s, block.blockFormat().marker() == QTextBlockFormat::MarkerType::Checked},
-            {u"text"_s, m_tasks.at(index).text}};
+            {u"text"_s, m_tasks.at(index).text},
+            {u"textStart"_s, block.position() + 1}};
 }
 
 } // namespace jot

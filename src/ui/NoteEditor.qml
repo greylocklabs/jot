@@ -765,7 +765,7 @@ Rectangle {
                         const position = reader.positionAt(point.position.x, point.position.y)
                         const task = reading.taskAt(position)
                         if (task.line === undefined || point.position.x
-                                >= reader.positionToRectangle(position).x)
+                                >= reader.positionToRectangle(task.textStart).x)
                             return
                         Vault.setTaskDone(Vault.current, task.line, !task.done, task.text)
                     }
