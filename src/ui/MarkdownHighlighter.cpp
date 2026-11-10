@@ -362,14 +362,22 @@ void MarkdownHighlighter::setFlash(int start, int end)
     QTextDocument *doc = document();
     if (!doc)
         return;
-    const std::pair<int, int> before = m_flash;
-    m_flash = end > start ? std::pair{start, end} : std::pair{-1, -1};
-    // The lines painted before and now, drawn again.
-    for (const auto &[from, to] : {before, m_flash}) {
-        if (to <= from)
-            continue;
-        rehighlightRange({doc->findBlock(from).blockNumber(),
-                          doc->findBlock(std::min(to, doc->characterCount() - 1)).blockNumber()});
+    const QTextCursor oldStart = m_flashStart;
+    const QTextCursor oldEnd = m_flashEnd;
+    m_flashStart = {};
+    m_flashEnd = {};
+    if (end > start) {
+        const int last = doc->characterCount() - 1;
+        m_flashStart = QTextCursor(doc);
+        m_flashStart.setPosition(std::clamp(start, 0, last));
+        m_flashEnd = QTextCursor(doc);
+        m_flashEnd.setPosition(std::clamp(end, 0, last));
+    }
+    // The lines painted before, wherever edits since have moved them, and those now.
+    for (const auto &[from, to] :
+         {std::pair{oldStart, oldEnd}, std::pair{m_flashStart, m_flashEnd}}) {
+        if (!from.isNull())
+            rehighlightRange({from.block().blockNumber(), to.block().blockNumber()});
     }
 }
 
@@ -417,10 +425,10 @@ void MarkdownHighlighter::highlightBlock(const QString &text)
 {
     styleBlock(text);
     // A yank's flash, over whatever the line is styled as.
-    if (m_flash.second > m_flash.first) {
+    if (!m_flashStart.isNull() && m_flashEnd.position() > m_flashStart.position()) {
         const int at = currentBlock().position();
-        const int start = std::max(m_flash.first - at, 0);
-        const int end = std::min(m_flash.second - at, int(text.size()));
+        const int start = std::max(m_flashStart.position() - at, 0);
+        const int end = std::min(m_flashEnd.position() - at, int(text.size()));
         if (end > start) {
             QTextCharFormat flash;
             QColor tint = m_look.accent;
