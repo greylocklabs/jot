@@ -494,6 +494,20 @@ void TestVaultController::countsTowardsANotebooksTarget()
     m_vault->setCurrent(u"Novel/Part 1/Ch 2.md"_s);
     QCOMPARE(m_vault->currentTarget().value(u"path"_s), u"Novel"_s);
     QCOMPARE(m_vault->currentTarget().value(u"others"_s), 3);
+    // What it says: the words so far, and those a day to the deadline, today counting.
+    const QDate due = QDate::currentDate().addDays(4);
+    QVERIFY(m_vault->setNotebookTarget(u"Novel"_s, 103, due.toString(Qt::ISODate)));
+    QCOMPARE(m_vault->targetProgress(0),
+             u"Novel: 3 of 103, 20 a day to make %1"_s.arg(QLocale().toString(due, u"MMM d"_s)));
+    QCOMPARE(m_vault->targetProgress(1),
+             u"Novel: 4 of 103, 20 a day to make %1"_s.arg(QLocale().toString(due, u"MMM d"_s)));
+    QCOMPARE(m_vault->targetProgress(100), u"Novel: 103 of 103"_s);
+    QVERIFY(m_vault->setNotebookTarget(u"Novel"_s, 103,
+                                       QDate::currentDate().addDays(-1).toString(Qt::ISODate)));
+    QVERIFY(m_vault->targetProgress(0).startsWith(u"Novel: 3 of 103, due "_s));
+    // A note changed outside Jot is counted again.
+    QVERIFY(notefile::write(m_root + u"/Novel/Ch 1.md"_s, u"One two three four.\n"_s, &error));
+    QTRY_COMPARE_WITH_TIMEOUT(m_vault->currentTarget().value(u"others"_s), 4, 3000);
     // Anywhere else there is none, nor once it is taken away.
     m_vault->setCurrent(u"Welcome.md"_s);
     QVERIFY(m_vault->currentTarget().isEmpty());

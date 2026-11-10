@@ -683,8 +683,8 @@ void TestNoteEditor::countsTheNotesWords()
     QVERIFY(m_vault->setNotebookTarget(u"Novel"_s, 107, due.toString(Qt::ISODate)));
     m_vault->setCurrent(u"Novel/Ch 2.md"_s);
     QTRY_VERIFY2(
-        count->property("text").toString().contains(u"Novel: 7 of 107, 10 a day to make %1"_s.arg(
-            QLocale(QLocale::English).toString(due, u"MMM d"_s))),
+        count->property("text").toString().contains(
+            u"Novel: 7 of 107, 10 a day to make %1"_s.arg(QLocale().toString(due, u"MMM d"_s))),
         qPrintable(count->property("text").toString()));
     body->forceActiveFocus();
     body->setProperty("cursorPosition", 0);

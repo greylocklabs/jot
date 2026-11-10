@@ -1157,9 +1157,17 @@ void VaultController::refreshTarget()
         for (const NoteInfo &note : m_index->notesIn(folder)) {
             if (note.path == m_current || !note.path.endsWith(u".md"_s))
                 continue;
-            if (const std::optional<QString> text =
-                    notefile::read(m_vault->absolute(note.path), &error))
-                others += countText(splitFrontMatter(*text).body).words;
+            const QString file = m_vault->absolute(note.path);
+            const QDateTime changed = QFileInfo(file).lastModified();
+            const auto known = m_noteWords.constFind(file);
+            if (known != m_noteWords.cend() && known->first == changed) {
+                others += known->second;
+                continue;
+            }
+            const std::optional<QString> text = notefile::read(file, &error);
+            const int words = text ? countText(splitFrontMatter(*text).body).words : 0;
+            m_noteWords.insert(file, {changed, words});
+            others += words;
         }
         found = {{u"path"_s, folder},
                  {u"name"_s, folder.section(u'/', -1)},
@@ -1173,6 +1181,28 @@ void VaultController::refreshTarget()
         m_currentTarget = found;
         Q_EMIT currentTargetChanged();
     }
+}
+
+QString VaultController::targetProgress(int noteWords) const
+{
+    const int goal = m_currentTarget.value(u"words"_s).toInt();
+    if (goal <= 0)
+        return {};
+    const QLocale locale;
+    const int total = m_currentTarget.value(u"others"_s).toInt() + std::max(0, noteWords);
+    QString text = tr("%1: %2 of %3")
+                       .arg(m_currentTarget.value(u"name"_s).toString(), locale.toString(total),
+                            locale.toString(goal));
+    const QDate deadline =
+        QDate::fromString(m_currentTarget.value(u"deadline"_s).toString(), Qt::ISODate);
+    if (!deadline.isValid() || total >= goal)
+        return text;
+    const qint64 days = QDate::currentDate().daysTo(deadline) + 1;
+    const QString when = locale.toString(deadline, u"MMM d"_s);
+    return text + u", "_s +
+           (days > 0 ? tr("%1 a day to make %2")
+                           .arg(locale.toString((goal - total + days - 1) / days), when)
+                     : tr("due %1").arg(when));
 }
 
 bool VaultController::setViewEmoji(const QString &view, const QString &emoji)

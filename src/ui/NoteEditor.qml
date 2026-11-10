@@ -1576,8 +1576,6 @@ Rectangle {
                                                                                          body.selectedText).words :
                                                                                      -1
         readonly property int target: Number(styler.frontMatter.target) || 0
-        /// The words of the notebook with a target this note is in, this note's as it is now.
-        readonly property int notebookWords: (Number(Vault.currentTarget.others) || 0) + count.words
 
         objectName: "wordCount"
         anchors {
@@ -1611,31 +1609,9 @@ Rectangle {
             if (target > 0)
                 parts.push(qsTr("%1% of %2").arg(Math.floor(100 * count.words / target)).arg(
                                target.toLocaleString(Qt.locale(), "f", 0)))
-            // The notebook's target, counting this note as it is now, and with a deadline, the
-            // words a day it still takes.
-            const goal = Vault.currentTarget
-            if (goal.words > 0) {
-                const total = notebookWords
-                let progress = qsTr("%1: %2 of %3").arg(goal.name).arg(notebookWords.toLocaleString(
-                                                                           Qt.locale(), "f", 0)).arg(
-                        goal.words.toLocaleString(Qt.locale(), "f", 0))
-                const due = goal.deadline !== "" ? Date.fromLocaleString(Qt.locale(), goal.deadline,
-                                                                         "yyyy-MM-dd") : null
-                if (due && total < goal.words) {
-                    const now = new Date()
-                    const days = Math.round((due - new Date(now.getFullYear(), now.getMonth(), now.getDate(
-                                                                ))) / 86400000) + 1
-                    const when = Qt.formatDate(due, "MMM d")
-                    progress += ", " + (days > 0 ? qsTr("%1 a day to make %2").arg(Math.ceil((
-                                                                                                 goal.words
-                                                                                                 - total)
-                                                                                             / days).toLocaleString(
-                                                                                       Qt.locale(),
-                                                                                       "f", 0)).arg(
-                                                       when) : qsTr("due %1").arg(when))
-                }
-                parts.push(progress)
-            }
+            // The notebook's target, counting this note as it is now.
+            if (Vault.currentTarget.words > 0)
+                parts.push(Vault.targetProgress(count.words))
             const today = Vault.wordsToday.toLocaleString(Qt.locale(), "f", 0)
             parts.push(Settings.dailyWordGoal > 0 ? qsTr("today %1 of %2").arg(today).arg(Settings.dailyWordGoal.toLocaleString(
                                                                                               Qt.locale(

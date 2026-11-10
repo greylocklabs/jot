@@ -93,7 +93,7 @@ Popup {
 
                 objectName: "targetWords"
                 anchors.verticalCenter: parent.verticalCenter
-                width: 140
+                width: parent.width - deadlinePicker.width - noDeadline.width - 2 * parent.spacing
                 placeholderText: qsTr("90000")
                 inputMethodHints: Qt.ImhDigitsOnly
                 Accessible.name: qsTr("Words to reach")
@@ -101,6 +101,8 @@ Popup {
                 Keys.onEnterPressed: root.set()
             }
             DatePicker {
+                id: deadlinePicker
+
                 objectName: "targetDeadline"
                 anchors.verticalCenter: parent.verticalCenter
                 day: root.deadline
@@ -109,6 +111,8 @@ Popup {
                 onPicked: day => root.deadline = day
             }
             StickerButton {
+                id: noDeadline
+
                 anchors.verticalCenter: parent.verticalCenter
                 visible: !isNaN(root.deadline.getTime())
                 glyph: "close"
