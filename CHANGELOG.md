@@ -8,6 +8,7 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 ### Fixed
 
 - Exporting a note keeps the first word of each footnote.
+- Restore is off, saying why, for a past version the same as the note now.
 
 ## 0.5.0 - 2026-11-09
 

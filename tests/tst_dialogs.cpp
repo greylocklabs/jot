@@ -264,6 +264,16 @@ void TestDialogs::showsAndRestoresPastVersions()
     QTRY_VERIFY(dialog->property("opened").toBool());
     auto *problem = content->findChild<QQuickItem *>(u"restoreProblem"_s);
     QVERIFY(problem && !problem->isVisible());
+    // A version the same as the note now has nothing to restore.
+    const QVariantList past = m_vault->historyOf(path);
+    const auto same = std::ranges::find_if(past, [this](const QVariant &version) {
+        return m_vault->versionText(version.toMap().value(u"path"_s).toString()) == u"First\n"_s;
+    });
+    QVERIFY(same != past.end());
+    versions->setProperty("currentIndex", int(same - past.begin()));
+    QTRY_VERIFY(!restore->isEnabled());
+    versions->setProperty("currentIndex", 0);
+    QTRY_VERIFY(restore->isEnabled());
     const QString chosen = m_vault->historyOf(path).first().toMap().value(u"path"_s).toString();
     QVERIFY(QFile::remove(m_vault->root() + u'/' + chosen));
     QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"could not read"_s));
