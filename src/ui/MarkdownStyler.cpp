@@ -156,6 +156,17 @@ void MarkdownStyler::flash(int start, int end)
     m_flashEnd->start();
 }
 
+void MarkdownStyler::setMatches(const QVariantList &positions)
+{
+    if (!m_highlighter)
+        return;
+    QList<int> at;
+    at.reserve(positions.size());
+    for (const QVariant &position : positions)
+        at.append(position.toInt());
+    m_highlighter->setMatches(at);
+}
+
 void MarkdownStyler::replace(int start, int end, const QString &text)
 {
     if (!m_document || !m_document->textDocument())

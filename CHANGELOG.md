@@ -11,6 +11,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   and come back as it widens. A button at the left of the title bar, or Ctrl+\, puts them away or
   brings them back by hand.
 - In vi mode, what a yank takes flashes in the selection's color for half a second.
+- In vi mode, f, F, t and T reach past the line, as in flash.nvim: the character's other matches
+  that way are marked, and pressing f, F, t or T again steps on or back through them.
 
 ### Changed
 

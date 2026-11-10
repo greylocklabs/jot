@@ -5,6 +5,7 @@
 #include <QClipboard>
 #include <QCoreApplication>
 #include <QGuiApplication>
+#include <QHash>
 #include <QInputMethod>
 #include <QKeyEvent>
 #include <QQuickTextDocument>
@@ -80,6 +81,7 @@ void ViEditor::setTarget(QQuickItem *target)
              {SIGNAL(cursorPositionChanged()), SIGNAL(selectionStartChanged()),
               SIGNAL(selectionEndChanged()), SIGNAL(textChanged())})
             connect(m_target, changed, this, SIGNAL(placeChanged()));
+        connect(m_target, SIGNAL(cursorPositionChanged()), this, SLOT(dropMatches()));
     }
     Q_EMIT targetChanged();
     Q_EMIT placeChanged();
@@ -105,6 +107,7 @@ void ViEditor::setMode(const QString &mode)
     if (m_mode == kVisual && m_target)
         QMetaObject::invokeMethod(m_target, "deselect");
     m_mode = mode;
+    endSteps();
     updateInputMethod();
     Q_EMIT modeChanged();
 }
@@ -199,7 +202,23 @@ bool ViEditor::key(const QKeyEvent *event)
 
     const QString keys = m_pending + name;
     static const QString kFinds = u"fFtT"_s;
+    static const QHash<QChar, QChar> kOther = {
+        {u'f', u'F'}, {u'F', u'f'}, {u't', u'T'}, {u'T', u't'}};
     const bool visual = m_mode == kVisual;
+    // While a find's matches show, as in flash.nvim, its own key steps on to the next and the
+    // other way's key back, as ; and , do.
+    if (m_stepping && m_pending.isEmpty() && name.size() == 1 && kFinds.contains(name.front())) {
+        const QChar pressed = name.front();
+        const bool till = pressed == u't' || pressed == u'T';
+        const bool findTill = m_findKind == u't' || m_findKind == u'T';
+        if (till == findTill) {
+            const bool forward = pressed == u'f' || pressed == u't';
+            const bool findForward = m_findKind == u'f' || m_findKind == u't';
+            return find({}, forward == findForward ? m_findKind : kOther.value(m_findKind),
+                        m_findTarget, true);
+        }
+    }
+    endSteps();
     // After f, F, t or T, any key is the character to go to.
     if (!m_pending.isEmpty() && kFinds.contains(m_pending.back())) {
         const QChar op = m_pending.size() > 1 ? m_pending.front() : QChar();
@@ -224,8 +243,6 @@ bool ViEditor::key(const QKeyEvent *event)
         setPending({});
         if (m_findKind.isNull())
             return true;
-        static const QHash<QChar, QChar> kOther = {
-            {u'f', u'F'}, {u'F', u'f'}, {u't', u'T'}, {u'T', u't'}};
         const QChar kind = last == u';' ? m_findKind : kOther.value(m_findKind);
         return find(operated ? keys.front() : QChar(), kind, m_findTarget, true);
     }
@@ -275,24 +292,26 @@ bool ViEditor::find(QChar op, QChar kind, QChar target, bool repeat)
     QTextDocument *doc = document();
     if (!doc)
         return true;
-    const int from = std::min(cursor(), doc->characterCount() - 1);
-    const QTextBlock block = doc->findBlock(from);
-    const QString line = block.text();
-    const int at = from - block.position();
+    const QString text = doc->toPlainText();
+    const int from = std::min(cursor(), int(text.size()));
     const bool forward = kind == u'f' || kind == u't';
     const bool till = kind == u't' || kind == u'T';
     const int skip = repeat && till ? 2 : 1;
-    const qsizetype found = forward         ? line.indexOf(target, at + skip)
-                            : at - skip < 0 ? -1
-                                            : line.lastIndexOf(target, at - skip);
+    const qsizetype found = forward           ? text.indexOf(target, from + skip)
+                            : from - skip < 0 ? -1
+                                              : text.lastIndexOf(target, from - skip);
     if (found < 0)
         return true;
-    const int to = block.position() + int(found) + (till ? (forward ? -1 : 1) : 0);
+    const int to = int(found) + (till ? (forward ? -1 : 1) : 0);
     if (op.isNull()) {
+        m_finding = true;
         if (m_mode == kVisual)
             QMetaObject::invokeMethod(m_target, "moveCursorSelection", Q_ARG(int, to));
         else
             setCursor(to);
+        m_finding = false;
+        m_stepping = true;
+        setMatches(kind, target);
         return true;
     }
     if (!writable())
@@ -309,6 +328,46 @@ bool ViEditor::find(QChar op, QChar kind, QChar target, bool repeat)
     if (op == u'c')
         setMode(kInsert);
     return true;
+}
+
+void ViEditor::setMatches(QChar kind, QChar target)
+{
+    QVariantList found;
+    if (QTextDocument *doc = document(); doc && !target.isNull()) {
+        const QString text = doc->toPlainText();
+        const int from = std::min(cursor(), int(text.size()));
+        const bool forward = kind == u'f' || kind == u't';
+        const bool till = kind == u't' || kind == u'T';
+        // Past the character a till stops beside, which it would step over.
+        const int start = forward ? from + (till ? 2 : 1) : from - (till ? 2 : 1);
+        // Enough to fill any screen; a note full of the character need not light every one.
+        constexpr int kMost = 500;
+        if (forward) {
+            for (qsizetype at = text.indexOf(target, start); at >= 0 && found.size() < kMost;
+                 at = text.indexOf(target, at + 1))
+                found.append(int(at));
+        } else if (start >= 0) {
+            for (qsizetype at = text.lastIndexOf(target, start); at >= 0 && found.size() < kMost;
+                 at = at > 0 ? text.lastIndexOf(target, at - 1) : -1)
+                found.append(int(at));
+        }
+    }
+    if (found == m_matches)
+        return;
+    m_matches = found;
+    Q_EMIT matchesChanged();
+}
+
+void ViEditor::endSteps()
+{
+    m_stepping = false;
+    setMatches({}, {});
+}
+
+void ViEditor::dropMatches()
+{
+    if (!m_finding)
+        endSteps();
 }
 
 void ViEditor::sendKey(int key, Qt::KeyboardModifiers modifiers)

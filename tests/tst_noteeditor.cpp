@@ -112,7 +112,7 @@ private Q_SLOTS:
     void editsInViModes();
     void showsWhereViIsAlongTheFoot();
     void keepsOneCursorAcrossViModes();
-    void jumpsAlongALineInVi();
+    void jumpsToACharacterInVi();
     void flashesWhatViYanks();
     void takesTextInputOnlyInInsertMode();
     void staysQuickAndStillInALongNote();
@@ -2382,7 +2382,7 @@ void TestNoteEditor::flashesWhatViYanks()
     m_settings->setViMode(false);
 }
 
-void TestNoteEditor::jumpsAlongALineInVi()
+void TestNoteEditor::jumpsToACharacterInVi()
 {
     m_settings->setViMode(true);
     m_vault->setCurrent(u"Welcome.md"_s);
@@ -2399,8 +2399,35 @@ void TestNoteEditor::jumpsAlongALineInVi()
             QTest::keyClick(m_window.get(), c.toLatin1());
     };
 
-    // f and t go along the line to a character, F and T back; ; and , repeat either way.
+    const auto matches = [vi] {
+        QList<int> at;
+        for (const QVariant &match : vi->property("matches").toList())
+            at.append(match.toInt());
+        return at;
+    };
+
+    // f and t go on to a character, F and T back; ; and , repeat either way.
     type(u"ft"_s);
+    QCOMPARE(at(), 5);
+    // Where it is found further on shows, as in flash.nvim, and f again steps on to it.
+    QCOMPARE(matches(), QList<int>{10});
+    QTextDocument *doc =
+        body->property("textDocument").value<QQuickTextDocument *>()->textDocument();
+    const auto marked = [doc](int position) {
+        for (const QTextLayout::FormatRange &range : doc->findBlock(position).layout()->formats()) {
+            if (position >= range.start && position < range.start + range.length &&
+                range.format.foreground().color() == ThemeController::instance()->accent())
+                return true;
+        }
+        return false;
+    };
+    QTRY_VERIFY(marked(10));
+    QVERIFY(!marked(9));
+    type(u"f"_s);
+    QCOMPARE(at(), 10);
+    QVERIFY(matches().isEmpty());
+    QTRY_VERIFY(!marked(10));
+    type(u"F"_s);
     QCOMPARE(at(), 5);
     type(u";"_s);
     QCOMPARE(at(), 10);
@@ -2408,6 +2435,9 @@ void TestNoteEditor::jumpsAlongALineInVi()
     QCOMPARE(at(), 5);
     type(u";"_s);
     QCOMPARE(at(), 10);
+    // Another key ends the matches, so F then finds afresh.
+    type(u"$"_s);
+    QVERIFY(matches().isEmpty());
     type(u"Fo"_s);
     QCOMPARE(at(), 7);
     type(u"t,"_s);
@@ -2418,14 +2448,19 @@ void TestNoteEditor::jumpsAlongALineInVi()
     QCOMPARE(at(), 1);
     type(u";"_s);
     QCOMPARE(at(), 12);
-    type(u"Tn"_s);
+    // T while t's matches show steps back, stopping beside the earlier e.
+    type(u"T"_s);
+    QCOMPARE(at(), 3);
+    type(u"$Tn"_s);
     QCOMPARE(at(), 2);
-    // Nothing to find on the line, or past its end, leaves the cursor where it was.
+    // Nothing to find leaves the cursor where it was; past the line's end, it goes on.
     type(u"fz"_s);
     QCOMPARE(at(), 2);
     type(u"$fr"_s);
-    QCOMPARE(at(), 15);
+    QCOMPARE(at(), 19);
     QCOMPARE(text(), u"one, two, three\nfour"_s);
+    type(u"0k"_s);
+    QCOMPARE(at(), 0);
 
     // d and c cut up to it, the character too going forward; c then types.
     type(u"0dt,"_s);

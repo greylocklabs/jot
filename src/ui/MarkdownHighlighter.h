@@ -129,6 +129,8 @@ public:
     /// Paints the text from `start` to `end` in the selection's color, as after a yank, or
     /// nothing when `end` is not past `start`.
     void setFlash(int start, int end);
+    /// Marks the characters at `positions`, as vi's matches for f and t; none when empty.
+    void setMatches(const QList<int> &positions);
     /// Folds CriticMarkup comments away, for the margin to show, but on the cursor's line.
     void setFoldComments(bool fold);
     /// Underlines words of prose `speller` does not know; none when it is null.
@@ -202,6 +204,8 @@ private:
     /// cursors when there is none.
     QTextCursor m_flashStart;
     QTextCursor m_flashEnd;
+    /// Where vi's f and t matches are, in order.
+    QList<int> m_matches;
     const Sonnet::Speller *m_speller = nullptr;
     /// The first and last blocks of the paragraph the cursor is in, for focus mode.
     std::pair<int, int> m_paragraph{-1, -1};
