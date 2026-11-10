@@ -12,11 +12,14 @@ Popup {
     property string path
     /// The day to reach the target by; invalid for none.
     property date deadline: new Date(NaN)
+    /// Whether the notebook had a target when the dialog opened, which can be taken away.
+    property bool hasTarget
     readonly property int words: Number(input.text.replace(/[^0-9]/g, "")) || 0
 
     function openFor(path) {
         root.path = path
         const target = Vault.notebookTarget(path)
+        root.hasTarget = target.words > 0
         input.text = target.words > 0 ? String(target.words) : ""
         root.deadline = target.deadline !== "" ? Date.fromLocaleString(Qt.locale(), target.deadline,
                                                                        "yyyy-MM-dd") : new Date(NaN)
@@ -146,7 +149,7 @@ Popup {
             }
             StickerButton {
                 objectName: "targetRemove"
-                visible: Vault.notebookTarget(root.path).words > 0
+                visible: root.hasTarget
                 enabled: Vault.writable
                 text: qsTr("Remove target")
                 onClicked: {

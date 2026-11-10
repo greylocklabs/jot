@@ -5,6 +5,7 @@
 
 #include "jot/Settings.h"
 
+#include <QDir>
 #include <QFile>
 #include <QQmlComponent>
 #include <QQmlEngine>
@@ -40,6 +41,7 @@ private Q_SLOTS:
     void importsFromTheJoplinOnThisComputer();
     void asksBeforeTrashingSharedAttachments();
     void narrowWindowOverlapsNothing();
+    void offersToRemoveATargetOnlyWhenThereIsOne();
 
 private:
     QTemporaryDir m_dir;
@@ -463,4 +465,36 @@ void TestDialogs::narrowWindowOverlapsNothing()
     }
     m_settings->setReadMode(false);
     QVERIFY(m_vault->openPath(m_dir.filePath(u"Notes"_s)));
+}
+
+void TestDialogs::offersToRemoveATargetOnlyWhenThereIsOne()
+{
+    QQuickWindow window;
+    window.resize(900, 700);
+    window.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&window));
+    QVERIFY(QDir(m_dir.filePath(u"Notes"_s)).mkpath(u"Novel"_s));
+    QVERIFY(m_vault->setNotebookTarget(u"Novel"_s, 0, {}));
+
+    QQmlEngine engine;
+    QQmlComponent component(&engine);
+    component.setData("import Jot.Ui\nNotebookTarget {}\n", QUrl(u"qrc:/test.qml"_s));
+    std::unique_ptr<QObject> dialog(component.create());
+    QVERIFY2(dialog, qPrintable(component.errorString()));
+    dialog->setProperty("parent", QVariant::fromValue(window.contentItem()));
+    const auto reopen = [&] {
+        QMetaObject::invokeMethod(dialog.get(), "close");
+        QTRY_VERIFY(!dialog->property("visible").toBool());
+        QMetaObject::invokeMethod(dialog.get(), "openFor", Q_ARG(QVariant, u"Novel"_s));
+        QTRY_VERIFY(dialog->property("opened").toBool());
+    };
+    reopen();
+    QVERIFY(!dialog->property("hasTarget").toBool());
+    // Set, then opened on the same notebook again, it can be taken away; then not again.
+    QVERIFY(m_vault->setNotebookTarget(u"Novel"_s, 500, {}));
+    reopen();
+    QVERIFY(dialog->property("hasTarget").toBool());
+    QVERIFY(m_vault->setNotebookTarget(u"Novel"_s, 0, {}));
+    reopen();
+    QVERIFY(!dialog->property("hasTarget").toBool());
 }
