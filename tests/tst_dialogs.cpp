@@ -453,7 +453,9 @@ void TestDialogs::narrowWindowOverlapsNothing()
                 continue;
             // The formatting wraps onto a few lines at most, leaving the note its room.
             QVERIFY2(buttons->parentItem()->height() <= 200, qPrintable(where));
-            for (QQuickItem *button : buttons->childItems()) {
+            QList<QQuickItem *> shown = buttons->childItems();
+            shown.append(find(root, u"formatMore"_s));
+            for (QQuickItem *button : std::as_const(shown)) {
                 if (!button->isVisible())
                     continue;
                 QVERIFY2(scene(button).right() <= scene(buttons->parentItem()).right(),

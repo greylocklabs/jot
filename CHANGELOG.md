@@ -8,6 +8,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 ### Changed
 
 - The format row's record button is a microphone, and a stop square while recording.
+- Formatting buttons that do not fit the format row go into a more menu at its end, instead of
+  wrapping onto more lines.
 
 ### Fixed
 

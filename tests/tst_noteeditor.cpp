@@ -79,6 +79,7 @@ private Q_SLOTS:
     void countsTheNotesWords();
     void recordsUnderAMicrophone();
     void keepsTheTitlesWordsWholeBesideDelete();
+    void foldsFormattingThatDoesNotFitIntoAMenu();
     void fadesAllButTheParagraphInFocusMode();
     void keepsTheLineInTheMiddleForTypewriterScrolling();
     void showsOnlyTheNoteWhenDistractionFree();
@@ -703,6 +704,57 @@ void TestNoteEditor::keepsTheTitlesWordsWholeBesideDelete()
     editor->setWidth(900);
     QTRY_COMPARE(trash->property("text").toString(), u"Delete"_s);
     QCOMPARE(trash->property("glyph").toString(), QString());
+}
+
+void TestNoteEditor::foldsFormattingThatDoesNotFitIntoAMenu()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *buttons = find(u"formatButtons"_s);
+    QQuickItem *more = find(u"formatMore"_s);
+    QVERIFY(buttons && more);
+    const auto shown = [buttons] {
+        return std::ranges::count_if(buttons->childItems(),
+                                     [](QQuickItem *item) { return item->isVisible(); });
+    };
+    // With room, every button shows and there is nothing more.
+    QTRY_COMPARE(shown(), buttons->childItems().size());
+    QVERIFY(!more->isVisible());
+
+    // Narrow, those that do not fit go into the more menu, on the same line as the rest.
+    auto *editor = qobject_cast<QQuickItem *>(m_editor.get());
+    editor->setWidth(400);
+    QTRY_VERIFY(more->isVisible());
+    QVERIFY(shown() < buttons->childItems().size());
+    QCOMPARE(more->mapToScene({0, 0}).y(), buttons->mapToScene({0, 0}).y());
+    QObject *bar = buttons->parentItem();
+    const QVariantList overflow = bar->property("overflow").toList();
+    QVERIFY(!overflow.isEmpty());
+    QCOMPARE(overflow.last().toMap().value(u"format"_s).toString(), u"record"_s);
+    // What it offers formats as its button does.
+    QSignalSpy asked(bar, SIGNAL(formatRequested(QString)));
+    QTest::mouseClick(m_window.get(), Qt::LeftButton, {},
+                      more->mapToScene({more->width() / 2, more->height() / 2}).toPoint());
+    QQuickItem *entry = nullptr;
+    const QString codeBlock = u"Code block"_s;
+    QTRY_VERIFY([&] {
+        const std::function<QQuickItem *(QQuickItem *)> look = [&](QQuickItem *at) -> QQuickItem * {
+            for (QQuickItem *child : at->childItems()) {
+                if (child->isVisible() && child->property("text").toString() == codeBlock &&
+                    child->inherits("QQuickAbstractButton"))
+                    return child;
+                if (QQuickItem *found = look(child))
+                    return found;
+            }
+            return nullptr;
+        };
+        entry = look(m_window->contentItem());
+        return entry != nullptr;
+    }());
+    QTest::mouseClick(m_window.get(), Qt::LeftButton, {},
+                      entry->mapToScene({entry->width() / 2, entry->height() / 2}).toPoint());
+    QTRY_COMPARE(asked.size(), 1);
+    QCOMPARE(asked.first().first().toString(), u"codeblock"_s);
+    editor->setWidth(900);
 }
 
 void TestNoteEditor::countsTheNotesWords()
