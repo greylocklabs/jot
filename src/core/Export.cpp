@@ -25,7 +25,9 @@ QString exportMarkdown(QStringView note,
 {
     static const QRegularExpression image(
         uR"(!\[([^\]]*)\]\(\s*(<[^>]*>|[^\s)]+)(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*\))"_s);
-    static const QRegularExpression reference(uR"(^( {0,3}\[[^\]]+\]:\s*)(<[^>]*>|\S+)(.*)$)"_s);
+    // A reference's definition, but not a footnote's, whose label starts with ^.
+    static const QRegularExpression reference(
+        uR"(^( {0,3}\[(?!\^)[^\]]+\]:\s*)(<[^>]*>|\S+)(.*)$)"_s);
     static const QRegularExpression scheme(uR"(^[A-Za-z][A-Za-z0-9+.-]*:)"_s);
     const auto bare = [](const QString &target) {
         return target.startsWith(u'<') ? target.mid(1, target.size() - 2) : target;

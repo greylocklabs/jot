@@ -3,6 +3,12 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## Unreleased
+
+### Fixed
+
+- Exporting a note keeps the first word of each footnote.
+
 ## 0.5.0 - 2026-11-09
 
 ### Added
