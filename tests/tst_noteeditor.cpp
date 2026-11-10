@@ -903,8 +903,9 @@ void TestNoteEditor::playsSoundsWhereTheyAreEmbedded()
 
     // Read, it plays in place too, between the lines around it; a sound only linked to, or
     // sharing its line, stays a link.
-    body->setProperty("text",
-                      text + u"\nHear [it](Welcome.assets/Take%201.wav) and ![[Take 1.wav]]\n"_s);
+    body->setProperty("text", text +
+                                  u"\nHear [it](Welcome.assets/Take%201.wav) and ![[Take 1.wav]]\n"
+                                  u"\n- ![[Take 1.wav]]\n\n| A |\n|---|\n| ![[Take 1.wav]] |\n"_s);
     m_settings->setReadMode(true);
     QQuickItem *reader = find(u"reader"_s);
     QTRY_VERIFY(reader->isVisible());
@@ -919,8 +920,10 @@ void TestNoteEditor::playsSoundsWhereTheyAreEmbedded()
         look(qobject_cast<QQuickItem *>(m_editor.get()));
         return found;
     };
-    QTRY_COMPARE(readPlayers().size(), 1);
+    // In a list it sits past the bullet; in a table cell, with no room for it, it stays a link.
+    QTRY_COMPARE(readPlayers().size(), 2);
     QQuickItem *played = readPlayers().first();
+    QTRY_VERIFY(readPlayers().last()->x() > played->x());
     QVERIFY(played->property("source").toUrl().toLocalFile().endsWith(u"/Take 1.wav"_s));
     auto *doc = reader->property("textDocument").value<QQuickTextDocument *>()->textDocument();
     const auto top = [&](const QString &words) {

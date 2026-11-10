@@ -782,6 +782,7 @@ Rectangle {
                         }
 
                         objectName: "readAudioPlayer"
+                        x: line.x
                         y: line.y + (line.height - height) / 2
                         width: sound.width ?? 0
                         height: sound.height ?? 0
