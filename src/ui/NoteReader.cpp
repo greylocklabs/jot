@@ -505,7 +505,9 @@ void NoteReader::placeSounds()
                 alone = false;
         }
         const bool wiki = href.startsWith(u"jot-wiki-sound:"_s);
-        if (!alone || !(wiki || href.startsWith(u"jot-sound:"_s)) || !vault)
+        // A table cell has no room for a player, so the sound stays a link there.
+        if (!alone || !(wiki || href.startsWith(u"jot-sound:"_s)) || !vault ||
+            QTextCursor(block).currentTable())
             continue;
         const QString target = QUrl::fromPercentEncoding(href.section(u':', 1).toUtf8());
         const QUrl beside = doc->baseUrl().resolved(QUrl(target));
