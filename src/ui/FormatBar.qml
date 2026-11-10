@@ -18,27 +18,53 @@ Rectangle {
 
     readonly property string task: frontMatter.task || ""
 
-    /// The formatting buttons' width on one line.
-    readonly property real formatWidth: {
-        let sum = 0
-        let shown = 0
-        for (const child of row.children) {
-            if (child.visible) {
-                sum += child.width
-                shown += 1
-            }
-        }
-        return sum + Math.max(0, shown - 1) * row.spacing
-    }
     readonly property real trailingWidth: modesHolder.width + outlineToggle.implicitWidth
                                           + taskToggle.implicitWidth + 2 * trailing.spacing
-    /// Too narrow for the formatting and the switches on one line: the switches go below it,
-    /// and each wraps as it must.
+    /// Too narrow for a few formatting buttons beside the switches: the switches go below the
+    /// buttons, and wrap as they must.
     readonly property bool stacked: row.visible && width - 2 * Theme.space5 - Theme.space3
-                                    - trailingWidth < formatWidth
+                                    - trailingWidth < 4 * more.implicitWidth
+    /// The width the formatting buttons have, the more button included.
+    readonly property real room: width - 2 * Theme.space5 - (stacked ? 0 : trailingWidth
+                                                                       + Theme.space3)
+    /// How many of the row's items, from the left, it shows; the rest are in the more menu.
+    readonly property int fitting: {
+        const items = row.children
+        let total = 0
+        for (let i = 0; i < items.length; ++i)
+            total += items[i].width + (i > 0 ? row.spacing : 0)
+        if (total <= room)
+            return items.length
+        let used = 0
+        let count = 0
+        for (let i = 0; i < items.length; ++i) {
+            const next = used + items[i].width + (i > 0 ? row.spacing : 0)
+            if (next > room - more.implicitWidth - row.spacing)
+                break
+            used = next
+            count += 1
+        }
+        // A divider with nothing after it is not shown.
+        while (count > 0 && items[count - 1].menuItems.length === 0)
+            count -= 1
+        return count
+    }
+    /// What the more menu offers: everything in the items not shown.
+    readonly property var overflow: {
+        const out = []
+        for (let i = fitting; i < row.children.length; ++i)
+            out.push(...row.children[i].menuItems)
+        return out
+    }
 
     implicitHeight: stacked ? row.height + trailing.height + 3 * Theme.space2 : Math.max(
                                   row.visible ? row.height : 0, trailing.height) + 2 * Theme.space2
+    Component.onCompleted: {
+        for (let i = 0; i < row.children.length; ++i) {
+            const at = i
+            row.children[i].visible = Qt.binding(() => at < root.fitting)
+        }
+    }
     color: Theme.bg
 
     Rectangle {
@@ -51,7 +77,8 @@ Rectangle {
         color: Theme.hairline
     }
 
-    Flow {
+    // The formatting, on one line; what does not fit is in the more menu at its end.
+    Row {
         id: row
 
         objectName: "formatButtons"
@@ -59,7 +86,6 @@ Rectangle {
         visible: !Settings.readMode
         x: Theme.space5
         y: root.stacked ? Theme.space2 : (root.height - height) / 2
-        width: root.width - 2 * Theme.space5 - (root.stacked ? 0 : trailing.width + Theme.space3)
         spacing: Theme.space1
 
         // One button for the three heading sizes, so the row has room for the rest.
@@ -68,6 +94,20 @@ Rectangle {
 
             label: "H"
             tip: qsTr("Heading")
+            menuItems: [
+                {
+                    "text": qsTr("Heading 1   Ctrl+1"),
+                    "format": "h1"
+                },
+                {
+                    "text": qsTr("Heading 2   Ctrl+2"),
+                    "format": "h2"
+                },
+                {
+                    "text": qsTr("Heading 3   Ctrl+3"),
+                    "format": "h3"
+                }
+            ]
             onClicked: headingMenu.popup(headings, 0, headings.height + Theme.space1)
 
             MenuCard {
@@ -154,6 +194,8 @@ Rectangle {
         }
         // Records from the microphone into the note, where there is one.
         WhyDisabled {
+            readonly property var menuItems: recordButton.menuItems
+
             target: recordButton
             reason: qsTr("No microphone found.")
 
@@ -165,6 +207,36 @@ Rectangle {
                 glyph: root.recording ? "stop" : "mic"
                 format: "record"
                 tip: root.recording ? qsTr("Stop recording") : qsTr("Record from the microphone")
+            }
+        }
+    }
+
+    FormatButton {
+        id: more
+
+        objectName: "formatMore"
+        visible: row.visible && root.overflow.length > 0
+        x: row.x + row.width + row.spacing
+        y: row.y
+        glyph: "more"
+        tip: qsTr("More formatting")
+        onClicked: overflowMenu.popup(more, 0, more.height + Theme.space1)
+
+        MenuCard {
+            id: overflowMenu
+
+            objectName: "formatOverflow"
+            minimumWidth: 200
+
+            Repeater {
+                model: root.overflow
+
+                MenuEntry {
+                    required property var modelData
+                    text: modelData.text
+                    enabled: modelData.enabled !== false
+                    onTriggered: root.formatRequested(modelData.format)
+                }
             }
         }
     }
@@ -257,6 +329,14 @@ Rectangle {
         property bool strike
         property bool underline
         property bool mono
+        /// What the more menu offers for it when it does not fit: `{text, format, enabled}`.
+        property var menuItems: format !== "" ? [
+                                                    {
+                                                        "text": tip,
+                                                        "format": format,
+                                                        "enabled": enabled
+                                                    }
+                                                ] : []
 
         implicitWidth: Math.max(implicitHeight, caption.implicitWidth + 2 * Theme.space2)
         // As tall as the pills beside it, so the row lines up.
@@ -314,6 +394,8 @@ Rectangle {
     }
 
     component Divider: Item {
+        readonly property var menuItems: []
+
         width: Theme.space3
         height: 32
 
