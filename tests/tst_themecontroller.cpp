@@ -6,6 +6,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFontDatabase>
+#include <QFontMetricsF>
 #include <QSet>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -40,6 +41,7 @@ private Q_SLOTS:
     void builtInIdIgnoresSameNamedFile();
     void everyBuiltInThemeReads();
     void bundledFontsAreAvailable();
+    void measuresWhatALineCannotBreak();
 };
 
 void TestThemeController::startsWithDefaultTheme()
@@ -155,4 +157,27 @@ void TestThemeController::noteFontsFallBackToGenericFamilies()
 }
 
 QTEST_MAIN(TestThemeController)
+void TestThemeController::measuresWhatALineCannotBreak()
+{
+    const ThemeController &theme = *ThemeController::instance();
+    QFont font;
+    font.setPixelSize(28);
+    const QFontMetricsF metrics(font);
+    // The widest word, without the space after it.
+    QCOMPARE(theme.widestUnbreakable(QStringLiteral("Ferry Crossings at dawn"), font),
+             metrics.horizontalAdvance(QStringLiteral("Crossings")));
+    // Text written without spaces breaks between its characters, so no stretch is the whole.
+    const QString japanese = QStringLiteral("\u6E21\u3057\u8239\u306E\u671D");
+    QVERIFY(theme.widestUnbreakable(japanese, font) < metrics.horizontalAdvance(japanese) / 2);
+
+    // Its own size when the widest word fits; smaller, but not below the smallest, when not.
+    const qreal word = metrics.horizontalAdvance(QStringLiteral("Crossings"));
+    QCOMPARE(theme.fittingPixelSize(QStringLiteral("Crossings"), font, word + 1, 20), 28);
+    const int fitted = theme.fittingPixelSize(QStringLiteral("Crossings"), font, word * 0.8, 20);
+    QVERIFY(fitted < 28 && fitted >= 20);
+    QCOMPARE(theme.fittingPixelSize(QStringLiteral("Crossings"), font, word * 0.1, 20), 20);
+    QCOMPARE(theme.fittingPixelSize(japanese, font, metrics.horizontalAdvance(japanese) / 2, 20),
+             28);
+}
+
 #include "tst_themecontroller.moc"

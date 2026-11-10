@@ -5,6 +5,7 @@
 
 #include <QColor>
 #include <QEasingCurve>
+#include <QFont>
 #include <QObject>
 #include <QQmlEngine>
 #include <QStringList>
@@ -156,6 +157,13 @@ public:
     /// leaves a family empty gets the system's monospace or serif font for it.
     Q_INVOKABLE QString noteFontFamily(const QString &choice) const;
     Q_INVOKABLE double contrast(const QColor &a, const QColor &b) const;
+    /// The widest stretch of `text` in `font` that a line cannot break inside, by the same
+    /// rules text wraps by: a word, or a single character of text written without spaces.
+    Q_INVOKABLE qreal widestUnbreakable(const QString &text, const QFont &font) const;
+    /// The pixel size, from `font`'s own down to `smallest`, at which no unbreakable stretch of
+    /// `text` is wider than `width`; `smallest` when none is small enough.
+    Q_INVOKABLE int fittingPixelSize(const QString &text, const QFont &font, qreal width,
+                                     int smallest) const;
 
     QVariantList swatches() const;
 

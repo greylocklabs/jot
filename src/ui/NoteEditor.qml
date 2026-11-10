@@ -475,19 +475,14 @@ Rectangle {
                     id: titleMetrics
                     font: title.font
                 }
-                // The title's longest word at its full size, for what gives way when it is narrow.
-                FontMetrics {
-                    id: fullTitleMetrics
-                    font.family: Theme.displayFontFamily
-                    font.pixelSize: Theme.text2xl
-                    font.weight: Theme.weightBold
-                }
-                readonly property real longestWord: {
-                    let longest = 0
-                    for (const word of title.text.split(/\s+/))
-                        longest = Math.max(longest, fullTitleMetrics.advanceWidth(word))
-                    return longest
-                }
+                // The title at its full size, and how wide its widest unbreakable stretch is in it,
+                // for what gives way when the note is narrow.
+                readonly property font titleFont: Qt.font({
+                                                              "family": Theme.displayFontFamily,
+                                                              "pixelSize": Theme.text2xl,
+                                                              "weight": Theme.weightBold
+                                                          })
+                readonly property real widestWord: Theme.widestUnbreakable(title.text, titleFont)
                 readonly property real firstLineMiddle: {
                     const letters = titleMetrics.tightBoundingRect("H")
                     return title.y + titleMetrics.ascent + letters.y + letters.height / 2
@@ -514,13 +509,11 @@ Rectangle {
                     color: Theme.text
                     selectionColor: Theme.tint(Theme.accent, 0.4)
                     selectedTextColor: Theme.text
-                    font.family: Theme.displayFontFamily
-                    // Smaller, down to the next size, when its longest word would not fit.
-                    font.pixelSize: parent.longestWord <= width ? Theme.text2xl : Math.max(
-                                                                      Theme.textXl, Math.floor(
-                                                                          Theme.text2xl * width
-                                                                          / parent.longestWord))
-                    font.weight: Theme.weightBold
+                    font.family: parent.titleFont.family
+                    // Smaller, down to the next size, when a word would not fit whole.
+                    font.pixelSize: Theme.fittingPixelSize(text, parent.titleFont, width,
+                                                           Theme.textXl)
+                    font.weight: parent.titleFont.weight
                     selectByMouse: true
                     Accessible.name: qsTr("Title")
                     onEditingFinished: {
@@ -589,7 +582,7 @@ Rectangle {
                         return parent.width - parent.spacing - wideTrash.width - (
                                     viewSwitch.visible ? viewSwitch.width + parent.spacing : 0) - (
                                     unsavedMark.visible ? unsavedMark.width + parent.spacing : 0)
-                                < parent.longestWord
+                                < parent.widestWord
                     }
 
                     objectName: "trash"
