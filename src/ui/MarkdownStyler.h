@@ -133,6 +133,8 @@ public:
     /// Paints the text from `start` to `end` in the selection's color for half a second, as
     /// vi does to what it yanked.
     Q_INVOKABLE void flash(int start, int end);
+    /// Marks the characters at `positions`, as vi's f and t matches.
+    Q_INVOKABLE void setMatches(const QVariantList &positions);
 
 Q_SIGNALS:
     void documentChanged();

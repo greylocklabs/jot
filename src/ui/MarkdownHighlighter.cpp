@@ -381,6 +381,28 @@ void MarkdownHighlighter::setFlash(int start, int end)
     }
 }
 
+void MarkdownHighlighter::setMatches(const QList<int> &positions)
+{
+    QTextDocument *doc = document();
+    if (!doc)
+        return;
+    QList<int> sorted = positions;
+    std::ranges::sort(sorted);
+    if (sorted == m_matches)
+        return;
+    // The lines with matches before or now, drawn again, each once.
+    QList<int> blocks;
+    for (const QList<int> &list : {m_matches, sorted}) {
+        for (const int position : list)
+            blocks.append(doc->findBlock(position).blockNumber());
+    }
+    m_matches = sorted;
+    std::ranges::sort(blocks);
+    blocks.erase(std::unique(blocks.begin(), blocks.end()), blocks.end());
+    for (const int block : std::as_const(blocks))
+        rehighlightBlock(doc->findBlockByNumber(block));
+}
+
 void MarkdownHighlighter::setFocusMode(bool focus)
 {
     if (m_focus == focus)
@@ -436,6 +458,17 @@ void MarkdownHighlighter::highlightBlock(const QString &text)
             flash.setBackground(tint);
             merge(start, end - start, flash);
         }
+    }
+    if (!m_matches.isEmpty()) {
+        const int at = currentBlock().position();
+        QTextCharFormat match;
+        QColor tint = m_look.accent;
+        tint.setAlphaF(0.3f);
+        match.setBackground(tint);
+        match.setForeground(m_look.accent);
+        for (auto it = std::ranges::lower_bound(m_matches, at);
+             it != m_matches.cend() && *it < at + text.size(); ++it)
+            merge(*it - at, 1, match);
     }
     const int number = currentBlock().blockNumber();
     if (!m_focus || m_paragraph.first < 0 ||

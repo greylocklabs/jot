@@ -7,6 +7,7 @@
 #include <QQmlEngine>
 #include <QQuickItem>
 #include <QTimer>
+#include <QVariantList>
 
 class QTextDocument;
 
@@ -36,6 +37,9 @@ class ViEditor : public QObject
     Q_PROPERTY(int percent READ percent NOTIFY placeChanged)
     /// The lines the selection touches, or 0 with nothing selected.
     Q_PROPERTY(int pickedLines READ pickedLines NOTIFY placeChanged)
+    /// After f, F, t or T, where the character gone to is found further on in the same
+    /// direction, to highlight while the next press of one of them steps on to it.
+    Q_PROPERTY(QVariantList matches READ matches NOTIFY matchesChanged)
 
 public:
     explicit ViEditor(QObject *parent = nullptr);
@@ -51,6 +55,7 @@ public:
     [[nodiscard]] int column() const;
     [[nodiscard]] int percent() const;
     [[nodiscard]] int pickedLines() const;
+    [[nodiscard]] QVariantList matches() const { return m_matches; }
 
 Q_SIGNALS:
     /// Escape in normal mode: the keyboard is done with the note.
@@ -64,9 +69,14 @@ Q_SIGNALS:
     void modeChanged();
     void pendingChanged();
     void placeChanged();
+    void matchesChanged();
 
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
+
+private Q_SLOTS:
+    /// Hides a find's matches once the cursor moves some other way.
+    void dropMatches();
 
 private:
     /// Handles a key in normal or visual mode; says whether it was used.
@@ -77,9 +87,14 @@ private:
     bool move(const QString &id);
     void sendKey(int key, Qt::KeyboardModifiers modifiers);
     void setPending(const QString &pending);
-    /// Goes along the line to `target`, as f, F, t or T (`kind`) do, or cuts or changes up to it
-    /// after d or c (`op`). Repeated, t and T look past a match right beside the cursor.
+    /// Goes on through the note to `target`, as f, F, t or T (`kind`) do, or cuts or changes up
+    /// to it after d or c (`op`). Repeated, t and T look past a match right beside the cursor.
     bool find(QChar op, QChar kind, QChar target, bool repeat);
+    /// Shows where `target` is found further on from the cursor in `kind`'s direction, or
+    /// nothing when `target` is null.
+    void setMatches(QChar kind, QChar target);
+    /// Ends stepping through a find's matches and hides them.
+    void endSteps();
     /// Whether keys type text, so the desktop's input method should see them.
     [[nodiscard]] bool typing() const;
     void updateInputMethod();
@@ -105,6 +120,11 @@ private:
     /// The last f, F, t or T and its character, for ; and , to repeat.
     QChar m_findKind;
     QChar m_findTarget;
+    QVariantList m_matches;
+    /// After a find, until another key or move: f, F, t and T step through its matches.
+    bool m_stepping = false;
+    /// Moving the cursor itself, as a find does, which leaves its matches shown.
+    bool m_finding = false;
 };
 
 } // namespace jot

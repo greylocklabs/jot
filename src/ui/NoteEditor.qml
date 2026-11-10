@@ -1039,6 +1039,7 @@ Rectangle {
                     busy: linkPopup.visible
                     onLeaveRequested: root.leftNote()
                     onYanked: (start, end) => styler.flash(start, end)
+                    onMatchesChanged: styler.setMatches(matches)
                 }
 
                 // The text is read for a table once typing pauses, so Edit as table can say
