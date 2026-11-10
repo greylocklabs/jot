@@ -131,10 +131,16 @@ ApplicationWindow {
                     font.pixelSize: Theme.textDisplay
                     font.weight: Theme.weightBold
                 }
+                // The notes folder's name, cut short before it reaches the buttons on the right.
                 Text {
+                    objectName: "vaultName"
                     anchors.verticalCenter: parent.verticalCenter
                     visible: Vault.isOpen
+                    width: Math.max(0, Math.min(implicitWidth, trailing.x - leading.x - x
+                                                - travel.width - 2 * leading.spacing
+                                                - Theme.space4))
                     text: Vault.name
+                    elide: Text.ElideRight
                     color: Theme.textMuted
                     font.family: Theme.displayFontFamily
                     font.pixelSize: Theme.textDisplay

@@ -18,7 +18,27 @@ Rectangle {
 
     readonly property string task: frontMatter.task || ""
 
-    implicitHeight: row.implicitHeight + 2 * Theme.space2
+    /// The formatting buttons' width on one line.
+    readonly property real formatWidth: {
+        let sum = 0
+        let shown = 0
+        for (const child of row.children) {
+            if (child.visible) {
+                sum += child.width
+                shown += 1
+            }
+        }
+        return sum + Math.max(0, shown - 1) * row.spacing
+    }
+    readonly property real trailingWidth: modesHolder.width + outlineToggle.implicitWidth
+                                          + taskToggle.implicitWidth + 2 * trailing.spacing
+    /// Too narrow for the formatting and the switches on one line: the switches go below it,
+    /// and each wraps as it must.
+    readonly property bool stacked: row.visible && width - 2 * Theme.space5 - Theme.space3
+                                    - trailingWidth < formatWidth
+
+    implicitHeight: stacked ? row.height + trailing.height + 3 * Theme.space2 : Math.max(
+                                  row.visible ? row.height : 0, trailing.height) + 2 * Theme.space2
     color: Theme.bg
 
     Rectangle {
@@ -34,15 +54,12 @@ Rectangle {
     Flow {
         id: row
 
+        objectName: "formatButtons"
         // Nothing to format while reading.
         visible: !Settings.readMode
-        anchors {
-            left: parent.left
-            right: parent.right
-            verticalCenter: parent.verticalCenter
-            leftMargin: Theme.space5
-            rightMargin: trailing.width + Theme.space5 + Theme.space3
-        }
+        x: Theme.space5
+        y: root.stacked ? Theme.space2 : (root.height - height) / 2
+        width: root.width - 2 * Theme.space5 - (root.stacked ? 0 : trailing.width + Theme.space3)
         spacing: Theme.space1
 
         // One button for the three heading sizes, so the row has room for the rest.
@@ -152,46 +169,56 @@ Rectangle {
         }
     }
 
-    Row {
+    Flow {
         id: trailing
 
-        anchors {
-            right: parent.right
-            rightMargin: Theme.space5
-            verticalCenter: parent.verticalCenter
-        }
+        objectName: "formatTrailing"
+        x: root.width - Theme.space5 - width
+        y: root.stacked ? row.y + row.height + Theme.space2 : (root.height - height) / 2
+        width: Math.min(root.trailingWidth, root.width - 2 * Theme.space5)
         spacing: Theme.space3
 
         // The note styled as it is typed, its Markdown as written, or drawn to read.
-        ModeSwitch {
-            objectName: "modes"
-            anchors.verticalCenter: parent.verticalCenter
-            options: [
-                {
-                    "label": qsTr("Styled"),
-                    "tip": qsTr("Style the Markdown as you type (Ctrl+/)")
-                },
-                {
-                    "label": qsTr("Source"),
-                    "tip": qsTr("Show the Markdown as written (Ctrl+/)")
-                },
-                {
-                    "label": qsTr("Read"),
-                    "tip": qsTr("Read the note as it looks, with links to follow (Ctrl+Shift+R)")
+        Item {
+            id: modesHolder
+
+            width: modes.implicitWidth
+            height: 32
+
+            ModeSwitch {
+                id: modes
+
+                objectName: "modes"
+                anchors.verticalCenter: parent.verticalCenter
+                options: [
+                    {
+                        "label": qsTr("Styled"),
+                        "tip": qsTr("Style the Markdown as you type (Ctrl+/)")
+                    },
+                    {
+                        "label": qsTr("Source"),
+                        "tip": qsTr("Show the Markdown as written (Ctrl+/)")
+                    },
+                    {
+                        "label": qsTr("Read"),
+                        "tip": qsTr(
+                                   "Read the note as it looks, with links to follow (Ctrl+Shift+R)")
+                    }
+                ]
+                current: Settings.readMode ? 2 : Settings.sourceMode ? 1 : 0
+                onPicked: index => {
+                    Settings.readMode = index === 2
+                    if (index < 2)
+                        Settings.sourceMode = index === 1
                 }
-            ]
-            current: Settings.readMode ? 2 : Settings.sourceMode ? 1 : 0
-            onPicked: index => {
-                Settings.readMode = index === 2
-                if (index < 2)
-                    Settings.sourceMode = index === 1
             }
         }
 
         // The note's headings down the side.
         Toggle {
+            id: outlineToggle
+
             objectName: "outlineToggle"
-            anchors.verticalCenter: parent.verticalCenter
             text: qsTr("Outline")
             checked: Settings.outlineShown
             focusPolicy: Qt.NoFocus
@@ -201,7 +228,8 @@ Rectangle {
 
         // A note that is a task shows in Tasks until it is done.
         Toggle {
-            anchors.verticalCenter: parent.verticalCenter
+            id: taskToggle
+
             text: qsTr("Task")
             // Follows the note: a click asks for the change, and the text says what it is.
             checked: root.task !== ""

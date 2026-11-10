@@ -5,6 +5,7 @@
 
 #include "jot/Settings.h"
 
+#include <QFile>
 #include <QQmlComponent>
 #include <QQmlEngine>
 #include <QQuickItem>
@@ -38,6 +39,7 @@ private Q_SLOTS:
     void showsAndRestoresPastVersions();
     void importsFromTheJoplinOnThisComputer();
     void asksBeforeTrashingSharedAttachments();
+    void narrowWindowOverlapsNothing();
 
 private:
     QTemporaryDir m_dir;
@@ -393,3 +395,71 @@ void TestDialogs::asksBeforeTrashingSharedAttachments()
 
 QTEST_MAIN(TestDialogs)
 #include "tst_dialogs.moc"
+
+void TestDialogs::narrowWindowOverlapsNothing()
+{
+    const QString folder = m_dir.filePath(u"A notes folder with a rather long name"_s);
+    QVERIFY(m_vault->openPath(folder));
+    QFile note(folder + u"/Narrow.md"_s);
+    QVERIFY(note.open(QIODevice::WriteOnly));
+    note.write("# A heading\n\nSome text.\n");
+    note.close();
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Narrow.md"_s), 3000);
+    m_vault->setCurrent(u"Narrow.md"_s);
+
+    QQmlEngine engine;
+    QQmlComponent component(&engine);
+    component.loadFromModule("Jot.Ui", "Main");
+    std::unique_ptr<QObject> main(component.create());
+    QVERIFY2(main, qPrintable(component.errorString()));
+    auto *window = qobject_cast<QQuickWindow *>(main.get());
+    QVERIFY(QTest::qWaitForWindowExposed(window));
+    QQuickItem *root = window->contentItem();
+    const std::function<QQuickItem *(QQuickItem *, const QString &)> find =
+        [&find](QQuickItem *at, const QString &name) -> QQuickItem * {
+        for (QQuickItem *child : at->childItems()) {
+            if (child->objectName() == name)
+                return child;
+            if (QQuickItem *found = find(child, name))
+                return found;
+        }
+        return nullptr;
+    };
+    const auto scene = [](QQuickItem *item) {
+        return item->mapRectToScene(QRectF(0, 0, item->width(), item->height()));
+    };
+    QQuickItem *forward = find(root, u"goForward"_s);
+    QQuickItem *newButton = find(root, u"newButton"_s);
+    QQuickItem *buttons = find(root, u"formatButtons"_s);
+    QQuickItem *trailing = find(root, u"formatTrailing"_s);
+    QVERIFY(forward && newButton && buttons && trailing);
+
+    // The window's own minimum is the narrowest it gets.
+    for (const int width : {1280, 1000, 760, 600}) {
+        for (const bool reading : {false, true}) {
+            m_settings->setReadMode(reading);
+            window->resize(width, 700);
+            QTRY_COMPARE(window->width(), width);
+            QTest::qWait(50);
+            const QString where = u"%1 wide%2"_s.arg(width).arg(reading ? u", reading"_s : u""_s);
+            QVERIFY2(scene(forward).right() <= scene(newButton).left(), qPrintable(where));
+            QVERIFY2(scene(trailing).left() >= 0 &&
+                         scene(trailing).right() <= scene(trailing->parentItem()).right(),
+                     qPrintable(where));
+            if (reading)
+                continue;
+            // The formatting wraps onto a few lines at most, leaving the note its room.
+            QVERIFY2(buttons->parentItem()->height() <= 200, qPrintable(where));
+            for (QQuickItem *button : buttons->childItems()) {
+                if (!button->isVisible())
+                    continue;
+                QVERIFY2(scene(button).right() <= scene(buttons->parentItem()).right(),
+                         qPrintable(where));
+                for (QQuickItem *other : trailing->childItems())
+                    QVERIFY2(!scene(button).intersects(scene(other)), qPrintable(where));
+            }
+        }
+    }
+    m_settings->setReadMode(false);
+    QVERIFY(m_vault->openPath(m_dir.filePath(u"Notes"_s)));
+}
