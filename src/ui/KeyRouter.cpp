@@ -82,6 +82,8 @@ QList<KeyAction> KeyRouter::actions()
         act(u"closeTab"_s, tr("Close the tab"), window, {int(K::Close)}),
         act(u"nextTab"_s, tr("Next tab"), window, {int(K::NextChild)}),
         act(u"previousTab"_s, tr("Previous tab"), window, {int(K::PreviousChild)}),
+        act(u"columns"_s, tr("Notebooks and notes, shown or put away"), window, {u"Ctrl+\\"_s}, {},
+            u"b"_s),
         act(u"outline"_s, tr("Outline of the note's headings"), window, {u"Ctrl+Shift+O"_s}, {},
             u"o"_s),
         act(u"focusMode"_s, tr("Focus mode: fade all but the paragraph being written"), window, {},

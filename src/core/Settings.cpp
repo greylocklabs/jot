@@ -34,6 +34,7 @@ const QString kLastReminderCheck = u"reminders/lastCheck"_s;
 const QString kSourceMode = u"editor/sourceMode"_s;
 const QString kReadMode = u"editor/readMode"_s;
 const QString kOutlineShown = u"editor/outline"_s;
+const QString kColumnsHidden = u"layout/columnsHidden"_s;
 const QString kFocusMode = u"editor/focusMode"_s;
 const QString kTypewriter = u"editor/typewriter"_s;
 const QString kNoteFont = u"editor/font"_s;
@@ -88,6 +89,7 @@ Settings::Settings(const QString &path, QObject *parent)
     m_sourceMode = m_store.value(kSourceMode, false).toBool();
     m_readMode = m_store.value(kReadMode, false).toBool();
     m_outlineShown = m_store.value(kOutlineShown, false).toBool();
+    m_columnsHidden = m_store.value(kColumnsHidden, false).toBool();
     m_focusMode = m_store.value(kFocusMode, false).toBool();
     m_typewriter = m_store.value(kTypewriter, false).toBool();
     m_noteFont = m_store.value(kNoteFont).toString();
@@ -341,6 +343,15 @@ void Settings::setNoteFont(const QString &font)
     Q_EMIT noteFontChanged();
 }
 
+void Settings::setColumnsHidden(bool hidden)
+{
+    if (m_columnsHidden == hidden)
+        return;
+    m_columnsHidden = hidden;
+    m_store.setValue(kColumnsHidden, hidden);
+    Q_EMIT columnsHiddenChanged();
+}
+
 void Settings::setOutlineShown(bool shown)
 {
     if (m_outlineShown == shown)
@@ -497,6 +508,7 @@ void Settings::reset()
     setSourceMode(false);
     setReadMode(false);
     setOutlineShown(false);
+    setColumnsHidden(false);
     setFocusMode(false);
     setTypewriter(false);
     setTasksView(u"today"_s);

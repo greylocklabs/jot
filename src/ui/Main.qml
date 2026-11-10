@@ -119,6 +119,18 @@ ApplicationWindow {
                     visible: buttons.length > 0
                     buttons: WindowButtons.left
                 }
+                // The notebooks and the note list, shown or put away.
+                StickerButton {
+                    objectName: "columnsToggle"
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: Vault.isOpen
+                    glyph: "sidebar"
+                    Accessible.name: columns.showSidebar || columns.showList ? qsTr(
+                                                                                   "Put away the notebooks and notes") :
+                                                                               qsTr("Show the notebooks and notes")
+                    tip: Accessible.name + " (Ctrl+\\)"
+                    onClicked: window.run("columns")
+                }
                 Logo {
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.verticalCenterOffset: -Theme.logoLift
@@ -357,18 +369,50 @@ ApplicationWindow {
         Item {
             id: columns
 
-            // The columns give way on a narrow window, so the note keeps room to write in.
+            // The notebooks and the note list put themselves away as the window narrows, the
+            // notebooks first, so the note keeps room to write in, and come back as it widens.
+            // Put away by hand they stay away; brought back by hand on a narrow window, they
+            // squeeze the note until the window is wide enough for them again.
+            readonly property int wantedSidebar: Settings.sidebarWidth > 0 ? Settings.sidebarWidth :
+                                                                             Theme.sidebarWidth
+            readonly property bool sidebarFits: width - wantedSidebar - Settings.minNoteListWidth
+                                                >= Theme.noteRoomWidth
+            readonly property bool listFits: width - Settings.minNoteListWidth
+                                             >= Theme.noteRoomWidth
+            /// Brought back by hand while the window is too narrow for them.
+            property bool shownByHand: false
+            readonly property bool showSidebar: !window.distractionFree && (shownByHand || (
+                                                                                !Settings.columnsHidden
+                                                                                && sidebarFits))
+            readonly property bool showList: !window.distractionFree && (shownByHand || (
+                                                                             !Settings.columnsHidden
+                                                                             && listFits))
+            // When they squeeze the note, it still keeps its least room.
             readonly property int room: width - Theme.editorMinWidth
-            readonly property int sidebarWidth: window.distractionFree ? 0 : Math.max(0, Math.min(
-                                                                                          Settings.sidebarWidth
-                                                                                          > 0 ? Settings.sidebarWidth :
-                                                                                                Theme.sidebarWidth,
-                                                                                          room - Settings.minNoteListWidth))
-            readonly property int noteListWidth: window.distractionFree ? 0 : Math.max(0, Math.min(
-                                                                                           Settings.noteListWidth
-                                                                                           > 0 ? Settings.noteListWidth :
-                                                                                                 Theme.noteListWidth,
-                                                                                           room - sidebarWidth))
+            readonly property int sidebarWidth: showSidebar ? Math.max(0, Math.min(wantedSidebar,
+                                                                                   room - Settings.minNoteListWidth)) :
+                                                              0
+            readonly property int noteListWidth: showList ? Math.max(0, Math.min(
+                                                                         Settings.noteListWidth > 0
+                                                                         ? Settings.noteListWidth :
+                                                                           Theme.noteListWidth,
+                                                                         room - sidebarWidth)) : 0
+
+            /// Puts both columns away, or brings both back.
+            function toggle() {
+                if (showSidebar || showList) {
+                    shownByHand = false
+                    Settings.columnsHidden = true
+                } else {
+                    Settings.columnsHidden = false
+                    shownByHand = !sidebarFits
+                }
+            }
+
+            onSidebarFitsChanged: {
+                if (sidebarFits)
+                    shownByHand = false
+            }
 
             anchors {
                 left: parent.left
@@ -385,9 +429,10 @@ ApplicationWindow {
             Sidebar {
                 id: sidebar
 
+                objectName: "sidebar"
                 onNoteMade: editor.editTitle()
                 onJoplinImportRequested: folder => joplinImport.start(folder)
-                visible: Vault.isOpen && !window.distractionFree
+                visible: Vault.isOpen && columns.showSidebar
                 anchors {
                     left: parent.left
                     top: parent.top
@@ -408,7 +453,7 @@ ApplicationWindow {
             }
             TaskList {
                 onAddRequested: quickAdd.open()
-                visible: Vault.isOpen && Vault.showingTasks
+                visible: Vault.isOpen && Vault.showingTasks && columns.showList
                 anchors {
                     left: sidebar.right
                     top: parent.top
@@ -419,11 +464,12 @@ ApplicationWindow {
             NoteList {
                 id: noteList
 
+                objectName: "noteList"
                 onTitleEditRequested: editor.editTitle()
                 onHistoryRequested: window.run("history")
                 onExportRequested: path => window.exportNote(path)
-                visible: Vault.isOpen && !Vault.showingTasks && !Vault.showingTrash &&
-                         !window.distractionFree
+                visible: Vault.isOpen && !Vault.showingTasks && !Vault.showingTrash
+                         && columns.showList
 
                 anchors {
                     left: sidebar.right
@@ -433,7 +479,7 @@ ApplicationWindow {
                 width: columns.noteListWidth
             }
             ColumnSplitter {
-                visible: Vault.isOpen && !window.distractionFree
+                visible: Vault.isOpen && columns.showList
                 anchors {
                     horizontalCenter: noteList.right
                     top: parent.top
@@ -446,7 +492,7 @@ ApplicationWindow {
             TrashList {
                 id: trashList
 
-                visible: Vault.isOpen && Vault.showingTrash
+                visible: Vault.isOpen && Vault.showingTrash && columns.showList
                 anchors {
                     left: sidebar.right
                     top: parent.top
@@ -643,6 +689,8 @@ ApplicationWindow {
         case "save":
         case "tasks":
             return Vault.isOpen
+        case "columns":
+            return Vault.isOpen && !window.distractionFree
         case "syncNow":
             return Vault.isOpen && Vault.sync.configured
         case "goBack":
@@ -789,6 +837,9 @@ ApplicationWindow {
             break
         case "outline":
             Settings.outlineShown = !Settings.outlineShown
+            break
+        case "columns":
+            columns.toggle()
             break
         case "export":
             exportNote(Vault.current)
