@@ -23,7 +23,8 @@ Popup {
     signal editColorsRequested
     signal joplinImportRequested
 
-    /// Which group of settings shows: "general", "sync", "appearance", "keyboard" or "developer".
+    /// Which group of settings shows: "general", "writing", "reminders", "sync", "appearance",
+    /// "keyboard" or "developer".
     property string tab: "general"
     /// The tab list's width: its longest label's.
     readonly property real tabsWidth: {
@@ -114,6 +115,14 @@ Popup {
                         "label": qsTr("General")
                     },
                     {
+                        "id": "writing",
+                        "label": qsTr("Writing")
+                    },
+                    {
+                        "id": "reminders",
+                        "label": qsTr("Reminders")
+                    },
+                    {
                         "id": "sync",
                         "label": qsTr("Sync")
                     },
@@ -175,6 +184,7 @@ Popup {
         ScrollView {
             id: pane
 
+            objectName: "settingsPane"
             anchors {
                 left: tabs.right
                 leftMargin: Theme.space6
@@ -246,7 +256,7 @@ Popup {
 
                 Section {
                     title: qsTr("Saving")
-                    visible: root.tab === "general"
+                    visible: root.tab === "writing"
 
                     Toggle {
                         objectName: "autosave"
@@ -269,7 +279,7 @@ Popup {
 
                 Section {
                     title: qsTr("Writing")
-                    visible: root.tab === "general"
+                    visible: root.tab === "writing"
 
                     Row {
                         spacing: Theme.space3
@@ -795,7 +805,7 @@ Popup {
 
                 Section {
                     title: qsTr("Reminders")
-                    visible: root.tab === "general"
+                    visible: root.tab === "reminders"
 
                     Toggle {
                         width: parent.width

@@ -33,6 +33,7 @@ private Q_SLOTS:
     void opensCleanly();
     void everyModalHasAClose_data();
     void everyModalHasAClose();
+    void settingsTabsFitWithoutScrolling();
     void themeColorsFinishHoweverClosed();
     void showsAndRestoresPastVersions();
     void importsFromTheJoplinOnThisComputer();
@@ -166,6 +167,34 @@ void TestDialogs::everyModalHasAClose()
     const QPointF center = close->mapToScene(QPointF(close->width() / 2, close->height() / 2));
     QTest::mouseClick(&window, Qt::LeftButton, {}, center.toPoint());
     QTRY_VERIFY(!popup->property("visible").toBool());
+}
+
+void TestDialogs::settingsTabsFitWithoutScrolling()
+{
+    QQuickWindow window;
+    window.resize(900, 700);
+    window.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&window));
+
+    QQmlEngine engine;
+    QQmlComponent component(&engine);
+    component.setData("import Jot.Ui\nSettingsDialog {}\n", QUrl(u"qrc:/test.qml"_s));
+    std::unique_ptr<QObject> settings(component.create());
+    QVERIFY2(settings, qPrintable(component.errorString()));
+    settings->setProperty("parent", QVariant::fromValue(window.contentItem()));
+    QMetaObject::invokeMethod(settings.get(), "open");
+    QTRY_VERIFY(settings->property("opened").toBool());
+    auto *pane = settings->property("contentItem")
+                     .value<QQuickItem *>()
+                     ->findChild<QQuickItem *>(u"settingsPane"_s);
+    QVERIFY(pane);
+    for (const QString &tab : {u"general"_s, u"writing"_s, u"reminders"_s}) {
+        settings->setProperty("tab", tab);
+        QTRY_VERIFY2(pane->property("contentHeight").toReal() <= pane->height(),
+                     qPrintable(u"%1: %2 tall in %3"_s.arg(tab)
+                                    .arg(pane->property("contentHeight").toReal())
+                                    .arg(pane->height())));
+    }
 }
 
 void TestDialogs::themeColorsFinishHoweverClosed()
