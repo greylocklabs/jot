@@ -27,6 +27,7 @@
 #include <QTemporaryDir>
 #include <QTest>
 #include <QTextBlock>
+#include <QTextCursor>
 #include <QTextDocument>
 #include <QTextLayout>
 #include <QtQml/qqmlextensionplugin.h>
@@ -1339,6 +1340,40 @@ void TestNoteEditor::readsTheNoteWithLinksAndBoxesToTick()
             break;
     }
     QVERIFY(ticked());
+
+    // Each box is drawn as the app's own, and a ticked one's text struck through. A click on the
+    // box itself unticks it.
+    const auto drawnBox = [&](const QString &text) {
+        const QTextBlock block = doc->findBlock(int(doc->toPlainText().indexOf(text)));
+        const QTextCharFormat first = block.begin().fragment().charFormat();
+        return first.isImageFormat() ? first.toImageFormat().name() : QString();
+    };
+    QTRY_COMPARE(drawnBox(u"Patch the hull"_s), u"jot-task:done"_s);
+    QCOMPARE(drawnBox(u"Buy rope"_s), u"jot-task:done"_s);
+    const int hull = int(doc->toPlainText().indexOf(u"Patch the hull"_s));
+    QTextCursor struck(doc);
+    struck.setPosition(hull + 1);
+    QVERIFY(struck.charFormat().fontStrikeOut());
+    const auto unticked = [&] {
+        return notefile::read(m_root + u"/Reading.md"_s, &error)
+            ->contains(u"- [ ] Patch the hull"_s);
+    };
+    for (int attempt = 0; attempt < 10 && !unticked(); ++attempt) {
+        QRectF box;
+        QMetaObject::invokeMethod(reader, "positionToRectangle", Q_RETURN_ARG(QRectF, box),
+                                  Q_ARG(int, hull - 1));
+        QRectF text;
+        QMetaObject::invokeMethod(reader, "positionToRectangle", Q_RETURN_ARG(QRectF, text),
+                                  Q_ARG(int, hull));
+        QTest::mouseClick(
+            m_window.get(), Qt::LeftButton, {},
+            reader->mapToScene(QPointF(box.x() + (text.x() - box.x()) / 3, text.center().y()))
+                .toPoint());
+        if (QTest::qWaitFor(unticked, 300))
+            break;
+    }
+    QVERIFY(unticked());
+    QTRY_COMPARE(drawnBox(u"Patch the hull"_s), u"jot-task:open"_s);
 
     // Its links lead to the note, and to the tag's notes.
     QMetaObject::invokeMethod(reader, "linkActivated", Q_ARG(QString, u"jot-tag:ferry"_s));

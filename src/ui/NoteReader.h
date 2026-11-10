@@ -40,8 +40,8 @@ public:
     [[nodiscard]] int width() const { return m_width; }
     void setWidth(int width);
 
-    /// The checkbox task drawn at `position`: `{line, done, text}`, with its line in the note's
-    /// file, or empty when there is none there.
+    /// The checkbox task drawn at `position`: `{line, done, text, textStart}`, with its line in
+    /// the note's file and where its text starts after the box, or empty when there is none there.
     Q_INVOKABLE QVariantMap taskAt(int position) const;
     /// Where the heading numbered `index`, from 0, as headingsOf() numbers them, starts in the
     /// drawn document, or -1.
@@ -54,6 +54,7 @@ private:
     void schedule();
     void render();
     void style();
+    void drawTasks();
     void placeImages();
 
     QPointer<QQuickTextDocument> m_document;
