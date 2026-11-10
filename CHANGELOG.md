@@ -21,6 +21,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 - Restore is off, saying why, for a past version the same as the note now.
 - The outline's headings line up under its title.
 - Read mode draws checkboxes like the rest of Jot's, with ticked tasks struck through.
+- On a narrow window the format row moves its switches below the formatting buttons instead of
+  piling the buttons into a column, and a long notes folder name is cut short in the title bar.
 
 ## 0.5.0 - 2026-11-09
 
