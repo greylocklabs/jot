@@ -562,4 +562,16 @@ void TestDialogs::columnsGiveWayToTheNote()
     click();
     QTRY_VERIFY(sidebar->isVisible() && list->isVisible());
     QVERIFY(!m_settings->columnsHidden());
+
+    // Searching brings the list back to search in, however it was put away.
+    widen(600);
+    QTRY_VERIFY(!list->isVisible());
+    QMetaObject::invokeMethod(main.get(), "run", Q_ARG(QVariant, u"search"_s));
+    QTRY_VERIFY(list->isVisible());
+    widen(1280);
+    click();
+    QTRY_VERIFY(!list->isVisible());
+    QMetaObject::invokeMethod(main.get(), "run", Q_ARG(QVariant, u"search"_s));
+    QTRY_VERIFY(list->isVisible());
+    QVERIFY(!m_settings->columnsHidden());
 }
