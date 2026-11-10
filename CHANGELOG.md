@@ -3,6 +3,12 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## Unreleased
+
+### Changed
+
+- The format row's record button is a microphone, and a stop square while recording.
+
 ## 0.5.1 - 2026-11-09
 
 ### Added
