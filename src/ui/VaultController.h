@@ -88,6 +88,10 @@ class VaultController : public QObject
     Q_PROPERTY(jot::BacklinksModel *backlinks READ backlinks CONSTANT)
     /// The note shown, by vault path, and what it says.
     Q_PROPERTY(QString current READ current WRITE setCurrent NOTIFY currentChanged)
+    /// The word target of the shown note's notebook, or of the nearest notebook around it with
+    /// one: `{path, name, words, deadline, others}`, its deadline as YYYY-MM-DD or empty, and
+    /// `others` the words of every other note in it and its notebooks. Empty for none.
+    Q_PROPERTY(QVariantMap currentTarget READ currentTarget NOTIFY currentTargetChanged)
     Q_PROPERTY(QString currentTitle READ currentTitle NOTIFY currentTitleChanged)
     Q_PROPERTY(QString currentText READ currentText NOTIFY currentChanged)
     /// The open file's kind: "markdown" for a note, else its data format: "json", "csv", "tsv"
@@ -252,6 +256,11 @@ public:
     Q_INVOKABLE bool setNotebookEmoji(const QString &path, const QString &emoji);
     /// Shows `emoji` before `view`, "tasks" or "trash", or none when it is empty.
     Q_INVOKABLE bool setViewEmoji(const QString &view, const QString &emoji);
+    /// The notebook's word target, `{words, deadline}`, 0 words for none.
+    Q_INVOKABLE QVariantMap notebookTarget(const QString &path) const;
+    /// Sets the notebook's word target and the day, YYYY-MM-DD, to reach it by, or none when
+    /// `deadline` is empty; 0 words takes the target away.
+    Q_INVOKABLE bool setNotebookTarget(const QString &path, int words, const QString &deadline);
     /// Makes a notebook in `parent`, or at the top for none, and gives its path.
     Q_INVOKABLE QString newNotebook(const QString &parent = {});
     /// Renames the notebook at `path`, rewriting links to the notes in it.
@@ -402,6 +411,7 @@ public:
     [[nodiscard]] QStringList tags() const;
     [[nodiscard]] QVariantList labels() const;
     [[nodiscard]] QVariantMap notebookEmoji() const { return m_notebookEmoji; }
+    [[nodiscard]] QVariantMap currentTarget() const { return m_currentTarget; }
     [[nodiscard]] QVariantMap viewEmoji() const { return m_viewEmoji; }
     [[nodiscard]] NotebookModel *notebooks() { return &m_notebooks; }
     [[nodiscard]] TagModel *tagTree() { return &m_tagTree; }
@@ -437,6 +447,7 @@ Q_SIGNALS:
     void errorChanged();
     void notesChanged();
     void currentChanged();
+    void currentTargetChanged();
     /// The note shown changed by replacing `length` characters at `start` with `text`, just
     /// before currentChanged(), so the editor can make the same edit and keep its undo history.
     void currentPatched(int start, int length, const QString &text);
@@ -470,6 +481,8 @@ private:
     void close();
     void notesChangedOnDisk(const QStringList &paths);
     void reloadModels();
+    /// Works out currentTarget() again.
+    void refreshTarget();
     /// Reads the trash again for Trash.
     void reloadTrash();
     /// Hands notes in the trash longer than settings keep them to the desktop's trash.
@@ -547,6 +560,7 @@ private:
     SyncController m_sync{m_settings};
     bool m_showingTasks = false;
     QVariantMap m_notebookEmoji;
+    QVariantMap m_currentTarget;
     QVariantMap m_viewEmoji;
     QStringList m_pinned;
     QString m_indexPath;

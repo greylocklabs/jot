@@ -57,6 +57,7 @@ VaultController::VaultController(Settings &settings, QObject *parent)
     });
     connect(this, &VaultController::currentChanged, this, &VaultController::currentTitleChanged);
     connect(this, &VaultController::currentChanged, this, &VaultController::followCurrentInTabs);
+    connect(this, &VaultController::currentChanged, this, &VaultController::refreshTarget);
     // Saving changes the list's order and titles; a burst of saves reloads it once.
     m_reloadTimer.setSingleShot(true);
     m_reloadTimer.setInterval(800);
@@ -1111,6 +1112,67 @@ bool VaultController::setNotebookEmoji(const QString &path, const QString &emoji
     }
     reloadModels();
     return true;
+}
+
+QVariantMap VaultController::notebookTarget(const QString &path) const
+{
+    QString error;
+    const std::optional<Layout> layout = m_vault ? Layout::read(*m_vault, &error) : std::nullopt;
+    const Layout::Target target = layout ? layout->target(path) : Layout::Target();
+    return {{u"words"_s, target.words},
+            {u"deadline"_s,
+             target.deadline.isValid() ? target.deadline.toString(Qt::ISODate) : QString()}};
+}
+
+bool VaultController::setNotebookTarget(const QString &path, int words, const QString &deadline)
+{
+    if (!m_vault || !m_vault->writable() || path.isEmpty())
+        return false;
+    QString error;
+    std::optional<Layout> layout = Layout::read(*m_vault, &error);
+    if (layout)
+        layout->setTarget(path, {std::max(0, words), QDate::fromString(deadline, Qt::ISODate)});
+    if (!layout || !layout->write(*m_vault, &error)) {
+        qCWarning(lcVault) << "could not set the word target of" << path << error;
+        setProblem(tr("Could not change the notebook's word target: %1").arg(error));
+        return false;
+    }
+    reloadModels();
+    return true;
+}
+
+void VaultController::refreshTarget()
+{
+    QVariantMap found;
+    QString error;
+    const std::optional<Layout> layout =
+        m_vault && m_index && !m_current.isEmpty() ? Layout::read(*m_vault, &error) : std::nullopt;
+    // The nearest notebook around the note with a target.
+    QString folder = m_current.section(u'/', 0, -2);
+    for (; layout && !folder.isEmpty(); folder = folder.section(u'/', 0, -2)) {
+        const Layout::Target target = layout->target(folder);
+        if (target.words <= 0)
+            continue;
+        int others = 0;
+        for (const NoteInfo &note : m_index->notesIn(folder)) {
+            if (note.path == m_current || !note.path.endsWith(u".md"_s))
+                continue;
+            if (const std::optional<QString> text =
+                    notefile::read(m_vault->absolute(note.path), &error))
+                others += countText(splitFrontMatter(*text).body).words;
+        }
+        found = {{u"path"_s, folder},
+                 {u"name"_s, folder.section(u'/', -1)},
+                 {u"words"_s, target.words},
+                 {u"deadline"_s,
+                  target.deadline.isValid() ? target.deadline.toString(Qt::ISODate) : QString()},
+                 {u"others"_s, others}};
+        break;
+    }
+    if (found != m_currentTarget) {
+        m_currentTarget = found;
+        Q_EMIT currentTargetChanged();
+    }
 }
 
 bool VaultController::setViewEmoji(const QString &view, const QString &emoji)
@@ -2191,6 +2253,7 @@ void VaultController::reloadModels()
         m_backlinks.reload(nullptr, nullptr, {});
         m_tasks.reload(nullptr);
     }
+    refreshTarget();
     Q_EMIT notesChanged();
 }
 

@@ -46,6 +46,7 @@ private Q_SLOTS:
     void switcherFindsByTitleAliasAndPath();
     void makesRenamesAndMovesNotebooks();
     void givesNotebooksAnEmoji();
+    void countsTowardsANotebooksTarget();
     void movesANoteToAnotherNotebook();
     void followsANotebookThatMovedThoughALinkCouldNotBeRewritten();
     void actsOnNotesThatAreNotShown();
@@ -466,6 +467,40 @@ void TestVaultController::followsANotebookThatMovedThoughALinkCouldNotBeRewritte
     QCOMPARE(m_vault->current(), u"Ashfall/Cast/Mara Vey.md"_s);
     QVERIFY(m_vault->index()->note(u"Ashfall/Cast/Mara Vey.md"_s));
     QVERIFY(!m_vault->index()->note(u"Ashfall/Characters/Mara Vey.md"_s));
+}
+
+void TestVaultController::countsTowardsANotebooksTarget()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    QVERIFY(QDir(m_root).mkpath(u"Novel/Part 1"_s));
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Novel/Ch 1.md"_s, u"One two three.\n"_s, &error));
+    QVERIFY(notefile::write(m_root + u"/Novel/Part 1/Ch 2.md"_s,
+                            u"---\ntitle: Not counted\n---\nFour five.\n"_s, &error));
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Novel/Part 1/Ch 2.md"_s), 3000);
+    QVERIFY(m_vault->setNotebookTarget(u"Novel"_s, 90000, u"2027-01-30"_s));
+    QCOMPARE(m_vault->notebookTarget(u"Novel"_s),
+             (QVariantMap{{u"words"_s, 90000}, {u"deadline"_s, u"2027-01-30"_s}}));
+
+    // A note in it, or in a notebook inside it, counts the others' words, front matter aside.
+    QSignalSpy changed(m_vault.get(), &VaultController::currentTargetChanged);
+    m_vault->setCurrent(u"Novel/Ch 1.md"_s);
+    QVariantMap target = m_vault->currentTarget();
+    QCOMPARE(target.value(u"name"_s), u"Novel"_s);
+    QCOMPARE(target.value(u"words"_s), 90000);
+    QCOMPARE(target.value(u"deadline"_s), u"2027-01-30"_s);
+    QCOMPARE(target.value(u"others"_s), 2);
+    QVERIFY(!changed.isEmpty());
+    m_vault->setCurrent(u"Novel/Part 1/Ch 2.md"_s);
+    QCOMPARE(m_vault->currentTarget().value(u"path"_s), u"Novel"_s);
+    QCOMPARE(m_vault->currentTarget().value(u"others"_s), 3);
+    // Anywhere else there is none, nor once it is taken away.
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QVERIFY(m_vault->currentTarget().isEmpty());
+    m_vault->setCurrent(u"Novel/Ch 1.md"_s);
+    QVERIFY(m_vault->setNotebookTarget(u"Novel"_s, 0, {}));
+    QVERIFY(m_vault->currentTarget().isEmpty());
+    QCOMPARE(m_vault->notebookTarget(u"Novel"_s).value(u"words"_s), 0);
 }
 
 void TestVaultController::givesNotebooksAnEmoji()

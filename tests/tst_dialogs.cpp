@@ -75,6 +75,7 @@ void TestDialogs::opensCleanly_data()
     QTest::newRow("theme colors") << u"ThemeEditor {}"_s;
     QTest::newRow("report a problem") << u"ReportDialog {}"_s;
     QTest::newRow("past versions") << u"HistoryDialog {}"_s;
+    QTest::newRow("word target") << u"NotebookTarget { path: 'Ashfall' }"_s;
     QTest::newRow("export") << u"ExportDialog { path: 'Welcome.md' }"_s;
     QTest::newRow("import from joplin")
         << uR"(JoplinImport { summary: ({ ok: true, created: 3, updated: 1, unchanged: 2, notebooks: 1,
@@ -135,7 +136,7 @@ void TestDialogs::everyModalHasAClose_data()
          {u"SettingsDialog {}"_s, u"KeyHelp { actions: [] }"_s, u"AboutDialog {}"_s,
           u"WhatsNewDialog {}"_s, u"UpdateDialog {}"_s, u"ThemeEditor {}"_s, u"TrashConfirm {}"_s,
           u"QuickSwitcher {}"_s, u"CommandPalette {}"_s, u"EmojiPicker {}"_s, u"QuickAdd {}"_s,
-          u"JoplinImport {}"_s, u"HistoryDialog {}"_s})
+          u"JoplinImport {}"_s, u"HistoryDialog {}"_s, u"NotebookTarget {}"_s})
         QTest::newRow(qPrintable(dialog)) << dialog;
 }
 

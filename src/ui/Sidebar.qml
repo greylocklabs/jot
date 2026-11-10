@@ -676,6 +676,13 @@ Rectangle {
             onTriggered: emojiPicker.choose(notebookMenu.path)
         }
         MenuEntry {
+            text: qsTr("Word target...")
+            visible: notebookMenu.path !== ""
+            height: visible ? implicitHeight : 0
+            enabled: Vault.writable
+            onTriggered: notebookTarget.openFor(notebookMenu.path)
+        }
+        MenuEntry {
             text: notebookMenu.path === "" ? qsTr("Import from Joplin...") : qsTr(
                                                  "Import from Joplin into here...")
             enabled: Vault.writable
@@ -696,6 +703,10 @@ Rectangle {
 
     EmojiPicker {
         id: emojiPicker
+    }
+
+    NotebookTarget {
+        id: notebookTarget
     }
 
     TrashConfirm {

@@ -104,6 +104,7 @@ qt_add_qml_module(jotui
         ModeSwitch.qml
         NoteEditor.qml
         NoteList.qml
+        NotebookTarget.qml
         PickerButton.qml
         PillButton.qml
         QuickAdd.qml
