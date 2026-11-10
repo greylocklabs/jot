@@ -574,4 +574,21 @@ void TestDialogs::columnsGiveWayToTheNote()
     QMetaObject::invokeMethod(main.get(), "run", Q_ARG(QVariant, u"search"_s));
     QTRY_VERIFY(list->isVisible());
     QVERIFY(!m_settings->columnsHidden());
+
+    // So does stepping through the notes, which then opens the next one.
+    QVERIFY(QDir(m_dir.filePath(u"Notes"_s)).exists());
+    for (const QString &name : {u"Step one.md"_s, u"Step two.md"_s}) {
+        QFile note(m_dir.filePath(u"Notes/"_s + name));
+        QVERIFY(note.open(QIODevice::WriteOnly));
+        note.write("Text.\n");
+    }
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Step two.md"_s), 3000);
+    click();
+    QTRY_VERIFY(!list->isVisible());
+    QMetaObject::invokeMethod(main.get(), "run", Q_ARG(QVariant, u"firstNote"_s));
+    QTRY_VERIFY(list->isVisible());
+    QTRY_VERIFY(!m_vault->current().isEmpty());
+    const QString first = m_vault->current();
+    QMetaObject::invokeMethod(main.get(), "run", Q_ARG(QVariant, u"nextNote"_s));
+    QTRY_VERIFY(m_vault->current() != first);
 }

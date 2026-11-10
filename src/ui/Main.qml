@@ -832,6 +832,7 @@ ApplicationWindow {
         case "previousNote":
         case "firstNote":
         case "lastNote":
+            columns.revealList()
             noteList.step(id)
             break
         case "editNote":
