@@ -574,6 +574,28 @@ void TestNoteEditor::outlinesTheNoteBesideIt()
     body->setProperty("cursorPosition", 2);
     QTRY_COMPARE(outline->property("headings").toList().size(), 2);
     QCOMPARE(outline->property("current").toInt(), 0);
+    // A top heading's words line up with the outline's title.
+    QQuickItem *title = find(u"outlineTitle"_s, outline);
+    QQuickItem *entry = nullptr;
+    QTRY_VERIFY((entry = [outline]() -> QQuickItem * {
+        QQuickItem *found = nullptr;
+        const std::function<void(QQuickItem *)> look = [&](QQuickItem *item) {
+            if (!found && item->objectName() == u"outlineEntry"_s)
+                found = item;
+            for (QQuickItem *child : item->childItems())
+                look(child);
+        };
+        look(outline);
+        return found;
+    }()));
+    QQuickItem *words = nullptr;
+    for (QQuickItem *child : entry->childItems()) {
+        if (QString::fromLatin1(child->metaObject()->className()).startsWith(u"QQuickText"))
+            words = child;
+    }
+    QVERIFY(title && words);
+    QCOMPARE(words->mapToItem(outline, {words->property("leftPadding").toReal(), 0}).x(),
+             title->mapToItem(outline, {0, 0}).x());
     // Above the first heading, under none; hidden, it reads nothing.
     body->setProperty("text", u"---\ntitle: x\n---\nIntro\n"_s + text);
     body->setProperty("cursorPosition", 18);
