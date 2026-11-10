@@ -41,6 +41,7 @@ private Q_SLOTS:
     void importsFromTheJoplinOnThisComputer();
     void asksBeforeTrashingSharedAttachments();
     void narrowWindowOverlapsNothing();
+    void columnsGiveWayToTheNote();
     void offersToRemoveATargetOnlyWhenThereIsOne();
 
 private:
@@ -499,4 +500,66 @@ void TestDialogs::offersToRemoveATargetOnlyWhenThereIsOne()
     QVERIFY(m_vault->setNotebookTarget(u"Novel"_s, 0, {}));
     reopen();
     QVERIFY(!dialog->property("hasTarget").toBool());
+}
+
+void TestDialogs::columnsGiveWayToTheNote()
+{
+    m_settings->setColumnsHidden(false);
+    QQmlEngine engine;
+    QQmlComponent component(&engine);
+    component.loadFromModule("Jot.Ui", "Main");
+    std::unique_ptr<QObject> main(component.create());
+    QVERIFY2(main, qPrintable(component.errorString()));
+    auto *window = qobject_cast<QQuickWindow *>(main.get());
+    QVERIFY(QTest::qWaitForWindowExposed(window));
+    const std::function<QQuickItem *(QQuickItem *, const QString &)> find =
+        [&find](QQuickItem *at, const QString &name) -> QQuickItem * {
+        for (QQuickItem *child : at->childItems()) {
+            if (child->objectName() == name)
+                return child;
+            if (QQuickItem *found = find(child, name))
+                return found;
+        }
+        return nullptr;
+    };
+    QQuickItem *sidebar = find(window->contentItem(), u"sidebar"_s);
+    QQuickItem *list = find(window->contentItem(), u"noteList"_s);
+    QQuickItem *toggle = find(window->contentItem(), u"columnsToggle"_s);
+    QVERIFY(sidebar && list && toggle);
+    const auto widen = [&](int width) {
+        window->resize(width, 700);
+        QTRY_COMPARE(window->contentItem()->width(), qreal(width));
+    };
+    const auto click = [&] {
+        QTest::mouseClick(
+            window, Qt::LeftButton, {},
+            toggle->mapToScene({toggle->width() / 2, toggle->height() / 2}).toPoint());
+    };
+
+    // As the window narrows, the notebooks go first, then the note list.
+    widen(1280);
+    QTRY_VERIFY(sidebar->isVisible() && list->isVisible());
+    widen(900);
+    QTRY_VERIFY(!sidebar->isVisible() && list->isVisible());
+    widen(600);
+    QTRY_VERIFY(!sidebar->isVisible() && !list->isVisible());
+    // Brought back by hand, both squeeze the note; wide again, they follow the window as before.
+    click();
+    QTRY_VERIFY(sidebar->isVisible() && list->isVisible());
+    widen(1280);
+    widen(600);
+    QTRY_VERIFY(!sidebar->isVisible() && !list->isVisible());
+
+    // Put away by hand, they stay away at any width, and that is remembered.
+    widen(1280);
+    QTRY_VERIFY(sidebar->isVisible());
+    click();
+    QTRY_VERIFY(!sidebar->isVisible() && !list->isVisible());
+    QVERIFY(m_settings->columnsHidden());
+    widen(600);
+    widen(1280);
+    QTRY_VERIFY(!sidebar->isVisible() && !list->isVisible());
+    click();
+    QTRY_VERIFY(sidebar->isVisible() && list->isVisible());
+    QVERIFY(!m_settings->columnsHidden());
 }

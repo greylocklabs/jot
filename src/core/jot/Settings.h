@@ -43,6 +43,9 @@ class Settings : public QObject
     Q_PROPERTY(bool readMode READ readMode WRITE setReadMode NOTIFY readModeChanged)
     /// The outline of the note's headings beside it.
     Q_PROPERTY(bool outlineShown READ outlineShown WRITE setOutlineShown NOTIFY outlineShownChanged)
+    /// The notebook and note list columns put away by hand, at any width.
+    Q_PROPERTY(
+        bool columnsHidden READ columnsHidden WRITE setColumnsHidden NOTIFY columnsHiddenChanged)
     /// Everything but the paragraph being written faded.
     Q_PROPERTY(bool focusMode READ focusMode WRITE setFocusMode NOTIFY focusChanged)
     /// The line being written kept in the middle of the window.
@@ -123,6 +126,8 @@ public:
     void setReadMode(bool read);
     [[nodiscard]] bool outlineShown() const { return m_outlineShown; }
     void setOutlineShown(bool shown);
+    [[nodiscard]] bool columnsHidden() const { return m_columnsHidden; }
+    void setColumnsHidden(bool hidden);
     [[nodiscard]] bool focusMode() const { return m_focusMode; }
     void setFocusMode(bool on);
     [[nodiscard]] bool typewriter() const { return m_typewriter; }
@@ -195,6 +200,7 @@ Q_SIGNALS:
     void sourceModeChanged();
     void readModeChanged();
     void outlineShownChanged();
+    void columnsHiddenChanged();
     void focusChanged();
     void keyboardChanged();
     void lastSeenVersionChanged();
@@ -221,6 +227,7 @@ private:
     bool m_sourceMode = false;
     bool m_readMode = false;
     bool m_outlineShown = false;
+    bool m_columnsHidden = false;
     bool m_focusMode = false;
     bool m_typewriter = false;
     bool m_developerMode = false;
