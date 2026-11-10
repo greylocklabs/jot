@@ -409,6 +409,15 @@ ApplicationWindow {
                 }
             }
 
+            /// Brings the note list back, if it is away, for something that needs it.
+            function revealList() {
+                if (showList)
+                    return
+                Settings.columnsHidden = false
+                if (!listFits)
+                    shownByHand = true
+            }
+
             onSidebarFitsChanged: {
                 if (sidebarFits)
                     shownByHand = false
@@ -514,7 +523,10 @@ ApplicationWindow {
                 id: editor
 
                 router: keys
-                onLeftNote: noteList.focusList()
+                onLeftNote: {
+                    columns.revealList()
+                    noteList.focusList()
+                }
                 distractionFree: window.distractionFree
 
                 visible: Vault.isOpen && !Vault.showingTrash
@@ -801,6 +813,7 @@ ApplicationWindow {
             palette.open()
             break
         case "search":
+            columns.revealList()
             noteList.focusSearch()
             break
         case "save":
