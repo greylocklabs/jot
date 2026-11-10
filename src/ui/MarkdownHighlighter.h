@@ -117,8 +117,8 @@ public:
     void setResolver(Resolver resolver);
     /// The block the cursor is in shows its marks; others fold them away.
     void setCursorPosition(int position);
-    /// Shows the Markdown exactly as written, in the monospace font: nothing folded, styled
-    /// or shown as an image.
+    /// Shows the Markdown exactly as written, in the monospace font and highlighted, but with
+    /// nothing folded, resized or shown as an image.
     void setSourceMode(bool source);
     /// Fades every block but those of the paragraph the cursor is in, while it is in one.
     void setFocusMode(bool focus);
@@ -156,6 +156,8 @@ private:
     void merge(int start, int length, const QTextCharFormat &format);
     void mark(int start, int length);
     void inlineStyles(const QString &text, int from);
+    /// Styles a block in source mode: the marks colored or faded, but none hidden or resized.
+    void sourceBlock(const QString &text, int state, bool first);
     /// Styles CriticMarkup's additions, deletions, substitutions, highlights and comments, and
     /// gives where its comments are, which nothing else styles inside.
     QList<std::pair<int, int>> criticStyles(const QString &text, int from);
