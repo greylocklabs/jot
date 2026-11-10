@@ -5,6 +5,10 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ## Unreleased
 
+### Changed
+
+- Settings has Writing and Reminders tabs, so each tab fits without scrolling.
+
 ### Fixed
 
 - Exporting a note keeps the first word of each footnote.
