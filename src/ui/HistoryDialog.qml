@@ -226,7 +226,7 @@ Popup {
                 left: list.right
                 leftMargin: Theme.space4
                 right: parent.right
-                bottom: restore.top
+                bottom: restoreHolder.top
                 bottomMargin: Theme.space4
             }
             visible: root.versions.length > 0 && root.showChanges
@@ -280,7 +280,7 @@ Popup {
                 left: list.right
                 leftMargin: Theme.space4
                 right: parent.right
-                bottom: restore.top
+                bottom: restoreHolder.top
                 bottomMargin: Theme.space4
             }
             visible: root.versions.length > 0 && !root.showChanges
@@ -305,25 +305,36 @@ Popup {
             }
         }
 
-        StickerButton {
-            id: restore
-            objectName: "restore"
+        // Nothing to restore from a version the same as the note now.
+        WhyDisabled {
+            id: restoreHolder
 
             anchors {
                 right: parent.right
                 bottom: parent.bottom
             }
             visible: root.versions.length > 0
-            accent: true
-            enabled: root.chosen !== null && Vault.writable
-            text: qsTr("Restore this version")
-            tip: qsTr("What the note holds now is kept as a version too")
-            onClicked: {
-                if (!enabled)
-                    return
-                root.failed = !Vault.restoreVersion(root.chosen.path)
-                if (!root.failed)
-                    root.close()
+            target: restore
+            reason: root.chosen && Vault.sameAsNow(root.chosen.path) ? qsTr(
+                                                                           "This version is the same as the note now.") :
+                                                                       ""
+
+            StickerButton {
+                id: restore
+                objectName: "restore"
+
+                accent: true
+                enabled: root.chosen !== null && Vault.writable && !Vault.sameAsNow(
+                             root.chosen.path)
+                text: qsTr("Restore this version")
+                tip: qsTr("What the note holds now is kept as a version too")
+                onClicked: {
+                    if (!enabled)
+                        return
+                    root.failed = !Vault.restoreVersion(root.chosen.path)
+                    if (!root.failed)
+                        root.close()
+                }
             }
         }
 
@@ -332,9 +343,9 @@ Popup {
 
             anchors {
                 left: viewer.left
-                right: restore.left
+                right: restoreHolder.left
                 rightMargin: Theme.space4
-                verticalCenter: restore.verticalCenter
+                verticalCenter: restoreHolder.verticalCenter
             }
             visible: root.failed
             text: qsTr("Could not restore this version, so the note is as it was.")

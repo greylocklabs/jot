@@ -354,6 +354,11 @@ public:
     Q_INVOKABLE QVariantList historyOf(const QString &path) const;
     /// The text of the past version at vault path `version`.
     Q_INVOKABLE QString versionText(const QString &version) const;
+    /// Whether the past version at `version` holds just what the note shown does now.
+    Q_INVOKABLE bool sameAsNow(const QString &version) const
+    {
+        return !version.isEmpty() && versionText(version) == m_currentText;
+    }
     /// Makes the past version at `version` the current note's text, keeping what it replaces
     /// as a version of its own. When it cannot be written, the note stays as it was.
     Q_INVOKABLE bool restoreVersion(const QString &version);
