@@ -183,7 +183,8 @@ Rectangle {
             id: modesHolder
 
             width: modes.implicitWidth
-            height: 32
+            // As tall as the toggles beside it, so the line lines up.
+            height: Math.max(modes.implicitHeight, outlineToggle.implicitHeight)
 
             ModeSwitch {
                 id: modes
