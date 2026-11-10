@@ -475,6 +475,19 @@ Rectangle {
                     id: titleMetrics
                     font: title.font
                 }
+                // The title's longest word at its full size, for what gives way when it is narrow.
+                FontMetrics {
+                    id: fullTitleMetrics
+                    font.family: Theme.displayFontFamily
+                    font.pixelSize: Theme.text2xl
+                    font.weight: Theme.weightBold
+                }
+                readonly property real longestWord: {
+                    let longest = 0
+                    for (const word of title.text.split(/\s+/))
+                        longest = Math.max(longest, fullTitleMetrics.advanceWidth(word))
+                    return longest
+                }
                 readonly property real firstLineMiddle: {
                     const letters = titleMetrics.tightBoundingRect("H")
                     return title.y + titleMetrics.ascent + letters.y + letters.height / 2
@@ -502,7 +515,11 @@ Rectangle {
                     selectionColor: Theme.tint(Theme.accent, 0.4)
                     selectedTextColor: Theme.text
                     font.family: Theme.displayFontFamily
-                    font.pixelSize: Theme.text2xl
+                    // Smaller, down to the next size, when its longest word would not fit.
+                    font.pixelSize: parent.longestWord <= width ? Theme.text2xl : Math.max(
+                                                                      Theme.textXl, Math.floor(
+                                                                          Theme.text2xl * width
+                                                                          / parent.longestWord))
                     font.weight: Theme.weightBold
                     selectByMouse: true
                     Accessible.name: qsTr("Title")
@@ -566,11 +583,32 @@ Rectangle {
                 DangerButton {
                     id: trash
 
+                    /// Too little room beside it for the title's longest word: a trash can
+                    /// alone, so the title keeps its words whole.
+                    readonly property bool compact: {
+                        return parent.width - parent.spacing - wideTrash.width - (
+                                    viewSwitch.visible ? viewSwitch.width + parent.spacing : 0) - (
+                                    unsavedMark.visible ? unsavedMark.width + parent.spacing : 0)
+                                < parent.longestWord
+                    }
+
                     objectName: "trash"
                     y: parent.firstLineMiddle - height / 2
                     visible: Vault.writable
-                    label: qsTr("Delete")
-                    armedLabel: qsTr("Move to trash?")
+                    label: compact ? "" : qsTr("Delete")
+                    armedLabel: compact ? "" : qsTr("Move to trash?")
+                    glyph: compact ? "trash" : ""
+                    tip: compact ? (armed ? qsTr("Click again to move to trash") : qsTr("Delete")) :
+                                   ""
+                    Accessible.name: armed ? qsTr("Move to trash?") : qsTr("Delete")
+
+                    // How wide the button is with its words, to tell whether they fit.
+                    StickerButton {
+                        id: wideTrash
+
+                        visible: false
+                        text: qsTr("Move to trash?")
+                    }
                     // Other notes' links to its attachments are worth a question first.
                     onConfirmed: {
                         if (Vault.notesUsingAttachments(Vault.current).length > 0)
