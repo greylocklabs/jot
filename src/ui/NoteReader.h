@@ -43,6 +43,9 @@ public:
     /// The checkbox task drawn at `position`: `{line, done, text, textStart}`, with its line in
     /// the note's file and where its text starts after the box, or empty when there is none there.
     Q_INVOKABLE QVariantMap taskAt(int position) const;
+    /// Puts the text from `start` to `end` on the clipboard, without the characters that hold
+    /// the place of pictures and task boxes.
+    Q_INVOKABLE void copy(int start, int end) const;
     /// Where the heading numbered `index`, from 0, as headingsOf() numbers them, starts in the
     /// drawn document, or -1.
     Q_INVOKABLE int headingPosition(int index) const;

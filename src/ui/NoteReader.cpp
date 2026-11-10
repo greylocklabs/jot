@@ -9,6 +9,7 @@
 #include "jot/FrontMatter.h"
 #include "jot/NoteScan.h"
 
+#include <QClipboard>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QImage>
@@ -18,6 +19,7 @@
 #include <QTextBlock>
 #include <QTextCursor>
 #include <QTextDocument>
+#include <QTextDocumentFragment>
 #include <QTextFrame>
 #include <QTextList>
 #include <QTextTable>
@@ -465,6 +467,19 @@ void NoteReader::placeImages()
             span.setCharFormat(format);
         }
     }
+}
+
+void NoteReader::copy(int start, int end) const
+{
+    QTextDocument *doc = m_document ? m_document->textDocument() : nullptr;
+    if (!doc)
+        return;
+    QTextCursor selection(doc);
+    selection.setPosition(start);
+    selection.setPosition(end, QTextCursor::KeepAnchor);
+    QString text = selection.selection().toPlainText();
+    text.remove(QChar::ObjectReplacementCharacter);
+    QGuiApplication::clipboard()->setText(text);
 }
 
 QVariantMap NoteReader::taskAt(int position) const
