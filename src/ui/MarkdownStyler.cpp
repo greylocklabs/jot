@@ -190,7 +190,9 @@ bool MarkdownStyler::tidyTaskLine(int line)
 {
     QTextDocument *document = m_document ? m_document->textDocument() : nullptr;
     const QTextBlock block = document ? document->findBlockByNumber(line) : QTextBlock();
-    if (!block.isValid())
+    // Code and front matter are kept as written, a to-do shown there as an example too.
+    if (!block.isValid() ||
+        MarkdownHighlighter::kindOf(block.userState()) != MarkdownHighlighter::Normal)
         return false;
     const std::optional<QString> tidied = tidiedTaskLine(block.text(), QDate::currentDate());
     if (!tidied)

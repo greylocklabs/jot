@@ -258,8 +258,14 @@ QString withTaskSchedule(const QString &text, const QString &due, const QString 
         line += u' ' + dueMarker(due);
     if (was.priority > 0)
         line += u' ' + priorityMarker(was.priority);
+    // A done day, or done with none said.
+    const bool done = std::ranges::any_of(taskMarkers(text), [](const TaskMarker &marker) {
+        return marker.kind == TaskMarker::Done;
+    });
     if (!was.done.isEmpty())
         line += u' ' + doneMarker(QDate::fromString(was.done, Qt::ISODate));
+    else if (done)
+        line += u" @done"_s;
     return line;
 }
 

@@ -1435,6 +1435,18 @@ void TestNoteEditor::putsInEmojiTypedAfterAColon()
     QTRY_VERIFY2(body->property("text").toString().contains(u"- [x] pay rent @done %1\n"_s.arg(
                      QDate::currentDate().addDays(-1).toString(Qt::ISODate))),
                  qPrintable(body->property("text").toString()));
+
+    // A to-do in a code block is an example, and stays as written.
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    type(u"```"_s);
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    type(u"- [ ] call @due tomorrow"_s);
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    type(u"```"_s);
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    QTRY_VERIFY2(body->property("text").toString().contains(u"- [ ] call @due tomorrow\n"_s),
+                 qPrintable(body->property("text").toString()));
 }
 
 void TestNoteEditor::togglesSourceMode()

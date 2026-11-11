@@ -130,6 +130,9 @@ void TestQuickAdd::keepsWordsAfterARuleWhenRescheduled()
     // Rescheduling takes the rule away, but not the words typed after it.
     QCOMPARE(withTaskSchedule(u"@every monday Call Soren"_s, u"2026-11-02"_s, u"every week"_s),
              u"Call Soren @weekly @due 2026-11-02"_s);
+    // Done with no day said stays done.
+    QCOMPARE(withTaskSchedule(u"Pay @done #home"_s, u"2026-11-02"_s, {}),
+             u"Pay #home @due 2026-11-02 @done"_s);
 }
 
 void TestQuickAdd::keepsARepeatRuleAsWritten()
