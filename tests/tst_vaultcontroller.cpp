@@ -34,6 +34,7 @@ private Q_SLOTS:
 
     void startsClosed();
     void opensAFolderAndRemembersIt();
+    void leavesOutWhatTheVaultIgnores();
     void refusesWhatIsNotAFolder();
     void switchesToAnotherFolder();
     void staysWhenTheNoteShownCannotBeSaved();
@@ -181,6 +182,32 @@ void TestVaultController::opensAFolderAndRemembersIt()
     m_vault.reset();
     QVERIFY(again.openLast());
     QCOMPARE(again.noteCount(), 15);
+}
+
+void TestVaultController::leavesOutWhatTheVaultIgnores()
+{
+    QVERIFY(QDir().mkpath(m_root + u"/node_modules/pkg"_s));
+    QFile readme(m_root + u"/node_modules/pkg/README.md"_s);
+    QVERIFY(readme.open(QIODevice::WriteOnly));
+    readme.write("# pkg\n");
+    readme.close();
+    QVERIFY(m_vault->openFolder(QUrl::fromLocalFile(m_root)));
+    QCOMPARE(m_vault->noteCount(), 16);
+    QVERIFY(m_vault->respectsGitignore());
+
+    QVERIFY(m_vault->setIgnore({u"node_modules/"_s, u" "_s}, true));
+    QCOMPARE(m_vault->noteCount(), 15);
+    QCOMPARE(m_vault->ignorePatterns(), QStringList{u"node_modules/"_s});
+
+    const QString notebook = u"Recipes"_s;
+    QVERIFY(m_vault->ignoreNotebook(notebook));
+    QCOMPARE(m_vault->ignorePatterns(), (QStringList{u"node_modules/"_s, u'/' + notebook + u'/'}));
+    QVERIFY(!column(*m_vault->notebooks(), "path").contains(notebook));
+
+    QVERIFY(m_vault->setIgnore({}, false));
+    QVERIFY(!m_vault->respectsGitignore());
+    QCOMPARE(m_vault->noteCount(), 16);
+    QCOMPARE(Vault(m_root).setting(u"gitignore"_s), u"false"_s);
 }
 
 void TestVaultController::refusesWhatIsNotAFolder()

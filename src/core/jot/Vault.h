@@ -4,10 +4,13 @@
 #include <QList>
 #include <QString>
 #include <QStringList>
+#include <QVariant>
 
 #include <optional>
 
 namespace jot {
+
+class VaultIgnore;
 
 /// A folder or a note in a vault, by its path from the vault's root with `/` between folders.
 struct VaultEntry
@@ -39,12 +42,15 @@ public:
     [[nodiscard]] int format() const;
     /// The value of `key` in `.jot/vault.yaml`, as text; empty when it is not there.
     [[nodiscard]] QString setting(const QString &key) const;
+    /// Sets `key` in `.jot/vault.yaml` to `value`, a QString, QStringList or bool, or removes it
+    /// when `value` is null, keeping the file's other lines as they are.
+    bool setSetting(const QString &key, const QVariant &value, QString *error) const;
     /// False for a vault from a newer Jot, which this one only reads.
     [[nodiscard]] bool writable() const { return format() <= kFormat; }
 
     /// Every folder, note and data file, parents before children, each folder's contents in
-    /// natural order ("Ch 2" before "Ch 10"). Hidden files, `.jot` and each note's
-    /// `.assets` folder are left out.
+    /// natural order ("Ch 2" before "Ch 10"). Hidden files, `.jot`, each note's `.assets`
+    /// folder and what VaultIgnore ignores are left out.
     [[nodiscard]] QList<VaultEntry> entries() const;
     /// The notes and data files alone, in the same order.
     [[nodiscard]] QStringList notes() const;
@@ -134,7 +140,7 @@ public:
     [[nodiscard]] static QString historyFolderFor(const QString &path);
 
 private:
-    void collect(const QString &folder, QList<VaultEntry> &into) const;
+    void collect(const QString &folder, const VaultIgnore &ignore, QList<VaultEntry> &into) const;
 
     QString m_root;
 

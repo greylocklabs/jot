@@ -272,6 +272,8 @@ QString setFrontMatterKey(const QString &note, const QString &key, const QVarian
     const QString newline = note.contains(u"\r\n"_s) ? u"\r\n"_s : u"\n"_s;
     const QString yamlKey = needsQuotes(key) ? yamlScalar(key) : key;
     const auto valueLines = [&](const QString &indent, bool block) {
+        if (value.typeId() == QMetaType::Bool)
+            return QStringList{yamlKey + (value.toBool() ? u": true"_s : u": false"_s)};
         if (value.typeId() != QMetaType::QStringList)
             return QStringList{yamlKey + u": "_s + yamlScalar(value.toString())};
         const QStringList items = value.toStringList();

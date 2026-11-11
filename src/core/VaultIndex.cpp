@@ -4,6 +4,7 @@
 #include "jot/FrontMatter.h"
 #include "jot/Logging.h"
 #include "jot/NoteScan.h"
+#include "jot/VaultIgnore.h"
 
 #include <QCryptographicHash>
 #include <QDir>
@@ -249,9 +250,10 @@ void VaultIndex::update(const QStringList &paths)
 {
     QSqlDatabase db = QSqlDatabase::database(m_connection);
     db.transaction();
+    const VaultIgnore ignore(m_vault);
     for (const QString &path : paths) {
         drop(path);
-        if (QFileInfo(m_vault.absolute(path)).isFile())
+        if (QFileInfo(m_vault.absolute(path)).isFile() && !ignore.ignored(path, false))
             read(path);
     }
     resolveLinks();

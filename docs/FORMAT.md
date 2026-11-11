@@ -39,7 +39,8 @@ My Notes/                    the vault: any folder
   top-level `$schema` names, else `<name>.schema.json`. A schema on the web is never fetched. For
   a list under a key, the schema's `properties` for that key describes it; YAML documents are not
   checked.
-- Names starting with `.` are hidden from the app and the index, apart from `.jot/`.
+- Names starting with `.` are hidden from the app and the index, apart from `.jot/`. So is what
+  the vault ignores, as [Vault settings](#vault-settings) says.
 - Opening a folder in Jot makes `.jot/vault.yaml` with `format: 1`, if it has none.
 - `.jot/stats/<computer>.yaml` holds `YYYY-MM-DD: words` lines: the words that computer's edits
   added to the vault's notes each day, less those they took away. Each computer writes only its
@@ -312,8 +313,10 @@ for the note's path, and names each copy by when the note held it:
 A vault can sync with a remote, such as another folder. The remote holds the vault's files as
 they are, so it can be read without Jot.
 
-- Everything in the vault syncs but hidden files and folders, which stay on each computer, and
-  `.jot/trash/`. Jot's own `.jot/` folder does sync, history included.
+- Everything in the vault syncs but hidden files and folders, which stay on each computer,
+  `.jot/trash/` and what the vault ignores. Jot's own `.jot/` folder does sync, history included.
+  An ignored file is left alone on both sides, so ignoring one that synced before deletes it
+  nowhere, and git sync keeps the vault's `ignore` patterns out of its commits too.
 - Where to sync is a setting of each computer, not of the vault. What Jot knows of the last sync,
   to tell an edit from a delete, is kept under `$XDG_STATE_HOME/jot/sync/`, never in the vault.
   Deleting it loses nothing: the next sync compares the two sides afresh, keeping both versions
@@ -360,6 +363,8 @@ inbox: Inbox.md # where quick add puts to-dos, as a checkbox at the end
 templates: Templates # the notebook whose notes are templates
 daily: Daily # where daily notes go, one per day as YYYY-MM-DD.md
 language: en_GB # spelling is checked in this, unless a note says otherwise
+ignore: [node_modules/, "*.log"] # files and folders Jot leaves out
+gitignore: false # leave .gitignore files out of it; they count unless this says false
 ```
 
 - `format` is the vault's format number, as [Versioning](#versioning) says. One that is missing
@@ -372,6 +377,12 @@ language: en_GB # spelling is checked in this, unless a note says otherwise
   template's front matter keys it does not have and its text, with `{{title}}`, `{{date}}`,
   `{{time}}`, `{{date:FORMAT}}` and `{{time:FORMAT}}` filled in, FORMAT as Obsidian writes it.
   A daily note is made from `Daily.md` in the templates notebook, when there is one.
+- `ignore` is one pattern or a list of them, read as the lines of a `.gitignore` at the top of the
+  vault: `Drafts/` for a folder at any depth, `/Drafts/` for the one at the top, `*.log` for files
+  by name, `**` across folders, and `!` to bring back what an earlier pattern left out. What it
+  matches stays out of the app, the index, search, tasks and sync. Unless `gitignore` is `false`,
+  the vault's `.gitignore` files count too, as git reads them, deeper ones after the vault's own
+  patterns. Nothing inside an ignored folder comes back, and `.jot/` is never ignored.
 
 ## Versioning
 

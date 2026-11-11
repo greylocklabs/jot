@@ -1,6 +1,8 @@
 #include "jot/GitSync.h"
 
 #include "jot/Conflicts.h"
+#include "jot/Vault.h"
+#include "jot/VaultIgnore.h"
 
 #include <QDir>
 #include <QFile>
@@ -26,6 +28,9 @@ const QByteArray kOwnExclude = "# Written by Jot: what syncs delete stays on thi
                                "/.jot/trash/\n";
 
 const QByteArray kLfsStart = "# Jot: large files go to Git LFS.\n";
+/// Around the vault's own ignore patterns in the exclude file, which are written again each sync.
+const QByteArray kIgnoreStart = "# Jot: the vault's ignore patterns.\n";
+const QByteArray kIgnoreEnd = "# Jot: end of the vault's ignore patterns.\n";
 
 std::optional<QString> utf8(const QByteArray &data)
 {
@@ -228,13 +233,25 @@ bool GitSync::prepare(QString *error)
     QDir().mkpath(m_gitDir + u"/info"_s);
     const QByteArray &excluded = m_own ? kOwnExclude : kExclude;
     QFile exclude(m_gitDir + u"/info/exclude"_s);
-    if (exclude.open(QIODevice::ReadOnly) && exclude.readAll().contains(excluded)) {
-        exclude.close();
-    } else {
-        exclude.close();
-        if (exclude.open(QIODevice::Append))
-            exclude.write('\n' + excluded);
+    QByteArray held;
+    if (exclude.open(QIODevice::ReadOnly))
+        held = exclude.readAll();
+    exclude.close();
+    QByteArray wanted = held;
+    if (const qsizetype start = wanted.indexOf(kIgnoreStart); start >= 0) {
+        const qsizetype end = wanted.indexOf(kIgnoreEnd, start);
+        wanted.remove(start, end < 0 ? wanted.size() - start : end + kIgnoreEnd.size() - start);
     }
+    if (!wanted.contains(excluded))
+        wanted += '\n' + excluded;
+    // What the vault ignores stays out of commits too.
+    if (const QStringList patterns = VaultIgnore::patternsOf(Vault(m_root)); !patterns.isEmpty()) {
+        if (!wanted.endsWith('\n'))
+            wanted += '\n';
+        wanted += kIgnoreStart + patterns.join(u'\n').toUtf8() + '\n' + kIgnoreEnd;
+    }
+    if (wanted != held && exclude.open(QIODevice::WriteOnly | QIODevice::Truncate))
+        exclude.write(wanted);
     if (!m_own && lfsAvailable()) {
         if (const Run run = git({u"lfs"_s, u"install"_s, u"--local"_s}); !run.ok())
             return fail(run);

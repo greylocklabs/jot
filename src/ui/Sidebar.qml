@@ -656,6 +656,14 @@ Rectangle {
             onTriggered: Vault.showInFiles(notebookMenu.path)
         }
         MenuEntry {
+            objectName: "ignoreNotebook"
+            text: qsTr("Ignore this notebook")
+            visible: notebookMenu.path !== ""
+            height: visible ? implicitHeight : 0
+            enabled: Vault.writable
+            onTriggered: Vault.ignoreNotebook(notebookMenu.path)
+        }
+        MenuEntry {
             text: qsTr("Move to trash...")
             visible: notebookMenu.path !== ""
             height: visible ? implicitHeight : 0

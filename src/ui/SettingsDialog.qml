@@ -115,6 +115,10 @@ Popup {
                         "label": qsTr("General")
                     },
                     {
+                        "id": "files",
+                        "label": qsTr("Files")
+                    },
+                    {
                         "id": "writing",
                         "label": qsTr("Writing")
                     },
@@ -251,6 +255,105 @@ Popup {
                         color: Theme.danger
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.textSm
+                    }
+                }
+
+                Section {
+                    id: ignoreSection
+
+                    /// The patterns and toggle as the vault has them, to tell an edit from them.
+                    property string savedPatterns
+                    property bool savedGitignore: true
+
+                    function load() {
+                        savedPatterns = Vault.ignorePatterns().join("\n")
+                        savedGitignore = Vault.respectsGitignore()
+                        ignorePatterns.text = savedPatterns
+                        respectGitignore.checked = savedGitignore
+                    }
+
+                    title: qsTr("Ignored files")
+                    visible: root.tab === "files"
+                    Component.onCompleted: load()
+
+                    Connections {
+                        target: root
+                        function onOpened() {
+                            ignoreSection.load()
+                        }
+                    }
+                    Connections {
+                        target: Vault
+                        function onOpenChanged() {
+                            ignoreSection.load()
+                        }
+                    }
+
+                    Text {
+                        visible: !Vault.isOpen
+                        width: parent.width
+                        wrapMode: Text.Wrap
+                        text: qsTr("Choose a notes folder first, under General.")
+                        color: Theme.textMuted
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.textSm
+                    }
+                    Text {
+                        width: parent.width
+                        wrapMode: Text.Wrap
+                        text: qsTr(
+                                  "Files and folders Jot leaves out of the vault, one pattern a line, written as in a .gitignore: Drafts/ for a folder, *.log for a kind of file, ! to bring one back.")
+                        color: Theme.textMuted
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.textSm
+                    }
+                    TextArea {
+                        id: ignorePatterns
+
+                        objectName: "ignorePatterns"
+                        width: parent.width
+                        height: Math.max(implicitHeight, 96)
+                        enabled: Vault.writable
+                        placeholderText: qsTr("node_modules/")
+                        placeholderTextColor: Theme.textFaint
+                        wrapMode: TextArea.Wrap
+                        color: Theme.text
+                        font.family: Theme.monoFontFamily
+                        font.pixelSize: Theme.textSm
+                        leftPadding: Theme.space4
+                        rightPadding: Theme.space4
+                        topPadding: Theme.space3
+                        bottomPadding: Theme.space3
+                        Accessible.name: qsTr("Ignored patterns")
+
+                        background: Rectangle {
+                            radius: Theme.radiusLg
+                            color: Theme.surfaceAlt
+                            border.width: parent.activeFocus ? 2 : 1
+                            border.color: parent.activeFocus ? Theme.accent : Theme.border
+                        }
+                    }
+                    Toggle {
+                        id: respectGitignore
+
+                        objectName: "respectGitignore"
+                        width: parent.width
+                        enabled: Vault.writable
+                        text: qsTr("Also leave out what the folder's .gitignore files ignore")
+                    }
+                    StickerButton {
+                        objectName: "ignoreSave"
+                        accent: true
+                        enabled: Vault.writable && (ignorePatterns.text
+                                                    !== ignoreSection.savedPatterns
+                                                    || respectGitignore.checked
+                                                    !== ignoreSection.savedGitignore)
+                        text: qsTr("Apply")
+                        onClicked: {
+                            if (Vault.setIgnore(ignorePatterns.text.split("\n"),
+                                                respectGitignore.checked))
+                                ignoreSection.load()
+                        }
                     }
                 }
 

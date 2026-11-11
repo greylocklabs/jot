@@ -102,6 +102,8 @@ add_library(jotcore STATIC
     WritingStats.cpp
     jot/Vault.h
     Vault.cpp
+    jot/VaultIgnore.h
+    VaultIgnore.cpp
     jot/VaultTrash.h
     VaultTrash.cpp
     jot/VaultWatcher.h

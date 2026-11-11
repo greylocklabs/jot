@@ -40,7 +40,7 @@ QByteArray hashOf(const QByteArray &bytes)
 } // namespace
 
 VaultWatcher::VaultWatcher(Vault vault, QObject *parent)
-    : QObject(parent), m_vault(std::move(vault))
+    : QObject(parent), m_vault(std::move(vault)), m_ignore(m_vault)
 {
     m_settle.setSingleShot(true);
     m_settle.setInterval(300);
@@ -71,6 +71,8 @@ void VaultWatcher::start()
     m_notes.clear();
     m_folders.clear();
     m_watchedNotes.clear();
+    m_gitignores.clear();
+    m_ignore = VaultIgnore(m_vault);
     if (!m_watcher.directories().isEmpty())
         m_watcher.removePaths(m_watcher.directories());
     if (!m_watcher.files().isEmpty())
@@ -81,6 +83,7 @@ void VaultWatcher::start()
         const QString folder = queue.takeFirst();
         QSet<QString> folders;
         snapshot(folder, m_notes, folders);
+        noteGitignore(folder);
         m_folders.insert(folder);
         m_watcher.addPath(m_vault.absolute(folder));
         queue.append(folders.values());
@@ -115,7 +118,7 @@ void VaultWatcher::snapshot(const QString &folder, QHash<QString, Seen> &notes,
     }
     for (const QFileInfo &info : all) {
         const QString name = info.fileName();
-        if (name.startsWith(u'.'))
+        if (name.startsWith(u'.') || m_ignore.ignoredIn(folder, name, info.isDir()))
             continue;
         const QString path = join(folder, name);
         if (info.isDir()) {
@@ -159,6 +162,10 @@ void VaultWatcher::compare(const QString &folder)
         return;
     }
 
+    if (noteGitignore(folder)) {
+        Q_EMIT ignoreChanged();
+        return;
+    }
     QHash<QString, Seen> now;
     QSet<QString> folders;
     snapshot(folder, now, folders);
@@ -193,6 +200,7 @@ void VaultWatcher::compare(const QString &folder)
             QHash<QString, Seen> notes;
             QSet<QString> below;
             snapshot(next, notes, below);
+            noteGitignore(next);
             m_folders.insert(next);
             m_watcher.addPath(m_vault.absolute(next));
             for (auto it = notes.cbegin(); it != notes.cend(); ++it) {
@@ -223,6 +231,25 @@ void VaultWatcher::flush()
     notes.sort();
     qCDebug(lcVault) << "changed on disk:" << notes;
     Q_EMIT changed(notes);
+}
+
+bool VaultWatcher::noteGitignore(const QString &folder)
+{
+    struct stat status{};
+    Seen seen;
+    const QString file = m_vault.absolute(join(folder, u".gitignore"_s));
+    if (::stat(QFile::encodeName(file).constData(), &status) == 0) {
+        // Written in place, it changes no folder, so it is watched itself.
+        if (!m_watcher.files().contains(file))
+            m_watcher.addPath(file);
+        seen = {qint64(status.st_size),
+                qint64(status.st_mtim.tv_sec) * 1000000000 + status.st_mtim.tv_nsec,
+                qint64(status.st_ino)};
+    }
+    const auto old = m_gitignores.constFind(folder);
+    const bool changed = old != m_gitignores.cend() && *old != seen;
+    m_gitignores.insert(folder, seen);
+    return changed;
 }
 
 bool VaultWatcher::expected(const QString &path)

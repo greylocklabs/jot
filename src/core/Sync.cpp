@@ -3,6 +3,8 @@
 #include "jot/Conflicts.h"
 #include "jot/FrontMatter.h"
 #include "jot/Merge.h"
+#include "jot/Vault.h"
+#include "jot/VaultIgnore.h"
 
 #include <QCryptographicHash>
 #include <QDir>
@@ -674,7 +676,11 @@ SyncReport SyncEngine::sync(const QDateTime &now)
     QStringList paths = remote.keys() + local.keys() + d->bases.keys();
     std::ranges::sort(paths);
     paths.erase(std::unique(paths.begin(), paths.end()), paths.end());
+    // An ignored file is left alone on both sides, so ignoring one never reads as deleting it.
+    const VaultIgnore ignore{Vault(d->root)};
     for (const QString &path : std::as_const(paths)) {
+        if (ignore.ignored(path, false))
+            continue;
         const auto here = local.constFind(path);
         const auto there = remote.constFind(path);
         d->syncPath(path, here == local.cend() ? std::nullopt : std::optional<Local>(*here),

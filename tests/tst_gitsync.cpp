@@ -26,6 +26,7 @@ private Q_SLOTS:
     void anEditBeatsADelete();
     void joinsTwoVaultsThatStartedApart();
     void leavesHiddenFilesAndTheTrashHere();
+    void leavesWhatTheVaultIgnoresHere();
     void keepsLargeFilesInLfs();
     void keepsBothPicturesWhenBothChanged();
     void refusesAnLfsRepositoryWithoutLfs();
@@ -246,6 +247,28 @@ void TestGitSync::leavesHiddenFilesAndTheTrashHere()
     QVERIFY(inRemote(u".jot/trash/2026-11-03 093000/Old.md"_s).isEmpty());
     QVERIFY(inRemote(u".obsidian/app.json"_s).isEmpty());
     QVERIFY(inRemote(u"Ashfall/.DS_Store"_s).isEmpty());
+}
+
+void TestGitSync::leavesWhatTheVaultIgnoresHere()
+{
+    const Computer laptop = computer(u"laptop"_s);
+    write(laptop, u".jot/vault.yaml"_s, "format: 1\nignore: [Scratch/]\n");
+    write(laptop, u"Scratch/Idea.md"_s, "idea\n");
+    write(laptop, u"Mara.md"_s, "# Mara\n");
+    QVERIFY(sync(laptop).failure.isEmpty());
+    QVERIFY(inRemote(u"Scratch/Idea.md"_s).isEmpty());
+    QCOMPARE(inRemote(u"Mara.md"_s), QByteArray("# Mara\n"));
+
+    // The patterns are written again when they change, without piling up.
+    write(laptop, u".jot/vault.yaml"_s, "format: 1\nignore: [Other/]\n");
+    write(laptop, u"Mara.md"_s, "# Mara\nedited\n");
+    QVERIFY(sync(laptop).failure.isEmpty());
+    QFile exclude(laptop.gitDir + u"/info/exclude"_s);
+    QVERIFY(exclude.open(QIODevice::ReadOnly));
+    const QByteArray excluded = exclude.readAll();
+    QCOMPARE(excluded.count("# Jot: the vault's ignore patterns."), 1);
+    QVERIFY(excluded.contains("Other/\n"));
+    QVERIFY(!excluded.contains("Scratch/\n"));
 }
 
 void TestGitSync::keepsLargeFilesInLfs()
