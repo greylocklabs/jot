@@ -557,7 +557,7 @@ bool GitSync::rebasing() const
 bool GitSync::rebase()
 {
     QStringList arguments = identity();
-    arguments << u"rebase"_s << u"-q"_s << u"--autostash"_s;
+    arguments << u"rebase"_s << u"-q"_s;
     if (!m_options.hooks)
         arguments << u"--no-verify"_s;
     if (m_options.sign)
@@ -579,7 +579,11 @@ bool GitSync::bringIn(SyncReport &report, QString *error)
         return true;
     // A rebase needs history of both sides in common; a first sync has none to rebase onto.
     const bool related = head.ok() && git({u"merge-base"_s, u"HEAD"_s, remoteBranch()}).ok();
-    if (m_options.rebase && related) {
+    // Only a clean tree is rebased: changes set aside and put back after could clash on the way
+    // back and leave markers in a note, where a merge leaves them alone.
+    const bool clean =
+        git({u"status"_s, u"--porcelain"_s, u"--untracked-files=no"_s}).out.trimmed().isEmpty();
+    if (m_options.rebase && related && clean) {
         const QString before = QString::fromUtf8(head.out).trimmed();
         if (rebase()) {
             notePulled(before, report);
