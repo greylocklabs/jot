@@ -105,6 +105,7 @@ private Q_SLOTS:
     void showsEachListOfAFileAsATab();
     void checksATableAgainstItsSchema();
     void scrollsAWideTableAcross();
+    void wrapsTheTableToolsWhenNarrow();
     void removingARowOrColumnAsksWithATrashCan();
     void readsTheNoteWithLinksAndBoxesToTick();
     void readsDiagramsAsPictures();
@@ -2085,6 +2086,29 @@ void TestNoteEditor::removingARowOrColumnAsksWithATrashCan()
     // And a single click sorts.
     QTest::mouseClick(m_window.get(), Qt::LeftButton, {}, heading);
     QTRY_COMPARE(records->sortColumn(), 0);
+}
+
+void TestNoteEditor::wrapsTheTableToolsWhenNarrow()
+{
+    QFile file(m_root + u"/cast.json"_s);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write("[{\"name\": \"Mara\"}]\n");
+    file.close();
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"cast.json"_s), 3000);
+    m_vault->setCurrent(u"cast.json"_s);
+    QQuickItem *view = find(u"tableView"_s);
+    QQuickItem *tools = find(u"tableTools"_s);
+    QTRY_VERIFY(view && tools && tools->isVisible());
+    // As narrow as the note gets, every tool stays in view, Undo and Redo too.
+    qobject_cast<QQuickItem *>(m_editor.get())->setWidth(240);
+    QTRY_VERIFY(tools->height() > 40);
+    const qreal right = view->mapToScene({view->width(), 0}).x();
+    for (QQuickItem *tool : tools->childItems()) {
+        if (tool->isVisible())
+            QVERIFY2(tool->mapToScene({tool->width(), 0}).x() <= right + 0.5,
+                     qPrintable(tool->property("text").toString()));
+    }
+    qobject_cast<QQuickItem *>(m_editor.get())->setWidth(900);
 }
 
 void TestNoteEditor::scrollsAWideTableAcross()
