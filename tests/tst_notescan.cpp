@@ -88,13 +88,16 @@ void TestNoteScan::findsTasks()
 - [x] find shop
   * [X] nested and done
 1. [ ] numbered
+- [ ] said done @done
 - [] not a task
 - plain
 )"_s);
+    // Ticked, or said done in words though not ticked.
     const QList<NoteScan::Task> expected{{1, false, u"buy paper"_s},
                                          {2, true, u"find shop"_s},
                                          {3, true, u"nested and done"_s},
-                                         {4, false, u"numbered"_s}};
+                                         {4, false, u"numbered"_s},
+                                         {5, true, u"said done @done"_s}};
     QCOMPARE(scan.tasks, expected);
 }
 
@@ -184,6 +187,7 @@ void TestNoteScan::readsAsMarkdownWithLinks()
                       QLocale().toString(QDate(year, 11, 1), u"MMM d"_s))
                  .arg(year));
     QCOMPARE(readingMarkdown(u"- [ ] Call @p1\n"_s, embed), u"- [ ] Call 🚩 Urgent\n"_s);
+    QCOMPARE(readingMarkdown(u"- [x] Call @done\n"_s, embed), u"- [x] Call ✅\n"_s);
     QCOMPARE(readingMarkdown(u"- [ ] Call @every 2 weeks @due 2000-01-05 14:00\n"_s, embed),
              u"- [ ] Call 🔁 every 2 weeks 📅 %1\n"_s.arg(
                  QLocale().toString(QDate(2000, 1, 5), u"MMM d, yyyy"_s) + u", "_s +

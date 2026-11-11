@@ -231,6 +231,10 @@ A checkbox says more about itself in plain words on its own line, each starting 
 - `@done` and a date is when it was done. Ticking one that repeats and is due writes the next one
   above it, unticked and due on its next day after today, and gives the ticked one `@done` and
   today's date. A rule Jot does not read is kept, and only ticked.
+- `@done` alone, with no date, is done on a day not said; a checkbox with any `@done` is done,
+  ticked or not. In Jot's editor, `@done` alone, `@done yesterday`, `@due tomorrow`, `today` and
+  the days of the week are written as their dates when the cursor leaves the line, and a to-do
+  said done is ticked.
 - `@p1` to `@p4` is its priority: urgent, high, medium or low. One without any has none.
 - A checkbox that does not repeat is only ticked or unticked; a `@done` already there stays.
 - Markers are found case aside, each at the start of a word, so `hello@example.org` is no marker.

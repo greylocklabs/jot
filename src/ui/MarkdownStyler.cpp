@@ -179,6 +179,28 @@ void MarkdownStyler::replace(int start, int end, const QString &text)
     cursor.insertText(text);
 }
 
+int MarkdownStyler::lineAt(int position) const
+{
+    if (!m_document || !m_document->textDocument())
+        return -1;
+    return m_document->textDocument()->findBlock(position).blockNumber();
+}
+
+bool MarkdownStyler::tidyTaskLine(int line)
+{
+    QTextDocument *document = m_document ? m_document->textDocument() : nullptr;
+    const QTextBlock block = document ? document->findBlockByNumber(line) : QTextBlock();
+    if (!block.isValid())
+        return false;
+    const std::optional<QString> tidied = tidiedTaskLine(block.text(), QDate::currentDate());
+    if (!tidied)
+        return false;
+    QTextCursor cursor(block);
+    cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
+    cursor.insertText(*tidied);
+    return true;
+}
+
 QVariantMap MarkdownStyler::wikilinkAt(int position) const
 {
     if (!m_document || !m_document->textDocument())

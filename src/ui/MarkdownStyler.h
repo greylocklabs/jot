@@ -137,6 +137,11 @@ public:
 
     /// Puts `text` in place of what is from `start` to `end`, as one step to undo.
     Q_INVOKABLE void replace(int start, int end, const QString &text);
+    /// The line, from 0, `position` is on.
+    Q_INVOKABLE int lineAt(int position) const;
+    /// Writes the days said in words on the to-do on `line`, from 0, as dates, and ticks one
+    /// said done, as tidiedTaskLine() does; says whether it changed anything.
+    Q_INVOKABLE bool tidyTaskLine(int line);
     /// Paints the text from `start` to `end` in the selection's color for half a second, as
     /// vi does to what it yanked.
     Q_INVOKABLE void flash(int start, int end);

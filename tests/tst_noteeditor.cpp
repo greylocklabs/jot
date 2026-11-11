@@ -1425,6 +1425,16 @@ void TestNoteEditor::putsInEmojiTypedAfterAColon()
     QTest::keyClick(m_window.get(), Qt::Key_Return);
     QTRY_VERIFY(body->property("text").toString().endsWith(
         u"- [ ] water @weekly @due %1 "_s.arg(QDate::currentDate().toString(Qt::ISODate))));
+
+    // A day said in words is written as its date once the cursor leaves the line, and a to-do
+    // said done is ticked.
+    // Return carries the list on, so the new to-do's box is there already.
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    type(u"pay rent @done yesterday"_s);
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    QTRY_VERIFY2(body->property("text").toString().contains(u"- [x] pay rent @done %1\n"_s.arg(
+                     QDate::currentDate().addDays(-1).toString(Qt::ISODate))),
+                 qPrintable(body->property("text").toString()));
 }
 
 void TestNoteEditor::togglesSourceMode()

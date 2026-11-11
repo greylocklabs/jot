@@ -5,13 +5,15 @@
 #include <QString>
 #include <QStringView>
 
+#include <optional>
+
 namespace jot {
 
 /// One of a to-do's markers, the plain words after its box that say when it is due, how it
 /// repeats and when it was done: `@due 2026-10-29`, with a time after it if it has one
 /// (`@due 2026-10-29 14:00`), `@daily`, `@weekly`, `@monthly`, `@yearly`, `@weekdays` or
-/// `@every 2 weeks on monday`, `@done 2026-10-28`, and its priority, `@p1` (urgent) to `@p4`
-/// (low). Each starts a word, case aside.
+/// `@every 2 weeks on monday`, `@done 2026-10-28` (or `@done` alone, with no day), and its
+/// priority, `@p1` (urgent) to `@p4` (low). Each starts a word, case aside.
 struct TaskMarker
 {
     enum Kind { Due, Repeat, Done, Priority };
@@ -64,6 +66,11 @@ struct TaskLine
 [[nodiscard]] QString priorityName(int priority);
 /// The priority a name gives, "p1" to "p4", with or without its @ and case aside; 0 for none.
 [[nodiscard]] int priorityOf(const QString &name);
+/// A whole checkbox line, `- [ ] …`, with the days said in words written as dates, as of
+/// `today`: `@due tomorrow` as `@due 2026-11-12`, `@done yesterday` as `@done 2026-11-10`, and a
+/// weekday as the next one due or the last one done. A bare `@done` is done today, and a line
+/// said done this way is ticked. Nothing when there is nothing to change.
+[[nodiscard]] std::optional<QString> tidiedTaskLine(const QString &line, const QDate &today);
 /// `text` without its markers of `kinds`, its spaces tidied where they were.
 [[nodiscard]] QString withoutMarkers(const QString &text, const QList<TaskMarker::Kind> &kinds);
 
