@@ -2449,6 +2449,8 @@ bool VaultController::setVaultSetting(const QString &key, const QVariant &value)
         setProblem(tr("Could not change the vault's settings: %1").arg(error));
         return false;
     }
+    if (key.startsWith(u"git"_s))
+        m_sync.reloadOptions();
     return true;
 }
 

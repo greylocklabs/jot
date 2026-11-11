@@ -93,6 +93,7 @@ qt_add_qml_module(jotui
         Field.qml
         FormatBar.qml
         FindBar.qml
+        CommitDialog.qml
         FormRow.qml
         Glyph.qml
         KeyCap.qml

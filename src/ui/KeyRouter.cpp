@@ -69,6 +69,8 @@ QList<KeyAction> KeyRouter::actions()
         act(u"settings"_s, tr("Settings"), window, {int(K::Preferences), u"Ctrl+,"_s}, {}, u"s"_s),
         // F5 alone, not the standard refresh keys: in vi mode Ctrl+R is redo.
         act(u"syncNow"_s, tr("Sync now"), window, {u"F5"_s}),
+        act(u"gitCommit"_s, tr("Commit to git..."), window, {}),
+        act(u"gitPush"_s, tr("Push to git"), window, {}),
         act(u"help"_s, tr("Keyboard shortcuts"), window, {int(K::HelpContents)}, u"?"_s),
         // Written out: not every platform theme gives the standard Quit key one.
         act(u"quit"_s, tr("Quit Jot"), window, {u"Ctrl+Q"_s}),

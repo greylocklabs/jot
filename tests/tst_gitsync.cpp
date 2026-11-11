@@ -11,6 +11,7 @@
 using namespace Qt::StringLiterals;
 using jot::GitSync;
 using jot::SyncReport;
+using jot::SyncRequest;
 
 /// Two computers syncing through a bare repository on disk, as through any git host.
 class TestGitSync : public QObject
@@ -22,6 +23,7 @@ private Q_SLOTS:
     void sendsAndBringsNotes();
     void mergesEditsGitCanMerge();
     void rebasesOrMergesAsTheVaultSays();
+    void commitsAndPushesByHandWhenTheVaultSays();
     void mergesFrontMatterGitCannot();
     void keepsAConflictCopyWithoutMarkers();
     void anEditBeatsADelete();
@@ -216,6 +218,64 @@ void TestGitSync::rebasesOrMergesAsTheVaultSays()
     QVERIFY(sync(desk).failure.isEmpty());
     QVERIFY(merges().size() > before.size());
     QVERIFY(!GitSync::optionsOf(desk.root).rebase);
+}
+
+void TestGitSync::commitsAndPushesByHandWhenTheVaultSays()
+{
+    const Computer laptop = computer(u"laptop"_s);
+    const Computer desk = computer(u"desk"_s);
+    write(laptop, u"Mara.md"_s, "# Mara\n");
+    write(laptop, u"Soren.md"_s, "# Soren\n");
+    QVERIFY(sync(laptop).failure.isEmpty());
+    QVERIFY(sync(desk).failure.isEmpty());
+    const auto at = QDateTime(QDate(2026, 11, 3), QTime(9, 30));
+    const auto syncAs = [this, at](const Computer &on, const SyncRequest &request) {
+        return GitSync(on.root, m_remote, u"main"_s, on.gitDir, on.name).sync(at, request);
+    };
+    const auto subject = [this] {
+        return run(m_dir->path(),
+                   {u"--git-dir="_s + m_remote, u"log"_s, u"-1"_s, u"--format=%s"_s, u"main"_s});
+    };
+
+    // Commits by hand: a sync leaves what changed uncommitted and still brings in the rest.
+    write(desk, u".jot/vault.yaml"_s, "format: 1\ngitCommit: manual\n");
+    write(desk, u"Mara.md"_s, "# Mara\ndesk\n");
+    write(laptop, u"Soren.md"_s, "# Soren\nlaptop\n");
+    QVERIFY(sync(laptop).failure.isEmpty());
+    SyncReport report = sync(desk);
+    QVERIFY2(report.failure.isEmpty(), qPrintable(report.failure));
+    QCOMPARE(report.uncommitted, 2);
+    QCOMPARE(read(desk, u"Soren.md"_s), QByteArray("# Soren\nlaptop\n"));
+    QCOMPARE(read(desk, u"Mara.md"_s), QByteArray("# Mara\ndesk\n"));
+    QVERIFY(GitSync(desk.root, m_remote, u"main"_s, desk.gitDir, desk.name)
+                .changes()
+                .contains(u"Mara.md"_s));
+
+    // What was pushed to a file changed here waits until that change is committed.
+    write(laptop, u"Mara.md"_s, "# Mara\nlaptop\n");
+    QVERIFY(sync(laptop).failure.isEmpty());
+    report = sync(desk);
+    QVERIFY(report.failure.contains(u"Mara.md"_s));
+    QCOMPARE(read(desk, u"Mara.md"_s), QByteArray("# Mara\ndesk\n"));
+    report = syncAs(desk, {u"notes: desk's Mara"_s, false});
+    QVERIFY2(report.failure.isEmpty(), qPrintable(report.failure));
+    QCOMPARE(report.uncommitted, 0);
+    QVERIFY(!read(desk, u"Mara.md"_s).contains("<<<<<<<"));
+    QVERIFY(run(m_dir->path(), {u"--git-dir="_s + m_remote, u"log"_s, u"--format=%s"_s, u"main"_s})
+                .contains("notes: desk's Mara"));
+
+    // Pushes by hand: commits wait here until a push is asked for.
+    write(desk, u".jot/vault.yaml"_s, "format: 1\ngitPush: manual\n");
+    write(desk, u"Ashfall.md"_s, "# Ashfall\n");
+    report = sync(desk);
+    QVERIFY2(report.failure.isEmpty(), qPrintable(report.failure));
+    QCOMPARE(report.unpushed, 1);
+    QVERIFY(inRemote(u"Ashfall.md"_s).isEmpty());
+    report = syncAs(desk, {{}, true});
+    QVERIFY2(report.failure.isEmpty(), qPrintable(report.failure));
+    QCOMPARE(report.unpushed, 0);
+    QCOMPARE(inRemote(u"Ashfall.md"_s), QByteArray("# Ashfall\n"));
+    QVERIFY(subject().startsWith("chore(sync): jot commit from desk"));
 }
 
 void TestGitSync::mergesFrontMatterGitCannot()

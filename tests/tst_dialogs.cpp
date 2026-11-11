@@ -150,7 +150,8 @@ void TestDialogs::everyModalHasAClose_data()
          {u"SettingsDialog {}"_s, u"KeyHelp { actions: [] }"_s, u"AboutDialog {}"_s,
           u"WhatsNewDialog {}"_s, u"UpdateDialog {}"_s, u"ThemeEditor {}"_s, u"TrashConfirm {}"_s,
           u"QuickSwitcher {}"_s, u"CommandPalette {}"_s, u"EmojiPicker {}"_s, u"QuickAdd {}"_s,
-          u"JoplinImport {}"_s, u"HistoryDialog {}"_s, u"NotebookTarget {}"_s, u"SyntaxGuide {}"_s})
+          u"JoplinImport {}"_s, u"HistoryDialog {}"_s, u"NotebookTarget {}"_s, u"SyntaxGuide {}"_s,
+          u"CommitDialog {}"_s})
         QTest::newRow(qPrintable(dialog)) << dialog;
 }
 

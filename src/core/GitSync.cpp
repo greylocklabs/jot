@@ -108,6 +108,8 @@ GitSync::Options GitSync::optionsOf(const QString &root)
     options.hooks = flag(u"gitHooks"_s).value_or(false);
     options.sign = flag(u"gitSign"_s);
     options.rebase = vault.setting(u"gitPull"_s).toLower() != u"merge";
+    options.autoCommit = vault.setting(u"gitCommit"_s).toLower() != u"manual";
+    options.autoPush = vault.setting(u"gitPush"_s).toLower() != u"manual";
     return options;
 }
 
@@ -398,7 +400,46 @@ bool GitSync::prepare(QString *error)
     return true;
 }
 
-std::optional<QStringList> GitSync::commit(QString *error)
+QStringList GitSync::changes() const
+{
+    QStringList paths;
+    if (!QFileInfo(m_gitDir).isDir())
+        return paths;
+    const Run status =
+        git({u"status"_s, u"--porcelain"_s, u"-z"_s, u"--untracked-files=all"_s}, 30 * 1000);
+    const QList<QByteArray> records = status.out.split('\0');
+    for (qsizetype i = 0; i < records.size(); ++i) {
+        const QByteArray &record = records.at(i);
+        if (record.size() < 4)
+            continue;
+        paths << QString::fromUtf8(record.mid(3));
+        // A rename or copy is followed by the path it came from.
+        if (record.at(0) == 'R' || record.at(0) == 'C')
+            ++i;
+    }
+    return paths;
+}
+
+QStringList GitSync::clashingChanges() const
+{
+    const QStringList here = changes();
+    if (here.isEmpty() || !git({u"rev-parse"_s, u"-q"_s, u"--verify"_s, remoteBranch()}).ok())
+        return {};
+    const Run base = git({u"merge-base"_s, u"HEAD"_s, remoteBranch()});
+    const Run incoming =
+        base.ok() ? git({u"diff"_s, u"--name-only"_s, u"-z"_s,
+                         QString::fromUtf8(base.out).trimmed(), remoteBranch()})
+                  : git({u"ls-tree"_s, u"-r"_s, u"--name-only"_s, u"-z"_s, remoteBranch()});
+    QStringList clashing;
+    for (const QByteArray &path : incoming.out.split('\0')) {
+        const QString each = QString::fromUtf8(path);
+        if (!path.isEmpty() && here.contains(each))
+            clashing << each;
+    }
+    return clashing;
+}
+
+std::optional<QStringList> GitSync::commit(const QString &message, QString *error)
 {
     if (const Run run = git({u"add"_s, u"-A"_s}); !run.ok()) {
         *error = QString::fromUtf8(run.err).trimmed();
@@ -412,8 +453,9 @@ std::optional<QStringList> GitSync::commit(QString *error)
     }
     if (paths.isEmpty())
         return paths;
-    const QString message = commitMessage(m_options.message, m_device, m_now, paths);
-    if (const Run run = git(commitArguments() + QStringList{u"-m"_s, message}); !run.ok()) {
+    const QString said =
+        message.isEmpty() ? commitMessage(m_options.message, m_device, m_now, paths) : message;
+    if (const Run run = git(commitArguments() + QStringList{u"-m"_s, said}); !run.ok()) {
         *error = QString::fromUtf8(run.err + run.out).trimmed();
         return std::nullopt;
     }
@@ -494,7 +536,8 @@ bool GitSync::merge(SyncReport &report, QString *error)
     if (head.ok() && git({u"merge-base"_s, u"--is-ancestor"_s, remoteBranch(), u"HEAD"_s}).ok())
         return true;
     const QString before = QString::fromUtf8(head.out).trimmed();
-    QStringList mergeArguments{u"merge"_s, u"-q"_s, u"--no-edit"_s,
+    // Changes not committed yet, with commits made by hand, are kept aside while it runs.
+    QStringList mergeArguments{u"merge"_s, u"-q"_s, u"--no-edit"_s, u"--autostash"_s,
                                u"--allow-unrelated-histories"_s};
     if (!m_options.hooks)
         mergeArguments << u"--no-verify"_s;
@@ -594,7 +637,7 @@ bool GitSync::bringIn(SyncReport &report, QString *error)
     return merge(report, error);
 }
 
-SyncReport GitSync::sync(const QDateTime &now)
+SyncReport GitSync::sync(const QDateTime &now, const SyncRequest &request)
 {
     m_now = now;
     m_options = optionsOf(m_root);
@@ -635,36 +678,62 @@ SyncReport GitSync::sync(const QDateTime &now)
         report.failure = error;
         return report;
     }
-    const std::optional<QStringList> committed = commit(&error);
+    // What is left to commit or push by hand, said with whatever this sync did.
+    const auto counted = [this](SyncReport &done) -> SyncReport & {
+        done.uncommitted = int(changes().size());
+        if (git({u"rev-parse"_s, u"-q"_s, u"--verify"_s, u"HEAD"_s}).ok()) {
+            const bool remote = git({u"rev-parse"_s, u"-q"_s, u"--verify"_s, remoteBranch()}).ok();
+            done.unpushed =
+                QString::fromUtf8(git({u"rev-list"_s, u"--count"_s,
+                                       remote ? remoteBranch() + u"..HEAD"_s : u"HEAD"_s})
+                                      .out)
+                    .trimmed()
+                    .toInt();
+        }
+        return done;
+    };
+    std::optional<QStringList> committed = QStringList();
+    if (!request.commitMessage.trimmed().isEmpty())
+        committed = commit(request.commitMessage.trimmed(), &error);
+    else if (m_options.autoCommit)
+        committed = commit({}, &error);
     if (!committed) {
         report.failure = error;
-        return report;
+        return counted(report);
     }
+    const bool push = m_options.autoPush || request.push;
     // Someone else pushing first sends this round back to fetch and merge their work.
     for (int attempt = 0; attempt < 3; ++attempt) {
         const Run fetched = git({u"fetch"_s, u"-q"_s, u"origin"_s}, kNetworkMs);
         if (!fetched.ok()) {
             report.failure = QString::fromUtf8(fetched.err).trimmed();
-            return report;
+            return counted(report);
         }
         if (lfsMissing(&error)) {
             report.failure = error;
-            return report;
+            return counted(report);
+        }
+        // Changes not committed yet are never merged over: what was pushed waits for them.
+        if (const QStringList clashing = clashingChanges(); !clashing.isEmpty()) {
+            report.failure = QObject::tr("commit the changes to %1 to bring in what was pushed")
+                                 .arg(clashing.mid(0, 3).join(u", "_s));
+            return counted(report);
         }
         if (!bringIn(report, &error)) {
             report.failure = error;
-            return report;
+            return counted(report);
         }
         if (!git({u"rev-parse"_s, u"-q"_s, u"--verify"_s, u"HEAD"_s}).ok())
-            return report;
+            return counted(report);
         if (git({u"rev-parse"_s, u"-q"_s, u"--verify"_s, remoteBranch()}).out ==
-            git({u"rev-parse"_s, u"HEAD"_s}).out)
+                git({u"rev-parse"_s, u"HEAD"_s}).out ||
+            !push)
             break;
         const Run pushed =
             git({u"push"_s, u"-q"_s, u"origin"_s, u"HEAD:refs/heads/"_s + m_branch}, kNetworkMs);
         if (pushed.ok()) {
             report.pushed = *committed;
-            return report;
+            return counted(report);
         }
         // Someone pushing first is met by fetching again; the repository refusing, as for a
         // protected branch, is not.
@@ -674,16 +743,17 @@ SyncReport GitSync::sync(const QDateTime &now)
                              said.contains(u"non-fast-forward"_s));
         if (!behind) {
             report.failure = said.trimmed();
-            return report;
+            return counted(report);
         }
     }
+    const bool even = git({u"rev-parse"_s, u"-q"_s, u"--verify"_s, remoteBranch()}).out ==
+                      git({u"rev-parse"_s, u"HEAD"_s}).out;
     // Synced here, but the repository kept changing under every push.
-    if (git({u"rev-parse"_s, u"-q"_s, u"--verify"_s, remoteBranch()}).out !=
-        git({u"rev-parse"_s, u"HEAD"_s}).out)
+    if (push && !even)
         report.failure = QObject::tr("the repository kept changing; this will try again");
-    else
+    else if (push)
         report.pushed = *committed;
-    return report;
+    return counted(report);
 }
 
 } // namespace jot

@@ -32,6 +32,12 @@ class SyncController : public QObject
     Q_PROPERTY(QString remote READ remote NOTIFY changed)
     /// Whether the vault syncs with a git repository, which has options of its own.
     Q_PROPERTY(bool git READ git NOTIFY changed)
+    /// For a git remote: whether commits, and pushes, are made by hand, as the vault says.
+    Q_PROPERTY(bool manualCommits READ manualCommits NOTIFY changed)
+    Q_PROPERTY(bool manualPushes READ manualPushes NOTIFY changed)
+    /// Files changed and not committed, and commits not pushed, as the last sync left them.
+    Q_PROPERTY(int uncommitted READ uncommitted NOTIFY changed)
+    Q_PROPERTY(int unpushed READ unpushed NOTIFY changed)
     Q_PROPERTY(bool syncing READ syncing NOTIFY changed)
     Q_PROPERTY(QDateTime lastSynced READ lastSynced NOTIFY changed)
     /// What went wrong with the last sync; empty when it went well.
@@ -79,6 +85,16 @@ public:
     /// Syncs the vault with the git repository at `url`, on `branch` (`main` when empty), once
     /// it answers with the keys and settings this computer has for git; Jot keeps none.
     Q_INVOKABLE void connectGit(const QString &url, const QString &branch);
+    /// Commits what changed with `message`, then syncs.
+    Q_INVOKABLE void commit(const QString &message);
+    /// Syncs and pushes, where pushes are made by hand.
+    Q_INVOKABLE void push();
+    /// The files changed and not committed, for a git remote.
+    Q_INVOKABLE QStringList changes() const;
+    /// The commit message the vault's template makes for `paths`.
+    Q_INVOKABLE QString suggestedMessage(const QStringList &paths) const;
+    /// Reads the vault's git options again, after they changed.
+    void reloadOptions() { Q_EMIT changed(); }
     /// The commit message git sync uses when the vault sets none.
     Q_INVOKABLE static QString defaultCommitMessage();
     /// The git repository the vault is, as `{exists, origin, branch}`: what connectGit() must
@@ -92,6 +108,10 @@ public:
     [[nodiscard]] bool configured() const { return !m_remote.isEmpty(); }
     [[nodiscard]] QString remote() const { return remoteLabel(m_remote); }
     [[nodiscard]] bool git() const { return m_remote.startsWith(u"git:"); }
+    [[nodiscard]] bool manualCommits() const;
+    [[nodiscard]] bool manualPushes() const;
+    [[nodiscard]] int uncommitted() const { return m_uncommitted; }
+    [[nodiscard]] int unpushed() const { return m_unpushed; }
     [[nodiscard]] bool syncing() const { return m_thread != nullptr && !m_checking; }
     [[nodiscard]] bool checking() const { return m_checking; }
     [[nodiscard]] static bool dropboxAvailable() { return !dropboxAppKey().isEmpty(); }
@@ -138,6 +158,10 @@ private:
     bool m_checking = false;
     QDateTime m_lastSynced;
     QString m_problem;
+    /// A commit or push asked for, to go with the next sync.
+    SyncRequest m_request;
+    int m_uncommitted = 0;
+    int m_unpushed = 0;
     QTimer m_soon;
     QTimer m_every;
     /// Says "3 minutes ago" anew each minute.

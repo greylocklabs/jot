@@ -46,6 +46,16 @@ public:
 };
 
 /// What a sync did, path by path.
+/// What a sync is asked to do beyond what the remote does on its own, for one that commits or
+/// pushes by hand.
+struct SyncRequest
+{
+    /// Commit what changed here with this message first; nothing when empty.
+    QString commitMessage;
+    /// Push, even where pushes are made by hand.
+    bool push = false;
+};
+
 struct SyncReport
 {
     /// Changed here from the remote, deleted here included.
@@ -61,6 +71,10 @@ struct SyncReport
     QStringList errors;
     /// The remote could not be reached or read, so nothing was done.
     QString failure;
+    /// Files changed here and not committed yet, for a remote that commits by hand.
+    int uncommitted = 0;
+    /// Commits made here and not pushed yet, for a remote that pushes by hand.
+    int unpushed = 0;
 
     [[nodiscard]] bool changedHere() const
     {
@@ -117,7 +131,11 @@ private:
 /// GitSync, the rest through SyncEngine. `stateDir` is syncStateDir()'s for the pair.
 [[nodiscard]] SyncReport syncVault(const QString &root, const QString &remote,
                                    const QString &secret, const QString &stateDir,
-                                   const QString &device);
+                                   const QString &device, const SyncRequest &request = {});
+/// The files changed and not committed in the vault at `root`, for a git `remote`; none for
+/// any other kind.
+[[nodiscard]] QStringList uncommittedChanges(const QString &root, const QString &remote,
+                                             const QString &stateDir);
 /// A git remote's repository and branch, from a setting written `git:<url>[#<branch>]`; the
 /// branch is `main` when it is not given.
 [[nodiscard]] std::pair<QString, QString> gitRemote(const QString &remote);
