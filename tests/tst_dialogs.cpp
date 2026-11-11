@@ -542,11 +542,16 @@ void TestDialogs::columnsGiveWayToTheNote()
             toggle->mapToScene({toggle->width() / 2, toggle->height() / 2}).toPoint());
     };
 
-    // As the window narrows, the notebooks go first, then the note list.
+    // As the window narrows, both go together once the note would have less than its room
+    // beside them, as the toggle puts both away; and they come back together.
     widen(1280);
     QTRY_VERIFY(sidebar->isVisible() && list->isVisible());
-    widen(900);
-    QTRY_VERIFY(!sidebar->isVisible() && list->isVisible());
+    widen(1060);
+    QTRY_VERIFY(sidebar->isVisible() && list->isVisible());
+    widen(1000);
+    QTRY_VERIFY(!sidebar->isVisible() && !list->isVisible());
+    widen(1060);
+    QTRY_VERIFY(sidebar->isVisible() && list->isVisible());
     widen(600);
     QTRY_VERIFY(!sidebar->isVisible() && !list->isVisible());
     // Brought back by hand, both squeeze the note; wide again, they follow the window as before.

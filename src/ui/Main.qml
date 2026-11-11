@@ -373,57 +373,53 @@ ApplicationWindow {
         Item {
             id: columns
 
-            // The notebooks and the note list put themselves away as the window narrows, the
-            // notebooks first, so the note keeps room to write in, and come back as it widens.
-            // Put away by hand they stay away; brought back by hand on a narrow window, they
-            // squeeze the note until the window is wide enough for them again.
+            // The notebooks and the note list go together as the window narrows, so the note
+            // keeps room to write in, and come back together as it widens. Put away by hand they
+            // stay away; brought back by hand on a narrow window, they squeeze the note until the
+            // window is wide enough for them again.
             readonly property int wantedSidebar: Settings.sidebarWidth > 0 ? Settings.sidebarWidth :
                                                                              Theme.sidebarWidth
-            readonly property bool sidebarFits: width - wantedSidebar - Settings.minNoteListWidth
-                                                >= Theme.noteRoomWidth
-            readonly property bool listFits: width - Settings.minNoteListWidth
-                                             >= Theme.noteRoomWidth
+            readonly property int wantedList: Settings.noteListWidth > 0 ? Settings.noteListWidth :
+                                                                           Theme.noteListWidth
+            /// The note keeps its room beside both, at the widths they are set to.
+            readonly property bool fits: width - wantedSidebar - wantedList >= Theme.noteRoomWidth
             /// Brought back by hand while the window is too narrow for them.
             property bool shownByHand: false
-            readonly property bool showSidebar: !window.distractionFree && (shownByHand || (
-                                                                                !Settings.columnsHidden
-                                                                                && sidebarFits))
-            readonly property bool showList: !window.distractionFree && (shownByHand || (
-                                                                             !Settings.columnsHidden
-                                                                             && listFits))
+            readonly property bool shown: !window.distractionFree && (shownByHand || (
+                                                                          !Settings.columnsHidden
+                                                                          && fits))
+            readonly property bool showSidebar: shown
+            readonly property bool showList: shown
             // When they squeeze the note, it still keeps its least room.
             readonly property int room: width - Theme.editorMinWidth
-            readonly property int sidebarWidth: showSidebar ? Math.max(0, Math.min(wantedSidebar,
-                                                                                   room - Settings.minNoteListWidth)) :
-                                                              0
-            readonly property int noteListWidth: showList ? Math.max(0, Math.min(
-                                                                         Settings.noteListWidth > 0
-                                                                         ? Settings.noteListWidth :
-                                                                           Theme.noteListWidth,
-                                                                         room - sidebarWidth)) : 0
+            readonly property int sidebarWidth: shown ? Math.max(0, Math.min(wantedSidebar, room
+                                                                             - Settings.minNoteListWidth)) :
+                                                        0
+            readonly property int noteListWidth: shown ? Math.max(0, Math.min(wantedList, room
+                                                                              - sidebarWidth)) : 0
 
             /// Puts both columns away, or brings both back.
             function toggle() {
-                if (showSidebar || showList) {
+                if (shown) {
                     shownByHand = false
                     Settings.columnsHidden = true
                 } else {
                     Settings.columnsHidden = false
-                    shownByHand = !sidebarFits
+                    shownByHand = !fits
                 }
             }
 
-            /// Brings the note list back, if it is away, for something that needs it.
+            /// Brings the columns back, if they are away, for something that needs the list.
             function revealList() {
-                if (showList)
+                if (shown)
                     return
                 Settings.columnsHidden = false
-                if (!listFits)
+                if (!fits)
                     shownByHand = true
             }
 
-            onSidebarFitsChanged: {
-                if (sidebarFits)
+            onFitsChanged: {
+                if (fits)
                     shownByHand = false
             }
 

@@ -12,6 +12,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ### Changed
 
+- The notebooks and the note list put themselves away together as the window narrows, and come
+  back together, as the title bar's button shows or hides both.
 - A data table's column headings look clickable, lighting up under the pointer with a tip that says
   a click sorts, and the column sorted by shows an arrow for which way.
 
