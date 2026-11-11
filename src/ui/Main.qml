@@ -457,7 +457,11 @@ ApplicationWindow {
                     bottom: parent.bottom
                 }
                 columnWidth: sidebar.width
-                onResized: width => Settings.sidebarWidth = width
+                // No wider than leaves the note its room beside both, so a drag never puts
+                // them away.
+                onResized: width => Settings.sidebarWidth = Math.min(width, columns.width
+                                                                     - columns.wantedList
+                                                                     - Theme.noteRoomWidth)
                 onReset: Settings.resetSidebarWidth()
             }
             TaskList {
@@ -488,6 +492,7 @@ ApplicationWindow {
                 width: columns.noteListWidth
             }
             ColumnSplitter {
+                objectName: "listSplitter"
                 visible: Vault.isOpen && columns.showList
                 anchors {
                     horizontalCenter: noteList.right
@@ -495,7 +500,9 @@ ApplicationWindow {
                     bottom: parent.bottom
                 }
                 columnWidth: noteList.width
-                onResized: width => Settings.noteListWidth = width
+                onResized: width => Settings.noteListWidth = Math.min(width, columns.width
+                                                                      - columns.wantedSidebar
+                                                                      - Theme.noteRoomWidth)
                 onReset: Settings.resetNoteListWidth()
             }
             TrashList {
