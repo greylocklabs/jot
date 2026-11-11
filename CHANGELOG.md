@@ -3,6 +3,19 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## 0.5.5 - 2026-11-11
+
+### New
+
+- Ignore paths by vault patterns and .gitignore files
+- Adopt a vault's own git origin however it is written
+- Find and replace in the note with ctrl+f and ctrl+h
+
+### Fixed
+
+- Escape ignored notebook names and keep .jot in git sync
+- Keep tokens out of the origin shown in git errors
+
 ## 0.5.4 - 2026-11-11
 
 ### Added

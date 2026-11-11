@@ -36,6 +36,17 @@
   </categories>
 
   <releases>
+    <release version="0.5.5" date="2026-11-11">
+      <description>
+        <ul>
+          <li>Ignore paths by vault patterns and .gitignore files</li>
+          <li>Adopt a vault's own git origin however it is written</li>
+          <li>Find and replace in the note with ctrl+f and ctrl+h</li>
+          <li>Escape ignored notebook names and keep .jot in git sync</li>
+          <li>Keep tokens out of the origin shown in git errors</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.5.4" date="2026-11-11">
       <description>
         <ul>
