@@ -36,8 +36,8 @@ QList<TaskMarker> taskMarkers(QStringView text)
                 uR"(^(?:\d+|other|on|(?:day|week|month|year|weekday|monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?)$)"_s,
                 QRegularExpression::CaseInsensitiveOption);
             QStringList rule;
+            QList<qsizetype> ends;
             qsizetype at = m.capturedEnd();
-            qsizetype end = at;
             while (true) {
                 while (at < text.size() && text.at(at).isSpace())
                     ++at;
@@ -48,10 +48,19 @@ QList<TaskMarker> taskMarkers(QStringView text)
                 if (word.isEmpty() || !ruleWord.match(word).hasMatch())
                     break;
                 rule.append(word);
-                end = at;
+                ends.append(at);
+            }
+            // The most of them that make a rule Jot reads; words past it, such as a number that
+            // starts the to-do's own words, stay the to-do's.
+            static const QDate someDay(2000, 1, 3);
+            while (!rule.isEmpty() &&
+                   !nextOccurrence(u"every "_s + rule.join(u' '), someDay).isValid()) {
+                rule.removeLast();
+                ends.removeLast();
             }
             if (!rule.isEmpty())
-                found.append({TaskMarker::Repeat, start, end, u"every "_s + rule.join(u' ')});
+                found.append(
+                    {TaskMarker::Repeat, start, ends.last(), u"every "_s + rule.join(u' ')});
         } else if (name == u"due" || name == u"done") {
             const QRegularExpressionMatch date = day.matchView(text.sliced(m.capturedEnd()));
             const bool due = name == u"due";
