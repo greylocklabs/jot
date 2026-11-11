@@ -66,10 +66,11 @@ struct TaskLine
 [[nodiscard]] QString priorityName(int priority);
 /// The priority a name gives, "p1" to "p4", with or without its @ and case aside; 0 for none.
 [[nodiscard]] int priorityOf(const QString &name);
-/// A whole checkbox line, `- [ ] …`, with the days said in words written as dates, as of
-/// `today`: `@due tomorrow` as `@due 2026-11-12`, `@done yesterday` as `@done 2026-11-10`, and a
-/// weekday as the next one due or the last one done. A bare `@done` is done today, and a line
-/// said done this way is ticked. Nothing when there is nothing to change.
+/// A whole checkbox line, `- [ ] …`, with the days said in other words written as dates, as of
+/// `today`, read as quick add reads them: `@due tomorrow 3pm` as `@due 2026-11-12 15:00`,
+/// `@due nov 14` or `@due 11-14-2026` as `@due 2026-11-14`, `@done yesterday` as
+/// `@done 2026-11-10`, and a weekday as the next one due or the last one done. A bare `@done` is
+/// done today, and a line said done this way is ticked. Nothing when there is nothing to change.
 [[nodiscard]] std::optional<QString> tidiedTaskLine(const QString &line, const QDate &today);
 /// `text` without its markers of `kinds`, its spaces tidied where they were.
 [[nodiscard]] QString withoutMarkers(const QString &text, const QList<TaskMarker::Kind> &kinds);

@@ -35,6 +35,11 @@ void TestQuickAdd::reads_data()
     QTest::newRow("a day typed as written")
         << u"pay rent @due 2026-11-01 9:00"_s << u"pay rent @due 2026-11-01 09:00"_s;
     QTest::newRow("today") << u"pay rent today"_s << u"pay rent @due 2026-10-28"_s;
+    QTest::newRow("month first in numbers")
+        << u"pay rent 11-14-2026"_s << u"pay rent @due 2026-11-14"_s;
+    QTest::newRow("a month and day gone is next year's")
+        << u"pay rent 10/1"_s << u"pay rent @due 2027-10-01"_s;
+    QTest::newRow("no such day") << u"pay rent 13/40"_s << u"pay rent 13/40"_s;
     QTest::newRow("a time alone is today")
         << u"stand-up at 9:30 am"_s << u"stand-up @due 2026-10-28 09:30"_s;
     QTest::newRow("24 hours") << u"meet Mara tomorrow at 15:45"_s

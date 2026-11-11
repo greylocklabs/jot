@@ -125,6 +125,9 @@ QuickTask readQuickTask(const QString &typed, const QDateTime &now)
     // The day, said one of several ways, with "on" or "by" before it if it has one.
     const QString lead = uR"((?:(?:on|by)\s+)?)"_s;
     static const QRegularExpression iso = words(lead + uR"((\d{4}-\d{2}-\d{2}))"_s);
+    // Month first, as written in the US: 11-14-2026, 11/14/26 or 11/14.
+    static const QRegularExpression numeric =
+        words(lead + uR"((\d{1,2})[/-](\d{1,2})(?:[/-](\d{4}|\d{2}))?)"_s);
     static const QRegularExpression in =
         words(uR"(in\s+(\d+|a|an|one|two|three)\s+(day|week|month)s?)"_s);
     static const QRegularExpression nextOne = words(uR"(next\s+(week|month))"_s);
@@ -144,6 +147,14 @@ QuickTask readQuickTask(const QString &typed, const QDateTime &now)
     const QString beforeDay = text;
     if (QRegularExpressionMatch m = take(text, iso); m.hasMatch()) {
         day = QDate::fromString(m.captured(1), Qt::ISODate);
+    } else if (m = take(text, numeric); m.hasMatch()) {
+        const QString year = m.captured(3);
+        day = QDate(year.isEmpty()     ? today.year()
+                    : year.size() == 2 ? 2000 + year.toInt()
+                                       : year.toInt(),
+                    m.captured(1).toInt(), m.captured(2).toInt());
+        if (year.isEmpty() && day.isValid() && day < today)
+            day = day.addYears(1);
     } else if (m = take(text, in); m.hasMatch()) {
         static const QHash<QString, int> spelled = {
             {u"a"_s, 1}, {u"an"_s, 1}, {u"one"_s, 1}, {u"two"_s, 2}, {u"three"_s, 3}};

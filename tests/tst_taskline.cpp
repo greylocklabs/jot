@@ -114,6 +114,13 @@ void TestTaskLine::writesDaysSaidInWordsAsDates()
     QCOMPARE(tidied(u"- [ ] Call @due tomorrow"_s), u"- [ ] Call @due 2026-10-29"_s);
     QCOMPARE(tidied(u"- [ ] Call @due friday #calls"_s), u"- [ ] Call @due 2026-10-30 #calls"_s);
     QCOMPARE(tidied(u"- [ ] Call @due Wednesday"_s), u"- [ ] Call @due 2026-11-04"_s);
+    // Any day quick add reads: month first in numbers, a month's name, and a time with it.
+    QCOMPARE(tidied(u"- [ ] Call @due 11-14-2026"_s), u"- [ ] Call @due 2026-11-14"_s);
+    QCOMPARE(tidied(u"- [ ] Call @due 11/14 #calls"_s), u"- [ ] Call @due 2026-11-14 #calls"_s);
+    QCOMPARE(tidied(u"- [ ] Call @due nov 14 3pm @p1"_s),
+             u"- [ ] Call @due 2026-11-14 15:00 @p1"_s);
+    QCOMPARE(tidied(u"- [ ] Call @due in 3 days"_s), u"- [ ] Call @due 2026-10-31"_s);
+    QCOMPARE(tidied(u"- [ ] Pay @done 10/27/26"_s), u"- [x] Pay @done 2026-10-27"_s);
     // Said done, with a day or none, it is ticked; a weekday is the last one gone.
     QCOMPARE(tidied(u"- [ ] Pay @done yesterday"_s), u"- [x] Pay @done 2026-10-27"_s);
     QCOMPARE(tidied(u"  * [ ] Pay @done"_s), u"  * [x] Pay @done 2026-10-28"_s);
