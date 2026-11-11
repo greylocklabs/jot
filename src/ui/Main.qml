@@ -541,6 +541,7 @@ ApplicationWindow {
 
                 z: columns.flyout ? 3 : 0
                 visible: Vault.isOpen && Vault.showingTrash && columns.showList
+                onNotePicked: columns.closeFlyout()
                 anchors {
                     left: sidebar.right
                     top: parent.top

@@ -653,6 +653,30 @@ void TestDialogs::columnsGiveWayToTheNote()
     QTRY_VERIFY(!sidebar->isVisible());
     QCOMPARE(m_vault->current(), u"Errands.md"_s);
     m_vault->setShowingTasks(false);
+    // And picking a note in the trash, to preview it.
+    QVERIFY(m_vault->trashNote(u"Errands.md"_s, false));
+    m_vault->setShowingTrash(true);
+    click();
+    QTRY_VERIFY(sidebar->isVisible());
+    const std::function<QQuickItem *(QQuickItem *)> trashedRow =
+        [&trashedRow](QQuickItem *at) -> QQuickItem * {
+        for (QQuickItem *child : at->childItems()) {
+            if (child->property("title").toString() == u"Errands"_s &&
+                !child->property("location").toString().isEmpty() && child->isVisible())
+                return child;
+            if (QQuickItem *found = trashedRow(child))
+                return found;
+        }
+        return nullptr;
+    };
+    QQuickItem *trashed = nullptr;
+    QTRY_VERIFY((trashed = trashedRow(window->contentItem())) != nullptr);
+    QTest::mouseClick(window, Qt::LeftButton, {},
+                      trashed->mapToScene({trashed->width() / 2, trashed->height() / 2}).toPoint());
+    QTRY_VERIFY(!sidebar->isVisible());
+    QVERIFY(!m_vault->chosenTrashed().isEmpty());
+    m_vault->setShowingTrash(false);
+    m_vault->setCurrent(u"Pick me.md"_s);
     click();
     QTRY_VERIFY(sidebar->isVisible());
     widen(1280);
