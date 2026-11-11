@@ -405,8 +405,10 @@ QStringList GitSync::changes() const
     QStringList paths;
     if (!QFileInfo(m_gitDir).isDir())
         return paths;
-    const Run status =
-        git({u"status"_s, u"--porcelain"_s, u"-z"_s, u"--untracked-files=all"_s}, 30 * 1000);
+    // Without the index lock a status may take, so it can run beside a sync.
+    const Run status = git({u"--no-optional-locks"_s, u"status"_s, u"--porcelain"_s, u"-z"_s,
+                            u"--untracked-files=all"_s},
+                           30 * 1000);
     const QList<QByteArray> records = status.out.split('\0');
     for (qsizetype i = 0; i < records.size(); ++i) {
         const QByteArray &record = records.at(i);
@@ -536,8 +538,7 @@ bool GitSync::merge(SyncReport &report, QString *error)
     if (head.ok() && git({u"merge-base"_s, u"--is-ancestor"_s, remoteBranch(), u"HEAD"_s}).ok())
         return true;
     const QString before = QString::fromUtf8(head.out).trimmed();
-    // Changes not committed yet, with commits made by hand, are kept aside while it runs.
-    QStringList mergeArguments{u"merge"_s, u"-q"_s, u"--no-edit"_s, u"--autostash"_s,
+    QStringList mergeArguments{u"merge"_s, u"-q"_s, u"--no-edit"_s,
                                u"--allow-unrelated-histories"_s};
     if (!m_options.hooks)
         mergeArguments << u"--no-verify"_s;
@@ -625,7 +626,9 @@ bool GitSync::bringIn(SyncReport &report, QString *error)
     // Only a clean tree is rebased: changes set aside and put back after could clash on the way
     // back and leave markers in a note, where a merge leaves them alone.
     const bool clean =
-        git({u"status"_s, u"--porcelain"_s, u"--untracked-files=no"_s}).out.trimmed().isEmpty();
+        git({u"--no-optional-locks"_s, u"status"_s, u"--porcelain"_s, u"--untracked-files=no"_s})
+            .out.trimmed()
+            .isEmpty();
     if (m_options.rebase && related && clean) {
         const QString before = QString::fromUtf8(head.out).trimmed();
         if (rebase()) {
