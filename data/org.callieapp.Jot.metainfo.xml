@@ -36,6 +36,20 @@
   </categories>
 
   <releases>
+    <release version="0.5.4" date="2026-11-11">
+      <description>
+        <ul>
+          <li>Double-click a note in the list to rename it there. Rename, from a note's menu or the keyboard, does the same, bringing the list back if it was put away.</li>
+          <li>What's new shows a release's breaking changes first, in red.</li>
+          <li>Double-click a to-do in Tasks to set its day and repeat, as Ctrl+Shift+D does in its note; a task note's go in its front matter.</li>
+          <li>The notebooks and the note list put themselves away together as the window narrows, and come back together, as the title bar's button shows or hides both. Shown on a narrow window, they lie over the note instead of squeezing it, and go again with a click on the note or a note picked.</li>
+          <li>A data table's column headings look clickable, lighting up under the pointer with a tip that says a click sorts, and the column sorted by shows an arrow for which way.</li>
+          <li>Renaming a notebook types the new name where the old one was, in a field the shape of its row.</li>
+          <li>A data table's tools, Undo and Redo among them, wrap onto more lines on a narrow window instead of being cut off.</li>
+          <li>In vi mode, the status line hides while a data file shows as a table, and comes back with its text.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.5.3" date="2026-11-11">
       <description>
         <ul>
