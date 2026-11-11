@@ -30,6 +30,8 @@ class SyncController : public QObject
     Q_PROPERTY(bool configured READ configured NOTIFY changed)
     /// Where it syncs to, in words: a folder's path.
     Q_PROPERTY(QString remote READ remote NOTIFY changed)
+    /// Whether the vault syncs with a git repository, which has options of its own.
+    Q_PROPERTY(bool git READ git NOTIFY changed)
     Q_PROPERTY(bool syncing READ syncing NOTIFY changed)
     Q_PROPERTY(QDateTime lastSynced READ lastSynced NOTIFY changed)
     /// What went wrong with the last sync; empty when it went well.
@@ -77,6 +79,8 @@ public:
     /// Syncs the vault with the git repository at `url`, on `branch` (`main` when empty), once
     /// it answers with the keys and settings this computer has for git; Jot keeps none.
     Q_INVOKABLE void connectGit(const QString &url, const QString &branch);
+    /// The commit message git sync uses when the vault sets none.
+    Q_INVOKABLE static QString defaultCommitMessage();
     /// The git repository the vault is, as `{exists, origin, branch}`: what connectGit() must
     /// be given for it, since Jot syncs such a vault on its own origin and branch.
     Q_INVOKABLE QVariantMap ownRepository() const;
@@ -87,6 +91,7 @@ public:
 
     [[nodiscard]] bool configured() const { return !m_remote.isEmpty(); }
     [[nodiscard]] QString remote() const { return remoteLabel(m_remote); }
+    [[nodiscard]] bool git() const { return m_remote.startsWith(u"git:"); }
     [[nodiscard]] bool syncing() const { return m_thread != nullptr && !m_checking; }
     [[nodiscard]] bool checking() const { return m_checking; }
     [[nodiscard]] static bool dropboxAvailable() { return !dropboxAppKey().isEmpty(); }

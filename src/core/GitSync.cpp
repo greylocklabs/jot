@@ -87,6 +87,62 @@ GitSync::GitSync(QString root, QString url, QString branch, QString gitDir, QStr
     }
 }
 
+const QString GitSync::kDefaultMessage = u"chore(sync): jot commit from {device}, {date} {time}"_s;
+
+GitSync::Options GitSync::optionsOf(const QString &root)
+{
+    const Vault vault(root);
+    const auto flag = [&vault](const QString &key) -> std::optional<bool> {
+        const QString said = vault.setting(key).toLower();
+        if (said == u"true" || said == u"yes" || said == u"on")
+            return true;
+        if (said == u"false" || said == u"no" || said == u"off")
+            return false;
+        return std::nullopt;
+    };
+    Options options;
+    options.message = vault.setting(u"gitMessage"_s);
+    if (options.message.isEmpty())
+        options.message = kDefaultMessage;
+    options.hooks = flag(u"gitHooks"_s).value_or(false);
+    options.sign = flag(u"gitSign"_s);
+    return options;
+}
+
+QString GitSync::commitMessage(const QString &pattern, const QString &device, const QDateTime &now,
+                               const QStringList &paths)
+{
+    QString files = paths.mid(0, 3).join(u", "_s);
+    if (paths.size() > 3)
+        files += QObject::tr(" and %n more", nullptr, int(paths.size() - 3));
+    QString message = pattern;
+    message.replace(u"{device}"_s, device)
+        .replace(u"{date}"_s, now.toString(u"yyyy-MM-dd"_s))
+        .replace(u"{time}"_s, now.toString(u"HH:mm"_s))
+        .replace(u"{count}"_s, QString::number(paths.size()))
+        .replace(u"{files}"_s, files);
+    return message.trimmed();
+}
+
+QStringList GitSync::identity() const
+{
+    // Git's own user, as for any commit made here; Jot only stands in when git has none.
+    if (git({u"config"_s, u"user.email"_s}).out.trimmed().isEmpty())
+        return {u"-c"_s, u"user.name=Jot"_s, u"-c"_s, u"user.email=jot@localhost"_s};
+    return {};
+}
+
+QStringList GitSync::commitArguments() const
+{
+    QStringList arguments = identity();
+    arguments << u"commit"_s << u"-q"_s;
+    if (!m_options.hooks)
+        arguments << u"--no-verify"_s;
+    if (m_options.sign)
+        arguments << (*m_options.sign ? u"-S"_s : u"--no-gpg-sign"_s);
+    return arguments;
+}
+
 GitSync::OwnRepository GitSync::ownRepository(const QString &root)
 {
     OwnRepository own;
@@ -294,11 +350,6 @@ bool GitSync::prepare(QString *error)
         if (const Run run = git({u"remote"_s, u"set-url"_s, u"origin"_s, m_url}); !run.ok())
             return fail(run);
     }
-    // Commits need a name: the person's own where git has one, else this computer's.
-    if (!m_own && git({u"config"_s, u"user.email"_s}).out.trimmed().isEmpty()) {
-        git({u"config"_s, u"user.name"_s, u"Jot on "_s + m_device});
-        git({u"config"_s, u"user.email"_s, u"jot@"_s + m_device + u".local"_s});
-    }
     QDir().mkpath(m_gitDir + u"/info"_s);
     const QByteArray &excluded = m_own ? kOwnExclude : kExclude;
     QFile exclude(m_gitDir + u"/info/exclude"_s);
@@ -359,9 +410,8 @@ std::optional<QStringList> GitSync::commit(QString *error)
     }
     if (paths.isEmpty())
         return paths;
-    const QString message = u"Jot on %1, %2"_s.arg(m_device, m_now.toString(u"yyyy-MM-dd HH:mm"_s));
-    if (const Run run = git({u"commit"_s, u"-q"_s, u"--no-verify"_s, u"-m"_s, message});
-        !run.ok()) {
+    const QString message = commitMessage(m_options.message, m_device, m_now, paths);
+    if (const Run run = git(commitArguments() + QStringList{u"-m"_s, message}); !run.ok()) {
         *error = QString::fromUtf8(run.err + run.out).trimmed();
         return std::nullopt;
     }
@@ -442,8 +492,13 @@ bool GitSync::merge(SyncReport &report, QString *error)
     if (head.ok() && git({u"merge-base"_s, u"--is-ancestor"_s, remoteBranch(), u"HEAD"_s}).ok())
         return true;
     const QString before = QString::fromUtf8(head.out).trimmed();
-    const Run run = git({u"merge"_s, u"-q"_s, u"--no-edit"_s, u"--no-verify"_s,
-                         u"--allow-unrelated-histories"_s, remoteBranch()});
+    QStringList mergeArguments{u"merge"_s, u"-q"_s, u"--no-edit"_s,
+                               u"--allow-unrelated-histories"_s};
+    if (!m_options.hooks)
+        mergeArguments << u"--no-verify"_s;
+    if (m_options.sign)
+        mergeArguments << (*m_options.sign ? u"-S"_s : u"--no-gpg-sign"_s);
+    const Run run = git(identity() + mergeArguments + QStringList{remoteBranch()});
     if (!run.ok()) {
         const Run unmerged = git({u"diff"_s, u"--name-only"_s, u"--diff-filter=U"_s, u"-z"_s});
         QStringList conflicted;
@@ -463,8 +518,7 @@ bool GitSync::merge(SyncReport &report, QString *error)
                 return false;
             }
         }
-        if (const Run done = git({u"commit"_s, u"-q"_s, u"--no-edit"_s, u"--no-verify"_s});
-            !done.ok()) {
+        if (const Run done = git(commitArguments() + QStringList{u"--no-edit"_s}); !done.ok()) {
             *error = QString::fromUtf8(done.err + done.out).trimmed();
             git({u"merge"_s, u"--abort"_s});
             return false;
@@ -484,6 +538,7 @@ bool GitSync::merge(SyncReport &report, QString *error)
 SyncReport GitSync::sync(const QDateTime &now)
 {
     m_now = now;
+    m_options = optionsOf(m_root);
     SyncReport report;
     QString error;
     if (!available()) {

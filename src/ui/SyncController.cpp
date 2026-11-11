@@ -238,6 +238,11 @@ void SyncController::connectGit(const QString &url, const QString &branch)
     });
 }
 
+QString SyncController::defaultCommitMessage()
+{
+    return GitSync::kDefaultMessage;
+}
+
 QVariantMap SyncController::ownRepository() const
 {
     const GitSync::OwnRepository own =

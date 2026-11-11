@@ -1994,7 +1994,17 @@ void TestVaultController::syncsWithAGitRepository()
     QVERIFY(git.waitForFinished());
     QCOMPARE(QString::fromUtf8(git.readAllStandardOutput()),
              readFile(m_root + u"/Inbox/Groceries.md"_s));
+    QVERIFY(sync->git());
+
+    // Its commit options are the vault's, and taken out when emptied.
+    QVERIFY(m_vault->setVaultSetting(u"gitMessage"_s, u"notes: from {device}"_s));
+    QVERIFY(m_vault->setVaultSetting(u"gitHooks"_s, true));
+    QCOMPARE(m_vault->vaultSetting(u"gitMessage"_s), u"notes: from {device}"_s);
+    QCOMPARE(m_vault->vaultSetting(u"gitHooks"_s), u"true"_s);
+    QVERIFY(m_vault->setVaultSetting(u"gitMessage"_s, u"  "_s));
+    QVERIFY(!readFile(m_root + u"/.jot/vault.yaml"_s).contains(u"gitMessage"_s));
     sync->stop();
+    QVERIFY(!sync->git());
 }
 
 void TestVaultController::resolvesAConflictCopy()
