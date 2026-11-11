@@ -542,6 +542,17 @@ void TestDialogs::columnsGiveWayToTheNote()
             toggle->mapToScene({toggle->width() / 2, toggle->height() / 2}).toPoint());
     };
 
+    // Dragging the list wider on a window just wide enough keeps both shown: the width it takes is
+    // no more than leaves the note its room.
+    widen(1100);
+    QTRY_VERIFY(sidebar->isVisible() && list->isVisible());
+    QQuickItem *splitter = find(window->contentItem(), u"listSplitter"_s);
+    QVERIFY(splitter);
+    QMetaObject::invokeMethod(splitter, "resized", Q_ARG(int, 420));
+    QTRY_COMPARE(m_settings->noteListWidth(), 1100 - 240 - 480);
+    QVERIFY(sidebar->isVisible() && list->isVisible());
+    m_settings->resetNoteListWidth();
+
     // As the window narrows, both go together once the note would have less than its room
     // beside them, as the toggle puts both away; and they come back together.
     widen(1280);
