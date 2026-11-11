@@ -44,6 +44,7 @@ private Q_SLOTS:
     void narrowWindowOverlapsNothing();
     void columnsGiveWayToTheNote();
     void showsTheSyntaxGuide();
+    void filtersToDosByPriority();
     void offersToRemoveATargetOnlyWhenThereIsOne();
 
 private:
@@ -619,4 +620,36 @@ void TestDialogs::showsTheSyntaxGuide()
     QTRY_VERIFY(doc->toPlainText().contains(u"To-dos"_s));
     QVERIFY(doc->toPlainText().contains(u"@every 2 weeks on monday"_s));
     QVERIFY(!doc->toPlainText().contains(u"## To-dos"_s));
+}
+
+void TestDialogs::filtersToDosByPriority()
+{
+    QQmlEngine engine;
+    QQmlComponent component(&engine);
+    component.loadFromModule("Jot.Ui", "Main");
+    std::unique_ptr<QObject> main(component.create());
+    QVERIFY2(main, qPrintable(component.errorString()));
+    auto *window = qobject_cast<QQuickWindow *>(main.get());
+    QVERIFY(QTest::qWaitForWindowExposed(window));
+    window->resize(1200, 700);
+    m_vault->setShowingTasks(true);
+    const std::function<QQuickItem *(QQuickItem *, const QString &)> find =
+        [&find](QQuickItem *at, const QString &name) -> QQuickItem * {
+        for (QQuickItem *child : at->childItems()) {
+            if (child->objectName() == name)
+                return child;
+            if (QQuickItem *found = find(child, name))
+                return found;
+        }
+        return nullptr;
+    };
+    // The list's priority filter narrows it, and Any priority shows them all again.
+    QQuickItem *filter = nullptr;
+    QTRY_VERIFY((filter = find(window->contentItem(), u"priorityFilter"_s)) && filter->isVisible());
+    QCOMPARE(filter->property("model").toList().size(), 6);
+    QMetaObject::invokeMethod(filter, "activated", Q_ARG(QVariant, 2));
+    QCOMPARE(m_vault->tasks()->priority(), 2);
+    QMetaObject::invokeMethod(filter, "activated", Q_ARG(QVariant, -1));
+    QCOMPARE(m_vault->tasks()->priority(), -1);
+    m_vault->setShowingTasks(false);
 }

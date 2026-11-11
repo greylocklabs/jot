@@ -9,7 +9,7 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 - To-dos have a priority, as in Todoist: `@p1` urgent, `@p2` high, `@p3` medium and `@p4` low, or
   `priority: p1` on a task note. Quick add reads a bare `p1` too. The task list flags each in its
-  color, the sidebar lists the priorities in use to show their to-dos, Read mode says 🚩 Urgent,
+  color and filters by priority, Read mode says 🚩 Urgent,
   and `jot tasks --priority p1` narrows the list.
 - Settings has a Tasks tab, in place of Reminders, with the reminders and a choice of how the
   to-do list is ordered: by due date, when the note was made, name or priority, either way round.
