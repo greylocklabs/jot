@@ -8,6 +8,7 @@
 #include "jot/Vault.h"
 
 #include <QDirIterator>
+#include <QFontMetricsF>
 #include <QGuiApplication>
 #include <QMimeData>
 #include <QQmlComponent>
@@ -16,6 +17,7 @@
 #include <QQuickStyle>
 #include <QQuickWindow>
 #include <QRegularExpression>
+#include <QSignalSpy>
 #include <QStyleHints>
 #include <QTemporaryDir>
 #include <QTest>
@@ -297,30 +299,44 @@ void TestLists::leavesRoomUnderTheTitleBar()
 
 void TestLists::renamesANotebookByDoubleClick()
 {
-    QQuickItem *places = entry(u"Places"_s);
-    QVERIFY(places);
+    // Nested, chosen, so drawn bold, and with an emoji before its name: the name is typed over
+    // where it was all the same.
+    QVERIFY(m_vault->setNotebookEmoji(u"Ashfall/Places"_s, u"\U0001F3AD"_s));
+    m_vault->notes()->setNotebook(u"Ashfall/Places"_s);
     // Where the name is drawn, to type the new one in the same place.
     const std::function<QQuickItem *(QQuickItem *)> named =
         [&named](QQuickItem *at) -> QQuickItem * {
         for (QQuickItem *child : at->childItems()) {
-            if (child->property("text").toString() == u"Places"_s && child->isVisible())
+            if (child->property("text").toString() == u"\U0001F3AD  Places"_s && child->isVisible())
                 return child;
             if (QQuickItem *found = named(child))
                 return found;
         }
         return nullptr;
     };
-    QQuickItem *label = named(places);
-    QVERIFY(label);
-    const qreal nameX = label->mapToScene({0, 0}).x();
-    const QPoint center = places->mapToScene({places->width() / 2, places->height() / 2}).toPoint();
-    QTest::mouseDClick(m_window.get(), Qt::LeftButton, {}, center);
-    // The name is selected, so typing replaces it.
-    QTRY_VERIFY(m_sidebar->property("renamingPath").toString() == u"Ashfall/Places"_s);
+    // The sidebar is made again for the emoji, and again once its file is seen to change; the
+    // double-click waits for that to settle.
+    QSignalSpy reloaded(m_vault.get(), &VaultController::notesChanged);
+    while (reloaded.wait(1000))
+        reloaded.clear();
+    QQuickItem *places = nullptr;
+    QQuickItem *label = nullptr;
+    QTRY_VERIFY((places = entry(u"Places"_s)) && (label = named(places)) &&
+                places->property("selected").toBool());
+    const qreal nameX =
+        label->mapToScene({0, 0}).x() +
+        QFontMetricsF(label->property("font").value<QFont>()).horizontalAdvance(u"\U0001F3AD  "_s);
+    const auto renaming = [this] {
+        return m_sidebar->property("renamingPath").toString() == u"Ashfall/Places"_s;
+    };
+    QTest::mouseDClick(m_window.get(), Qt::LeftButton, {},
+                       places->mapToScene({places->width() / 2, places->height() / 2}).toPoint());
+    QTRY_VERIFY(renaming());
     QQuickItem *field =
         findItem([](QQuickItem *item) { return item->objectName() == u"notebookName"_s; });
     QVERIFY(field);
-    QCOMPARE(field->mapToScene({field->property("leftPadding").toReal(), 0}).x(), nameX);
+    QVERIFY(qAbs(field->mapToScene({field->property("leftPadding").toReal(), 0}).x() - nameX) <
+            0.5);
     QVERIFY(field->height() < places->height());
     type(u"Harbor"_s);
     QTest::keyClick(m_window.get(), Qt::Key_Return);
