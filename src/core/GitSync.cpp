@@ -429,7 +429,7 @@ QStringList GitSync::clashingChanges() const
         return {};
     const Run base = git({u"merge-base"_s, u"HEAD"_s, remoteBranch()});
     const Run incoming =
-        base.ok() ? git({u"diff"_s, u"--name-only"_s, u"-z"_s,
+        base.ok() ? git({u"diff"_s, u"--name-only"_s, u"--no-renames"_s, u"-z"_s,
                          QString::fromUtf8(base.out).trimmed(), remoteBranch()})
                   : git({u"ls-tree"_s, u"-r"_s, u"--name-only"_s, u"-z"_s, remoteBranch()});
     QStringList clashing;
@@ -576,9 +576,10 @@ bool GitSync::merge(SyncReport &report, QString *error)
 
 void GitSync::notePulled(const QString &before, SyncReport &report) const
 {
-    const Run changed = before.isEmpty()
-                            ? git({u"ls-files"_s, u"-z"_s})
-                            : git({u"diff"_s, u"--name-only"_s, u"-z"_s, before, u"HEAD"_s});
+    const Run changed =
+        before.isEmpty()
+            ? git({u"ls-files"_s, u"-z"_s})
+            : git({u"diff"_s, u"--name-only"_s, u"--no-renames"_s, u"-z"_s, before, u"HEAD"_s});
     for (const QByteArray &path : changed.out.split('\0')) {
         const QString each = QString::fromUtf8(path);
         if (!path.isEmpty() && !report.merged.contains(each) && !report.conflicts.contains(each) &&
