@@ -67,6 +67,7 @@ private Q_SLOTS:
     void showsAndResolvesAConflictCopy();
     void goesBackToWhereTheCursorWas();
     void typingIsDrawnAndSaved();
+    void findsAndReplacesInTheNote();
     void typingAfterAMoveIsSaved();
     void typingKeepsWindowsLineEndings();
     void anOutsideEditKeepsTheCursorWhereItWas();
@@ -275,6 +276,54 @@ void TestNoteEditor::typingIsDrawnAndSaved()
 
     QString error;
     QVERIFY(notefile::read(m_root + u"/Welcome.md"_s, &error)->endsWith(u"And **bold** words."_s));
+}
+
+void TestNoteEditor::findsAndReplacesInTheNote()
+{
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Ferry.md"_s,
+                            u"The ferry at dawn.\nA ferryman and his ferry.\n"_s, &error));
+    m_vault->setCurrent(u"Ferry.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    QTRY_VERIFY(body->property("text").toString().contains(u"ferryman"_s));
+    QMetaObject::invokeMethod(m_editor.get(), "find", Q_ARG(QVariant, true));
+    QQuickItem *bar = find(u"findBar"_s);
+    QTRY_VERIFY(bar->isVisible());
+    QQuickItem *field = find(u"findField"_s);
+    QTRY_VERIFY(field->hasActiveFocus());
+    for (const char c : "ferry")
+        if (c != 0)
+            QTest::keyClick(m_window.get(), c);
+    QTRY_COMPARE(bar->property("starts").toList().size(), 3);
+    QCOMPARE(find(u"findCount"_s)->property("text").toString(), u"1 of 3"_s);
+    QCOMPARE(body->property("selectionStart").toInt(), 4);
+
+    // Return and Shift+Return go round the matches.
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    QCOMPARE(bar->property("current").toInt(), 1);
+    QTest::keyClick(m_window.get(), Qt::Key_Return, Qt::ShiftModifier);
+    QTest::keyClick(m_window.get(), Qt::Key_Return, Qt::ShiftModifier);
+    QCOMPARE(bar->property("current").toInt(), 2);
+
+    // Whole words leave out the ferryman.
+    QMetaObject::invokeMethod(find(u"findWholeWords"_s), "clicked");
+    QTRY_COMPARE(bar->property("starts").toList().size(), 2);
+
+    // Replace all is one step to undo.
+    find(u"replaceField"_s)->setProperty("text", u"raft"_s);
+    QMetaObject::invokeMethod(find(u"replaceAll"_s), "clicked");
+    QTRY_COMPARE(body->property("text").toString(),
+                 u"The raft at dawn.\nA ferryman and his raft.\n"_s);
+    QCOMPARE(bar->property("starts").toList().size(), 0);
+    QMetaObject::invokeMethod(body, "undo");
+    QTRY_COMPARE(body->property("text").toString(),
+                 u"The ferry at dawn.\nA ferryman and his ferry.\n"_s);
+
+    // Escape closes the bar and goes back to the note.
+    field->forceActiveFocus();
+    QTest::keyClick(m_window.get(), Qt::Key_Escape);
+    QTRY_VERIFY(!bar->isVisible());
+    QVERIFY(body->hasActiveFocus());
 }
 
 void TestNoteEditor::typingAfterAMoveIsSaved()

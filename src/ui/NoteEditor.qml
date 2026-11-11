@@ -31,6 +31,15 @@ Rectangle {
         vi.mode = "insert"
     }
 
+    /// Shows the find bar over the note, with the replace row when `replace`. A table is shown as
+    /// its text, which is what is searched.
+    function find(replace) {
+        Settings.readMode = false
+        if (root.tableShown)
+            root.showText = true
+        findBar.show(replace && Vault.writable)
+    }
+
     /// Puts the cursor back in the body where it was, to type, out of reading.
     function write() {
         Settings.readMode = false
@@ -1727,6 +1736,29 @@ Rectangle {
             if (Vault.streak > 1)
                 parts.push(qsTr("%1 days in a row").arg(Vault.streak))
             return parts.join(", ")
+        }
+    }
+
+    FindBar {
+        id: findBar
+
+        anchors {
+            right: flick.right
+            top: flick.top
+            margins: Theme.space4
+        }
+        z: 2
+        styler: styler
+        body: body
+        writable: Vault.writable
+
+        // Another note, or none, ends the search.
+        Connections {
+            target: Vault
+            function onCurrentChanged() {
+                if (findBar.visible)
+                    findBar.close()
+            }
         }
     }
 
