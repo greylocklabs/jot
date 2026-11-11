@@ -24,6 +24,8 @@ public:
     Q_INVOKABLE void openFolder(const QString &which);
     /// Puts `text` on the clipboard, then emits copied().
     Q_INVOKABLE void copyText(const QString &text);
+    /// The syntax guide, data/syntax.md, as Markdown.
+    Q_INVOKABLE static QString syntaxGuide();
     /// Opens the report as a new GitHub issue, for the person to submit there.
     Q_INVOKABLE void reportOnGitHub(bool idea, const QString &summary, const QString &note,
                                     const QString &diagnostics);

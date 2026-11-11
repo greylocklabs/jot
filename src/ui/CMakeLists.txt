@@ -104,6 +104,7 @@ qt_add_qml_module(jotui
         ModeSwitch.qml
         NoteEditor.qml
         NoteList.qml
+        SyntaxGuide.qml
         NotebookTarget.qml
         PickerButton.qml
         PillButton.qml
@@ -141,6 +142,13 @@ qt_add_resources(jotui "jot_logo"
     PREFIX "/jot"
     BASE "${PROJECT_SOURCE_DIR}"
     FILES "${PROJECT_SOURCE_DIR}/assets/logo.png"
+)
+
+# The syntax guide the help menu shows.
+qt_add_resources(jotui "jot_syntax"
+    PREFIX "/jot"
+    BASE "${PROJECT_SOURCE_DIR}/data"
+    FILES "${PROJECT_SOURCE_DIR}/data/syntax.md"
 )
 
 # Names for the emoji picker's search, made by data/emoji.pl.

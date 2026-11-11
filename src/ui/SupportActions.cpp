@@ -10,6 +10,7 @@
 
 #include <QClipboard>
 #include <QDesktopServices>
+#include <QFile>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QPointer>
@@ -77,6 +78,12 @@ void SupportActions::sendReport(bool idea, const QString &summary, const QString
                             else
                                 Q_EMIT self->reportFailed(error);
                         });
+}
+
+QString SupportActions::syntaxGuide()
+{
+    QFile file(u":/jot/syntax.md"_s);
+    return file.open(QIODevice::ReadOnly) ? QString::fromUtf8(file.readAll()) : QString();
 }
 
 } // namespace jot
