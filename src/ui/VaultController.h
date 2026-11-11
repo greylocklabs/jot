@@ -57,9 +57,6 @@ class VaultController : public QObject
     Q_PROPERTY(QString error READ error NOTIFY errorChanged)
     Q_PROPERTY(int noteCount READ noteCount NOTIFY notesChanged)
     Q_PROPERTY(QStringList tags READ tags NOTIFY notesChanged)
-    /// The priorities open to-dos have, urgent first: `{priority, name, count}` for each with
-    /// any, and None with how many have none, when any has one.
-    Q_PROPERTY(QVariantList priorities READ priorities NOTIFY notesChanged)
     /// Each notebook's emoji, by its path, for those that have one.
     Q_PROPERTY(QVariantMap notebookEmoji READ notebookEmoji NOTIFY notesChanged)
     /// The emoji before Tasks and Trash in the sidebar, by view, each empty for none.
@@ -415,7 +412,6 @@ public:
     [[nodiscard]] bool writable() const;
     [[nodiscard]] QString error() const { return m_error; }
     [[nodiscard]] int noteCount() const;
-    [[nodiscard]] QVariantList priorities() const;
     /// What a priority is called: Urgent, High, Medium, Low, or None for 0.
     Q_INVOKABLE static QString priorityName(int priority) { return jot::priorityName(priority); }
     [[nodiscard]] QStringList tags() const;

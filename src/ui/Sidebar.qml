@@ -81,11 +81,10 @@ Rectangle {
 
                 width: root.width
                 label: qsTr("Tasks")
-                selected: Vault.showingTasks && Vault.tasks.tag === "" && Vault.tasks.priority < 0
+                selected: Vault.showingTasks && Vault.tasks.tag === ""
                 onClicked: {
                     Vault.showingTasks = true
                     Vault.tasks.tag = ""
-                    Vault.tasks.priority = -1
                 }
 
                 TapHandler {
@@ -124,78 +123,6 @@ Rectangle {
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.textXs
                         font.weight: Theme.weightBold
-                    }
-                }
-            }
-
-            // Each priority open to-dos have; choosing one shows them.
-            Repeater {
-                model: Vault.priorities
-
-                Entry {
-                    id: priorityRow
-
-                    required property var modelData
-
-                    objectName: "priorityEntry"
-                    width: root.width
-                    label: modelData.name
-                    selected: Vault.showingTasks && Vault.tasks.priority === modelData.priority
-                    onClicked: {
-                        Vault.showingTasks = true
-                        Vault.tasks.priority = Vault.tasks.priority === modelData.priority ? -1 :
-                                                                                             modelData.priority
-                    }
-
-                    contentItem: Item {
-                        Glyph {
-                            id: priorityFlag
-
-                            anchors {
-                                left: parent.left
-                                // Under the Tasks entry, as the views of it.
-                                leftMargin: Theme.space4 + Theme.smallGlyphSize + Theme.space3
-                                verticalCenter: parent.verticalCenter
-                            }
-                            width: Theme.smallGlyphSize
-                            height: width
-                            name: "flag"
-                            color: priorityRow.modelData.priority > 0 ? Theme.priorityColor(
-                                                                            priorityRow.modelData.priority) :
-                                                                        Theme.textFaint
-                        }
-                        Text {
-                            anchors {
-                                left: priorityFlag.right
-                                leftMargin: Theme.space3
-                                right: priorityCount.left
-                                rightMargin: Theme.space3
-                                verticalCenter: parent.verticalCenter
-                            }
-                            text: priorityRow.label
-                            elide: Text.ElideRight
-                            color: priorityRow.selected ? Theme.text : Theme.textMuted
-                            font.family: Theme.fontFamily
-                            font.pixelSize: Theme.textMd
-                            font.weight: priorityRow.selected ? Theme.weightBold :
-                                                                Theme.weightStrong
-                        }
-                        Text {
-                            id: priorityCount
-
-                            anchors {
-                                right: parent.right
-                                rightMargin: Theme.space5
-                                verticalCenter: parent.verticalCenter
-                            }
-                            text: priorityRow.modelData.count
-                            color: Theme.textFaint
-                            font.family: Theme.fontFamily
-                            font.pixelSize: Theme.textXs
-                            font.features: {
-                                "tnum": 1
-                            }
-                        }
                     }
                 }
             }

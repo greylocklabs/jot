@@ -2196,15 +2196,12 @@ void TestVaultController::headsToDosByDay()
     tasks.setTag(u"calls"_s);
     tasks.setView(u"all"_s);
     QCOMPARE(column(tasks, "title"), (QStringList{u"Call Soren #calls"_s, u"Buy rope #calls"_s}));
-    // Or to a priority; the sidebar lists those in use, urgent first, then those with none.
+    // Or to a priority, as the list's priority filter does.
     tasks.setTag({});
     tasks.setPriority(1);
     QCOMPARE(column(tasks, "title"), QStringList{u"Call Soren #calls"_s});
     QCOMPARE(column(tasks, "priority"), QStringList{u"1"_s});
-    const QVariantList priorities = m_vault->priorities();
-    QCOMPARE(priorities.first().toMap().value(u"name"_s).toString(), u"Urgent"_s);
-    QCOMPARE(priorities.first().toMap().value(u"count"_s).toInt(), 1);
-    QCOMPARE(priorities.last().toMap().value(u"name"_s).toString(), u"None"_s);
+    QCOMPARE(VaultController::priorityName(1), u"Urgent"_s);
     tasks.setPriority(-1);
 
     // Ordered as chosen in Settings; other than by day, the list has no headings.

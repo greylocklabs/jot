@@ -124,9 +124,8 @@ Rectangle {
             spacing: Theme.space3
 
             Text {
-                width: Math.min(implicitWidth, parent.width - (taskFilter.visible ? taskFilter.width
-                                                                                    + parent.spacing :
-                                                                                    0))
+                width: Math.min(implicitWidth, parent.width - priorityFilter.width - parent.spacing
+                                - (taskFilter.visible ? taskFilter.width + parent.spacing : 0))
                 anchors.verticalCenter: parent.verticalCenter
                 elide: Text.ElideRight
                 text: {
@@ -148,18 +147,27 @@ Rectangle {
 
                 objectName: "taskFilter"
                 anchors.verticalCenter: parent.verticalCenter
-                visible: Vault.tasks.tag !== "" || Vault.tasks.priority >= 0
-                label: [Vault.tasks.tag !== "" ? "#" + Vault.tasks.tag : "", Vault.tasks.priority
-                    >= 0 ? Vault.priorityName(Vault.tasks.priority) : ""].filter(part => part
-                                                                                         !== "").join(
-                    " ")
+                visible: Vault.tasks.tag !== ""
+                label: "#" + Vault.tasks.tag
                 selected: true
-                tip: qsTr("Show every to-do again")
-                Accessible.name: qsTr("Show every to-do again")
-                onClicked: {
-                    Vault.tasks.tag = ""
-                    Vault.tasks.priority = -1
-                }
+                tip: qsTr("Show to-dos with any tag again")
+                Accessible.name: qsTr("Show to-dos with any tag again")
+                onClicked: Vault.tasks.tag = ""
+            }
+            // Only the to-dos of one priority, or of none.
+            Dropdown {
+                id: priorityFilter
+
+                objectName: "priorityFilter"
+                anchors.verticalCenter: parent.verticalCenter
+                minimumWidth: 0
+                model: [-1, 1, 2, 3, 4, 0].map(priority => ({
+                    "id": priority,
+                    "name": priority < 0 ? qsTr("Any priority") : Vault.priorityName(priority)
+                }))
+                currentValue: Vault.tasks.priority
+                Accessible.name: qsTr("Priority")
+                onActivated: value => Vault.tasks.priority = value
             }
         }
     }

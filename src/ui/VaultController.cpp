@@ -2315,23 +2315,6 @@ bool VaultController::writable() const
     return m_vault && m_vault->writable();
 }
 
-QVariantList VaultController::priorities() const
-{
-    if (!m_index)
-        return {};
-    int counts[5] = {};
-    for (const ToDo &each : toDos(*m_index, ToDoView::All, QDate::currentDate()))
-        ++counts[std::clamp(each.priority, 0, 4)];
-    QVariantList found;
-    for (const int priority : {1, 2, 3, 4, 0}) {
-        if (counts[priority] > 0 && (priority > 0 || !found.isEmpty()))
-            found.append(QVariantMap{{u"priority"_s, priority},
-                                     {u"name"_s, priorityName(priority)},
-                                     {u"count"_s, counts[priority]}});
-    }
-    return found;
-}
-
 int VaultController::noteCount() const
 {
     return m_index ? m_index->noteCount() : 0;
