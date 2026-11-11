@@ -13,7 +13,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 ### Changed
 
 - The notebooks and the note list put themselves away together as the window narrows, and come
-  back together, as the title bar's button shows or hides both.
+  back together, as the title bar's button shows or hides both. Shown on a narrow window, they lie
+  over the note instead of squeezing it, and go again with a click on the note or a note picked.
 - A data table's column headings look clickable, lighting up under the pointer with a tip that says
   a click sorts, and the column sorted by shows an arrow for which way.
 

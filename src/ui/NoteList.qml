@@ -17,6 +17,8 @@ Rectangle {
     signal historyRequested
     /// Export was chosen from the note at `path`'s menu.
     signal exportRequested(string path)
+    /// A note was chosen with a click, to read or write in.
+    signal notePicked
 
     /// The notebook at `path` as the list names it, after its emoji if it has one.
     function notebookLabel(path) {
@@ -255,6 +257,7 @@ Rectangle {
             onClicked: {
                 Vault.current = path
                 list.currentIndex = index
+                root.notePicked()
             }
             onDoubleClicked: {
                 if (Vault.writable)

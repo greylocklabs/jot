@@ -576,9 +576,46 @@ void TestDialogs::columnsGiveWayToTheNote()
     QTRY_VERIFY(sidebar->isVisible() && list->isVisible());
     widen(600);
     QTRY_VERIFY(!sidebar->isVisible() && !list->isVisible());
-    // Brought back by hand, both squeeze the note; wide again, they follow the window as before.
+    // Brought back by hand on a narrow window, both lie over the note rather than squeezing it,
+    // and a click on the note's side puts them away again.
+    QQuickItem *format = find(window->contentItem(), u"formatBar"_s);
+    QVERIFY(format);
+    const qreal noteWidth = format->width();
     click();
     QTRY_VERIFY(sidebar->isVisible() && list->isVisible());
+    QCOMPARE(format->width(), noteWidth);
+    QQuickItem *backdrop = find(window->contentItem(), u"columnsBackdrop"_s);
+    QVERIFY(backdrop && backdrop->isVisible());
+    QVERIFY(list->mapToScene({list->width(), 0}).x() < window->width());
+    QTest::mouseClick(
+        window, Qt::LeftButton, {},
+        backdrop->mapToScene({backdrop->width() / 2, backdrop->height() / 2}).toPoint());
+    QTRY_VERIFY(!sidebar->isVisible() && !list->isVisible());
+    // Picking a note puts them away too, showing it.
+    QFile pick(m_dir.filePath(u"Notes/Pick me.md"_s));
+    QVERIFY(pick.open(QIODevice::WriteOnly));
+    pick.write("Text.\n");
+    pick.close();
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Pick me.md"_s), 3000);
+    click();
+    const std::function<QQuickItem *(QQuickItem *)> rowOf =
+        [&rowOf](QQuickItem *at) -> QQuickItem * {
+        for (QQuickItem *child : at->childItems()) {
+            if (child->property("path").toString() == u"Pick me.md"_s && child->height() > 0)
+                return child;
+            if (QQuickItem *found = rowOf(child))
+                return found;
+        }
+        return nullptr;
+    };
+    QQuickItem *row = nullptr;
+    QTRY_VERIFY((row = rowOf(list)) != nullptr && list->isVisible());
+    QTest::mouseClick(window, Qt::LeftButton, {},
+                      row->mapToScene({row->width() / 2, row->height() / 2}).toPoint());
+    QTRY_VERIFY(!list->isVisible());
+    QCOMPARE(m_vault->current(), u"Pick me.md"_s);
+    click();
+    QTRY_VERIFY(sidebar->isVisible());
     widen(1280);
     widen(600);
     QTRY_VERIFY(!sidebar->isVisible() && !list->isVisible());
