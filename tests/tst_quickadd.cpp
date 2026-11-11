@@ -14,6 +14,7 @@ private Q_SLOTS:
     void reads();
     void schedulesACheckboxFromItsWords();
     void setsAndClearsTheDayAndRepeat();
+    void keepsWordsAfterARuleWhenRescheduled();
     void keepsARepeatRuleAsWritten();
 };
 
@@ -119,13 +120,20 @@ void TestQuickAdd::setsAndClearsTheDayAndRepeat()
              u"water #home @done 2026-11-01"_s);
 }
 
+void TestQuickAdd::keepsWordsAfterARuleWhenRescheduled()
+{
+    // Rescheduling takes the rule away, but not the words typed after it.
+    QCOMPARE(withTaskSchedule(u"@every monday Call Soren"_s, u"2026-11-02"_s, u"every week"_s),
+             u"Call Soren @weekly @due 2026-11-02"_s);
+}
+
 void TestQuickAdd::keepsARepeatRuleAsWritten()
 {
     const QDateTime now(QDate(2026, 10, 28), QTime(10, 0));
-    const QString water = u"water @every week when done @due 2026-10-28"_s;
-    // Its rule kept in the words, only the day changes, the rule as it was.
-    QCOMPARE(scheduledAs(water, u"2026-11-04 every week when done"_s, now),
-             std::optional(u"water @every week when done @due 2026-11-04"_s));
+    const QString water = u"water @every 2 weeks on Monday @due 2026-10-28"_s;
+    // Its rule kept in the words, only the day changes, the rule as it was written.
+    QCOMPARE(scheduledAs(water, u"2026-11-04 every 2 weeks on Monday"_s, now),
+             std::optional(u"water @every 2 weeks on Monday @due 2026-11-04"_s));
     // A new rule replaces it; no words at all clear both; words of neither do nothing.
     QCOMPARE(scheduledAs(water, u"friday every month"_s, now),
              std::optional(u"water @monthly @due 2026-10-30"_s));

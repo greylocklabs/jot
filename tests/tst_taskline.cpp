@@ -40,6 +40,8 @@ void TestTaskLine::reads_data()
     QTest::newRow("a rule up to a tag")
         << u"Water @every 2 weeks on monday #home @due 2026-11-02"_s
         << TaskLine{u"Water #home"_s, u"2026-11-02"_s, u"every 2 weeks on monday"_s, {}};
+    QTest::newRow("words after a rule stay the to-do's")
+        << u"@every monday Call Soren"_s << TaskLine{u"Call Soren"_s, {}, u"every monday"_s, {}};
     QTest::newRow("shortcuts, case aside")
         << u"Stretch @Weekdays"_s << TaskLine{u"Stretch"_s, {}, u"every weekday"_s, {}};
     QTest::newRow("a time after a T")

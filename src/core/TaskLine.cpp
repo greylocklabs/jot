@@ -28,19 +28,24 @@ QList<TaskMarker> taskMarkers(QStringView text)
         } else if (const auto shortcut = every.constFind(name); shortcut != every.cend()) {
             found.append({TaskMarker::Repeat, start, m.capturedEnd(), *shortcut});
         } else if (name == u"every") {
-            // The rule's words, up to the next marker or tag.
+            // The rule's words, up to the first that no rule is made of, so words after it stay
+            // the to-do's own.
+            static const QRegularExpression ruleWord(
+                uR"(^(?:\d+|other|on|(?:day|week|month|year|weekday|monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?)$)"_s,
+                QRegularExpression::CaseInsensitiveOption);
             QStringList rule;
             qsizetype at = m.capturedEnd();
             qsizetype end = at;
             while (true) {
                 while (at < text.size() && text.at(at).isSpace())
                     ++at;
-                if (at >= text.size() || text.at(at) == u'@' || text.at(at) == u'#')
-                    break;
                 const qsizetype from = at;
                 while (at < text.size() && !text.at(at).isSpace())
                     ++at;
-                rule.append(text.sliced(from, at - from).toString());
+                const QString word = text.sliced(from, at - from).toString();
+                if (word.isEmpty() || !ruleWord.match(word).hasMatch())
+                    break;
+                rule.append(word);
                 end = at;
             }
             if (!rule.isEmpty())
