@@ -393,9 +393,9 @@ void TestVaultIndex::sortsNotesWithThePinnedFirst()
 
 void TestVaultIndex::readsToDoDatesAndLabels()
 {
-    write(u"Calls.md"_s, u"- [ ] Call Soren #calls 📅 2026-10-29 14:00\n"
-                         "- [x] Call Mara ✅ 2026-10-27\n"
-                         "- [ ] Water plants 🔁 every week 📅 2026-10-30\n"_s);
+    write(u"Calls.md"_s, u"- [ ] Call Soren #calls @due 2026-10-29 14:00\n"
+                         "- [x] Call Mara @done 2026-10-27\n"
+                         "- [ ] Water plants @weekly @due 2026-10-30\n"_s);
     write(u"Taxes.md"_s, u"---\ntask: open\ndue: 2026-11-15\n---\n"_s);
     open();
     const QList<NoteTask> tasks = m_index->openTasks();

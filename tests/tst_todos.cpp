@@ -38,18 +38,18 @@ void TestToDos::init()
         QString error;
         QVERIFY2(notefile::write(m_vault->absolute(path), text, &error), qPrintable(error));
     };
-    write(u"Inbox.md"_s, u"- [ ] Call Soren #calls 📅 2026-10-28 14:00\n"
-                         "- [ ] Buy rope 📅 2026-10-28\n"
-                         "- [ ] Late fee #home/money 📅 2026-10-20\n"
-                         "- [ ] Plan trip 📅 2026-11-02\n"
+    write(u"Inbox.md"_s, u"- [ ] Call Soren #calls @due 2026-10-28 14:00\n"
+                         "- [ ] Buy rope @due 2026-10-28\n"
+                         "- [ ] Late fee #home/money @due 2026-10-20\n"
+                         "- [ ] Plan trip @due 2026-11-02\n"
                          "- [ ] Someday read Proust\n"
-                         "- [x] Done already 📅 2026-10-28\n"_s);
+                         "- [x] Done already @due 2026-10-28\n"_s);
     write(u"Taxes.md"_s, u"---\ntask: open\ndue: 2026-10-30\ntags: [home]\n---\n"_s);
     write(u"Fence.md"_s, u"---\ntask: open\n---\n"_s);
     // A time written with a space, as YAML allows, sorts by the clock too.
     write(u"Dentist.md"_s, u"---\ntask: open\ndue: 2026-10-28 09:00\n---\n"_s);
-    write(u"Done.md"_s, u"- [x] Pay rent #home ✅ 2026-10-26\n"
-                        "- [x] Water plants ✅ 2026-10-27\n"
+    write(u"Done.md"_s, u"- [x] Pay rent #home @done 2026-10-26\n"
+                        "- [x] Water plants @done 2026-10-27\n"
                         "- [X] Old one, no day\n"_s);
     write(u"Garage.md"_s, u"---\ntask: done\ndone: 2026-10-27T15:30:00Z\n---\n"_s);
     m_index = std::make_unique<VaultIndex>(*m_vault, m_dir->filePath(u"index.sqlite"_s));
@@ -138,7 +138,7 @@ void TestToDos::remindsAtTheTimeOrInTheMorning()
 
     // Ticking finds a checkbox by its text as written.
     const ToDo call = toDos(*m_index, ToDoView::Today, m_today).last();
-    QCOMPARE(call.text, u"Call Soren #calls 📅 2026-10-28 14:00"_s);
+    QCOMPARE(call.text, u"Call Soren #calls @due 2026-10-28 14:00"_s);
 }
 
 QTEST_GUILESS_MAIN(TestToDos)

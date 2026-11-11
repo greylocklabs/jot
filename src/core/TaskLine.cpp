@@ -1,58 +1,151 @@
 #include "jot/TaskLine.h"
 
+#include <QHash>
+#include <QObject>
 #include <QRegularExpression>
+#include <QStringList>
 
 using namespace Qt::StringLiterals;
 
 namespace jot {
 
+QList<TaskMarker> taskMarkers(QStringView text)
+{
+    static const QRegularExpression word(uR"((?:^|(?<=\s))@([A-Za-z]+)(?=\s|$))"_s);
+    static const QRegularExpression day(
+        uR"(^\s+(\d{4}-\d{2}-\d{2})(?:[ T](\d{1,2}:\d{2}))?(?=\s|$))"_s);
+    static const QHash<QString, QString> every = {{u"daily"_s, u"every day"_s},
+                                                  {u"weekly"_s, u"every week"_s},
+                                                  {u"monthly"_s, u"every month"_s},
+                                                  {u"yearly"_s, u"every year"_s},
+                                                  {u"weekdays"_s, u"every weekday"_s}};
+    QList<TaskMarker> found;
+    for (const QRegularExpressionMatch &m : word.globalMatchView(text)) {
+        const QString name = m.captured(1).toLower();
+        const qsizetype start = m.capturedStart();
+        if (const auto shortcut = every.constFind(name); shortcut != every.cend()) {
+            found.append({TaskMarker::Repeat, start, m.capturedEnd(), *shortcut});
+        } else if (name == u"every") {
+            // The rule's words, up to the next marker or tag.
+            QStringList rule;
+            qsizetype at = m.capturedEnd();
+            qsizetype end = at;
+            while (true) {
+                while (at < text.size() && text.at(at).isSpace())
+                    ++at;
+                if (at >= text.size() || text.at(at) == u'@' || text.at(at) == u'#')
+                    break;
+                const qsizetype from = at;
+                while (at < text.size() && !text.at(at).isSpace())
+                    ++at;
+                rule.append(text.sliced(from, at - from).toString());
+                end = at;
+            }
+            if (!rule.isEmpty())
+                found.append({TaskMarker::Repeat, start, end, u"every "_s + rule.join(u' ')});
+        } else if (name == u"due" || name == u"done") {
+            const QRegularExpressionMatch date = day.matchView(text.sliced(m.capturedEnd()));
+            if (!date.hasMatch() || !QDate::fromString(date.captured(1), Qt::ISODate).isValid())
+                continue;
+            // A time goes with a due day; a done one is the day alone.
+            const bool due = name == u"due";
+            const QString time = due ? date.captured(2) : QString();
+            const qsizetype end =
+                m.capturedEnd() + (due ? date.capturedEnd() : date.capturedEnd(1));
+            found.append({due ? TaskMarker::Due : TaskMarker::Done, start, end,
+                          time.isEmpty()
+                              ? date.captured(1)
+                              : u"%1T%2"_s.arg(date.captured(1), time.rightJustified(5, u'0'))});
+        }
+    }
+    return found;
+}
+
 TaskLine readTaskLine(const QString &text)
 {
-    // Obsidian Tasks' markers: due, scheduled, start, created, done, canceled, repeats, and
-    // the priorities. Each is followed by its value, up to the next marker.
-    static const QRegularExpression marker(u"(📅|⏳|🛫|➕|✅|❌|🔁|⏫|🔼|🔽|🔺|⏬)\\x{FE0F}?"_s);
-    static const QRegularExpression date(uR"(^\s*(\d{4}-\d{2}-\d{2})(?:[ T](\d{1,2}:\d{2}))?)"_s);
-
     TaskLine line;
-    // Everything before the first marker is the to-do's own words; each marker owns what
-    // follows it up to the next.
-    QList<QRegularExpressionMatch> found;
-    for (const QRegularExpressionMatch &m : marker.globalMatch(text))
-        found.append(m);
-    QString words = found.isEmpty() ? text : text.first(found.first().capturedStart());
-    for (qsizetype i = 0; i < found.size(); ++i) {
-        const QRegularExpressionMatch &m = found.at(i);
-        const qsizetype end = i + 1 < found.size() ? found.at(i + 1).capturedStart() : text.size();
-        const QString value = text.sliced(m.capturedEnd(), end - m.capturedEnd()).trimmed();
-        const QString kind = m.captured(1);
-        const QRegularExpressionMatch day = date.match(value);
-        if (kind == u"📅"_s && day.hasMatch()) {
-            line.due =
-                day.captured(2).isEmpty()
-                    ? day.captured(1)
-                    : u"%1T%2"_s.arg(day.captured(1), day.captured(2).rightJustified(5, u'0'));
-        } else if (kind == u"✅"_s && day.hasMatch()) {
-            line.done = day.captured(1);
-        } else if (kind == u"🔁"_s) {
-            // A tag after the rule is the to-do's, not part of the rule.
-            QStringList rule;
-            for (const QString &word : value.split(u' ', Qt::SkipEmptyParts)) {
-                if (word.startsWith(u'@') || word.startsWith(u'#'))
-                    words += u' ' + word;
-                else
-                    rule << word;
-            }
-            line.repeat = rule.join(u' ');
-            continue;
-        }
-        // Words after a date, such as a tag, and a value that is no date at all, still belong
-        // to the to-do.
-        const QString rest = day.hasMatch() ? value.sliced(day.capturedLength()).trimmed() : value;
-        if (!rest.isEmpty())
-            words += u' ' + rest;
+    for (const TaskMarker &marker : taskMarkers(text)) {
+        QString &value = marker.kind == TaskMarker::Due      ? line.due
+                         : marker.kind == TaskMarker::Repeat ? line.repeat
+                                                             : line.done;
+        if (value.isEmpty())
+            value = marker.value;
     }
-    line.title = words.simplified();
+    line.title =
+        withoutMarkers(text, {TaskMarker::Due, TaskMarker::Repeat, TaskMarker::Done}).simplified();
     return line;
+}
+
+QList<MarkerSuggestion> markerSuggestions(const QString &typed, const QDate &today)
+{
+    // Next Monday, as "next week" means in quick add.
+    const QDate monday = today.addDays(8 - today.dayOfWeek());
+    const auto due = [](const QDate &day) { return dueMarker(day.toString(Qt::ISODate)); };
+    const QList<MarkerSuggestion> all = {
+        {due(today), u"@due today"_s, QObject::tr("Due today")},
+        {due(today.addDays(1)), u"@due tomorrow"_s, QObject::tr("Due tomorrow")},
+        {due(monday), u"@due next week"_s, QObject::tr("Due next Monday")},
+        {u"@due "_s, u"@due …"_s, QObject::tr("Due on a day: 2026-11-02, with 14:00 after it")},
+        {u"@daily"_s, u"@daily"_s, QObject::tr("Repeats every day")},
+        {u"@weekly"_s, u"@weekly"_s, QObject::tr("Repeats every week")},
+        {u"@weekdays"_s, u"@weekdays"_s, QObject::tr("Repeats Monday to Friday")},
+        {u"@monthly"_s, u"@monthly"_s, QObject::tr("Repeats every month")},
+        {u"@yearly"_s, u"@yearly"_s, QObject::tr("Repeats every year")},
+        {u"@every "_s, u"@every …"_s, QObject::tr("Repeats as written: every 2 weeks on monday")},
+        {doneMarker(today), u"@done today"_s, QObject::tr("Done today")},
+    };
+    QList<MarkerSuggestion> found;
+    const QString wanted = typed.toLower();
+    for (const MarkerSuggestion &each : all) {
+        if (each.shown.mid(1).startsWith(wanted))
+            found.append(each);
+    }
+    return found;
+}
+
+QString repeatMarker(const QString &rule)
+{
+    static const QHash<QString, QString> shortcuts = {{u"every day"_s, u"@daily"_s},
+                                                      {u"every week"_s, u"@weekly"_s},
+                                                      {u"every month"_s, u"@monthly"_s},
+                                                      {u"every year"_s, u"@yearly"_s},
+                                                      {u"every weekday"_s, u"@weekdays"_s}};
+    const QString tidy = rule.simplified();
+    if (const auto shortcut = shortcuts.constFind(tidy.toLower()); shortcut != shortcuts.cend())
+        return *shortcut;
+    return tidy.startsWith(u"every "_s, Qt::CaseInsensitive) ? u'@' + tidy : u"@every "_s + tidy;
+}
+
+QString dueMarker(const QString &due)
+{
+    return u"@due "_s + QString(due).replace(u'T', u' ');
+}
+
+QString doneMarker(const QDate &day)
+{
+    return u"@done "_s + day.toString(Qt::ISODate);
+}
+
+QString withoutMarkers(const QString &text, const QList<TaskMarker::Kind> &kinds)
+{
+    QString out = text;
+    const QList<TaskMarker> found = taskMarkers(text);
+    for (auto it = found.crbegin(); it != found.crend(); ++it) {
+        if (!kinds.contains(it->kind))
+            continue;
+        // With the space before it, or after it when it starts the text.
+        qsizetype start = it->start;
+        qsizetype end = it->end;
+        while (start > 0 && out.at(start - 1).isSpace())
+            --start;
+        if (start == 0 || out.first(start).trimmed().isEmpty()) {
+            start = it->start;
+            while (end < out.size() && out.at(end).isSpace())
+                ++end;
+        }
+        out.remove(start, end - start);
+    }
+    return out;
 }
 
 QDate nextOccurrence(const QString &rule, const QDate &from)
@@ -105,19 +198,17 @@ QString completedTaskLine(const QString &line, const QDate &today)
 {
     static const QRegularExpression box(
         uR"(^(\s*(?:[-*+]|\d+[.)])\s+\[)[ xX](\]\s*)(.*?)(\r?)$)"_s);
-    static const QRegularExpression due(u"📅\\x{FE0F}?\\s*(\\d{4}-\\d{2}-\\d{2})"_s);
     const QRegularExpressionMatch m = box.match(line);
     if (!m.hasMatch())
         return line;
     const QString text = m.captured(3);
-    static const QRegularExpression doneMark(u"\\s*✅\\x{FE0F}?\\s*\\d{4}-\\d{2}-\\d{2}"_s);
-    // Ticked with the day it was done, in place of any it said before.
-    QString completed = m.captured(1) + u'x' + m.captured(2) + text;
-    completed.remove(doneMark);
-    while (completed.endsWith(u' '))
-        completed.chop(1);
-    completed += u" ✅ "_s + today.toString(Qt::ISODate);
     const QString ending = m.captured(4);
+    // Ticked with the day it was done, in place of any it said before.
+    QString words = withoutMarkers(text, {TaskMarker::Done});
+    while (words.endsWith(u' '))
+        words.chop(1);
+    const QString completed =
+        m.captured(1) + u'x' + m.captured(2) + words + u' ' + doneMarker(today);
     const TaskLine parts = readTaskLine(text);
     const QDate was = QDate::fromString(parts.due.left(10), Qt::ISODate);
     QDate next = nextOccurrence(parts.repeat, was);
@@ -126,11 +217,16 @@ QString completedTaskLine(const QString &line, const QDate &today)
         next = nextOccurrence(parts.repeat, next);
     if (!next.isValid())
         return completed + ending;
+    // The next one is due on its day, at the same time, and carries no done day of its own.
     QString again = text;
-    const QRegularExpressionMatch day = due.match(again);
-    again.replace(day.capturedStart(1), day.capturedLength(1), next.toString(Qt::ISODate));
-    // The next one carries no done date of its own.
-    again.remove(doneMark);
+    for (const TaskMarker &marker : taskMarkers(text)) {
+        if (marker.kind == TaskMarker::Due) {
+            again.replace(marker.start, marker.end - marker.start,
+                          dueMarker(next.toString(Qt::ISODate) + marker.value.mid(10)));
+            break;
+        }
+    }
+    again = withoutMarkers(again, {TaskMarker::Done});
     return m.captured(1) + u' ' + m.captured(2) + again + ending + u'\n' + completed + ending;
 }
 

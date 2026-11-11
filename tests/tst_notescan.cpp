@@ -1,6 +1,7 @@
 #include "jot/FrontMatter.h"
 #include "jot/NoteScan.h"
 
+#include <QLocale>
 #include <QTest>
 
 using namespace jot;
@@ -112,17 +113,18 @@ void TestNoteScan::countsLinesFromTheTopOfTheFile()
 void TestNoteScan::ticksATaskAndNothingElse()
 {
     const QString note =
-        u"---\na: 1\n---\n- [ ] one\r\n  * [X] two ✅ 2026-10-01\nplain\n3. [ ] three"_s;
+        u"---\na: 1\n---\n- [ ] one\r\n  * [X] two @done 2026-10-01\nplain\n3. [ ] three"_s;
     const QDate today(2026, 10, 28);
     // Ticked, a box says the day; unticked, it no longer does.
     QCOMPARE(setTaskDone(note, 4, true, {}, today),
-             std::optional(u"---\na: 1\n---\n- [x] one ✅ 2026-10-28\r\n  * [X] two ✅ 2026-10-01\n"
-                           "plain\n3. [ ] three"_s));
+             std::optional(
+                 u"---\na: 1\n---\n- [x] one @done 2026-10-28\r\n  * [X] two @done 2026-10-01\n"
+                 "plain\n3. [ ] three"_s));
     QCOMPARE(setTaskDone(note, 5, false, {}, today),
              std::optional(u"---\na: 1\n---\n- [ ] one\r\n  * [ ] two\nplain\n3. [ ] three"_s));
     QCOMPARE(setTaskDone(note, 7, true, {}, today),
-             std::optional(u"---\na: 1\n---\n- [ ] one\r\n  * [X] two ✅ 2026-10-01\nplain\n"
-                           "3. [x] three ✅ 2026-10-28"_s));
+             std::optional(u"---\na: 1\n---\n- [ ] one\r\n  * [X] two @done 2026-10-01\nplain\n"
+                           "3. [x] three @done 2026-10-28"_s));
     QVERIFY(!setTaskDone(note, 6, true));
     QVERIFY(!setTaskDone(note, 99, true));
 }
@@ -133,21 +135,21 @@ void TestNoteScan::findsATaskThatMoved()
     const QString note = u"new line\n- [ ] buy\n- [ ] sell\n"_s;
     const QDate today(2026, 10, 28);
     QCOMPARE(setTaskDone(note, 1, true, u"buy"_s, today),
-             std::optional(u"new line\n- [x] buy ✅ 2026-10-28\n- [ ] sell\n"_s));
+             std::optional(u"new line\n- [x] buy @done 2026-10-28\n- [ ] sell\n"_s));
     // The line it names says something else, and nothing says "buy": nothing changes.
     QVERIFY(!setTaskDone(u"- [ ] sell\n"_s, 1, true, u"buy"_s));
     // Two tasks say it, so which one moved cannot be told.
     QVERIFY(!setTaskDone(u"x\n- [ ] buy\n- [ ] buy\n"_s, 1, true, u"buy"_s));
     QCOMPARE(setTaskDone(u"- [ ] buy\n"_s, 1, true, u"buy"_s, today),
-             std::optional(u"- [x] buy ✅ 2026-10-28\n"_s));
+             std::optional(u"- [x] buy @done 2026-10-28\n"_s));
 }
 
 void TestNoteScan::findsAToDosWords()
 {
-    const QString note = u"# Chores\n  * [x]  water 🔁 every week  \nsweep\n- [ ] "_s;
-    const std::optional<TaskWords> water = taskWordsAt(note, note.indexOf(u"every"_s));
+    const QString note = u"# Chores\n  * [x]  water @weekly  \nsweep\n- [ ] "_s;
+    const std::optional<TaskWords> water = taskWordsAt(note, note.indexOf(u"weekly"_s));
     QVERIFY(water);
-    QCOMPARE(note.sliced(water->start, water->end - water->start), u"water 🔁 every week"_s);
+    QCOMPARE(note.sliced(water->start, water->end - water->start), u"water @weekly"_s);
     // Anywhere on the line, even its start.
     QCOMPARE(taskWordsAt(note, note.indexOf(u"  * [x]"_s))->start, water->start);
     QVERIFY(!taskWordsAt(note, note.indexOf(u"sweep"_s)));
@@ -171,6 +173,20 @@ void TestNoteScan::readsAsMarkdownWithLinks()
     const auto embed = [](const QString &target) {
         return target == u"map.png"_s ? u"file:///v/map.png"_s : QString();
     };
+    // A to-do's markers are said as a reader would; elsewhere they are words.
+    const int year = QDate::currentDate().year();
+    QCOMPARE(readingMarkdown(u"- [ ] Water @weekly @due %1-11-02 #home\n- [x] Pay @done %1-11-01\n"
+                             u"Sent @due %1-11-02\n"_s.arg(year),
+                             embed),
+             u"- [ ] Water 🔁 weekly 📅 %1 [#home](jot-tag:home)\n- [x] Pay ✅ %2\n"
+             u"Sent @due %3-11-02\n"_s
+                 .arg(QLocale().toString(QDate(year, 11, 2), u"MMM d"_s),
+                      QLocale().toString(QDate(year, 11, 1), u"MMM d"_s))
+                 .arg(year));
+    QCOMPARE(readingMarkdown(u"- [ ] Call @every 2 weeks @due 2000-01-05 14:00\n"_s, embed),
+             u"- [ ] Call 🔁 every 2 weeks 📅 %1\n"_s.arg(
+                 QLocale().toString(QDate(2000, 1, 5), u"MMM d, yyyy"_s) + u", "_s +
+                 QLocale().toString(QTime(14, 0), QLocale::ShortFormat)));
     QCOMPARE(readingMarkdown(u"See [[Mara Vey]] and [[Cast/Soren|her brother]].\n"_s, embed),
              u"See [Mara Vey](jot-note:Mara%20Vey) and [her brother](jot-note:Cast/Soren).\n"_s);
     QCOMPARE(readingMarkdown(u"![[map.png]] ![[gone.png]]\n"_s, embed),
@@ -296,20 +312,20 @@ void TestNoteScan::findsMathAsPandocDoes()
 
 void TestNoteScan::tickingARepeatingTaskWritesTheNext()
 {
-    const QString note = u"# Chores\n\n- [ ] Water 🔁 every week 📅 2026-10-28\n- [ ] Sweep\n"_s;
+    const QString note = u"# Chores\n\n- [ ] Water @weekly @due 2026-10-28\n- [ ] Sweep\n"_s;
     const std::optional<QString> ticked = setTaskDone(note, 3, true, {}, QDate(2026, 10, 28));
     QVERIFY(ticked);
-    QCOMPARE(*ticked, u"# Chores\n\n- [ ] Water 🔁 every week 📅 2026-11-04\n"
-                      "- [x] Water 🔁 every week 📅 2026-10-28 ✅ 2026-10-28\n- [ ] Sweep\n"_s);
+    QCOMPARE(*ticked, u"# Chores\n\n- [ ] Water @weekly @due 2026-11-04\n"
+                      "- [x] Water @weekly @due 2026-10-28 @done 2026-10-28\n- [ ] Sweep\n"_s);
     // The editor's edit for the same: the line's stretch, and what replaces it.
     const TickEdit edit = tickedLineAt(note, note.indexOf(u"[ ] Water"_s) + 1, QDate(2026, 10, 28));
     QCOMPARE(edit.start, note.indexOf(u"- [ ] Water"_s));
     QCOMPARE(edit.end, note.indexOf(u"\n- [ ] Sweep"_s));
-    QVERIFY(edit.text.startsWith(u"- [ ] Water 🔁 every week 📅 2026-11-04\n- [x] Water"_s));
+    QVERIFY(edit.text.startsWith(u"- [ ] Water @weekly @due 2026-11-04\n- [x] Water"_s));
     // Unticking only unticks, and takes away the day it was done.
     QCOMPARE(*setTaskDone(*ticked, 4, false, {}, QDate(2026, 10, 28)),
-             u"# Chores\n\n- [ ] Water 🔁 every week 📅 2026-11-04\n"
-             "- [ ] Water 🔁 every week 📅 2026-10-28\n- [ ] Sweep\n"_s);
+             u"# Chores\n\n- [ ] Water @weekly @due 2026-11-04\n"
+             "- [ ] Water @weekly @due 2026-10-28\n- [ ] Sweep\n"_s);
 }
 
 QTEST_GUILESS_MAIN(TestNoteScan)

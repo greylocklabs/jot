@@ -36,6 +36,7 @@ private Q_SLOTS:
     void completesWikilinks_data();
     void findsTheEmojiBeingTyped_data();
     void findsTheEmojiBeingTyped();
+    void findsTheMarkerBeingTyped();
     void completesWikilinks();
     void setsFrontMatterKeepingTheSelection();
     void editsAreAsSmallAsTheyCanBe();
@@ -449,6 +450,24 @@ void TestMarkdownEdit::findsTheEmojiBeingTyped()
     QCOMPARE(query ? query->text : u"-"_s, typed);
     if (query)
         QCOMPARE(text.at(query->start), u':');
+}
+
+void TestMarkdownEdit::findsTheMarkerBeingTyped()
+{
+    const auto typed = [](const QString &before) {
+        const qsizetype cursor = before.indexOf(u'|');
+        const QString text = QString(before).remove(cursor, 1);
+        const std::optional<EmojiQuery> query = markerAt(text, cursor);
+        return query ? text.mid(query->start, cursor - query->start) : u"-"_s;
+    };
+    // After an @ on a to-do's line, even before any letter.
+    QCOMPARE(typed(u"- [ ] water @we|"_s), u"@we"_s);
+    QCOMPARE(typed(u"  1. [x] water @|"_s), u"@"_s);
+    // Not in an address, the box itself, other lines or code.
+    QCOMPARE(typed(u"- [ ] mail me@ex|"_s), u"-"_s);
+    QCOMPARE(typed(u"Water @we|"_s), u"-"_s);
+    QCOMPARE(typed(u"- [ ] call `x @we|"_s), u"-"_s);
+    QCOMPARE(typed(u"- [ ] water @due 2026|"_s), u"-"_s);
 }
 
 void TestMarkdownEdit::completesWikilinks_data()

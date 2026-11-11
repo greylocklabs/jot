@@ -3,6 +3,7 @@
 #include "jot/TaskLine.h"
 #include "jot/Vault.h"
 
+#include <QLocale>
 #include <QRegularExpression>
 #include <QUrl>
 
@@ -345,6 +346,19 @@ QString mathForReading(QStringView body,
     return out.join(u'\n');
 }
 
+/// A day, "2026-11-02" or "2026-11-02T14:00", as people say it: "Nov 2", with its year when
+/// that is not this one, and its time.
+QString readableDay(const QString &value)
+{
+    const QLocale locale;
+    const QDate day = QDate::fromString(value.left(10), Qt::ISODate);
+    QString shown = locale.toString(
+        day, day.year() == QDate::currentDate().year() ? u"MMM d"_s : u"MMM d, yyyy"_s);
+    if (const QTime time = QTime::fromString(value.mid(11, 5), u"HH:mm"_s); time.isValid())
+        shown += u", "_s + locale.toString(time, QLocale::ShortFormat);
+    return shown;
+}
+
 } // namespace
 
 QString readingMarkdown(QStringView original,
@@ -431,6 +445,22 @@ QString readingMarkdown(QStringView original,
                                     bare.section(u'#', 0, 0).section(u'/', -1).toUtf8())))});
             }
             rest.replace(m.capturedStart(), m.capturedLength(), QString(m.capturedLength(), u' '));
+        }
+        // A to-do's markers, said as a reader would: 🔁 weekly, 📅 Nov 2, ✅ Nov 1.
+        if (const QRegularExpressionMatch box = checkboxLine().match(prose); box.hasMatch()) {
+            const qsizetype from = box.capturedStart(2);
+            for (const TaskMarker &marker : taskMarkers(QStringView(rest).sliced(from))) {
+                const qsizetype at = from + marker.start;
+                const qsizetype length = marker.end - marker.start;
+                QString shown;
+                if (marker.kind == TaskMarker::Repeat)
+                    shown = u"🔁 "_s + line.mid(at + 1, length - 1);
+                else
+                    shown = (marker.kind == TaskMarker::Due ? u"📅 "_s : u"✅ "_s) +
+                            readableDay(marker.value);
+                changes.append({at, length, shown});
+                rest.replace(at, length, QString(length, u' '));
+            }
         }
         for (const QRegularExpressionMatch &m : tagPattern().globalMatch(rest)) {
             QString name = m.captured(1);
@@ -551,16 +581,12 @@ std::optional<QString> setTaskDone(const QString &note, int line, bool done, con
     QString changed = note;
     if (!done) {
         changed[mark] = u' ';
-        // Open again, it was not done on the day ✅ says.
-        static const QRegularExpression doneOn(uR"(\s*✅\x{FE0F}?\s*\d{4}-\d{2}-\d{2})"_s);
+        // Open again, it was not done on the day @done says.
         qsizetype end = changed.indexOf(u'\n', mark);
         if (end < 0)
             end = changed.size();
-        const QRegularExpressionMatch m =
-            doneOn.matchView(QStringView(changed).sliced(mark, end - mark));
-        if (m.hasMatch())
-            changed.remove(mark + m.capturedStart(), m.capturedLength());
-        return changed;
+        const QString line = changed.sliced(mark, end - mark);
+        return changed.replace(mark, end - mark, withoutMarkers(line, {TaskMarker::Done}));
     }
     const TickEdit edit = tickedLineAt(note, mark, today);
     return changed.replace(edit.start, edit.end - edit.start, edit.text);

@@ -1788,6 +1788,16 @@ bool VaultController::completeTask(const QString &path)
     return rewriteNote(
         path,
         [](const QString &text) {
+            // One that repeats comes round again on its next day after today, still open.
+            const QVariantMap meta = readFrontMatter(splitFrontMatter(text).frontMatter);
+            const QString due = meta.value(u"due"_s).toString().trimmed();
+            const QString rule = meta.value(u"repeat"_s).toString().trimmed();
+            QDate next = nextOccurrence(rule, QDate::fromString(due.left(10), Qt::ISODate));
+            while (next.isValid() && next <= QDate::currentDate())
+                next = nextOccurrence(rule, next);
+            if (next.isValid())
+                return std::optional(
+                    setFrontMatterKey(text, u"due"_s, next.toString(Qt::ISODate) + due.mid(10)));
             QString changed = setFrontMatterKey(text, u"task"_s, u"done"_s);
             changed = setFrontMatterKey(changed, u"done"_s,
                                         QDateTime::currentDateTimeUtc().toString(Qt::ISODate));

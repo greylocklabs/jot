@@ -5,6 +5,17 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ## Unreleased
 
+### Changed
+
+- To-dos say when they are due, how they repeat and when they were done in plain words instead of
+  emoji: `@due 2026-11-02 14:00`, `@daily`, `@weekly`, `@monthly`, `@yearly`, `@weekdays`,
+  `@every 2 weeks on monday` and `@done 2026-11-01`. Typing `@` on a to-do offers them, with
+  today, tomorrow and next week as days. The editor colors each kind its own way, and Read mode
+  shows them as 🔁 weekly, 📅 Nov 2 and ✅ Nov 1. **Breaking:** the emoji markers (📅, 🔁, ✅) are no
+  longer read.
+- A task note can repeat, with `repeat: every week` in its front matter: completing it moves its
+  due day on instead of finishing it.
+
 ### Removed
 
 - @labels on to-dos and task notes, with the Labels section of the sidebar, the label filter

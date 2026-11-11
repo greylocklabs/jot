@@ -47,7 +47,7 @@ QDateTime ToDo::doneAt() const
 {
     if (done.isEmpty())
         return {};
-    // A moment as written in `done:`, "2026-10-29T14:00:00Z", or a day as after ✅.
+    // A moment as written in `done:`, "2026-10-29T14:00:00Z", or a day as after @done.
     const QDateTime exact = QDateTime::fromString(done.trimmed(), Qt::ISODate);
     if (exact.isValid() && done.size() > 10)
         return exact.toLocalTime();
@@ -81,7 +81,7 @@ QList<ToDo> toDos(const VaultIndex &index, ToDoView view, const QDate &today, co
                     note.title,
                     {},
                     note.due.trimmed(),
-                    {},
+                    note.repeat.trimmed(),
                     note.tags,
                     {},
                     note.done.trimmed()});

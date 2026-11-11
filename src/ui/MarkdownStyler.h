@@ -128,6 +128,13 @@ public:
     /// Empty when there is none.
     Q_INVOKABLE QVariantMap emojiAt(int position) const;
 
+    /// The to-do marker being typed at `position`: `{start, text}`, where `start` is its @ and
+    /// `text` the letters after it. Empty when there is none.
+    Q_INVOKABLE QVariantMap markerAt(int position) const;
+    /// The markers offered for `typed`, the letters after an @, as of today: `{text, shown,
+    /// detail}` for each.
+    Q_INVOKABLE static QVariantList markerSuggestions(const QString &typed);
+
     /// Puts `text` in place of what is from `start` to `end`, as one step to undo.
     Q_INVOKABLE void replace(int start, int end, const QString &text);
     /// Paints the text from `start` to `end` in the selection's color for half a second, as

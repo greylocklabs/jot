@@ -856,6 +856,26 @@ std::optional<EmojiQuery> emojiAt(const QString &text, qsizetype cursor)
     return EmojiQuery{colon, text.mid(colon + 1, cursor - colon - 1).replace(u'_', u' ')};
 }
 
+std::optional<EmojiQuery> markerAt(const QString &text, qsizetype cursor)
+{
+    cursor = std::clamp<qsizetype>(cursor, 0, text.size());
+    const qsizetype line = lineStartOf(text, cursor);
+    qsizetype at = cursor;
+    while (at > line && text.at(at - 1).isLetter())
+        --at;
+    if (at == line || text.at(at - 1) != u'@')
+        return std::nullopt;
+    --at;
+    static const QRegularExpression box(uR"(^\s*(?:[-*+]|\d+[.)])\s+\[[ xX]\]\s)"_s);
+    const QRegularExpressionMatch m = box.match(text.mid(line, at - line + 1));
+    if (!m.hasMatch() || at < line + m.capturedLength() ||
+        (at > line && !text.at(at - 1).isSpace()))
+        return std::nullopt;
+    if (inCode(text, line) || text.mid(line, at - line).count(u'`') % 2 == 1)
+        return std::nullopt;
+    return EmojiQuery{at, text.mid(at + 1, cursor - at - 1)};
+}
+
 std::optional<Edit> completeWikilink(const QString &text, qsizetype cursor, const QString &target)
 {
     const std::optional<WikilinkQuery> query = wikilinkAt(text, cursor);

@@ -864,6 +864,7 @@ Rectangle {
                     // Once the cursor has moved too, so it is read where the typing ended.
                     Qt.callLater(findLink)
                     Qt.callLater(findEmoji)
+                    Qt.callLater(findMarker)
                 }
                 onCursorRectangleChanged: flick.follow(cursorRectangle)
                 onActiveFocusChanged: {
@@ -929,6 +930,44 @@ Rectangle {
                     emojiPopup.highlighted = 0
                 }
 
+                /// Where the to-do marker being typed starts, at its @, or -1, and the one Escape
+                /// put away.
+                property int markerStart: -1
+                property int dismissedMarker: -1
+
+                /// Offers to-do markers, @weekly, @due and the rest, after an @ on a to-do's line.
+                function findMarker() {
+                    const query = activeFocus && !readOnly && selectionStart === selectionEnd
+                          && linkStart < 0 && emojiStart < 0 ? styler.markerAt(cursorPosition) : (
+                                                                   {})
+                    markerStart = query.start === undefined ? -1 : query.start
+                    if (markerStart < 0 || markerStart === dismissedMarker) {
+                        if (markerStart < 0)
+                            dismissedMarker = -1
+                        markerPopup.items = []
+                        return
+                    }
+                    markerPopup.items = styler.markerSuggestions(query.text).map(each => ({
+                        "text": each.shown,
+                        "detail": each.detail,
+                        "marker": each.text
+                    }))
+                    markerPopup.highlighted = 0
+                }
+
+                /// Writes the marker chosen, with a space after a whole one.
+                function pickMarker(index) {
+                    const item = markerPopup.items[index]
+                    if (!item)
+                        return
+                    const start = markerStart
+                    const marker = item.marker.endsWith(" ") ? item.marker : item.marker + " "
+                    markerPopup.items = []
+                    dismissedMarker = start
+                    styler.replace(start, cursorPosition, marker)
+                    cursorPosition = start + marker.length
+                }
+
                 /// Puts the emoji itself in place of the colon and name, not a shortcode.
                 function pickEmoji(index) {
                     const item = emojiPopup.items[index]
@@ -975,6 +1014,9 @@ Rectangle {
                     if (emojiPopup.items.length > 0 && styler.emojiAt(cursorPosition).start
                             !== emojiStart)
                         emojiPopup.items = []
+                    if (markerPopup.items.length > 0 && styler.markerAt(cursorPosition).start
+                            !== markerStart)
+                        markerPopup.items = []
                 }
 
                 /// Puts `markdown` on lines of its own at `position`.
@@ -1003,6 +1045,16 @@ Rectangle {
                                                                                  = body.emojiStart
                                                                          emojiPopup.items = []
                                                                      })) {
+                        event.accepted = true
+                        return
+                    }
+                    // And for to-do markers after an @.
+                    if (markerPopup.visible && body.suggestionKey(event, markerPopup,
+                                                                  body.pickMarker, () => {
+                                                                      body.dismissedMarker
+                                                                              = body.markerStart
+                                                                      markerPopup.items = []
+                                                                  })) {
                         event.accepted = true
                         return
                     }
@@ -1165,6 +1217,12 @@ Rectangle {
                         objectName: "emojiPopup"
                         wanted: body.activeFocus
                         onPicked: index => body.pickEmoji(index)
+                    }
+                    SuggestionPopup {
+                        id: markerPopup
+                        objectName: "markerPopup"
+                        wanted: body.activeFocus
+                        onPicked: index => body.pickMarker(index)
                     }
                 }
 

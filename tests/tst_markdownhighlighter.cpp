@@ -25,6 +25,7 @@ private Q_SLOTS:
     void codeIsColoredByItsLanguage();
     void frontMatterIsNotMarkdown();
     void doneTasksAreStruckThrough();
+    void colorsAToDosMarkers();
     void tablesAreMonospaceAndKeepTheirMarks();
     void sourceModeShowsTheMarkdownAsWritten();
     void saysWhatIsUnderAPosition();
@@ -216,6 +217,20 @@ void TestMarkdownHighlighter::doneTasksAreStruckThrough()
     QVERIFY(!formatAt(find(u"open task"_s)).fontStrikeOut());
     QVERIFY(formatAt(find(u"done task"_s)).fontStrikeOut());
     QCOMPARE(formatAt(find(u"[x]"_s)).foreground().color(), m_look.accent);
+}
+
+void TestMarkdownHighlighter::colorsAToDosMarkers()
+{
+    setText(u"- [ ] water @weekly #home @due 2026-11-02 @done 2026-11-01 @trip\n"
+            u"- [x] done @daily\nplain @weekly\n"_s);
+    // Kept as written, each kind in its own of the theme's colors, on an open to-do alone.
+    QCOMPARE(formatAt(find(u"@weekly"_s)).foreground().color(), m_look.code.type);
+    QCOMPARE(formatAt(find(u"2026-11-02"_s)).foreground().color(), m_look.code.number);
+    QCOMPARE(formatAt(find(u"@done"_s)).foreground().color(), m_look.code.string);
+    QVERIFY(formatAt(find(u"@trip"_s)).foreground().color() != m_look.code.type);
+    QVERIFY(formatAt(find(u"@daily"_s)).foreground().color() != m_look.code.type);
+    QVERIFY(formatAt(find(u"@weekly"_s, find(u"plain"_s))).foreground().color() !=
+            m_look.code.type);
 }
 
 void TestMarkdownHighlighter::tablesAreMonospaceAndKeepTheirMarks()

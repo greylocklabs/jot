@@ -204,36 +204,39 @@ There are two kinds, and the task view shows both:
 - **Checkboxes** in any note: a list item starting `[ ]` or `[x]` (or `[X]`), after `-`, `*`, `+`,
   `1.` or `1)`. Ticking one in Jot edits that line.
 - **Task notes**: a note with `task: open` or `task: done` in its front matter, and optionally
-  `due` and `done`. Completing one sets `task: done` and `done:` to the current time.
+  `due`, `done` and `repeat`. Completing one sets `task: done` and `done:` to the current time; one
+  that repeats, with a `due` day, is due again on its next day after today instead, and stays
+  open.
 
-A checkbox says more about itself on its own line, in the format of Obsidian's Tasks plugin, so
-the same vault works there:
+A checkbox says more about itself in plain words on its own line, each starting with an `@`:
 
 ```markdown
-- [ ] Call Soren @minutes #calls 📅 2026-10-29 14:00
-- [ ] Water the plants @day 🔁 every week 📅 2026-10-30
-- [x] Pay rent ✅ 2026-10-01
+- [ ] Call Soren #calls @due 2026-10-29 14:00
+- [ ] Water the plants @weekly @due 2026-10-30
+- [ ] Review the budget @every 2 weeks on monday @due 2026-11-02
+- [x] Pay rent @monthly @due 2026-10-01 @done 2026-10-01
 ```
 
-- `📅` and a date is when it is due. A time after the date, `14:00`, `T14:00` or `9:30`, is Jot's
-  addition, in local time; Obsidian shows it as text.
-- `🔁` and a rule is how it repeats, `✅` and a date when it was done. Jot reads `every day`,
-  `every week`, `every month` and `every year`, with a number (`every 2 weeks`) or `other`,
-  `every weekday`, `every monday` through `every sunday`, and `every 2 weeks on monday`, in any
-  case. Ticking one that is due writes the next one above it, unticked and due on its next day
-  after today, and gives the ticked one `✅` and today's date, as Obsidian does. A rule Jot does
-  not read is kept, and only ticked.
-- A checkbox that does not repeat is only ticked or unticked; a `✅` already there stays.
+- `@due` and a date is when it is due. A time after the date, `14:00`, `T14:00` or `9:30`, is in
+  local time.
+- `@daily`, `@weekly`, `@monthly`, `@yearly` and `@weekdays` say how it repeats, and `@every` with
+  a rule for anything else: Jot reads `every day`, `every week`, `every month` and `every year`,
+  with a number (`every 2 weeks`) or `other`, `every weekday`, `every monday` through `every
+sunday`, and `every 2 weeks on monday`, in any case. A rule runs up to the next `@` or `#` word.
+  `repeat:` on a task note takes the same rules, as `repeat: every week`.
+- `@done` and a date is when it was done. Ticking one that repeats and is due writes the next one
+  above it, unticked and due on its next day after today, and gives the ticked one `@done` and
+  today's date. A rule Jot does not read is kept, and only ticked.
+- A checkbox that does not repeat is only ticked or unticked; a `@done` already there stays.
+- Markers are found case aside, each at the start of a word, so `hello@example.org` is no marker.
+  `@due` and `@done` without a valid date, and any other `@word`, are just words.
 - `#tags` work as they do anywhere in a note.
-- Each marker's value runs to the next marker, and a marker may carry the emoji variation
-  selector (U+FE0F). Obsidian's other markers (`⏳`, `🛫`, `➕`, `❌` and the priorities) are kept
-  as written, and not yet read.
 
 Quick add appends a checkbox to the note `inbox:` names in `.jot/vault.yaml`, `Inbox.md` at the top
 of the vault by default, making the note if need be. It writes the repeat before the date:
 
 ```markdown
-- [ ] Call Soren @minutes 🔁 every week 📅 2026-10-29 14:00
+- [ ] Call Soren #calls @weekly @due 2026-10-29 14:00
 ```
 
 ## Notebook appearance and pins
