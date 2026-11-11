@@ -1,6 +1,7 @@
 #include "jot/GitSync.h"
 
 #include "jot/Conflicts.h"
+#include "jot/Logging.h"
 #include "jot/Vault.h"
 #include "jot/VaultIgnore.h"
 
@@ -106,6 +107,7 @@ GitSync::Options GitSync::optionsOf(const QString &root)
         options.message = kDefaultMessage;
     options.hooks = flag(u"gitHooks"_s).value_or(false);
     options.sign = flag(u"gitSign"_s);
+    options.rebase = vault.setting(u"gitPull"_s).toLower() != u"merge";
     return options;
 }
 
@@ -524,15 +526,68 @@ bool GitSync::merge(SyncReport &report, QString *error)
             return false;
         }
     }
+    notePulled(before, report);
+    return true;
+}
+
+void GitSync::notePulled(const QString &before, SyncReport &report) const
+{
     const Run changed = before.isEmpty()
                             ? git({u"ls-files"_s, u"-z"_s})
                             : git({u"diff"_s, u"--name-only"_s, u"-z"_s, before, u"HEAD"_s});
     for (const QByteArray &path : changed.out.split('\0')) {
         const QString each = QString::fromUtf8(path);
-        if (!path.isEmpty() && !report.merged.contains(each) && !report.conflicts.contains(each))
+        if (!path.isEmpty() && !report.merged.contains(each) && !report.conflicts.contains(each) &&
+            !report.pulled.contains(each))
             report.pulled << each;
     }
-    return true;
+}
+
+bool GitSync::rebasing() const
+{
+    for (const QString &state : {u"rebase-merge"_s, u"rebase-apply"_s}) {
+        const QString path =
+            QString::fromUtf8(git({u"rev-parse"_s, u"--git-path"_s, state}).out).trimmed();
+        if (!path.isEmpty() && QFileInfo(QDir(m_root).absoluteFilePath(path)).isDir())
+            return true;
+    }
+    return false;
+}
+
+bool GitSync::rebase()
+{
+    QStringList arguments = identity();
+    arguments << u"rebase"_s << u"-q"_s << u"--autostash"_s;
+    if (!m_options.hooks)
+        arguments << u"--no-verify"_s;
+    if (m_options.sign)
+        arguments << (*m_options.sign ? u"--gpg-sign"_s : u"--no-gpg-sign"_s);
+    if (git(arguments + QStringList{remoteBranch()}).ok())
+        return true;
+    // Stopped on a conflict, or not started: given up whole, for a merge to bring it in.
+    if (rebasing())
+        git({u"rebase"_s, u"--abort"_s});
+    return false;
+}
+
+bool GitSync::bringIn(SyncReport &report, QString *error)
+{
+    if (!git({u"rev-parse"_s, u"-q"_s, u"--verify"_s, remoteBranch()}).ok())
+        return true;
+    const Run head = git({u"rev-parse"_s, u"-q"_s, u"--verify"_s, u"HEAD"_s});
+    if (head.ok() && git({u"merge-base"_s, u"--is-ancestor"_s, remoteBranch(), u"HEAD"_s}).ok())
+        return true;
+    // A rebase needs history of both sides in common; a first sync has none to rebase onto.
+    const bool related = head.ok() && git({u"merge-base"_s, u"HEAD"_s, remoteBranch()}).ok();
+    if (m_options.rebase && related) {
+        const QString before = QString::fromUtf8(head.out).trimmed();
+        if (rebase()) {
+            notePulled(before, report);
+            return true;
+        }
+        qCInfo(lcSync) << "the rebase stopped; merging instead";
+    }
+    return merge(report, error);
 }
 
 SyncReport GitSync::sync(const QDateTime &now)
@@ -551,6 +606,17 @@ SyncReport GitSync::sync(const QDateTime &now)
     }
     // A merge left half done, as when Jot quit within one, holds git's conflict markers, which
     // committing would keep: Jot undoes its own and starts it over, and leaves the person's.
+    // A rebase left half done is given up the same way.
+    if (rebasing()) {
+        if (m_own) {
+            report.failure = QObject::tr("the vault's repository is in the middle of a rebase");
+            return report;
+        }
+        if (const Run run = git({u"rebase"_s, u"--abort"_s}); !run.ok()) {
+            report.failure = QString::fromUtf8(run.err).trimmed();
+            return report;
+        }
+    }
     if (git({u"rev-parse"_s, u"-q"_s, u"--verify"_s, u"MERGE_HEAD"_s}).ok()) {
         if (m_own) {
             report.failure = QObject::tr("the vault's repository is in the middle of a merge");
@@ -581,7 +647,7 @@ SyncReport GitSync::sync(const QDateTime &now)
             report.failure = error;
             return report;
         }
-        if (!merge(report, &error)) {
+        if (!bringIn(report, &error)) {
             report.failure = error;
             return report;
         }

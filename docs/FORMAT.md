@@ -369,6 +369,7 @@ gitignore: false # leave .gitignore files out of it; they count unless this says
 gitMessage: "chore(sync): jot commit from {device}, {date} {time}" # git sync's commit message
 gitHooks: false # whether git sync's commits run the repository's hooks
 gitSign: true # sign git sync's commits; unset leaves it to git
+gitPull: merge # bring in what others pushed by merging; rebase when missing
 ```
 
 - `format` is the vault's format number, as [Versioning](#versioning) says. One that is missing
@@ -393,6 +394,9 @@ gitSign: true # sign git sync's commits; unset leaves it to git
   missing. Hooks run only when `gitHooks` is `true`. Commits are signed with `gitSign: true`,
   not with `false`, and as git's own settings say when it is missing. They are made as git's
   user, or as `Jot <jot@localhost>` when git has none.
+- `gitPull` is how git sync brings in what others pushed: `rebase`, the default, keeps the
+  history in a line, and `merge` merges it. A rebase that stops on a conflict is given up for a
+  merge, so notes are still merged as for the other remotes, or kept as conflict copies.
 
 ## Versioning
 

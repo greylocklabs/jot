@@ -3,6 +3,7 @@
 #include "JexBuilder.h"
 
 #include "jot/DataTable.h"
+#include "jot/GitSync.h"
 #include "jot/NoteHistory.h"
 #include "jot/Settings.h"
 
@@ -2001,6 +2002,8 @@ void TestVaultController::syncsWithAGitRepository()
     QVERIFY(m_vault->setVaultSetting(u"gitHooks"_s, true));
     QCOMPARE(m_vault->vaultSetting(u"gitMessage"_s), u"notes: from {device}"_s);
     QCOMPARE(m_vault->vaultSetting(u"gitHooks"_s), u"true"_s);
+    QVERIFY(m_vault->setVaultSetting(u"gitPull"_s, u"merge"_s));
+    QVERIFY(!GitSync::optionsOf(m_root).rebase);
     QVERIFY(m_vault->setVaultSetting(u"gitMessage"_s, u"  "_s));
     QVERIFY(!readFile(m_root + u"/.jot/vault.yaml"_s).contains(u"gitMessage"_s));
     sync->stop();
