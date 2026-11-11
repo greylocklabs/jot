@@ -299,10 +299,29 @@ void TestLists::renamesANotebookByDoubleClick()
 {
     QQuickItem *places = entry(u"Places"_s);
     QVERIFY(places);
+    // Where the name is drawn, to type the new one in the same place.
+    const std::function<QQuickItem *(QQuickItem *)> named =
+        [&named](QQuickItem *at) -> QQuickItem * {
+        for (QQuickItem *child : at->childItems()) {
+            if (child->property("text").toString() == u"Places"_s && child->isVisible())
+                return child;
+            if (QQuickItem *found = named(child))
+                return found;
+        }
+        return nullptr;
+    };
+    QQuickItem *label = named(places);
+    QVERIFY(label);
+    const qreal nameX = label->mapToScene({0, 0}).x();
     const QPoint center = places->mapToScene({places->width() / 2, places->height() / 2}).toPoint();
     QTest::mouseDClick(m_window.get(), Qt::LeftButton, {}, center);
     // The name is selected, so typing replaces it.
     QTRY_VERIFY(m_sidebar->property("renamingPath").toString() == u"Ashfall/Places"_s);
+    QQuickItem *field =
+        findItem([](QQuickItem *item) { return item->objectName() == u"notebookName"_s; });
+    QVERIFY(field);
+    QCOMPARE(field->mapToScene({field->property("leftPadding").toReal(), 0}).x(), nameX);
+    QVERIFY(field->height() < places->height());
     type(u"Harbor"_s);
     QTest::keyClick(m_window.get(), Qt::Key_Return);
 

@@ -3,6 +3,12 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## Unreleased
+
+### Fixed
+
+- Renaming a notebook types the new name where the old one was, in a field the shape of its row.
+
 ## 0.5.3 - 2026-11-11
 
 ### Added
