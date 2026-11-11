@@ -2472,7 +2472,7 @@ bool VaultController::ignoreNotebook(const QString &path)
     if (path.isEmpty())
         return false;
     QStringList patterns = ignorePatterns();
-    const QString pattern = u'/' + path + u'/';
+    const QString pattern = VaultIgnore::literal(path, true);
     if (!patterns.contains(pattern))
         patterns.append(pattern);
     return setIgnore(patterns, respectsGitignore());

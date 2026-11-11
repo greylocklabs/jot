@@ -107,6 +107,20 @@ bool VaultIgnore::empty() const
     return m_own.isEmpty() && !m_gitignore;
 }
 
+QString VaultIgnore::literal(const QString &path, bool folder)
+{
+    QString escaped;
+    for (const QChar c : path) {
+        if (c == u'*' || c == u'?' || c == u'[' || c == u'\\')
+            escaped += u'\\';
+        escaped += c;
+    }
+    // A trailing space would be trimmed unless kept by a backslash.
+    if (escaped.endsWith(u' '))
+        escaped.insert(escaped.size() - 1, u'\\');
+    return u'/' + escaped + (folder ? u"/"_s : QString());
+}
+
 QList<VaultIgnore::Rule> VaultIgnore::parse(const QStringList &lines)
 {
     QList<Rule> rules;

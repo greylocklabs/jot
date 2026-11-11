@@ -252,11 +252,15 @@ void TestGitSync::leavesHiddenFilesAndTheTrashHere()
 void TestGitSync::leavesWhatTheVaultIgnoresHere()
 {
     const Computer laptop = computer(u"laptop"_s);
-    write(laptop, u".jot/vault.yaml"_s, "format: 1\nignore: [Scratch/]\n");
+    write(laptop, u".jot/vault.yaml"_s, "format: 1\nignore: [Scratch/, \"*.yaml\"]\n");
     write(laptop, u"Scratch/Idea.md"_s, "idea\n");
     write(laptop, u"Mara.md"_s, "# Mara\n");
+    write(laptop, u"data.yaml"_s, "a: 1\n");
     QVERIFY(sync(laptop).failure.isEmpty());
     QVERIFY(inRemote(u"Scratch/Idea.md"_s).isEmpty());
+    QVERIFY(inRemote(u"data.yaml"_s).isEmpty());
+    // A broad pattern leaves Jot's own folder synced.
+    QVERIFY(inRemote(u".jot/vault.yaml"_s).contains("Scratch/"));
     QCOMPARE(inRemote(u"Mara.md"_s), QByteArray("# Mara\n"));
 
     // The patterns are written again when they change, without piling up.

@@ -248,7 +248,9 @@ bool GitSync::prepare(QString *error)
     if (const QStringList patterns = VaultIgnore::patternsOf(Vault(m_root)); !patterns.isEmpty()) {
         if (!wanted.endsWith('\n'))
             wanted += '\n';
-        wanted += kIgnoreStart + patterns.join(u'\n').toUtf8() + '\n' + kIgnoreEnd;
+        // Jot's own folder is never ignored, so it comes back after them, all but its trash.
+        wanted += kIgnoreStart + patterns.join(u'\n').toUtf8() +
+                  "\n!/.jot/\n!/.jot/**\n/.jot/trash/\n" + kIgnoreEnd;
     }
     if (wanted != held && exclude.open(QIODevice::WriteOnly | QIODevice::Truncate))
         exclude.write(wanted);
