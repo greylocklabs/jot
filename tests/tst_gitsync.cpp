@@ -434,6 +434,13 @@ void TestGitSync::usesTheVaultsOwnRepositoryAsItIs()
     GitSync elsewhere(laptop.root, m_dir->filePath(u"other.git"_s), u"main"_s, laptop.gitDir,
                       laptop.name);
     QVERIFY(elsewhere.sync().failure.contains(u"origin"_s));
+    // An origin with a token in it is shown without the token.
+    run(laptop.root, {u"remote"_s, u"set-url"_s, u"origin"_s,
+                      u"https://me:ghp_secret@example.org/me/notes.git"_s});
+    const QString told = elsewhere.sync().failure;
+    QVERIFY(told.contains(u"https://example.org/me/notes.git"_s));
+    QVERIFY(!told.contains(u"ghp_secret"_s));
+    run(laptop.root, {u"remote"_s, u"set-url"_s, u"origin"_s, m_remote});
     GitSync otherBranch(laptop.root, m_remote, u"notes"_s, laptop.gitDir, laptop.name);
     QVERIFY(otherBranch.sync().failure.contains(u"notes"_s));
     QCOMPARE(run(laptop.root, {u"remote"_s, u"get-url"_s, u"origin"_s}), m_remote.toUtf8());

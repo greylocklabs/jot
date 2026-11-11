@@ -11,6 +11,7 @@
 #include <QRegularExpression>
 #include <QSaveFile>
 #include <QStringDecoder>
+#include <QUrl>
 
 using namespace Qt::StringLiterals;
 
@@ -32,6 +33,16 @@ const QByteArray kLfsStart = "# Jot: large files go to Git LFS.\n";
 /// Around the vault's own ignore patterns in the exclude file, which are written again each sync.
 const QByteArray kIgnoreStart = "# Jot: the vault's ignore patterns.\n";
 const QByteArray kIgnoreEnd = "# Jot: end of the vault's ignore patterns.\n";
+
+/// `address` with any user name and password taken out, to show it without giving away a token
+/// kept in it. An SSH address's user, as in git@, is no secret and stays.
+QString withoutCredentials(const QString &address)
+{
+    const QUrl url(address);
+    if (!url.isValid() || !url.scheme().startsWith(u"http"_s) || url.userInfo().isEmpty())
+        return address;
+    return url.toString(QUrl::RemoveUserInfo);
+}
 
 std::optional<QString> utf8(const QByteArray &data)
 {
@@ -263,7 +274,7 @@ bool GitSync::prepare(QString *error)
         }
         if (!sameRemote(own.origin, m_url)) {
             *error = QObject::tr("the vault's own repository has the origin %1, not %2")
-                         .arg(own.origin, m_url);
+                         .arg(withoutCredentials(own.origin), m_url);
             return false;
         }
         if (own.branch.isEmpty()) {
