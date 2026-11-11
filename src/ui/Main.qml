@@ -345,7 +345,7 @@ ApplicationWindow {
                         }
                         MenuEntry {
                             text: qsTr("What's new")
-                            visible: Release.notes !== ""
+                            visible: Release.notes !== "" || Release.breaking !== ""
                             height: visible ? implicitHeight : 0
                             onTriggered: whatsNew.open()
                         }
@@ -814,7 +814,7 @@ ApplicationWindow {
         case "update":
             return Release.update !== ""
         case "whatsNew":
-            return Release.notes !== ""
+            return Release.notes !== "" || Release.breaking !== ""
         }
         return true
     }

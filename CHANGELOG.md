@@ -9,6 +9,7 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 - Double-click a note in the list to rename it there. Rename, from a note's menu or the keyboard,
   does the same, bringing the list back if it was put away.
+- What's new shows a release's breaking changes first, in red.
 - Double-click a to-do in Tasks to set its day and repeat, as Ctrl+Shift+D does in its note; a
   task note's go in its front matter.
 
@@ -30,6 +31,12 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ## 0.5.3 - 2026-11-11
 
+### Breaking
+
+- To-dos no longer read Obsidian Tasks' emoji markers (📅, 🔁, ✅): write `@due`, `@weekly` and the
+  other plain markers, and `@done`, instead.
+- @labels are gone: an `@word` on a to-do is now just a word. Use tags.
+
 ### Added
 
 - To-dos have a priority, as in Todoist: `@p1` urgent, `@p2` high, `@p3` medium and `@p4` low, or
@@ -50,8 +57,7 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   `@due 11-14-2026` or `@done yesterday`, and `@done` alone, become dates when you leave the line, and a to-do said
   done is ticked. Typing `@` on a to-do offers them, with
   today, tomorrow and next week as days. The editor colors each kind its own way, and Read mode
-  shows them as 🔁 weekly, 📅 Nov 2 and ✅ Nov 1. **Breaking:** the emoji markers (📅, 🔁, ✅) are no
-  longer read.
+  shows them as 🔁 weekly, 📅 Nov 2 and ✅ Nov 1.
 - A task note can repeat, with `repeat: every week` in its front matter: completing it moves its
   due day on instead of finishing it.
 

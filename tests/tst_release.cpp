@@ -15,6 +15,7 @@ class TestRelease : public QObject
 
 private Q_SLOTS:
     void notesComeFromTheBundledChangelog();
+    void setsBreakingChangesApart();
     void updateNoticeShowsOncePerNewVersion();
 };
 
@@ -26,6 +27,18 @@ void TestRelease::notesComeFromTheBundledChangelog()
     // Any kind of section; a release of fixes alone has no "New".
     QVERIFY(release.notes().contains(u"### "_s));
     QCOMPARE(release.support(), QUrl(u"https://ko-fi.com/sayonara_lara"_s));
+}
+
+void TestRelease::setsBreakingChangesApart()
+{
+    const auto [rest, breaking] = ReleaseInfo::splitBreaking(
+        u"### Breaking\n\n- Old markers are not read.\n\n### Added\n\n- New ones.\n\n"
+        u"### Fixed\n\n- A bug.\n"_s);
+    QCOMPARE(breaking, u"- Old markers are not read."_s);
+    QCOMPARE(rest, u"### Added\n\n- New ones.\n\n### Fixed\n\n- A bug."_s);
+    // Notes with nothing breaking are left whole.
+    QCOMPARE(ReleaseInfo::splitBreaking(u"### Added\n\n- New.\n"_s),
+             (std::pair{u"### Added\n\n- New."_s, QString()}));
 }
 
 void TestRelease::updateNoticeShowsOncePerNewVersion()

@@ -80,21 +80,54 @@ Popup {
         ScrollView {
             id: scroller
             width: parent.width
-            height: Math.min(notes.implicitHeight, 360)
+            height: Math.min(changes.implicitHeight, 360)
             clip: true
             contentWidth: availableWidth
 
-            Text {
-                id: notes
+            Column {
+                id: changes
                 width: scroller.availableWidth
-                text: Release.notes
-                textFormat: Text.MarkdownText
-                wrapMode: Text.Wrap
-                color: Theme.text
-                linkColor: Theme.accent
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.textMd
-                onLinkActivated: link => Qt.openUrlExternally(link)
+                spacing: Theme.space4
+
+                // What breaks with this release, first and in red, so it is not missed.
+                Column {
+                    objectName: "breakingChanges"
+                    width: parent.width
+                    visible: Release.breaking !== ""
+                    spacing: Theme.space2
+
+                    Text {
+                        text: qsTr("Breaking changes")
+                        color: Theme.danger
+                        font.family: Theme.fontFamily
+                        // As big as the notes' own headings below.
+                        font.pixelSize: Theme.textLg
+                        font.weight: Theme.weightBold
+                    }
+                    Text {
+                        width: parent.width
+                        text: Release.breaking
+                        textFormat: Text.MarkdownText
+                        wrapMode: Text.Wrap
+                        color: Theme.danger
+                        linkColor: Theme.danger
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.textMd
+                        onLinkActivated: link => Qt.openUrlExternally(link)
+                    }
+                }
+                Text {
+                    id: notes
+                    width: parent.width
+                    text: Release.notes
+                    textFormat: Text.MarkdownText
+                    wrapMode: Text.Wrap
+                    color: Theme.text
+                    linkColor: Theme.accent
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.textMd
+                    onLinkActivated: link => Qt.openUrlExternally(link)
+                }
             }
         }
 
