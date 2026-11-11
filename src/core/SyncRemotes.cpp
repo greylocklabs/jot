@@ -68,11 +68,12 @@ std::pair<QString, QString> gitRemote(const QString &remote)
 }
 
 SyncReport syncVault(const QString &root, const QString &remote, const QString &secret,
-                     const QString &stateDir, const QString &device)
+                     const QString &stateDir, const QString &device, const SyncRequest &request)
 {
     if (remote.startsWith(u"git:"_s)) {
         const auto [url, branch] = gitRemote(remote);
-        return GitSync(root, url, branch, stateDir + u"/git"_s, device).sync();
+        return GitSync(root, url, branch, stateDir + u"/git"_s, device)
+            .sync(QDateTime::currentDateTime(), request);
     }
     QString error;
     std::unique_ptr<Transport> transport = transportFor(remote, secret, &error);
@@ -82,6 +83,14 @@ SyncReport syncVault(const QString &root, const QString &remote, const QString &
         return report;
     }
     return SyncEngine(root, std::move(transport), stateDir, device).sync();
+}
+
+QStringList uncommittedChanges(const QString &root, const QString &remote, const QString &stateDir)
+{
+    if (!remote.startsWith(u"git:"_s))
+        return {};
+    const auto [url, branch] = gitRemote(remote);
+    return GitSync(root, url, branch, stateDir + u"/git"_s, {}).changes();
 }
 
 bool remoteNeedsSecret(const QString &remote)

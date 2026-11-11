@@ -238,6 +238,44 @@ void SyncController::connectGit(const QString &url, const QString &branch)
     });
 }
 
+bool SyncController::manualCommits() const
+{
+    return git() && !GitSync::optionsOf(m_root).autoCommit;
+}
+
+bool SyncController::manualPushes() const
+{
+    return git() && !GitSync::optionsOf(m_root).autoPush;
+}
+
+void SyncController::commit(const QString &message)
+{
+    if (!git() || message.trimmed().isEmpty())
+        return;
+    m_request.commitMessage = message.trimmed();
+    start();
+}
+
+void SyncController::push()
+{
+    if (!git())
+        return;
+    m_request.push = true;
+    start();
+}
+
+QStringList SyncController::changes() const
+{
+    return git() ? uncommittedChanges(m_root, m_remote, syncStateDir(m_root, m_remote))
+                 : QStringList();
+}
+
+QString SyncController::suggestedMessage(const QStringList &paths) const
+{
+    return GitSync::commitMessage(GitSync::optionsOf(m_root).message, QSysInfo::machineHostName(),
+                                  QDateTime::currentDateTime(), paths);
+}
+
 QString SyncController::defaultCommitMessage()
 {
     return GitSync::kDefaultMessage;
@@ -349,8 +387,9 @@ void SyncController::start()
     const QString secret = m_secret;
     const QString state = syncStateDir(root, remote);
     const QString device = QSysInfo::machineHostName();
-    m_thread = QThread::create([this, root, remote, secret, state, device] {
-        const SyncReport report = syncVault(root, remote, secret, state, device);
+    const SyncRequest request = std::exchange(m_request, {});
+    m_thread = QThread::create([this, root, remote, secret, state, device, request] {
+        const SyncReport report = syncVault(root, remote, secret, state, device, request);
         QMetaObject::invokeMethod(this, [this, report] { done(report); }, Qt::QueuedConnection);
     });
     connect(m_thread, &QThread::finished, m_thread, &QObject::deleteLater);
@@ -364,6 +403,8 @@ void SyncController::done(const SyncReport &report)
         m_thread->wait();
         m_thread = nullptr;
     }
+    m_uncommitted = report.uncommitted;
+    m_unpushed = report.unpushed;
     if (!report.failure.isEmpty()) {
         qCWarning(lcVault) << "sync failed:" << report.failure;
         m_problem = report.failure;
@@ -401,6 +442,14 @@ QString SyncController::summary() const
         return tr("Sync: %1").arg(m_problem);
     if (!m_lastSynced.isValid())
         return tr("Not synced yet");
+    // What waits on a commit or a push by hand is said before when it last synced.
+    QStringList waiting;
+    if (m_uncommitted > 0)
+        waiting << tr("%n file(s) not committed", nullptr, m_uncommitted);
+    if (m_unpushed > 0)
+        waiting << tr("%n commit(s) not pushed", nullptr, m_unpushed);
+    if (!waiting.isEmpty())
+        return waiting.join(u", "_s);
     const qint64 minutes = m_lastSynced.secsTo(QDateTime::currentDateTime()) / 60;
     if (minutes < 1)
         return tr("Synced just now");

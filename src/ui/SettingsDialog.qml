@@ -540,6 +540,21 @@ Popup {
                             onClicked: Vault.sync.syncNow()
                         }
                         StickerButton {
+                            objectName: "gitCommitButton"
+                            visible: Vault.sync.manualCommits
+                            enabled: Vault.writable && !Vault.sync.syncing
+                            text: qsTr("Commit...")
+                            onClicked: settingsCommit.open()
+                        }
+                        StickerButton {
+                            objectName: "gitPushButton"
+                            visible: Vault.sync.manualPushes
+                            enabled: !Vault.sync.syncing
+                            text: Vault.sync.unpushed > 0 ? qsTr("Push %n commit(s)", "", Vault.sync.unpushed) :
+                                                            qsTr("Push")
+                            onClicked: Vault.sync.push()
+                        }
+                        StickerButton {
                             enabled: Vault.isOpen && Vault.writable
                             text: Vault.sync.configured ? qsTr("Sync with a folder instead...") :
                                                           qsTr("Sync with a folder...")
@@ -880,6 +895,10 @@ Popup {
                         gitHooks.checked = ["true", "yes", "on"].includes(Vault.vaultSetting(
                                                                               "gitHooks").toLowerCase(
                                                                               ))
+                        gitCommitAuto.checked = Vault.vaultSetting("gitCommit").toLowerCase()
+                                !== "manual"
+                        gitPushAuto.checked = Vault.vaultSetting("gitPush").toLowerCase()
+                                !== "manual"
                         gitPull.currentValue = Vault.vaultSetting("gitPull").toLowerCase()
                                 === "merge" ? "merge" : "rebase"
                         const sign = Vault.vaultSetting("gitSign").toLowerCase()
@@ -922,6 +941,24 @@ Popup {
                         color: Theme.textFaint
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.textXs
+                    }
+                    Toggle {
+                        id: gitCommitAuto
+
+                        objectName: "gitCommitAuto"
+                        width: parent.width
+                        enabled: Vault.writable
+                        text: qsTr("Commit what changed on each sync")
+                        onToggled: Vault.setVaultSetting("gitCommit", checked ? null : "manual")
+                    }
+                    Toggle {
+                        id: gitPushAuto
+
+                        objectName: "gitPushAuto"
+                        width: parent.width
+                        enabled: Vault.writable
+                        text: qsTr("Push on each sync")
+                        onToggled: Vault.setVaultSetting("gitPush", checked ? null : "manual")
                     }
                     Toggle {
                         id: gitHooks
@@ -1609,5 +1646,9 @@ Popup {
             width: parent.width
             spacing: Theme.space3
         }
+    }
+
+    CommitDialog {
+        id: settingsCommit
     }
 }

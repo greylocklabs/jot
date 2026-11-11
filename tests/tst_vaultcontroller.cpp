@@ -17,6 +17,7 @@
 #include <QRegularExpression>
 #include <QScopeGuard>
 #include <QSignalSpy>
+#include <QSysInfo>
 #include <QTemporaryDir>
 #include <QTest>
 
@@ -2004,6 +2005,29 @@ void TestVaultController::syncsWithAGitRepository()
     QCOMPARE(m_vault->vaultSetting(u"gitHooks"_s), u"true"_s);
     QVERIFY(m_vault->setVaultSetting(u"gitPull"_s, u"merge"_s));
     QVERIFY(!GitSync::optionsOf(m_root).rebase);
+    QVERIFY(!sync->manualCommits());
+    QVERIFY(m_vault->setVaultSetting(u"gitCommit"_s, u"manual"_s));
+    QVERIFY(m_vault->setVaultSetting(u"gitPush"_s, u"manual"_s));
+    QVERIFY(sync->manualCommits());
+    QVERIFY(sync->manualPushes());
+    QFile groceries(m_root + u"/Inbox/Groceries.md"_s);
+    QVERIFY(groceries.open(QIODevice::Append));
+    groceries.write("- [ ] eggs\n");
+    groceries.close();
+    QVERIFY(sync->changes().contains(u"Inbox/Groceries.md"_s));
+    QCOMPARE(sync->suggestedMessage({u"a.md"_s}), u"notes: from "_s + QSysInfo::machineHostName());
+    sync->commit(u"notes: eggs"_s);
+    QVERIFY(finished.wait(30000));
+    QVERIFY2(sync->problem().isEmpty(), qPrintable(sync->problem()));
+    QCOMPARE(sync->unpushed(), 1);
+    QVERIFY(sync->summary().contains(u"not pushed"_s));
+    sync->push();
+    QVERIFY(finished.wait(30000));
+    QCOMPARE(sync->unpushed(), 0);
+    QProcess subject;
+    subject.start(u"git"_s, {u"--git-dir="_s + bare, u"log"_s, u"-1"_s, u"--format=%s"_s});
+    QVERIFY(subject.waitForFinished());
+    QCOMPARE(subject.readAllStandardOutput().trimmed(), QByteArray("notes: eggs"));
     QVERIFY(m_vault->setVaultSetting(u"gitMessage"_s, u"  "_s));
     QVERIFY(!readFile(m_root + u"/.jot/vault.yaml"_s).contains(u"gitMessage"_s));
     sync->stop();

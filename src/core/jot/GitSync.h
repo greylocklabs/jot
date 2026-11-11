@@ -26,7 +26,12 @@ public:
     /// git's own user, or as `Jot <jot@localhost>` when git has none, as Options say.
     GitSync(QString root, QString url, QString branch, QString gitDir, QString device);
 
-    SyncReport sync(const QDateTime &now = QDateTime::currentDateTime());
+    /// Commits what changed here, brings in what others pushed and pushes, as Options say and
+    /// `request` asks beyond them.
+    SyncReport sync(const QDateTime &now = QDateTime::currentDateTime(),
+                    const SyncRequest &request = {});
+    /// The vault's files changed and not committed, by path.
+    [[nodiscard]] QStringList changes() const;
 
     /// Whether the `git` command is there to run.
     [[nodiscard]] static bool available();
@@ -65,6 +70,12 @@ public:
         /// default, or by merging it, `gitPull: merge`. A rebase that stops on a conflict is
         /// given up for a merge, which Jot can always finish.
         bool rebase = true;
+        /// Whether each sync commits what changed, `gitCommit: auto`, the default, or only a
+        /// Commit asked for does, `gitCommit: manual`.
+        bool autoCommit = true;
+        /// Whether each sync pushes, `gitPush: auto`, the default, or only a Push asked for
+        /// does, `gitPush: manual`.
+        bool autoPush = true;
     };
     /// The commit message used when the vault sets none.
     static const QString kDefaultMessage;
@@ -98,8 +109,11 @@ private:
     /// `gitArguments` find them.
     static bool sshChosen(const QStringList &gitArguments);
     bool prepare(QString *error);
-    /// Commits what changed here; gives the paths.
-    std::optional<QStringList> commit(QString *error);
+    /// Commits what changed here with `message`; gives the paths.
+    std::optional<QStringList> commit(const QString &message, QString *error);
+    /// Files changed here that the fetched commits change too, so bringing them in would have to
+    /// wait for those to be committed.
+    [[nodiscard]] QStringList clashingChanges() const;
     /// The author Jot commits as when git has none: `Jot <jot@localhost>`.
     [[nodiscard]] QStringList identity() const;
     /// What a commit is given: its author when git has none, its hooks and its signing.

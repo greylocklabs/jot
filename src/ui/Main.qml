@@ -600,6 +600,10 @@ ApplicationWindow {
         }
     }
 
+    CommitDialog {
+        id: commitDialog
+    }
+
     QuickSwitcher {
         id: switcher
     }
@@ -768,6 +772,10 @@ ApplicationWindow {
             return Vault.isOpen
         case "replace":
             return note && Vault.writable && !Vault.showingTrash
+        case "gitCommit":
+            return Vault.isOpen && Vault.writable && Vault.sync.manualCommits
+        case "gitPush":
+            return Vault.isOpen && Vault.sync.manualPushes && !Vault.sync.syncing
         case "columns":
             return Vault.isOpen && !window.distractionFree
         case "syncNow":
@@ -892,6 +900,12 @@ ApplicationWindow {
             break
         case "replace":
             editor.find(true)
+            break
+        case "gitCommit":
+            commitDialog.open()
+            break
+        case "gitPush":
+            Vault.sync.push()
             break
         case "save":
             Vault.saveNow()

@@ -370,6 +370,8 @@ gitMessage: "chore(sync): jot commit from {device}, {date} {time}" # git sync's 
 gitHooks: false # whether git sync's commits run the repository's hooks
 gitSign: true # sign git sync's commits; unset leaves it to git
 gitPull: merge # bring in what others pushed by merging; rebase when missing
+gitCommit: manual # commit only when asked; each sync commits when missing
+gitPush: manual # push only when asked; each sync pushes when missing
 ```
 
 - `format` is the vault's format number, as [Versioning](#versioning) says. One that is missing
@@ -397,6 +399,10 @@ gitPull: merge # bring in what others pushed by merging; rebase when missing
 - `gitPull` is how git sync brings in what others pushed: `rebase`, the default, keeps the
   history in a line, and `merge` merges it. A rebase that stops on a conflict is given up for a
   merge, so notes are still merged as for the other remotes, or kept as conflict copies.
+- `gitCommit: manual` leaves what changed uncommitted until Commit is asked for, with a message
+  filled in from `gitMessage`; syncs still bring in what others pushed, but not into a file
+  changed here and not committed yet. `gitPush: manual` keeps commits here until Push is asked
+  for. Both are `auto` when missing.
 
 ## Versioning
 
