@@ -28,9 +28,9 @@ struct TaskMarker
     bool operator==(const TaskMarker &) const = default;
 };
 
-/// The markers in a to-do's text, in order. An `@every` rule runs over the words rules are made
-/// of, numbers, `other`, `on`, days, weeks, months, years and the days of the week, and stops at
-/// the first other word; `@due` and `@done` need a day after them, and are only words without one.
+/// The markers in a to-do's text, in order. An `@every` rule is the most of the words after it
+/// that make a rule nextOccurrence() reads, so words past it stay the to-do's own; `@due` and
+/// `@done` need a day after them, and are only words without one.
 [[nodiscard]] QList<TaskMarker> taskMarkers(QStringView text);
 
 /// What a to-do says about itself on its own line, read from its markers.

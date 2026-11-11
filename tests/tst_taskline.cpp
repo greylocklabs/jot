@@ -43,6 +43,14 @@ void TestTaskLine::reads_data()
         << TaskLine{u"Water #home"_s, u"2026-11-02"_s, u"every 2 weeks on monday"_s, {}};
     QTest::newRow("words after a rule stay the to-do's")
         << u"@every monday Call Soren"_s << TaskLine{u"Call Soren"_s, {}, u"every monday"_s, {}};
+    QTest::newRow("a number after a rule is the to-do's")
+        << u"Water @every week 3 plants @due 2026-11-02"_s
+        << TaskLine{u"Water 3 plants"_s, u"2026-11-02"_s, u"every week"_s, {}};
+    QTest::newRow("on with no weekday after it")
+        << u"Sweep @every 2 weeks on time"_s
+        << TaskLine{u"Sweep on time"_s, {}, u"every 2 weeks"_s, {}};
+    QTest::newRow("no rule at all")
+        << u"Plant @every 3 seeds"_s << TaskLine{u"Plant @every 3 seeds"_s, {}, {}, {}};
     QTest::newRow("shortcuts, case aside")
         << u"Stretch @Weekdays"_s << TaskLine{u"Stretch"_s, {}, u"every weekday"_s, {}};
     QTest::newRow("a time after a T")

@@ -224,10 +224,9 @@ A checkbox says more about itself in plain words on its own line, each starting 
 - `@daily`, `@weekly`, `@monthly`, `@yearly` and `@weekdays` say how it repeats, and `@every` with
   a rule for anything else: Jot reads `every day`, `every week`, `every month` and `every year`,
   with a number (`every 2 weeks`) or `other`, `every weekday`, `every monday` through
-  `every sunday`, and `every 2 weeks on monday`, in any case. A rule runs over the words rules
-  are made of, numbers, `other`, `on`, days, weeks, months, years and the days of the week, so
-  words after it stay the to-do's own. `repeat:` on a task note takes the same rules, as
-  `repeat: every week`.
+  `every sunday`, and `every 2 weeks on monday`, in any case. A rule is the most of the words
+  after `@every` that make one of these, so words after it, even a number, stay the to-do's
+  own. `repeat:` on a task note takes the same rules, as `repeat: every week`.
 - `@done` and a date is when it was done. Ticking one that repeats and is due writes the next one
   above it, unticked and due on its next day after today, and gives the ticked one `@done` and
   today's date. A rule Jot does not read is kept, and only ticked.
