@@ -3,6 +3,22 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## 0.5.6 - 2026-11-11
+
+### New
+
+- Set git sync's commit message, hooks and signing
+- Rebase onto what git sync fetches, or merge
+- Commit and push to git by hand when the vault says
+- Set how often sync runs, or only when asked
+
+### Fixed
+
+- Rebase only a clean tree, so nothing set aside can clash
+- Read uncommitted changes without git's index lock
+- Count files renamed upstream as changed there
+- Write whole numbers exactly and cap the sync interval
+
 ## 0.5.5 - 2026-11-11
 
 ### New

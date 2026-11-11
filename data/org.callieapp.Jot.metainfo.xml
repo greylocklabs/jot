@@ -36,6 +36,20 @@
   </categories>
 
   <releases>
+    <release version="0.5.6" date="2026-11-11">
+      <description>
+        <ul>
+          <li>Set git sync's commit message, hooks and signing</li>
+          <li>Rebase onto what git sync fetches, or merge</li>
+          <li>Commit and push to git by hand when the vault says</li>
+          <li>Set how often sync runs, or only when asked</li>
+          <li>Rebase only a clean tree, so nothing set aside can clash</li>
+          <li>Read uncommitted changes without git's index lock</li>
+          <li>Count files renamed upstream as changed there</li>
+          <li>Write whole numbers exactly and cap the sync interval</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.5.5" date="2026-11-11">
       <description>
         <ul>
