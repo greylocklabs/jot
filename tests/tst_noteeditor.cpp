@@ -1850,6 +1850,28 @@ void TestNoteEditor::editsAListOfRecordsAsATable()
     records->sortBy(0);
     QCOMPARE(records->data(records->index(0, 0)).toString(), u"Soren"_s);
     QVERIFY(m_vault->currentText().indexOf(u"Mara"_s) < m_vault->currentText().indexOf(u"Soren"_s));
+    // The column sorted by shows which way, in the accent; the others show nothing until hovered.
+    const auto arrowOf = [&](int column) -> QQuickItem * {
+        const std::function<QQuickItem *(QQuickItem *)> look = [&](QQuickItem *at) -> QQuickItem * {
+            for (QQuickItem *child : at->childItems()) {
+                if (child->objectName() == u"sortArrow"_s &&
+                    child->parentItem()->property("index").toInt() == column)
+                    return child;
+                if (QQuickItem *found = look(child))
+                    return found;
+            }
+            return nullptr;
+        };
+        return look(find(u"tableHeader"_s));
+    };
+    QTRY_VERIFY(arrowOf(0) && arrowOf(0)->isVisible());
+    QCOMPARE(arrowOf(0)->property("color").value<QColor>(), ThemeController::instance()->accent());
+    QCOMPARE(arrowOf(0)->rotation(), 0.0);
+    QVERIFY(!arrowOf(1)->isVisible());
+    records->sortBy(0);
+    QTRY_VERIFY(!arrowOf(0)->isVisible());
+    records->sortBy(0);
+    records->sortBy(0);
 
     // A row added under a sort is picked where the sort shows it, and stays empty until typed in.
     const int added = records->addRowAfter(0);
