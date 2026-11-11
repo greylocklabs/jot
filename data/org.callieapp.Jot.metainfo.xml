@@ -36,6 +36,18 @@
   </categories>
 
   <releases>
+    <release version="0.5.3" date="2026-11-11">
+      <description>
+        <ul>
+          <li>To-dos have a priority, as in Todoist: @p1 urgent, @p2 high, @p3 medium and @p4 low, or priority: p1 on a task note. Quick add reads a bare p1 too. The task list flags each in its color and filters by priority, Read mode says 🚩 Urgent, and jot tasks --priority p1 narrows the list.</li>
+          <li>Settings has a Tasks tab, in place of Reminders, with the reminders and a choice of how the to-do list is ordered: by due date, when the note was made, name or priority, either way round.</li>
+          <li>A syntax guide in the help menu, below Keyboard shortcuts, explains what Jot reads in a note: links and embeds, tags, to-dos and their markers, front matter, tables, math, diagrams and CriticMarkup.</li>
+          <li>To-dos say when they are due, how they repeat and when they were done in plain words instead of emoji: @due 2026-11-02 14:00, @daily, @weekly, @monthly, @yearly, @weekdays, @every 2 weeks on monday and @done 2026-11-01. Days typed another way, as @due tomorrow 3pm, @due 11-14-2026 or @done yesterday, and @done alone, become dates when you leave the line, and a to-do said done is ticked. Typing @ on a to-do offers them, with today, tomorrow and next week as days. The editor colors each kind its own way, and Read mode shows them as 🔁 weekly, 📅 Nov 2 and ✅ Nov 1. **Breaking:** the emoji markers (📅, 🔁, ✅) are no longer read.</li>
+          <li>A task note can repeat, with repeat: every week in its front matter: completing it moves its due day on instead of finishing it.</li>
+          <li>@labels on to-dos and task notes, with the Labels section of the sidebar, the label filter and jot tasks --label. Tags are the one way to sort notes and to-dos; an @word is now just a word.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.5.2" date="2026-11-10">
       <description>
         <ul>
