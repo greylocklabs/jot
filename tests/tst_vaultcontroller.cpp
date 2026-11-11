@@ -2025,7 +2025,8 @@ void TestVaultController::syncsWithAGitRepository()
     QVERIFY(finished.wait(30000));
     QCOMPARE(sync->unpushed(), 0);
     QProcess subject;
-    subject.start(u"git"_s, {u"--git-dir="_s + bare, u"log"_s, u"-1"_s, u"--format=%s"_s});
+    subject.start(u"git"_s,
+                  {u"--git-dir="_s + bare, u"log"_s, u"-1"_s, u"--format=%s"_s, u"main"_s});
     QVERIFY(subject.waitForFinished());
     QCOMPARE(subject.readAllStandardOutput().trimmed(), QByteArray("notes: eggs"));
     QVERIFY(m_vault->setVaultSetting(u"gitMessage"_s, u"  "_s));
