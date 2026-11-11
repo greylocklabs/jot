@@ -303,6 +303,18 @@ void TestSettings::keepsTheTasksView()
     settings.setTasksView(u"anytime"_s);
     settings.reset();
     QCOMPARE(settings.tasksView(), u"today"_s);
+
+    // And how they are ordered, by due date soonest first unless chosen otherwise.
+    QCOMPARE(settings.tasksSort(), u"due"_s);
+    QVERIFY(!settings.tasksSortDescending());
+    settings.setTasksSort(u"priority"_s);
+    settings.setTasksSort(u"mood"_s);
+    settings.setTasksSortDescending(true);
+    QCOMPARE(Settings(path).tasksSort(), u"priority"_s);
+    QVERIFY(Settings(path).tasksSortDescending());
+    settings.reset();
+    QCOMPARE(settings.tasksSort(), u"due"_s);
+    QVERIFY(!settings.tasksSortDescending());
 }
 
 void TestSettings::keepsReminderChoices()

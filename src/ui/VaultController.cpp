@@ -72,6 +72,9 @@ VaultController::VaultController(Settings &settings, QObject *parent)
             [this] { m_settings.setTasksView(m_tasks.view()); });
     connect(&settings, &Settings::tasksViewChanged, this,
             [this] { m_tasks.setView(m_settings.tasksView()); });
+    m_tasks.setSort(settings.tasksSort(), settings.tasksSortDescending());
+    connect(&settings, &Settings::tasksSortChanged, this,
+            [this] { m_tasks.setSort(m_settings.tasksSort(), m_settings.tasksSortDescending()); });
     // Jot keeps running for days in the tray, so the trash is looked at more than at opening.
     m_expireTimer.setInterval(std::chrono::hours(6));
     connect(&m_expireTimer, &QTimer::timeout, this, &VaultController::expireTrash);

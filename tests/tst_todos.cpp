@@ -19,6 +19,7 @@ private Q_SLOTS:
     void listsDoneOnesMostRecentFirst();
     void filtersByTag();
     void filtersByPriority();
+    void sortsAsAsked();
     void remindsAtTheTimeOrInTheMorning();
 
 private:
@@ -120,6 +121,50 @@ void TestToDos::filtersByTag()
              (QStringList{u"Late fee #home/money"_s, u"Taxes"_s}));
     QCOMPARE(titles(ToDoView::Today, u"home"_s), QStringList{u"Late fee #home/money"_s});
     QCOMPARE(titles(ToDoView::Today, u"calls"_s), QStringList{u"Call Soren #calls"_s});
+}
+
+void TestToDos::sortsAsAsked()
+{
+    QList<ToDo> list;
+    const auto make = [](const QString &title, const QString &due, int priority, int day) {
+        ToDo each;
+        each.title = title;
+        each.due = due;
+        each.priority = priority;
+        each.created = QDateTime(QDate(2026, 10, day), QTime(9, 0));
+        return each;
+    };
+    list = {make(u"ch 10"_s, u"2026-10-30"_s, 0, 3), make(u"Ch 2"_s, {}, 2, 1),
+            make(u"apple"_s, u"2026-10-29T14:00"_s, 1, 2), make(u"Dusk"_s, u"2026-10-29"_s, 4, 4)};
+    const auto titles = [&](ToDoSort sort, bool descending) {
+        QList<ToDo> sorted = list;
+        sortToDos(sorted, sort, descending);
+        QStringList out;
+        for (const ToDo &each : sorted)
+            out << each.title;
+        return out;
+    };
+    // By day and time, the untimed first in a day; those with no day last either way.
+    QCOMPARE(titles(ToDoSort::Due, false),
+             (QStringList{u"Dusk"_s, u"apple"_s, u"ch 10"_s, u"Ch 2"_s}));
+    QCOMPARE(titles(ToDoSort::Due, true),
+             (QStringList{u"ch 10"_s, u"apple"_s, u"Dusk"_s, u"Ch 2"_s}));
+    QCOMPARE(titles(ToDoSort::Created, false),
+             (QStringList{u"Ch 2"_s, u"apple"_s, u"ch 10"_s, u"Dusk"_s}));
+    QCOMPARE(titles(ToDoSort::Created, true),
+             (QStringList{u"Dusk"_s, u"ch 10"_s, u"apple"_s, u"Ch 2"_s}));
+    // Case aside, and numbers in order.
+    QCOMPARE(titles(ToDoSort::Title, false),
+             (QStringList{u"apple"_s, u"Ch 2"_s, u"ch 10"_s, u"Dusk"_s}));
+    QCOMPARE(titles(ToDoSort::Title, true),
+             (QStringList{u"Dusk"_s, u"ch 10"_s, u"Ch 2"_s, u"apple"_s}));
+    // Urgent first, or low first; none last either way.
+    QCOMPARE(titles(ToDoSort::Priority, false),
+             (QStringList{u"apple"_s, u"Ch 2"_s, u"Dusk"_s, u"ch 10"_s}));
+    QCOMPARE(titles(ToDoSort::Priority, true),
+             (QStringList{u"Dusk"_s, u"Ch 2"_s, u"apple"_s, u"ch 10"_s}));
+    QCOMPARE(toDoSort(u"title"_s), ToDoSort::Title);
+    QVERIFY(!toDoSort(u"mood"_s));
 }
 
 void TestToDos::filtersByPriority()

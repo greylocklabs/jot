@@ -194,7 +194,7 @@ void TestDialogs::settingsTabsFitWithoutScrolling()
                      .value<QQuickItem *>()
                      ->findChild<QQuickItem *>(u"settingsPane"_s);
     QVERIFY(pane);
-    for (const QString &tab : {u"general"_s, u"writing"_s, u"reminders"_s}) {
+    for (const QString &tab : {u"general"_s, u"writing"_s, u"tasks"_s}) {
         settings->setProperty("tab", tab);
         QTRY_VERIFY2(pane->property("contentHeight").toReal() <= pane->height(),
                      qPrintable(u"%1: %2 tall in %3"_s.arg(tab)

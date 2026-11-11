@@ -2204,6 +2204,13 @@ void TestVaultController::headsToDosByDay()
     QCOMPARE(priorities.first().toMap().value(u"count"_s).toInt(), 1);
     QCOMPARE(priorities.last().toMap().value(u"name"_s).toString(), u"None"_s);
     tasks.setPriority(-1);
+
+    // Ordered as chosen in Settings; other than by day, the list has no headings.
+    m_settings->setTasksSort(u"priority"_s);
+    QCOMPARE(column(tasks, "title").first(), u"Call Soren #calls"_s);
+    QCOMPARE(column(tasks, "group").first(), QString());
+    m_settings->setTasksSort(u"due"_s);
+    QVERIFY(!column(tasks, "group").first().isEmpty());
 }
 
 void TestVaultController::addsToDosToTheInbox()

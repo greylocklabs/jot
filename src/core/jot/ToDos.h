@@ -35,6 +35,9 @@ struct ToDo
     /// A checkbox's text as written, markers and all, which ticking it looks for; empty for a
     /// task note.
     QString text;
+    /// When it was made: its note's `created:`, or the file's last change when that is not
+    /// written. A checkbox goes by the note it is in.
+    QDateTime created;
     /// When it was done, from a checkbox's @done or a task note's `done:`; empty when it is open or
     /// that was not written.
     QString done;
@@ -61,6 +64,25 @@ enum class ToDoView {
     /// Those done, most recently first.
     Done,
 };
+
+/// What a list of to-dos is ordered by.
+enum class ToDoSort {
+    /// Soonest first, a day's untimed ones before its timed; those with no day after.
+    Due,
+    /// Oldest first, then by their place in the note.
+    Created,
+    /// A to Z, numbers in order.
+    Title,
+    /// Urgent first; those with none after.
+    Priority,
+};
+
+/// The order a name gives, "due", "created", "title" or "priority", or nothing for another.
+[[nodiscard]] std::optional<ToDoSort> toDoSort(const QString &name);
+
+/// `list` ordered by `sort`, the other way round when `descending`, though those with no day or
+/// priority stay last. Ties keep their order.
+void sortToDos(QList<ToDo> &list, ToDoSort sort, bool descending);
 
 /// When a reminder about `todo` comes: when it is due, or at `allDay` on its day when it is due
 /// on a day without a time. Invalid when it is not due.
