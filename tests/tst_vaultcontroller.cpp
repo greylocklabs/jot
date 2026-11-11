@@ -1017,7 +1017,7 @@ void TestVaultController::keepsPastVersionsWhileEditing()
     // Ticking a to-do in a note not shown keeps its version too.
     const QString soren = readFile(m_root + u"/Ashfall/Characters/Soren.md"_s);
     QVERIFY(m_vault->setTaskDone(u"Ashfall/Characters/Soren.md"_s, 7, true,
-                                 u"decide what he wants by act two"_s));
+                                 u"decide what he wants by act two @p3"_s));
     history = m_vault->historyOf(u"Ashfall/Characters/Soren.md"_s);
     QCOMPARE(history.size(), 1);
     QCOMPARE(m_vault->versionText(history.first().toMap().value(u"path"_s).toString()), soren);
@@ -1761,22 +1761,24 @@ void TestVaultController::listsAndTicksWhatIsLeftToDo()
     QCOMPARE(m_settings->tasksView(), u"all"_s);
     // The ones with a day first, then the open boxes, note by note.
     QCOMPARE(column(tasks, "kind"), (QStringList{u"note"_s, u"task"_s, u"task"_s, u"task"_s,
-                                                 u"task"_s, u"task"_s, u"task"_s}));
+                                                 u"task"_s, u"task"_s, u"task"_s, u"task"_s}));
     QCOMPARE(
         column(tasks, "title"),
         (QStringList{u"Groceries"_s, u"Fares for act two"_s, u"Feed the starter"_s,
                      u"decide what he wants by act two"_s, u"Ask playtesters about the stranger"_s,
-                     u"watercolor paper"_s, u"oat milk"_s}));
+                     u"watercolor paper"_s, u"oat milk"_s, u"Restock the maple syrup"_s}));
     QCOMPARE(column(tasks, "note").mid(1),
              (QStringList{u"Crossings"_s, u"Sourdough"_s, u"Soren"_s, u"Crossings"_s,
-                          u"Groceries"_s, u"Groceries"_s}));
+                          u"Groceries"_s, u"Groceries"_s, u"Pancakes"_s}));
+    QCOMPARE(column(tasks, "priority"),
+             (QStringList{u"3"_s, u"2"_s, u"0"_s, u"3"_s, u"4"_s, u"0"_s, u"0"_s, u"0"_s}));
 
     const QStringList lines = column(tasks, "line");
     // A box in a note that is not shown is ticked in its file.
     QVERIFY(m_vault->setTaskDone(u"Ashfall/Characters/Soren.md"_s, lines.at(3).toInt(), true));
     QVERIFY(readFile(m_root + u"/Ashfall/Characters/Soren.md"_s)
                 .contains(u"- [x] decide what he wants"_s));
-    QCOMPARE(tasks.rowCount(), 6);
+    QCOMPARE(tasks.rowCount(), 7);
 
     // One in the note shown goes through the editor's text, unsaved edits and all.
     m_vault->setCurrent(u"Inbox/Groceries.md"_s);
@@ -1795,7 +1797,7 @@ void TestVaultController::listsAndTicksWhatIsLeftToDo()
     QVERIFY(m_vault->completeTask(u"Inbox/Groceries.md"_s));
     QVERIFY(m_vault->currentText().contains(u"task: done"_s));
     QVERIFY(m_vault->currentText().contains(u"\ndone: 20"_s));
-    QCOMPARE(column(tasks, "kind"), QStringList(5, u"task"_s));
+    QCOMPARE(column(tasks, "kind"), QStringList(6, u"task"_s));
 
     // A task note that repeats is due again on its next day after today, still open.
     QString error;
