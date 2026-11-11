@@ -21,6 +21,11 @@ class Settings : public QObject
     Q_PROPERTY(QString noteSort READ noteSort WRITE setNoteSort NOTIFY noteSortChanged)
     /// Which to-dos Tasks shows: "today", "upcoming", "anytime", "all" or "done".
     Q_PROPERTY(QString tasksView READ tasksView WRITE setTasksView NOTIFY tasksViewChanged)
+    /// What open to-dos are ordered by: "due", "created", "title" or "priority".
+    Q_PROPERTY(QString tasksSort READ tasksSort WRITE setTasksSort NOTIFY tasksSortChanged)
+    /// Ordered the other way round: latest, newest, Z to A, or low to high first.
+    Q_PROPERTY(bool tasksSortDescending READ tasksSortDescending WRITE setTasksSortDescending NOTIFY
+                   tasksSortChanged)
     /// Notebooks folded shut in the sidebar, by vault path.
     Q_PROPERTY(QStringList collapsedNotebooks READ collapsedNotebooks WRITE setCollapsedNotebooks
                    NOTIFY collapsedNotebooksChanged)
@@ -102,6 +107,10 @@ public:
     [[nodiscard]] QStringList collapsedNotebooks() const { return m_collapsedNotebooks; }
     void setCollapsedNotebooks(const QStringList &paths);
     [[nodiscard]] QString tasksView() const { return m_tasksView; }
+    [[nodiscard]] QString tasksSort() const { return m_tasksSort; }
+    void setTasksSort(const QString &sort);
+    [[nodiscard]] bool tasksSortDescending() const { return m_tasksSortDescending; }
+    void setTasksSortDescending(bool descending);
     void setTasksView(const QString &view);
     [[nodiscard]] QStringList collapsedTags() const { return m_collapsedTags; }
     void setCollapsedTags(const QStringList &tags);
@@ -193,6 +202,7 @@ Q_SIGNALS:
     void collapsedNotebooksChanged();
     void collapsedTagsChanged();
     void tasksViewChanged();
+    void tasksSortChanged();
     void checkForUpdatesChanged();
     void noteFontChanged();
     void sidebarWidthChanged();
@@ -220,6 +230,8 @@ private:
     QStringList m_collapsedNotebooks;
     QStringList m_collapsedTags;
     QString m_tasksView = QStringLiteral("today");
+    QString m_tasksSort = QStringLiteral("due");
+    bool m_tasksSortDescending = false;
     bool m_checkForUpdates = true;
     QString m_noteFont;
     int m_sidebarWidth = 0;

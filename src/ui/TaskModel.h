@@ -60,6 +60,9 @@ public:
     void setTag(const QString &tag);
     [[nodiscard]] int priority() const { return m_priority; }
     void setPriority(int priority);
+    /// Orders open to-dos by `sort`, "due", "created", "title" or "priority", the other way
+    /// round when `descending`. Only by due day do they come under day headings.
+    void setSort(const QString &sort, bool descending);
     [[nodiscard]] int todayCount() const { return m_todayCount; }
 
     [[nodiscard]] int rowCount(const QModelIndex &parent = {}) const override;
@@ -77,6 +80,8 @@ private:
     QString m_view = QStringLiteral("today");
     QString m_tag;
     int m_priority = -1;
+    ToDoSort m_sort = ToDoSort::Due;
+    bool m_descending = false;
     QDate m_today;
     QList<ToDo> m_rows;
     int m_todayCount = 0;

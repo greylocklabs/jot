@@ -46,6 +46,16 @@ void TaskModel::setPriority(int priority)
     refill();
 }
 
+void TaskModel::setSort(const QString &sort, bool descending)
+{
+    const ToDoSort wanted = toDoSort(sort).value_or(ToDoSort::Due);
+    if (wanted == m_sort && descending == m_descending)
+        return;
+    m_sort = wanted;
+    m_descending = descending;
+    refill();
+}
+
 void TaskModel::refill()
 {
     beginResetModel();
@@ -53,6 +63,8 @@ void TaskModel::refill()
     m_rows = m_index ? toDos(*m_index, toDoView(m_view).value_or(ToDoView::Today), m_today, m_tag,
                              m_priority < 0 ? std::nullopt : std::optional(m_priority))
                      : QList<ToDo>();
+    if (m_view != u"done")
+        sortToDos(m_rows, m_sort, m_descending);
     m_todayCount = m_index ? int(toDos(*m_index, ToDoView::Today, m_today).size()) : 0;
     endResetModel();
     m_midnight.start(int(std::max<qint64>(1000, QDateTime::currentDateTime().msecsTo(QDateTime(
@@ -105,6 +117,9 @@ QVariant TaskModel::data(const QModelIndex &index, int role) const
             return locale.toString(on, on.year() == m_today.year() ? u"dddd, MMMM d"_s
                                                                    : u"dddd, MMMM d, yyyy"_s);
         }
+        // In any other order, one list, with no headings to break it up.
+        if (m_sort != ToDoSort::Due)
+            return QString();
         if (due.isValid() && due < m_today)
             return tr("Overdue");
         if (due == m_today)

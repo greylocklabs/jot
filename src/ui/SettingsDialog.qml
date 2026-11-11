@@ -23,7 +23,7 @@ Popup {
     signal editColorsRequested
     signal joplinImportRequested
 
-    /// Which group of settings shows: "general", "writing", "reminders", "sync", "appearance",
+    /// Which group of settings shows: "general", "writing", "tasks", "sync", "appearance",
     /// "keyboard" or "developer".
     property string tab: "general"
     /// The tab list's width: its longest label's.
@@ -119,8 +119,8 @@ Popup {
                         "label": qsTr("Writing")
                     },
                     {
-                        "id": "reminders",
-                        "label": qsTr("Reminders")
+                        "id": "tasks",
+                        "label": qsTr("Tasks")
                     },
                     {
                         "id": "sync",
@@ -804,8 +804,87 @@ Popup {
                 }
 
                 Section {
+                    title: qsTr("Order")
+                    visible: root.tab === "tasks"
+
+                    Row {
+                        spacing: Theme.space3
+
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: qsTr("List to-dos by")
+                            color: Theme.text
+                            font.family: Theme.fontFamily
+                            font.pixelSize: Theme.textMd
+                        }
+                        Dropdown {
+                            objectName: "tasksSort"
+                            anchors.verticalCenter: parent.verticalCenter
+                            minimumWidth: 160
+                            model: [
+                                {
+                                    "id": "due",
+                                    "name": qsTr("Due date")
+                                },
+                                {
+                                    "id": "created",
+                                    "name": qsTr("Created")
+                                },
+                                {
+                                    "id": "title",
+                                    "name": qsTr("Name")
+                                },
+                                {
+                                    "id": "priority",
+                                    "name": qsTr("Priority")
+                                }
+                            ]
+                            currentValue: Settings.tasksSort
+                            Accessible.name: qsTr("List to-dos by")
+                            onActivated: value => Settings.tasksSort = value
+                        }
+                        // Each order's two ways, in its own words.
+                        Dropdown {
+                            objectName: "tasksSortDirection"
+                            anchors.verticalCenter: parent.verticalCenter
+                            minimumWidth: 160
+                            model: {
+                                const ways = {
+                                    "due": [qsTr("Soonest first"), qsTr("Latest first")],
+                                    "created": [qsTr("Oldest first"), qsTr("Newest first")],
+                                    "title": [qsTr("A to Z"), qsTr("Z to A")],
+                                    "priority": [qsTr("High to low"), qsTr("Low to high")]
+                                }[Settings.tasksSort]
+                                return [
+                                            {
+                                                "id": false,
+                                                "name": ways[0]
+                                            },
+                                            {
+                                                "id": true,
+                                                "name": ways[1]
+                                            }
+                                        ]
+                            }
+                            currentValue: Settings.tasksSortDescending
+                            Accessible.name: qsTr("Which way round")
+                            onActivated: value => Settings.tasksSortDescending = value
+                        }
+                    }
+                    Text {
+                        width: parent.width
+                        wrapMode: Text.Wrap
+                        text: qsTr(
+                                  "By due date, to-dos come under the day they are due. Created goes by when their note was made. To-dos with no day or priority come last. Done ones are always most recent first.")
+                        color: Theme.textMuted
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.textSm
+                    }
+                }
+
+                Section {
                     title: qsTr("Reminders")
-                    visible: root.tab === "reminders"
+                    visible: root.tab === "tasks"
 
                     Toggle {
                         width: parent.width

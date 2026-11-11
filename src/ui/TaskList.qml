@@ -184,6 +184,9 @@ Rectangle {
         section.delegate: Text {
             required property string section
 
+            // Ordered other than by day, the list has no headings.
+            visible: section !== ""
+            height: visible ? implicitHeight : 0
             width: ListView.view.width
             leftPadding: Theme.space5
             topPadding: Theme.space4

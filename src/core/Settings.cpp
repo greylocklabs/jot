@@ -24,6 +24,9 @@ const QString kNoteSort = u"notes/sort"_s;
 const QString kCollapsedNotebooks = u"notes/collapsedNotebooks"_s;
 const QString kCollapsedTags = u"notes/collapsedTags"_s;
 const QString kTasksView = u"tasks/view"_s;
+const QString kTasksSort = u"tasks/sort"_s;
+const QString kTasksSortDescending = u"tasks/sortDescending"_s;
+const QStringList kTaskSorts = {u"due"_s, u"created"_s, u"title"_s, u"priority"_s};
 const QString kCheckForUpdates = u"updates/check"_s;
 const QString kLastSeenVersion = u"app/lastSeenVersion"_s;
 const QString kKeepRunning = u"app/keepRunning"_s;
@@ -77,6 +80,10 @@ Settings::Settings(const QString &path, QObject *parent)
     m_tasksView = m_store.value(kTasksView, u"today"_s).toString();
     if (!toDoViews().contains(m_tasksView))
         m_tasksView = u"today"_s;
+    m_tasksSort = m_store.value(kTasksSort, u"due"_s).toString();
+    if (!kTaskSorts.contains(m_tasksSort))
+        m_tasksSort = u"due"_s;
+    m_tasksSortDescending = m_store.value(kTasksSortDescending, false).toBool();
     m_checkForUpdates = m_store.value(kCheckForUpdates, true).toBool();
     m_lastSeenVersion = m_store.value(kLastSeenVersion).toString();
     m_keepRunning = m_store.value(kKeepRunning, true).toBool();
@@ -153,6 +160,24 @@ void Settings::setNoteSort(const QString &sort)
 QStringList Settings::toDoViews()
 {
     return {u"today"_s, u"upcoming"_s, u"anytime"_s, u"all"_s, u"done"_s};
+}
+
+void Settings::setTasksSort(const QString &sort)
+{
+    if (m_tasksSort == sort || !kTaskSorts.contains(sort))
+        return;
+    m_tasksSort = sort;
+    m_store.setValue(kTasksSort, sort);
+    Q_EMIT tasksSortChanged();
+}
+
+void Settings::setTasksSortDescending(bool descending)
+{
+    if (m_tasksSortDescending == descending)
+        return;
+    m_tasksSortDescending = descending;
+    m_store.setValue(kTasksSortDescending, descending);
+    Q_EMIT tasksSortChanged();
 }
 
 void Settings::setTasksView(const QString &view)
@@ -512,6 +537,8 @@ void Settings::reset()
     setFocusMode(false);
     setTypewriter(false);
     setTasksView(u"today"_s);
+    setTasksSort(u"due"_s);
+    setTasksSortDescending(false);
     setKeepRunning(true);
     setRemindersOn(true);
     setQuickCaptureKey(false);
