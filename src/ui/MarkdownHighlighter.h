@@ -131,6 +131,9 @@ public:
     void setFlash(int start, int end);
     /// Marks the characters at `positions`, as vi's matches for f and t; none when empty.
     void setMatches(const QList<int> &positions);
+    /// Paints what find found, `length` long from each of `starts`, the one at `current` more
+    /// strongly; none when `starts` is empty.
+    void setFound(const QList<int> &starts, int length, int current);
     /// Folds CriticMarkup comments away, for the margin to show, but on the cursor's line.
     void setFoldComments(bool fold);
     /// Underlines words of prose `speller` does not know; none when it is null.
@@ -209,6 +212,10 @@ private:
     QTextCursor m_flashEnd;
     /// Where vi's f and t matches are, in order.
     QList<int> m_matches;
+    /// What find found, in order, how long each is, and the index of the one the cursor is on.
+    QList<int> m_found;
+    int m_foundLength = 0;
+    int m_foundCurrent = -1;
     const Sonnet::Speller *m_speller = nullptr;
     /// The first and last blocks of the paragraph the cursor is in, for focus mode.
     std::pair<int, int> m_paragraph{-1, -1};

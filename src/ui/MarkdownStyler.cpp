@@ -8,6 +8,7 @@
 
 #include "jot/FrontMatter.h"
 #include "jot/MarkdownEdit.h"
+#include "jot/TextFind.h"
 #include "jot/WritingStats.h"
 
 #include <Sonnet/Speller>
@@ -167,6 +168,48 @@ void MarkdownStyler::setMatches(const QVariantList &positions)
     for (const QVariant &position : positions)
         at.append(position.toInt());
     m_highlighter->setMatches(at);
+}
+
+QVariantList MarkdownStyler::findAll(const QString &needle, bool matchCase, bool wholeWords) const
+{
+    QVariantList starts;
+    if (!m_document || !m_document->textDocument())
+        return starts;
+    const QString text = m_document->textDocument()->toPlainText();
+    for (const qsizetype start : jot::findAll(text, needle, matchCase, wholeWords))
+        starts.append(int(start));
+    return starts;
+}
+
+void MarkdownStyler::setFound(const QVariantList &starts, int length, int current)
+{
+    if (!m_highlighter)
+        return;
+    QList<int> at;
+    at.reserve(starts.size());
+    for (const QVariant &start : starts)
+        at.append(start.toInt());
+    m_highlighter->setFound(at, length, current);
+}
+
+int MarkdownStyler::replaceAll(const QVariantList &starts, int length, const QString &text)
+{
+    if (!m_document || !m_document->textDocument() || starts.isEmpty())
+        return 0;
+    QList<int> at;
+    for (const QVariant &start : starts)
+        at.append(start.toInt());
+    std::ranges::sort(at, std::greater<>());
+    QTextCursor cursor(m_document->textDocument());
+    cursor.beginEditBlock();
+    // From the end, so each start is still where it was found.
+    for (const int start : std::as_const(at)) {
+        cursor.setPosition(start);
+        cursor.setPosition(start + length, QTextCursor::KeepAnchor);
+        cursor.insertText(text);
+    }
+    cursor.endEditBlock();
+    return int(at.size());
 }
 
 void MarkdownStyler::replace(int start, int end, const QString &text)

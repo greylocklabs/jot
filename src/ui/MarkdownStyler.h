@@ -147,6 +147,14 @@ public:
     Q_INVOKABLE void flash(int start, int end);
     /// Marks the characters at `positions`, as vi's f and t matches.
     Q_INVOKABLE void setMatches(const QVariantList &positions);
+    /// Where `needle` is in the note, as each match's start, as findAll() finds it.
+    Q_INVOKABLE QVariantList findAll(const QString &needle, bool matchCase, bool wholeWords) const;
+    /// Paints the matches find found, `length` long from each of `starts`, the one at index
+    /// `current` more strongly; none when `starts` is empty.
+    Q_INVOKABLE void setFound(const QVariantList &starts, int length, int current);
+    /// Puts `text` in place of each match, `length` long from each of `starts`, as one step to
+    /// undo. Gives how many it replaced.
+    Q_INVOKABLE int replaceAll(const QVariantList &starts, int length, const QString &text);
 
 Q_SIGNALS:
     void documentChanged();

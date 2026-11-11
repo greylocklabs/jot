@@ -92,6 +92,7 @@ qt_add_qml_module(jotui
         DatePicker.qml
         Field.qml
         FormatBar.qml
+        FindBar.qml
         FormRow.qml
         Glyph.qml
         KeyCap.qml

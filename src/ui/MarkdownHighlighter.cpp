@@ -404,6 +404,34 @@ void MarkdownHighlighter::setMatches(const QList<int> &positions)
         rehighlightBlock(doc->findBlockByNumber(block));
 }
 
+void MarkdownHighlighter::setFound(const QList<int> &starts, int length, int current)
+{
+    QTextDocument *doc = document();
+    if (!doc)
+        return;
+    QList<int> sorted = starts;
+    std::ranges::sort(sorted);
+    if (sorted == m_found && length == m_foundLength && current == m_foundCurrent)
+        return;
+    QList<int> blocks;
+    for (const auto &[list, size] :
+         {std::pair{m_found, m_foundLength}, std::pair{sorted, length}}) {
+        for (const int start : list) {
+            const int first = doc->findBlock(start).blockNumber();
+            const int last = doc->findBlock(start + std::max(size - 1, 0)).blockNumber();
+            for (int block = first; block <= last; ++block)
+                blocks.append(block);
+        }
+    }
+    m_found = sorted;
+    m_foundLength = length;
+    m_foundCurrent = current;
+    std::ranges::sort(blocks);
+    blocks.erase(std::unique(blocks.begin(), blocks.end()), blocks.end());
+    for (const int block : std::as_const(blocks))
+        rehighlightBlock(doc->findBlockByNumber(block));
+}
+
 void MarkdownHighlighter::setFocusMode(bool focus)
 {
     if (m_focus == focus)
@@ -470,6 +498,24 @@ void MarkdownHighlighter::highlightBlock(const QString &text)
         for (auto it = std::ranges::lower_bound(m_matches, at);
              it != m_matches.cend() && *it < at + text.size(); ++it)
             merge(*it - at, 1, match);
+    }
+    if (!m_found.isEmpty() && m_foundLength > 0) {
+        const int at = currentBlock().position();
+        const int end = at + int(text.size());
+        // From the first match that could still reach into this line.
+        for (auto it = std::ranges::lower_bound(m_found, at - m_foundLength + 1);
+             it != m_found.cend() && *it < end; ++it) {
+            const int from = std::max(*it, at);
+            const int to = std::min(*it + m_foundLength, end);
+            if (to <= from)
+                continue;
+            QTextCharFormat found;
+            QColor tint = m_look.accent;
+            const bool current = it - m_found.begin() == m_foundCurrent;
+            tint.setAlphaF(current ? 0.6f : 0.25f);
+            found.setBackground(tint);
+            merge(from - at, to - from, found);
+        }
     }
     const int number = currentBlock().blockNumber();
     if (!m_focus || m_paragraph.first < 0 ||

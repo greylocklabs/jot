@@ -98,6 +98,8 @@ add_library(jotcore STATIC
     Settings.cpp
     jot/Templates.h
     Templates.cpp
+    jot/TextFind.h
+    TextFind.cpp
     jot/WritingStats.h
     WritingStats.cpp
     jot/Vault.h

@@ -762,9 +762,12 @@ ApplicationWindow {
             return Vault.isOpen && Vault.writable
         case "goTo":
         case "search":
+        case "find":
         case "save":
         case "tasks":
             return Vault.isOpen
+        case "replace":
+            return note && Vault.writable && !Vault.showingTrash
         case "columns":
             return Vault.isOpen && !window.distractionFree
         case "syncNow":
@@ -879,6 +882,16 @@ ApplicationWindow {
         case "search":
             columns.revealList()
             noteList.focusSearch()
+            break
+        case "find":
+            // With no note to find in, the vault is searched instead.
+            if (Vault.current !== "" && !Vault.showingTrash)
+                editor.find(false)
+            else
+                run("search")
+            break
+        case "replace":
+            editor.find(true)
             break
         case "save":
             Vault.saveNow()

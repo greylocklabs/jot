@@ -117,6 +117,7 @@ Item {
                               "chevron-left": chevronShape,
                               "chevron-right": chevronShape,
                               "chevron-down": chevronShape,
+                              "chevron-up": chevronShape,
                               "refresh": refreshShape,
                               "more": moreShape,
                               "search": searchShape,
@@ -187,12 +188,16 @@ Item {
                 const unit = (size - root.stroke) / 24
                 const atX = v => (width - size) / 2 + root.stroke / 2 + v * unit
                 const atY = v => (height - size) / 2 + root.stroke / 2 + v * unit
-                const points = root.name === "chevron-down" ? [[6, 9], [12, 15], [18, 9]] :
-                                                              root.name === "chevron-left" ? [[15,
-                                                                                               6], [9, 12],
-                                                                                              [15, 18]] :
-                                                                                             [[9, 6], [15,
-                                                                                                       12], [9, 18]]
+                const points = root.name === "chevron-up" ? [[6, 15], [12, 9], [18, 15]] :
+                                                            root.name === "chevron-down" ? [[6, 9],
+                                                                                            [12, 15], [18,
+                                                                                                       9]] : root.name
+                                                                                           === "chevron-left"
+                                                                                           ? [[15, 6],
+                                                                                              [9, 12], [15,
+                                                                                                        18]] : [[9,
+                                                                                                                 6], [15, 12],
+                                                                                                                [9, 18]]
                 ctx.strokeStyle = root.color
                 ctx.lineWidth = root.stroke
                 ctx.lineCap = "round"
