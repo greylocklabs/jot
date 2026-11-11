@@ -1759,7 +1759,8 @@ Rectangle {
             right: parent.right
             bottom: parent.bottom
         }
-        visible: Settings.viMode && Vault.current !== ""
+        // Vi works in the text, so a table shown in its place has no use for the line.
+        visible: Settings.viMode && Vault.current !== "" && !root.tableShown
         mode: vi.mode
         pending: vi.pending
         path: Vault.current
