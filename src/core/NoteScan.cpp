@@ -556,37 +556,67 @@ qsizetype lineStart(QStringView text, int line)
     return start;
 }
 
-std::optional<QString> setTaskDone(const QString &note, int line, bool done, const QString &text,
-                                   const QDate &today)
+namespace {
+
+/// Where the task on `line` is in `note`, if it is one that says `text` (when given): its mark,
+/// and its words' start and end. When lines have moved since `line` was read, the one task
+/// that says `text` is found instead; nothing when none, or more than one, does.
+struct TaskPlace
+{
+    qsizetype mark = -1;
+    qsizetype start = -1;
+    qsizetype end = -1;
+};
+
+std::optional<TaskPlace> findTask(const QString &note, int line, const QString &text)
 {
     const QRegularExpression &task = checkboxLine();
-    // The mark's place in the note, if `number` is a task that says `text` (when given).
-    const auto markOn = [&](int number) -> qsizetype {
+    const auto on = [&](int number) -> std::optional<TaskPlace> {
         const qsizetype start = lineStart(note, number);
         if (start >= note.size() && number > 1)
-            return -1;
+            return std::nullopt;
         qsizetype end = note.indexOf(u'\n', start);
         if (end < 0)
             end = note.size();
         const QRegularExpressionMatch m =
             task.matchView(QStringView(note).sliced(start, end - start));
         if (!m.hasMatch() || (!text.isEmpty() && m.captured(2) != text.trimmed()))
-            return -1;
-        return start + m.capturedStart(1);
+            return std::nullopt;
+        return TaskPlace{start + m.capturedStart(1), start + m.capturedStart(2),
+                         start + m.capturedEnd(2)};
     };
-    qsizetype mark = markOn(line);
-    if (mark < 0 && !text.isEmpty()) {
-        // Lines moved: the task is the one, and only one, that says the same.
+    std::optional<TaskPlace> found = on(line);
+    if (!found && !text.isEmpty()) {
         const int lines = int(note.count(u'\n')) + 1;
         for (int number = 1; number <= lines; ++number) {
-            const qsizetype found = markOn(number);
-            if (found < 0)
+            const std::optional<TaskPlace> here = on(number);
+            if (!here)
                 continue;
-            if (mark >= 0)
+            if (found)
                 return std::nullopt;
-            mark = found;
+            found = here;
         }
     }
+    return found;
+}
+
+} // namespace
+
+std::optional<QString> setTaskText(const QString &note, int line, const QString &text,
+                                   const QString &now)
+{
+    const std::optional<TaskPlace> place = findTask(note, line, text);
+    if (!place)
+        return std::nullopt;
+    QString changed = note;
+    return changed.replace(place->start, place->end - place->start, now);
+}
+
+std::optional<QString> setTaskDone(const QString &note, int line, bool done, const QString &text,
+                                   const QDate &today)
+{
+    const std::optional<TaskPlace> place = findTask(note, line, text);
+    const qsizetype mark = place ? place->mark : -1;
     if (mark < 0)
         return std::nullopt;
     QString changed = note;

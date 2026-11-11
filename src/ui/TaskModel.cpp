@@ -1,5 +1,7 @@
 #include "TaskModel.h"
 
+#include "jot/TaskLine.h"
+
 #include <QDateTime>
 #include <QLocale>
 
@@ -105,6 +107,16 @@ QVariant TaskModel::data(const QModelIndex &index, int role) const
     case RepeatsRole: return !row.repeat.isEmpty();
     case DoneRole: return done;
     case PriorityRole: return row.priority;
+    case WordingRole: {
+        if (row.kind == u"task")
+            return row.text;
+        QString text = row.title;
+        if (!row.repeat.isEmpty())
+            text += u' ' + repeatMarker(row.repeat);
+        if (!row.due.isEmpty())
+            text += u' ' + dueMarker(QString(row.due).left(16).replace(u' ', u'T'));
+        return text;
+    }
     case GroupRole:
         if (done) {
             const QDate on = row.doneAt().date();
@@ -136,10 +148,10 @@ QVariant TaskModel::data(const QModelIndex &index, int role) const
 
 QHash<int, QByteArray> TaskModel::roleNames() const
 {
-    return {{KindRole, "kind"},       {PathRole, "path"},        {TitleRole, "title"},
-            {NoteRole, "note"},       {LineRole, "line"},        {DueRole, "due"},
-            {OverdueRole, "overdue"}, {RepeatsRole, "repeats"},  {GroupRole, "group"},
-            {DoneRole, "done"},       {PriorityRole, "priority"}};
+    return {{KindRole, "kind"},       {PathRole, "path"},         {TitleRole, "title"},
+            {NoteRole, "note"},       {LineRole, "line"},         {DueRole, "due"},
+            {OverdueRole, "overdue"}, {RepeatsRole, "repeats"},   {GroupRole, "group"},
+            {DoneRole, "done"},       {PriorityRole, "priority"}, {WordingRole, "wording"}};
 }
 
 } // namespace jot

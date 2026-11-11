@@ -95,6 +95,12 @@ readingMarkdown(QStringView body, const std::function<QString(const QString &)> 
 rewriteLinks(QStringView body,
              const std::function<std::optional<QString>(const QString &raw, bool wiki)> &replace);
 
+/// `note` with the words of the task on `line` (counted from 1, in the whole file), which say
+/// `text`, replaced with `now`, its box and the rest of the note as they were. Found as
+/// setTaskDone() finds it; nothing when there is no such task.
+[[nodiscard]] std::optional<QString> setTaskText(const QString &note, int line, const QString &text,
+                                                 const QString &now);
+
 /// `note` with the task on `line` (counted from 1, in the whole file) ticked or unticked,
 /// and nothing else changed. Given `text`, the task must say that: when lines have moved
 /// since `line` was read, the one task that does is changed instead. Ticking one writes
