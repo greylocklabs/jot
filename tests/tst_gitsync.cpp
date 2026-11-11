@@ -470,12 +470,27 @@ void TestGitSync::startsOverAMergeLeftHalfDone()
     write(laptop, u"Mara.md"_s, "laptop's line\n");
     write(desk, u"Mara.md"_s, "desk's line\n");
     sync(laptop);
-    // The desk quits within its merge, leaving git's markers in the note.
-    const QStringList at{u"--git-dir="_s + desk.gitDir, u"--work-tree="_s + desk.root};
-    run(desk.root, at + QStringList{u"commit"_s, u"-qam"_s, u"desk"_s});
-    run(desk.root, at + QStringList{u"fetch"_s, u"-q"_s, u"origin"_s});
-    run(desk.root, at + QStringList{u"merge"_s, u"-q"_s, u"origin/main"_s});
-    QVERIFY(read(desk, u"Mara.md"_s).contains("<<<<<<<"));
+    // The desk quits within its merge, leaving git's markers in the note. Jot gives git a user
+    // only for its own commits, so these name one.
+    const QStringList at{u"-c"_s,
+                         u"user.name=Desk"_s,
+                         u"-c"_s,
+                         u"user.email=desk@example.org"_s,
+                         u"--git-dir="_s + desk.gitDir,
+                         u"--work-tree="_s + desk.root};
+    const auto step = [&desk, &at](const QStringList &arguments) {
+        QProcess git;
+        git.setWorkingDirectory(desk.root);
+        git.setProcessChannelMode(QProcess::MergedChannels);
+        git.start(u"git"_s, at + arguments);
+        git.waitForFinished();
+        return u"git %1: %2"_s.arg(arguments.join(u' '), QString::fromUtf8(git.readAll()));
+    };
+    const QString committed = step({u"commit"_s, u"-qam"_s, u"desk"_s});
+    const QString fetched = step({u"fetch"_s, u"-q"_s, u"origin"_s});
+    const QString merged = step({u"merge"_s, u"-q"_s, u"origin/main"_s});
+    QVERIFY2(read(desk, u"Mara.md"_s).contains("<<<<<<<"),
+             qPrintable(committed + u'\n' + fetched + u'\n' + merged));
 
     const SyncReport report = sync(desk);
     QVERIFY2(report.failure.isEmpty(), qPrintable(report.failure));
