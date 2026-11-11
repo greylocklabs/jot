@@ -30,6 +30,7 @@ private Q_SLOTS:
     void writesCommitMessagesFromTheTemplate();
     void fillsInTheCommitMessage();
     void runsHooksOnlyWhenTheVaultSays();
+    void signsAndHooksMergesAsCommits();
     void commitsAsJotWhenGitHasNoUser();
     void keepsLargeFilesInLfs();
     void keepsBothPicturesWhenBothChanged();
@@ -334,6 +335,51 @@ void TestGitSync::runsHooksOnlyWhenTheVaultSays()
     QVERIFY(!GitSync::optionsOf(laptop.root).sign);
     write(laptop, u".jot/vault.yaml"_s, "format: 1\ngitSign: false\n");
     QCOMPARE(GitSync::optionsOf(laptop.root).sign, std::optional<bool>(false));
+}
+
+void TestGitSync::signsAndHooksMergesAsCommits()
+{
+    // The laptop's repository signs everything, with a signer that always fails, and its hook
+    // turns down merges.
+    const Computer laptop = computer(u"laptop"_s);
+    const Computer desk = computer(u"desk"_s);
+    run(laptop.root, {u"init"_s, u"-q"_s, u"-b"_s, u"main"_s});
+    run(laptop.root, {u"remote"_s, u"add"_s, u"origin"_s, m_remote});
+    run(laptop.root, {u"config"_s, u"user.name"_s, u"Mara"_s});
+    run(laptop.root, {u"config"_s, u"user.email"_s, u"mara@example.org"_s});
+    run(laptop.root, {u"config"_s, u"commit.gpgsign"_s, u"true"_s});
+    run(laptop.root, {u"config"_s, u"gpg.program"_s, u"false"_s});
+    QFile hook(laptop.root + u"/.git/hooks/commit-msg"_s);
+    QVERIFY(hook.open(QIODevice::WriteOnly));
+    hook.write(
+        "#!/bin/sh\nif grep -q '^Merge' \"$1\"; then echo 'no merges here' >&2; exit 1; fi\n");
+    hook.close();
+    hook.setPermissions(hook.permissions() | QFileDevice::ExeOwner);
+
+    // Signing as git says fails; not signing, as the vault says, commits.
+    write(laptop, u"Mara.md"_s, "# Mara\n");
+    QVERIFY(!sync(laptop).failure.isEmpty());
+    write(laptop, u".jot/vault.yaml"_s, "format: 1\ngitSign: false\ngitPull: merge\n");
+    SyncReport report = sync(laptop);
+    QVERIFY2(report.failure.isEmpty(), qPrintable(report.failure));
+
+    // So does a merge, which skips the hook while hooks are off.
+    QVERIFY(sync(desk).failure.isEmpty());
+    write(desk, u"Soren.md"_s, "# Soren\n");
+    QVERIFY(sync(desk).failure.isEmpty());
+    write(laptop, u"Mara.md"_s, "# Mara\nlaptop\n");
+    report = sync(laptop);
+    QVERIFY2(report.failure.isEmpty(), qPrintable(report.failure));
+    QCOMPARE(read(laptop, u"Soren.md"_s), QByteArray("# Soren\n"));
+
+    // With hooks on, the merge goes through the hook, which turns it down.
+    write(laptop, u".jot/vault.yaml"_s,
+          "format: 1\ngitSign: false\ngitPull: merge\ngitHooks: true\n");
+    QVERIFY(sync(laptop).failure.isEmpty());
+    write(desk, u"Ashfall.md"_s, "# Ashfall\n");
+    QVERIFY(sync(desk).failure.isEmpty());
+    write(laptop, u"Mara.md"_s, "# Mara\nlaptop again\n");
+    QVERIFY(sync(laptop).failure.contains(u"no merges here"_s));
 }
 
 void TestGitSync::commitsAsJotWhenGitHasNoUser()
