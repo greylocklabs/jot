@@ -181,8 +181,8 @@ public:
     {
         return m_vault ? m_vault->setting(key) : QString();
     }
-    /// Sets `key` in the vault's `.jot/vault.yaml` to `value`, a string, list or bool, or takes
-    /// it out when `value` is empty or null. Whether it could be written.
+    /// Sets `key` in the vault's `.jot/vault.yaml` to `value`, a string, list, bool or number, or
+    /// takes it out when `value` is empty or null. Whether it could be written.
     Q_INVOKABLE bool setVaultSetting(const QString &key, const QVariant &value);
     /// The vault's own ignore patterns, as `ignore:` in `.jot/vault.yaml` lists them.
     Q_INVOKABLE QStringList ignorePatterns() const;

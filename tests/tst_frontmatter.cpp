@@ -116,6 +116,11 @@ void TestFrontMatter::addsAMissingKey()
     const QString note = u"---\ntitle: T\n---\nBody\n"_s;
     QCOMPARE(jot::setFrontMatterKey(note, u"tags"_s, QStringList{u"a"_s, u"b, c"_s}),
              u"---\ntitle: T\ntags: [a, \"b, c\"]\n---\nBody\n"_s);
+    // Booleans and numbers are written as they are, not as text.
+    QCOMPARE(jot::setFrontMatterKey(note, u"every"_s, 15),
+             u"---\ntitle: T\nevery: 15\n---\nBody\n"_s);
+    QCOMPARE(jot::setFrontMatterKey(note, u"hooks"_s, false),
+             u"---\ntitle: T\nhooks: false\n---\nBody\n"_s);
 }
 
 void TestFrontMatter::removesAKeyAndItsLines()

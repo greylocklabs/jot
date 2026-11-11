@@ -2029,6 +2029,16 @@ void TestVaultController::syncsWithAGitRepository()
                   {u"--git-dir="_s + bare, u"log"_s, u"-1"_s, u"--format=%s"_s, u"main"_s});
     QVERIFY(subject.waitForFinished());
     QCOMPARE(subject.readAllStandardOutput().trimmed(), QByteArray("notes: eggs"));
+
+    // How often it syncs is the vault's too: 5 minutes unless it says, 0 for only when asked.
+    QCOMPARE(sync->syncEvery(), 5);
+    QVERIFY(m_vault->setVaultSetting(u"syncEvery"_s, 15));
+    QCOMPARE(sync->syncEvery(), 15);
+    QVERIFY(readFile(m_root + u"/.jot/vault.yaml"_s).contains(u"syncEvery: 15\n"_s));
+    QVERIFY(m_vault->setVaultSetting(u"syncEvery"_s, 0));
+    QCOMPARE(sync->syncEvery(), 0);
+    QVERIFY(m_vault->setVaultSetting(u"syncEvery"_s, QVariant()));
+    QCOMPARE(sync->syncEvery(), 5);
     QVERIFY(m_vault->setVaultSetting(u"gitMessage"_s, u"  "_s));
     QVERIFY(!readFile(m_root + u"/.jot/vault.yaml"_s).contains(u"gitMessage"_s));
     sync->stop();

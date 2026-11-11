@@ -38,6 +38,9 @@ class SyncController : public QObject
     /// Files changed and not committed, and commits not pushed, as the last sync left them.
     Q_PROPERTY(int uncommitted READ uncommitted NOTIFY changed)
     Q_PROPERTY(int unpushed READ unpushed NOTIFY changed)
+    /// Minutes between automatic syncs, `syncEvery` in the vault's settings; 0 syncs only when
+    /// asked.
+    Q_PROPERTY(int syncEvery READ syncEvery NOTIFY changed)
     Q_PROPERTY(bool syncing READ syncing NOTIFY changed)
     Q_PROPERTY(QDateTime lastSynced READ lastSynced NOTIFY changed)
     /// What went wrong with the last sync; empty when it went well.
@@ -93,8 +96,8 @@ public:
     Q_INVOKABLE QStringList changes() const;
     /// The commit message the vault's template makes for `paths`.
     Q_INVOKABLE QString suggestedMessage(const QStringList &paths) const;
-    /// Reads the vault's git options again, after they changed.
-    void reloadOptions() { Q_EMIT changed(); }
+    /// Reads the vault's sync options again, after they changed.
+    void reloadOptions();
     /// The commit message git sync uses when the vault sets none.
     Q_INVOKABLE static QString defaultCommitMessage();
     /// The git repository the vault is, as `{exists, origin, branch}`: what connectGit() must
@@ -112,6 +115,7 @@ public:
     [[nodiscard]] bool manualPushes() const;
     [[nodiscard]] int uncommitted() const { return m_uncommitted; }
     [[nodiscard]] int unpushed() const { return m_unpushed; }
+    [[nodiscard]] int syncEvery() const;
     [[nodiscard]] bool syncing() const { return m_thread != nullptr && !m_checking; }
     [[nodiscard]] bool checking() const { return m_checking; }
     [[nodiscard]] static bool dropboxAvailable() { return !dropboxAppKey().isEmpty(); }
@@ -123,7 +127,8 @@ public:
     [[nodiscard]] QString problem() const { return m_problem; }
     [[nodiscard]] QString summary() const;
 
-    /// How long after a change here a sync follows, and how often one runs regardless.
+    /// How long after a change here a sync follows, and how often one runs regardless unless
+    /// the vault says otherwise.
     static constexpr int kAfterChangeMs = 10 * 1000;
     static constexpr int kEveryMs = 5 * 60 * 1000;
 
@@ -135,6 +140,8 @@ Q_SIGNALS:
 private:
     void start();
     void done(const SyncReport &report);
+    /// Starts or stops the timer for automatic syncs, as syncEvery() says.
+    void applyInterval();
     /// Checks a new remote on a thread of its own with `check`, which may change the secret
     /// and name the remote, then keeps the secret for it in the keyring and syncs with it; or
     /// says what went wrong.
