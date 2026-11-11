@@ -257,21 +257,23 @@ Item {
             required property string display
             property bool renaming: false
 
+            readonly property bool sorted: root.records.sortColumn === index
+
             implicitWidth: 180
             implicitHeight: 32
-            color: Theme.surfaceAlt
+            // Lit on hover, as a button is, since a click sorts by it.
+            color: headingHover.hovered && !renaming ? Theme.border : Theme.surfaceAlt
             border.color: Theme.border
+            Accessible.role: Accessible.ColumnHeader
+            Accessible.name: display
 
             Text {
                 anchors.fill: parent
                 anchors.leftMargin: Theme.space3
-                anchors.rightMargin: Theme.space6
+                anchors.rightMargin: Theme.space6 + Theme.space4
                 visible: !heading.renaming
                 verticalAlignment: Text.AlignVCenter
-                text: heading.display + (root.records.sortColumn !== heading.index ? "" :
-                                                                                     root.records.sortDescending
-                                                                                     ? qsTr(" (Z-A)") :
-                                                                                       qsTr(" (A-Z)"))
+                text: heading.display
                 textFormat: Text.PlainText
                 elide: Text.ElideRight
                 color: Theme.text
@@ -301,6 +303,31 @@ Item {
             }
             HoverHandler {
                 id: headingHover
+                cursorShape: heading.renaming ? Qt.IBeamCursor : Qt.PointingHandCursor
+            }
+            // Which way it is sorted, or on hover that a click sorts by it.
+            Glyph {
+                objectName: "sortArrow"
+                anchors {
+                    right: removeColumn.visible ? removeColumn.left : parent.right
+                    rightMargin: removeColumn.visible ? 0 : Theme.space3
+                    verticalCenter: parent.verticalCenter
+                }
+                width: Theme.smallGlyphSize
+                height: width
+                visible: !heading.renaming && (heading.sorted || headingHover.hovered)
+                name: "chevron-down"
+                rotation: heading.sorted && !root.records.sortDescending ? 180 : 0
+                color: heading.sorted ? Theme.accent : Theme.textFaint
+                stroke: Theme.smallGlyphStroke
+            }
+            Tip {
+                visible: headingHover.hovered && !heading.renaming && !removeColumn.hovered
+                delay: Theme.durSlow * 2
+                text: !heading.sorted ? qsTr("Sort by %1").arg(heading.display) :
+                                        root.records.sortDescending ? qsTr(
+                                                                          "Sorted Z to A, click for the file's order") :
+                                                                      qsTr("Sorted A to Z, click for Z to A")
             }
             // Clicks sort and double clicks rename only beside the X, so on any Qt version the X's
             // own clicks reach nothing else.
