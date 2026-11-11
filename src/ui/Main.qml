@@ -390,8 +390,13 @@ ApplicationWindow {
                                                                           && fits))
             readonly property bool showSidebar: shown
             readonly property bool showList: shown
-            // When they squeeze the note, it still keeps its least room.
-            readonly property int room: width - Theme.editorMinWidth
+            /// Brought back on a window too narrow for them, they lie over the note, to pick from
+            /// and put away again, rather than squeezing it.
+            readonly property bool flyout: shown && !fits
+            // Over the note, a strip of it stays in view beside them.
+            readonly property int room: flyout ? width - 2 * Theme.space7 : width
+                                                 - Theme.noteRoomWidth
+
             readonly property int sidebarWidth: shown ? Math.max(0, Math.min(wantedSidebar, room
                                                                              - Settings.minNoteListWidth)) :
                                                         0
@@ -407,6 +412,12 @@ ApplicationWindow {
                     Settings.columnsHidden = false
                     shownByHand = !fits
                 }
+            }
+
+            /// Puts the columns away again once the note under them is wanted.
+            function closeFlyout() {
+                if (flyout)
+                    shownByHand = false
             }
 
             /// Brings the columns back, if they are away, for something that needs the list.
@@ -438,6 +449,7 @@ ApplicationWindow {
             Sidebar {
                 id: sidebar
 
+                z: columns.flyout ? 3 : 0
                 objectName: "sidebar"
                 onNoteMade: editor.editTitle()
                 onJoplinImportRequested: folder => joplinImport.start(folder)
@@ -450,6 +462,7 @@ ApplicationWindow {
                 width: columns.sidebarWidth
             }
             ColumnSplitter {
+                z: columns.flyout ? 3 : 0
                 visible: sidebar.visible
                 anchors {
                     horizontalCenter: sidebar.right
@@ -466,6 +479,8 @@ ApplicationWindow {
                 onReset: Settings.resetSidebarWidth()
             }
             TaskList {
+
+                z: columns.flyout ? 3 : 0
                 onAddRequested: quickAdd.open()
                 visible: Vault.isOpen && Vault.showingTasks && columns.showList
                 anchors {
@@ -478,10 +493,12 @@ ApplicationWindow {
             NoteList {
                 id: noteList
 
+                z: columns.flyout ? 3 : 0
                 objectName: "noteList"
                 onTitleEditRequested: editor.editTitle()
                 onHistoryRequested: window.run("history")
                 onExportRequested: path => window.exportNote(path)
+                onNotePicked: columns.closeFlyout()
                 visible: Vault.isOpen && !Vault.showingTasks && !Vault.showingTrash
                          && columns.showList
 
@@ -494,6 +511,7 @@ ApplicationWindow {
             }
             ColumnSplitter {
                 objectName: "listSplitter"
+                z: columns.flyout ? 3 : 0
                 visible: Vault.isOpen && columns.showList
                 anchors {
                     horizontalCenter: noteList.right
@@ -510,6 +528,7 @@ ApplicationWindow {
             TrashList {
                 id: trashList
 
+                z: columns.flyout ? 3 : 0
                 visible: Vault.isOpen && Vault.showingTrash && columns.showList
                 anchors {
                     left: sidebar.right
@@ -522,12 +541,32 @@ ApplicationWindow {
                 location: trashList.chosen
                 visible: Vault.isOpen && Vault.showingTrash
                 anchors {
-                    left: trashList.right
+                    left: columns.flyout ? parent.left : trashList.right
                     right: parent.right
                     top: parent.top
                     bottom: parent.bottom
                 }
             }
+            // Over the note while the columns lie on it: a click there puts them away.
+            Scrim {
+                objectName: "columnsBackdrop"
+                z: 2
+                visible: columns.flyout && Vault.isOpen
+                anchors {
+                    left: parent.left
+                    leftMargin: columns.sidebarWidth + columns.noteListWidth
+                    right: parent.right
+                    top: parent.top
+                    bottom: parent.bottom
+                }
+                radius: 0
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: columns.closeFlyout()
+                }
+            }
+
             NoteEditor {
                 id: editor
 
@@ -540,7 +579,7 @@ ApplicationWindow {
 
                 visible: Vault.isOpen && !Vault.showingTrash
                 anchors {
-                    left: noteList.right
+                    left: columns.flyout ? parent.left : noteList.right
                     right: parent.right
                     top: parent.top
                     bottom: parent.bottom
