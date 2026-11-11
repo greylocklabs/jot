@@ -393,22 +393,17 @@ void TestVaultIndex::sortsNotesWithThePinnedFirst()
 
 void TestVaultIndex::readsToDoDatesAndLabels()
 {
-    write(u"Calls.md"_s, u"- [ ] Call Soren @minutes #calls 📅 2026-10-29 14:00\n"
-                         "- [x] Call Mara @minutes ✅ 2026-10-27\n"
-                         "- [ ] Water plants @Day 🔁 every week 📅 2026-10-30\n"_s);
-    write(u"Taxes.md"_s,
-          u"---\ntask: open\ndue: 2026-11-15\nlabels: [\"@days\", minutes]\n---\n"_s);
+    write(u"Calls.md"_s, u"- [ ] Call Soren #calls 📅 2026-10-29 14:00\n"
+                         "- [x] Call Mara ✅ 2026-10-27\n"
+                         "- [ ] Water plants 🔁 every week 📅 2026-10-30\n"_s);
+    write(u"Taxes.md"_s, u"---\ntask: open\ndue: 2026-11-15\n---\n"_s);
     open();
     const QList<NoteTask> tasks = m_index->openTasks();
     QCOMPARE(tasks.size(), 2);
     QCOMPARE(tasks.at(0).parts.title, u"Call Soren #calls"_s);
     QCOMPARE(tasks.at(0).parts.due, u"2026-10-29T14:00"_s);
-    QCOMPARE(tasks.at(0).parts.labels, QStringList{u"minutes"_s});
     QCOMPARE(tasks.at(1).parts.repeat, u"every week"_s);
-    QCOMPARE(m_index->openTaskNotes().first().labels, (QStringList{u"days"_s, u"minutes"_s}));
-    // Open to-dos only, case aside, in order.
-    QCOMPARE(m_index->labels(),
-             (QList<TagCount>{{u"Day"_s, 1}, {u"days"_s, 1}, {u"minutes"_s, 2}}));
+    QCOMPARE(m_index->openTaskNotes().first().due, u"2026-11-15"_s);
 }
 
 QTEST_GUILESS_MAIN(TestVaultIndex)

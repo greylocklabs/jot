@@ -205,16 +205,14 @@ void TestVaultCommands::listsWhatIsLeftToDo()
     QVERIFY(isOverdue(u"2026-10-14T09:00:00Z"_s, QDate(2026, 10, 15)));
     QVERIFY(!isOverdue(u"2026-10-15"_s, QDate(2026, 10, 15)));
 
-    // Views, labels and tags, with their marks or without.
-    QVERIFY(notefile::write(
-        m_vault->absolute(u"Calls.md"_s),
-        u"- [ ] Call Soren @minutes #calls 📅 2020-01-01\n- [ ] Call Mara @hours\n"_s, &error));
+    // Views and tags, with their marks or without.
+    QVERIFY(notefile::write(m_vault->absolute(u"Calls.md"_s),
+                            u"- [ ] Call Soren #calls 📅 2020-01-01\n- [ ] Call Mara\n"_s, &error));
     m_index->update({u"Calls.md"_s});
-    QCOMPARE(run([](auto &c) { return c.listTasks(true, u"today"_s, u"@minutes"_s); }), 0);
+    QCOMPARE(run([](auto &c) { return c.listTasks(true, u"today"_s, u"#calls"_s); }), 0);
     QCOMPARE(json().array().size(), 1);
     QCOMPARE(json().array().first()[u"due"_s].toString(), u"2020-01-01"_s);
-    QCOMPARE(json().array().first()[u"labels"_s].toArray().first().toString(), u"minutes"_s);
-    QCOMPARE(run([](auto &c) { return c.listTasks(true, u"anytime"_s, {}, u"#calls"_s); }), 0);
+    QCOMPARE(run([](auto &c) { return c.listTasks(true, u"anytime"_s, u"calls"_s); }), 0);
     QVERIFY(json().array().isEmpty());
     QCOMPARE(run([](auto &c) { return c.listTasks(false, u"later"_s); }), 2);
 
@@ -255,17 +253,17 @@ void TestVaultCommands::syncsOnce()
 
 void TestVaultCommands::addsAToDoToTheInbox()
 {
-    QCOMPARE(run([](auto &c) { return c.addTask(u"pay rent today @minutes"_s, true); }), 0);
+    QCOMPARE(run([](auto &c) { return c.addTask(u"pay rent today #home"_s, true); }), 0);
     QCOMPARE(json()[u"path"_s].toString(), u"Inbox.md"_s);
     QCOMPARE(json()[u"due"_s].toString(), QDate::currentDate().toString(Qt::ISODate));
     QCOMPARE(run([](auto &c) { return c.addTask(u"buy rope"_s, false); }), 0);
     QCOMPARE(m_out, u"Inbox.md: - [ ] buy rope\n"_s);
     QString error;
     QCOMPARE(*notefile::read(m_vault->absolute(u"Inbox.md"_s), &error),
-             u"- [ ] pay rent @minutes 📅 %1\n- [ ] buy rope\n"_s.arg(
+             u"- [ ] pay rent #home 📅 %1\n- [ ] buy rope\n"_s.arg(
                  QDate::currentDate().toString(Qt::ISODate)));
     // The index knows them at once.
-    QCOMPARE(run([](auto &c) { return c.listTasks(true, u"today"_s, u"minutes"_s); }), 0);
+    QCOMPARE(run([](auto &c) { return c.listTasks(true, u"today"_s, u"home"_s); }), 0);
     QCOMPARE(json().array().size(), 1);
     QCOMPARE(run([](auto &c) { return c.addTask({}, false); }), 2);
     // A vault from a newer Jot is only read.

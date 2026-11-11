@@ -104,7 +104,6 @@ Keys Jot understands:
 | `task`    | `open` or `done`           | Makes the note a task                          |
 | `due`     | ISO 8601 date or date-time | When a task is due                             |
 | `done`    | ISO 8601 date-time         | When a task was completed                      |
-| `labels`  | list of strings            | A task's labels                                |
 | `type`    | string                     | The note's type; searchable as `type:` for now |
 | `target`  | whole number               | Words the note is meant to reach               |
 | `lang`    | language code, as `en_GB`  | The language spelling is checked in            |
@@ -122,8 +121,8 @@ Rules:
   saves from rewriting the front matter.
 - No id is required or written. Links work by path and name.
 - A list key also accepts a single string, which is one item: `tags: a, b` is the one tag `a, b`.
-  `aliases` also accepts `alias`, `tags` `tag`, and `labels` `label`. A leading `#` on a tag and
-  `@` on a label are dropped, and `task:` ignores case.
+  `aliases` also accepts `alias`, and `tags` `tag`. A leading `#` on a tag is dropped, and `task:`
+  ignores case.
 - Reopening a task removes its `done:`. Making a note no longer a task removes `task:` and leaves
   `due:`.
 
@@ -205,7 +204,7 @@ There are two kinds, and the task view shows both:
 - **Checkboxes** in any note: a list item starting `[ ]` or `[x]` (or `[X]`), after `-`, `*`, `+`,
   `1.` or `1)`. Ticking one in Jot edits that line.
 - **Task notes**: a note with `task: open` or `task: done` in its front matter, and optionally
-  `due`, `done` and `labels`. Completing one sets `task: done` and `done:` to the current time.
+  `due` and `done`. Completing one sets `task: done` and `done:` to the current time.
 
 A checkbox says more about itself on its own line, in the format of Obsidian's Tasks plugin, so
 the same vault works there:
@@ -225,8 +224,7 @@ the same vault works there:
   after today, and gives the ticked one `✅` and today's date, as Obsidian does. A rule Jot does
   not read is kept, and only ticked.
 - A checkbox that does not repeat is only ticked or unticked; a `✅` already there stays.
-- `@label` gives it a label, like Todoist's: `@` after a space or at the start, then letters,
-  digits, `_` and `-`. `#tags` work as they do anywhere in a note.
+- `#tags` work as they do anywhere in a note.
 - Each marker's value runs to the next marker, and a marker may carry the emoji variation
   selector (U+FE0F). Obsidian's other markers (`⏳`, `🛫`, `➕`, `❌` and the priorities) are kept
   as written, and not yet read.

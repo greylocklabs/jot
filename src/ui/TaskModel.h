@@ -9,8 +9,8 @@
 
 namespace jot {
 
-/// The to-dos Tasks shows: one view of them, Today, Upcoming, Anytime, All or Done, with a label
-/// or a tag to narrow it, under headings for the day or the note they are in.
+/// The to-dos Tasks shows: one view of them, Today, Upcoming, Anytime, All or Done, with a tag to
+/// narrow it, under headings for the day or the note they are in.
 class TaskModel : public QAbstractListModel
 {
     Q_OBJECT
@@ -19,8 +19,6 @@ class TaskModel : public QAbstractListModel
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
     /// "today", "upcoming", "anytime", "all" or "done".
     Q_PROPERTY(QString view READ view WRITE setView NOTIFY filterChanged)
-    /// Only to-dos with this @label, when set.
-    Q_PROPERTY(QString label READ label WRITE setLabel NOTIFY filterChanged)
     /// Only to-dos with this #tag or one nested in it, when set.
     Q_PROPERTY(QString tag READ tag WRITE setTag NOTIFY filterChanged)
     /// How many are overdue or due today, whatever the view.
@@ -40,7 +38,6 @@ public:
         DueRole,
         /// The due day is past.
         OverdueRole,
-        LabelsRole,
         /// It repeats.
         RepeatsRole,
         /// The heading it is listed under: a day, or the note it is in.
@@ -55,8 +52,6 @@ public:
 
     [[nodiscard]] QString view() const { return m_view; }
     void setView(const QString &view);
-    [[nodiscard]] QString label() const { return m_label; }
-    void setLabel(const QString &label);
     [[nodiscard]] QString tag() const { return m_tag; }
     void setTag(const QString &tag);
     [[nodiscard]] int todayCount() const { return m_todayCount; }
@@ -74,7 +69,6 @@ private:
 
     const VaultIndex *m_index = nullptr;
     QString m_view = QStringLiteral("today");
-    QString m_label;
     QString m_tag;
     QDate m_today;
     QList<ToDo> m_rows;

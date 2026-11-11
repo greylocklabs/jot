@@ -17,11 +17,11 @@ private Q_SLOTS:
     void cleanup();
     void showsEachView();
     void listsDoneOnesMostRecentFirst();
-    void filtersByLabelAndTag();
+    void filtersByTag();
     void remindsAtTheTimeOrInTheMorning();
 
 private:
-    QStringList titles(ToDoView view, const QString &label = {}, const QString &tag = {}) const;
+    QStringList titles(ToDoView view, const QString &tag = {}) const;
 
     std::unique_ptr<QTemporaryDir> m_dir;
     std::unique_ptr<Vault> m_vault;
@@ -38,21 +38,20 @@ void TestToDos::init()
         QString error;
         QVERIFY2(notefile::write(m_vault->absolute(path), text, &error), qPrintable(error));
     };
-    write(u"Inbox.md"_s, u"- [ ] Call Soren @minutes #calls 📅 2026-10-28 14:00\n"
-                         "- [ ] Buy rope @minutes 📅 2026-10-28\n"
-                         "- [ ] Late fee @hours #home/money 📅 2026-10-20\n"
-                         "- [ ] Plan trip @days 📅 2026-11-02\n"
+    write(u"Inbox.md"_s, u"- [ ] Call Soren #calls 📅 2026-10-28 14:00\n"
+                         "- [ ] Buy rope 📅 2026-10-28\n"
+                         "- [ ] Late fee #home/money 📅 2026-10-20\n"
+                         "- [ ] Plan trip 📅 2026-11-02\n"
                          "- [ ] Someday read Proust\n"
                          "- [x] Done already 📅 2026-10-28\n"_s);
-    write(u"Taxes.md"_s,
-          u"---\ntask: open\ndue: 2026-10-30\nlabels: [days]\ntags: [home]\n---\n"_s);
+    write(u"Taxes.md"_s, u"---\ntask: open\ndue: 2026-10-30\ntags: [home]\n---\n"_s);
     write(u"Fence.md"_s, u"---\ntask: open\n---\n"_s);
     // A time written with a space, as YAML allows, sorts by the clock too.
     write(u"Dentist.md"_s, u"---\ntask: open\ndue: 2026-10-28 09:00\n---\n"_s);
-    write(u"Done.md"_s, u"- [x] Pay rent @hours ✅ 2026-10-26\n"
+    write(u"Done.md"_s, u"- [x] Pay rent #home ✅ 2026-10-26\n"
                         "- [x] Water plants ✅ 2026-10-27\n"
                         "- [X] Old one, no day\n"_s);
-    write(u"Garage.md"_s, u"---\ntask: done\ndone: 2026-10-27T15:30:00Z\nlabels: [days]\n---\n"_s);
+    write(u"Garage.md"_s, u"---\ntask: done\ndone: 2026-10-27T15:30:00Z\n---\n"_s);
     m_index = std::make_unique<VaultIndex>(*m_vault, m_dir->filePath(u"index.sqlite"_s));
     QString error;
     QVERIFY2(m_index->open(&error), qPrintable(error));
@@ -64,10 +63,10 @@ void TestToDos::cleanup()
     m_index.reset();
 }
 
-QStringList TestToDos::titles(ToDoView view, const QString &label, const QString &tag) const
+QStringList TestToDos::titles(ToDoView view, const QString &tag) const
 {
     QStringList found;
-    for (const ToDo &each : toDos(*m_index, view, m_today, label, tag))
+    for (const ToDo &each : toDos(*m_index, view, m_today, tag))
         found << each.title;
     return found;
 }
@@ -88,7 +87,6 @@ void TestToDos::showsEachView()
     QCOMPARE(call.line, 1);
     QCOMPARE(call.due, u"2026-10-28T14:00"_s);
     QCOMPARE(call.dueDate(), m_today);
-    QCOMPARE(call.labels, QStringList{u"minutes"_s});
     QCOMPARE(call.tags, QStringList{u"calls"_s});
     QCOMPARE(toDoView(u"upcoming"_s), ToDoView::Upcoming);
     QVERIFY(!toDoView(u"later"_s));
@@ -98,10 +96,10 @@ void TestToDos::listsDoneOnesMostRecentFirst()
 {
     // By when they were done, a moment before a bare day's midnight on the same day; those with
     // no day written last.
-    QCOMPARE(titles(ToDoView::Done), (QStringList{u"Garage"_s, u"Water plants"_s, u"Pay rent"_s,
-                                                  u"Old one, no day"_s, u"Done already"_s}));
-    QCOMPARE(titles(ToDoView::Done, u"days"_s), QStringList{u"Garage"_s});
-    QCOMPARE(titles(ToDoView::Done, u"hours"_s), QStringList{u"Pay rent"_s});
+    QCOMPARE(titles(ToDoView::Done),
+             (QStringList{u"Garage"_s, u"Water plants"_s, u"Pay rent #home"_s, u"Old one, no day"_s,
+                          u"Done already"_s}));
+    QCOMPARE(titles(ToDoView::Done, u"home"_s), QStringList{u"Pay rent #home"_s});
     const ToDo garage = toDos(*m_index, ToDoView::Done, m_today).first();
     QCOMPARE(garage.kind, u"note"_s);
     QCOMPARE(garage.doneAt(),
@@ -114,16 +112,13 @@ void TestToDos::listsDoneOnesMostRecentFirst()
     QCOMPARE(toDoView(u"done"_s), std::optional(ToDoView::Done));
 }
 
-void TestToDos::filtersByLabelAndTag()
+void TestToDos::filtersByTag()
 {
-    QCOMPARE(titles(ToDoView::All, u"Minutes"_s),
-             (QStringList{u"Buy rope"_s, u"Call Soren #calls"_s}));
-    QCOMPARE(titles(ToDoView::Upcoming, u"days"_s), (QStringList{u"Taxes"_s, u"Plan trip"_s}));
     // A tag takes in the tags nested in it, and a task note's own.
-    QCOMPARE(titles(ToDoView::All, {}, u"home"_s),
+    QCOMPARE(titles(ToDoView::All, u"home"_s),
              (QStringList{u"Late fee #home/money"_s, u"Taxes"_s}));
-    QCOMPARE(titles(ToDoView::Today, u"hours"_s, u"home"_s),
-             QStringList{u"Late fee #home/money"_s});
+    QCOMPARE(titles(ToDoView::Today, u"home"_s), QStringList{u"Late fee #home/money"_s});
+    QCOMPARE(titles(ToDoView::Today, u"calls"_s), QStringList{u"Call Soren #calls"_s});
 }
 
 void TestToDos::remindsAtTheTimeOrInTheMorning()
@@ -143,7 +138,7 @@ void TestToDos::remindsAtTheTimeOrInTheMorning()
 
     // Ticking finds a checkbox by its text as written.
     const ToDo call = toDos(*m_index, ToDoView::Today, m_today).last();
-    QCOMPARE(call.text, u"Call Soren @minutes #calls 📅 2026-10-28 14:00"_s);
+    QCOMPARE(call.text, u"Call Soren #calls 📅 2026-10-28 14:00"_s);
 }
 
 QTEST_GUILESS_MAIN(TestToDos)

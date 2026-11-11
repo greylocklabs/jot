@@ -95,7 +95,7 @@ void TestToDoReminders::write(const QString &path, const QString &text)
 
 void TestToDoReminders::remindsAtTheTimeAndInTheMorning()
 {
-    write(u"Today.md"_s, u"- [ ] Call Soren @minutes 📅 2026-10-28 14:00\n"
+    write(u"Today.md"_s, u"- [ ] Call Soren 📅 2026-10-28 14:00\n"
                          "- [ ] Buy rope 📅 2026-10-28\n"
                          "- [ ] Later 📅 2026-10-30\n"
                          "- [x] Done already 📅 2026-10-28 10:00\n"_s);

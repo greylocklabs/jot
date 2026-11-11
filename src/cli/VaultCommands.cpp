@@ -278,21 +278,17 @@ int VaultCommands::show(const QString &name)
     return 0;
 }
 
-int VaultCommands::listTasks(bool json, const QString &view, const QString &label,
-                             const QString &tag)
+int VaultCommands::listTasks(bool json, const QString &view, const QString &tag)
 {
     const std::optional<ToDoView> shown = toDoView(view.isEmpty() ? u"all"_s : view);
     if (!shown) {
-        m_err << tr("usage: jot tasks [--view today|upcoming|anytime|all|done] [--label name] "
-                    "[--tag name]")
+        m_err << tr("usage: jot tasks [--view today|upcoming|anytime|all|done] [--tag name]")
               << "\n";
         return 2;
     }
     const QDate today = QDate::currentDate();
-    // Written with their mark or without: @minutes or minutes, #calls or calls.
-    const QList<ToDo> list =
-        toDos(m_index, *shown, today, label.startsWith(u'@') ? label.mid(1) : label,
-              tag.startsWith(u'#') ? tag.mid(1) : tag);
+    // Written with its mark or without: #calls or calls.
+    const QList<ToDo> list = toDos(m_index, *shown, today, tag.startsWith(u'#') ? tag.mid(1) : tag);
     if (json) {
         QJsonArray array;
         for (const ToDo &each : list)
@@ -303,7 +299,6 @@ int VaultCommands::listTasks(bool json, const QString &view, const QString &labe
                                      {u"note"_s, each.note},
                                      {u"due"_s, each.due},
                                      {u"repeat"_s, each.repeat},
-                                     {u"labels"_s, QJsonArray::fromStringList(each.labels)},
                                      {u"tags"_s, QJsonArray::fromStringList(each.tags)},
                                      {u"done"_s, each.done}});
         print(m_out, array);
@@ -328,8 +323,6 @@ int VaultCommands::listTasks(bool json, const QString &view, const QString &labe
             last = group;
         }
         QStringList extra;
-        for (const QString &each : each.labels)
-            extra << u'@' + each;
         if (!each.repeat.isEmpty())
             extra << each.repeat;
         if (!done && due.isValid() && due != today)
