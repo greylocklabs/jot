@@ -229,6 +229,7 @@ Rectangle {
             required property bool repeats
             required property bool done
             required property int priority
+            required property string wording
 
             width: ListView.view.width
             height: Math.max(Theme.listRowHeight, words.implicitHeight + 2 * Theme.space2)
@@ -237,6 +238,16 @@ Rectangle {
             onClicked: {
                 Vault.openAt(path, line)
                 root.taskPicked()
+            }
+            // A double-click sets its day and repeat, as Ctrl+Shift+D does in the note.
+            onDoubleClicked: {
+                if (!Vault.writable || done)
+                    return
+                scheduler.kind = kind
+                scheduler.path = path
+                scheduler.line = line
+                scheduler.written = wording
+                scheduler.openFor(wording)
             }
 
             background: Rectangle {
@@ -368,5 +379,25 @@ Rectangle {
         }
         width: 1
         color: Theme.hairline
+    }
+
+    // The day popup for a to-do double-clicked in the list, which writes to its note.
+    TaskSchedule {
+        id: scheduler
+
+        objectName: "taskListSchedule"
+        /// The to-do it is for: a checkbox or a task note, where, and its words as written.
+        property string kind
+        property string path
+        property int line
+        property string written
+
+        parent: Overlay.overlay
+        onChosen: line => {
+            if (kind === "note")
+                Vault.scheduleTaskNote(path, line)
+            else
+                Vault.setTaskText(path, scheduler.line, written, line)
+        }
     }
 }

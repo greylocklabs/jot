@@ -64,6 +64,7 @@ private Q_SLOTS:
     void taskViewsLineUpWithTheAddButton();
     void taskViewsFitANarrowColumn();
     void untickingInDoneOpensItAgain();
+    void schedulesAToDoByDoubleClick();
 
 private:
     /// The visible menu entry reading `text`, anywhere in the window.
@@ -231,6 +232,56 @@ void TestLists::untickingInDoneOpensItAgain()
     QString error;
     QVERIFY(notefile::read(m_root + u"/Ashfall/Characters/Soren.md"_s, &error)
                 ->contains(u"- [ ] decide what he wants"_s));
+}
+
+void TestLists::schedulesAToDoByDoubleClick()
+{
+    m_vault->tasks()->setView(u"all"_s);
+    QQmlComponent component(m_engine.get());
+    component.loadFromModule("Jot.Ui", "TaskList");
+    std::unique_ptr<QObject> tasks(component.create());
+    QVERIFY2(tasks, qPrintable(component.errorString()));
+    auto *item = qobject_cast<QQuickItem *>(tasks.get());
+    item->setParentItem(m_window->contentItem());
+    item->setSize({480, 700});
+    const auto rowFor = [&](const QString &path) {
+        return findItem(
+            [&path](QQuickItem *each) {
+                return each->isVisible() && each->property("path").toString() == path &&
+                       each->property("kind").isValid();
+            },
+            item);
+    };
+    QQuickItem *row = nullptr;
+    QTRY_VERIFY(row = rowFor(u"Ashfall/Characters/Soren.md"_s));
+    const auto doubleClick = [&](QQuickItem *at) {
+        QTest::mouseDClick(m_window.get(), Qt::LeftButton, {},
+                           at->mapToScene({at->width() / 2, at->height() / 2}).toPoint());
+    };
+    const auto set = [&](const QString &when) {
+        QQuickItem *input = nullptr;
+        QTRY_VERIFY(input = findItem(
+                        [](QQuickItem *each) {
+                            return each->objectName() == u"scheduleInput"_s && each->isVisible();
+                        },
+                        m_window->contentItem()));
+        input->setProperty("text", when);
+        input->forceActiveFocus();
+        QTest::keyClick(m_window.get(), Qt::Key_Return);
+    };
+    // A checkbox's day is written on its line in its note.
+    doubleClick(row);
+    set(u"2030-01-02 every week"_s);
+    QString error;
+    QTRY_VERIFY(
+        notefile::read(m_root + u"/Ashfall/Characters/Soren.md"_s, &error)
+            ->contains(u"- [ ] decide what he wants by act two @weekly @due 2030-01-02 @p3"_s));
+    // A task note's goes in its front matter.
+    QTRY_VERIFY(row = rowFor(u"Inbox/Groceries.md"_s));
+    doubleClick(row);
+    set(u"2030-01-03"_s);
+    QTRY_VERIFY(
+        notefile::read(m_root + u"/Inbox/Groceries.md"_s, &error)->contains(u"due: 2030-01-03"_s));
 }
 
 void TestLists::cleanup()

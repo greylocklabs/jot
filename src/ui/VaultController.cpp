@@ -1787,6 +1787,30 @@ bool VaultController::setTaskDone(const QString &path, int line, bool done, cons
         true);
 }
 
+bool VaultController::setTaskText(const QString &path, int line, const QString &text,
+                                  const QString &now)
+{
+    return rewriteNote(
+        path,
+        [line, text, now](const QString &note) { return jot::setTaskText(note, line, text, now); },
+        true);
+}
+
+bool VaultController::scheduleTaskNote(const QString &path, const QString &line)
+{
+    const TaskLine said = readTaskLine(line);
+    return rewriteNote(
+        path,
+        [said](const QString &text) {
+            QString changed = setFrontMatterKey(
+                text, u"due"_s,
+                said.due.isEmpty() ? QVariant() : QVariant(QString(said.due).replace(u'T', u' ')));
+            return std::optional(setFrontMatterKey(
+                changed, u"repeat"_s, said.repeat.isEmpty() ? QVariant() : QVariant(said.repeat)));
+        },
+        true);
+}
+
 bool VaultController::completeTask(const QString &path)
 {
     return rewriteNote(

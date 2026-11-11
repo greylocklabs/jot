@@ -333,6 +333,13 @@ public:
     /// note shown, in the editor's text.
     Q_INVOKABLE bool setTaskDone(const QString &path, int line, bool done,
                                  const QString &text = {});
+    /// Puts `now` in place of the words of the checkbox on `line` of the note at `path`, which
+    /// say `text`, as the day popup does for a to-do in Tasks.
+    Q_INVOKABLE bool setTaskText(const QString &path, int line, const QString &text,
+                                 const QString &now);
+    /// Sets the task note at `path` due and repeating as `line`, a to-do's words with markers
+    /// such as `@weekly @due 2026-11-02`, from the day popup; either missing takes it away.
+    Q_INVOKABLE bool scheduleTaskNote(const QString &path, const QString &line);
     /// Marks a note that is a task as done, with when it was; one that repeats is due again on
     /// its next day after today instead.
     Q_INVOKABLE bool completeTask(const QString &path);

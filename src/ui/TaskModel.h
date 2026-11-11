@@ -48,6 +48,9 @@ public:
         DoneRole,
         /// 1 urgent to 4 low, or 0 for none.
         PriorityRole,
+        /// What the day popup starts from: a checkbox's words as written, markers and all, or a
+        /// task note's title with markers for its day and repeat.
+        WordingRole,
     };
 
     explicit TaskModel(QObject *parent = nullptr);

@@ -26,6 +26,7 @@ private Q_SLOTS:
     void ticksATaskAndNothingElse();
     void findsATaskThatMoved();
     void findsWhereLinesStart();
+    void rewritesAToDosWords();
     void findsAToDosWords();
 };
 
@@ -145,6 +146,17 @@ void TestNoteScan::findsATaskThatMoved()
     QVERIFY(!setTaskDone(u"x\n- [ ] buy\n- [ ] buy\n"_s, 1, true, u"buy"_s));
     QCOMPARE(setTaskDone(u"- [ ] buy\n"_s, 1, true, u"buy"_s, today),
              std::optional(u"- [x] buy @done 2026-10-28\n"_s));
+}
+
+void TestNoteScan::rewritesAToDosWords()
+{
+    const QString note = u"# Chores\n- [ ] water @weekly\n- [x] sweep\n"_s;
+    QCOMPARE(setTaskText(note, 2, u"water @weekly"_s, u"water @daily"_s),
+             std::optional(u"# Chores\n- [ ] water @daily\n- [x] sweep\n"_s));
+    // Moved, it is found by its words; another line's words are not taken for it.
+    QCOMPARE(setTaskText(u"new\n"_s + note, 2, u"water @weekly"_s, u"water"_s),
+             std::optional(u"new\n# Chores\n- [ ] water\n- [x] sweep\n"_s));
+    QCOMPARE(setTaskText(note, 2, u"weed"_s, u"water"_s), std::nullopt);
 }
 
 void TestNoteScan::findsAToDosWords()

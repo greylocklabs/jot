@@ -9,6 +9,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 - Double-click a note in the list to rename it there. Rename, from a note's menu or the keyboard,
   does the same, bringing the list back if it was put away.
+- Double-click a to-do in Tasks to set its day and repeat, as Ctrl+Shift+D does in its note; a
+  task note's go in its front matter.
 
 ### Changed
 
