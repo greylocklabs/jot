@@ -11,6 +11,8 @@ Rectangle {
     /// Where the note chosen is in the trash, or empty.
     readonly property string chosen: Vault.chosenTrashed
 
+    signal notePicked
+
     color: Theme.bg
 
     Column {
@@ -117,7 +119,10 @@ Rectangle {
             height: Theme.listRowHeight * 2
             hoverEnabled: true
             Accessible.name: title
-            onClicked: Vault.chosenTrashed = location
+            onClicked: {
+                Vault.chosenTrashed = location
+                root.notePicked()
+            }
 
             TapHandler {
                 acceptedButtons: Qt.RightButton
