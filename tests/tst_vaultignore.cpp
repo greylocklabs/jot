@@ -18,6 +18,7 @@ private Q_SLOTS:
     void readsPatternsAsGitDoes();
     void deeperGitignoreFilesWin();
     void neverIgnoresJotsOwnFolder();
+    void writesAPathAsAPatternForItAlone();
     void readsTheVaultSettings();
     void leavesIgnoredFilesOutOfTheVault();
     void setsAVaultSettingKeepingTheRest();
@@ -119,6 +120,21 @@ void TestVaultIgnore::neverIgnoresJotsOwnFolder()
     QVERIFY(!ignore.ignored(u".jot"_s, true));
     QVERIFY(!ignore.ignored(u".jot/vault.yaml"_s, false));
     QVERIFY(ignore.ignored(u"data.yaml"_s, false));
+}
+
+void TestVaultIgnore::writesAPathAsAPatternForItAlone()
+{
+    QTemporaryDir dir;
+    for (const QString &name : {u"Ch [1]"_s, u"a*b"_s, u"What?"_s, u"back\\slash"_s}) {
+        const VaultIgnore ignore(dir.path(), {VaultIgnore::literal(name, true)}, false);
+        QVERIFY2(ignore.ignored(name, true), qPrintable(name));
+        QVERIFY2(!ignore.ignored(u"Other/"_s + name, true), qPrintable(name));
+    }
+    const VaultIgnore glob(dir.path(), {VaultIgnore::literal(u"a*b"_s, true)}, false);
+    QVERIFY(!glob.ignored(u"axxb"_s, true));
+    const VaultIgnore spaced(dir.path(), {VaultIgnore::literal(u"Draft "_s, false)}, false);
+    QVERIFY(spaced.ignored(u"Draft "_s, false));
+    QVERIFY(!spaced.ignored(u"Draft"_s, false));
 }
 
 void TestVaultIgnore::readsTheVaultSettings()

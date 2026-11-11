@@ -34,6 +34,9 @@ public:
     [[nodiscard]] static QStringList patternsOf(const Vault &vault);
     /// Whether `vault` respects its `.gitignore` files: unless it says `gitignore: false`.
     [[nodiscard]] static bool respectsGitignore(const Vault &vault);
+    /// A pattern that matches the vault path `path` alone, from the top of the vault, its
+    /// characters that patterns read otherwise escaped; a folder's ends with `/`.
+    [[nodiscard]] static QString literal(const QString &path, bool folder);
 
 private:
     struct Rule
