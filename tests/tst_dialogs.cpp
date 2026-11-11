@@ -3,12 +3,14 @@
 #include "ThemeController.h"
 #include "VaultController.h"
 
+#include "jot/GitSync.h"
 #include "jot/Settings.h"
 
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QGuiApplication>
+#include <QProcess>
 #include <QQmlComponent>
 #include <QQmlEngine>
 #include <QQuickItem>
@@ -40,6 +42,7 @@ private Q_SLOTS:
     void everyModalHasAClose_data();
     void everyModalHasAClose();
     void settingsTabsFitWithoutScrolling();
+    void gitSyncStartsFromTheVaultsOwnRepository();
     void themeColorsFinishHoweverClosed();
     void showsAndRestoresPastVersions();
     void importsFromTheJoplinOnThisComputer();
@@ -209,6 +212,45 @@ void TestDialogs::settingsTabsFitWithoutScrolling()
                                     .arg(pane->property("contentHeight").toReal())
                                     .arg(pane->height())));
     }
+}
+
+void TestDialogs::gitSyncStartsFromTheVaultsOwnRepository()
+{
+    if (!GitSync::available())
+        QSKIP("git is not installed");
+    const QString notes = m_dir.filePath(u"Notes"_s);
+    const auto git = [&notes](const QStringList &arguments) {
+        QProcess process;
+        process.setWorkingDirectory(notes);
+        process.start(u"git"_s, arguments);
+        QVERIFY(process.waitForFinished(10000));
+        QCOMPARE(process.exitCode(), 0);
+    };
+    git({u"init"_s, u"-q"_s, u"-b"_s, u"notes"_s});
+    git({u"remote"_s, u"add"_s, u"origin"_s, u"git@example.org:me/notes.git"_s});
+
+    QQuickWindow window;
+    window.resize(900, 700);
+    window.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&window));
+    QQmlEngine engine;
+    QQmlComponent component(&engine);
+    component.setData("import Jot.Ui\nSettingsDialog {}\n", QUrl(u"qrc:/test.qml"_s));
+    std::unique_ptr<QObject> settings(component.create());
+    QVERIFY2(settings, qPrintable(component.errorString()));
+    settings->setProperty("parent", QVariant::fromValue(window.contentItem()));
+    settings->setProperty("tab", u"sync"_s);
+    QMetaObject::invokeMethod(settings.get(), "open");
+    QTRY_VERIFY(settings->property("opened").toBool());
+    auto *content = settings->property("contentItem").value<QQuickItem *>();
+    auto *start = content->findChild<QQuickItem *>(u"syncWithGit"_s);
+    QVERIFY(start);
+    QMetaObject::invokeMethod(start, "clicked");
+    auto *url = content->findChild<QQuickItem *>(u"gitUrl"_s);
+    auto *branch = content->findChild<QQuickItem *>(u"gitBranch"_s);
+    QTRY_COMPARE(url->property("text").toString(), u"git@example.org:me/notes.git"_s);
+    QCOMPARE(branch->property("text").toString(), u"notes"_s);
+    QVERIFY(content->findChild<QQuickItem *>(u"gitOwnRepository"_s)->isVisible());
 }
 
 void TestDialogs::themeColorsFinishHoweverClosed()

@@ -576,6 +576,8 @@ Popup {
                             text: qsTr("Sync with git...")
                             onClicked: {
                                 gitForm.visible = !gitForm.visible
+                                if (gitForm.visible)
+                                    gitForm.fillFromOwn()
                                 bucketForm.visible = false
                                 dropboxForm.visible = false
                                 driveForm.visible = false
@@ -602,6 +604,19 @@ Popup {
                     Column {
                         id: gitForm
 
+                        /// The vault's own repository, when it is one: `{exists, origin, branch}`.
+                        property var own: ({})
+
+                        function fillFromOwn() {
+                            own = Vault.sync.ownRepository()
+                            if (!own.exists)
+                                return
+                            if (gitUrl.text.trim() === "")
+                                gitUrl.text = own.origin
+                            if (gitBranch.text.trim() === "")
+                                gitBranch.text = own.branch
+                        }
+
                         objectName: "gitForm"
                         visible: false
                         width: parent.width
@@ -613,6 +628,28 @@ Popup {
                             text: qsTr(
                                       "A git repository on GitHub, GitLab, Codeberg, your own server or a NAS. Jot reaches it as git does from a terminal, with your SSH keys or saved logins, and keeps large files in Git LFS. Each sync is a commit.")
                             color: Theme.textMuted
+                            font.family: Theme.fontFamily
+                            font.pixelSize: Theme.textSm
+                        }
+                        Text {
+                            readonly property bool usable: gitForm.own.origin !== ""
+                                                           && gitForm.own.branch !== ""
+
+                            objectName: "gitOwnRepository"
+                            visible: gitForm.own.exists === true
+                            width: parent.width
+                            wrapMode: Text.Wrap
+                            text: {
+                                if (gitForm.own.origin === "")
+                                    return qsTr(
+                                                "This folder is a git repository with no origin. Add one with git remote add origin, then connect to it here.")
+                                if (gitForm.own.branch === "")
+                                    return qsTr(
+                                                "This folder is a git repository on no branch. Check one out, then connect here.")
+                                return qsTr(
+                                            "This folder is a git repository already, so Jot syncs it on its own origin and branch and leaves how it is set up alone.")
+                            }
+                            color: usable ? Theme.textMuted : Theme.danger
                             font.family: Theme.fontFamily
                             font.pixelSize: Theme.textSm
                         }

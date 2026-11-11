@@ -34,6 +34,9 @@ private Q_SLOTS:
     void runsSshAsThePersonChose();
     void startsOverAMergeLeftHalfDone();
     void usesTheVaultsOwnRepositoryAsItIs();
+    void readsTheVaultsOwnRepository();
+    void knowsOneRemoteWrittenTwoWays_data();
+    void knowsOneRemoteWrittenTwoWays();
     void failsPlainlyWithoutTheRepository();
 
 private:
@@ -434,6 +437,65 @@ void TestGitSync::usesTheVaultsOwnRepositoryAsItIs()
     GitSync otherBranch(laptop.root, m_remote, u"notes"_s, laptop.gitDir, laptop.name);
     QVERIFY(otherBranch.sync().failure.contains(u"notes"_s));
     QCOMPARE(run(laptop.root, {u"remote"_s, u"get-url"_s, u"origin"_s}), m_remote.toUtf8());
+
+    // The origin written another way is the same origin.
+    GitSync spelled(laptop.root, m_remote + u"/"_s, u"main"_s, laptop.gitDir, laptop.name);
+    write(laptop, u"Mara.md"_s, "# Mara\nagain\n");
+    const SyncReport again = spelled.sync();
+    QVERIFY2(again.failure.isEmpty(), qPrintable(again.failure));
+}
+
+void TestGitSync::readsTheVaultsOwnRepository()
+{
+    const Computer laptop = computer(u"laptop"_s);
+    QVERIFY(!GitSync::ownRepository(laptop.root).exists);
+    run(laptop.root, {u"init"_s, u"-q"_s, u"-b"_s, u"notes"_s});
+    GitSync::OwnRepository own = GitSync::ownRepository(laptop.root);
+    QVERIFY(own.exists);
+    QVERIFY(own.origin.isEmpty());
+    QCOMPARE(own.branch, u"notes"_s);
+    GitSync noOrigin(laptop.root, m_remote, u"notes"_s, laptop.gitDir, laptop.name);
+    QVERIFY(noOrigin.sync().failure.contains(u"no origin"_s));
+
+    run(laptop.root, {u"remote"_s, u"add"_s, u"origin"_s, m_remote});
+    run(laptop.root, {u"config"_s, u"user.name"_s, u"Mara"_s});
+    run(laptop.root, {u"config"_s, u"user.email"_s, u"mara@example.org"_s});
+    write(laptop, u"Mara.md"_s, "# Mara\n");
+    run(laptop.root, {u"add"_s, u"Mara.md"_s});
+    run(laptop.root, {u"commit"_s, u"-q"_s, u"-m"_s, u"first"_s});
+    run(laptop.root, {u"checkout"_s, u"-q"_s, u"--detach"_s});
+    own = GitSync::ownRepository(laptop.root);
+    QCOMPARE(own.origin, m_remote);
+    QVERIFY(own.branch.isEmpty());
+    GitSync detached(laptop.root, m_remote, u"notes"_s, laptop.gitDir, laptop.name);
+    QVERIFY(detached.sync().failure.contains(u"no branch"_s));
+}
+
+void TestGitSync::knowsOneRemoteWrittenTwoWays_data()
+{
+    QTest::addColumn<QString>("a");
+    QTest::addColumn<QString>("b");
+    QTest::addColumn<bool>("same");
+    QTest::newRow("ssh and https")
+        << u"git@github.com:me/notes.git"_s << u"https://github.com/me/notes"_s << true;
+    QTest::newRow("ssh url with a port")
+        << u"ssh://git@github.com:22/me/notes.git"_s << u"git@github.com:me/notes"_s << true;
+    QTest::newRow("trailing slash and host case")
+        << u"https://GitHub.com/me/notes/"_s << u"https://github.com/me/notes.git"_s << true;
+    QTest::newRow("another repository")
+        << u"git@github.com:me/notes.git"_s << u"git@github.com:me/other.git"_s << false;
+    QTest::newRow("another host") << u"git@github.com:me/notes.git"_s
+                                  << u"git@gitlab.com:me/notes.git"_s << false;
+    QTest::newRow("local path") << u"/srv/git/notes.git/"_s << u"/srv/git/notes"_s << true;
+    QTest::newRow("local paths differ") << u"/srv/git/notes"_s << u"/srv/git/other"_s << false;
+}
+
+void TestGitSync::knowsOneRemoteWrittenTwoWays()
+{
+    QFETCH(QString, a);
+    QFETCH(QString, b);
+    QFETCH(bool, same);
+    QCOMPARE(GitSync::sameRemote(a, b), same);
 }
 
 void TestGitSync::failsPlainlyWithoutTheRepository()

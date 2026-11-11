@@ -329,7 +329,8 @@ they are, so it can be read without Jot.
 - A git remote is a repository the vault is committed to, a commit for each sync. Git's own
   files live in Jot's state folder, not the vault, and Jot writes `.gitattributes` to keep
   pictures, PDFs, audio, video and archives in Git LFS. A vault that already is a repository is
-  synced as it is set up: on its own origin and branch, with its own `.gitattributes`. Where
+  synced as it is set up: on its own origin and branch, with its own `.gitattributes`. Its origin
+  counts as the remote however either is written, SSH or HTTPS, with or without `.git`. Where
   git cannot merge a note, Jot merges it as for the other remotes, or keeps the other version as
   a conflict copy; it never leaves conflict markers in a file.
 - A Dropbox remote holds the files in Jot's own app folder, `Apps/Jot`, by their paths. Dropbox

@@ -12,6 +12,7 @@
 #include <QThread>
 #include <QTimer>
 #include <QUrl>
+#include <QVariantMap>
 
 #include <atomic>
 
@@ -76,6 +77,9 @@ public:
     /// Syncs the vault with the git repository at `url`, on `branch` (`main` when empty), once
     /// it answers with the keys and settings this computer has for git; Jot keeps none.
     Q_INVOKABLE void connectGit(const QString &url, const QString &branch);
+    /// The git repository the vault is, as `{exists, origin, branch}`: what connectGit() must
+    /// be given for it, since Jot syncs such a vault on its own origin and branch.
+    Q_INVOKABLE QVariantMap ownRepository() const;
     /// Stops syncing this vault, forgetting what the last sync knew; its files stay as they are,
     /// here and there.
     Q_INVOKABLE void stop();
