@@ -870,6 +870,9 @@ Rectangle {
                 onActiveFocusChanged: {
                     if (!activeFocus && vi.mode === "visual")
                         vi.mode = "normal"
+                    // Leaving the note tidies the line, as leaving the line does.
+                    if (!activeFocus && cursorLine >= 0 && !readOnly && !root.loading)
+                        styler.tidyTaskLine(cursorLine)
                 }
                 // One cursor for every vi mode, never swapped for the built-in one, which can be
                 // left drawn where it was.
@@ -1005,7 +1008,20 @@ Rectangle {
                 }
 
                 // Moving out of the link being typed puts its notes away.
+                /// The line the cursor was on, to tidy once it leaves it.
+                property int cursorLine: -1
+
+                /// Writes a to-do's days said in words, such as "@done yesterday", as dates on
+                /// the line just left, where nothing moves under the cursor.
+                function tidyLeftLine() {
+                    const line = styler.lineAt(cursorPosition)
+                    if (cursorLine >= 0 && line !== cursorLine && !readOnly && !root.loading)
+                        styler.tidyTaskLine(cursorLine)
+                    cursorLine = line
+                }
+
                 onCursorPositionChanged: {
+                    tidyLeftLine()
                     if (!root.loading)
                         Vault.cursorPosition = cursorPosition
                     if (linkPopup.items.length > 0 && styler.wikilinkAt(cursorPosition).start

@@ -52,10 +52,14 @@ QList<TaskMarker> taskMarkers(QStringView text)
                 found.append({TaskMarker::Repeat, start, end, u"every "_s + rule.join(u' ')});
         } else if (name == u"due" || name == u"done") {
             const QRegularExpressionMatch date = day.matchView(text.sliced(m.capturedEnd()));
-            if (!date.hasMatch() || !QDate::fromString(date.captured(1), Qt::ISODate).isValid())
-                continue;
-            // A time goes with a due day; a done one is the day alone.
             const bool due = name == u"due";
+            if (!date.hasMatch() || !QDate::fromString(date.captured(1), Qt::ISODate).isValid()) {
+                // Done, with no day said, is still done.
+                if (!due)
+                    found.append({TaskMarker::Done, start, m.capturedEnd(), {}});
+                continue;
+            }
+            // A time goes with a due day; a done one is the day alone.
             const QString time = due ? date.captured(2) : QString();
             const qsizetype end =
                 m.capturedEnd() + (due ? date.capturedEnd() : date.capturedEnd(1));
@@ -106,6 +110,7 @@ QList<MarkerSuggestion> markerSuggestions(const QString &typed, const QDate &tod
         {u"@yearly"_s, u"@yearly"_s, QObject::tr("Repeats every year")},
         {u"@every "_s, u"@every …"_s, QObject::tr("Repeats as written: every 2 weeks on monday")},
         {doneMarker(today), u"@done today"_s, QObject::tr("Done today")},
+        {doneMarker(today.addDays(-1)), u"@done yesterday"_s, QObject::tr("Done yesterday")},
         {u"@p1"_s, u"@p1"_s, QObject::tr("Urgent priority")},
         {u"@p2"_s, u"@p2"_s, QObject::tr("High priority")},
         {u"@p3"_s, u"@p3"_s, QObject::tr("Medium priority")},
@@ -164,6 +169,62 @@ int priorityOf(const QString &name)
     static const QRegularExpression level(uR"(^@?[pP]([1-4])$)"_s);
     const QRegularExpressionMatch m = level.match(name.trimmed());
     return m.hasMatch() ? m.captured(1).toInt() : 0;
+}
+
+std::optional<QString> tidiedTaskLine(const QString &line, const QDate &today)
+{
+    static const QRegularExpression box(uR"(^(\s*(?:[-*+]|\d+[.)])\s+\[)([ xX])(\].*)$)"_s);
+    const QRegularExpressionMatch m = box.match(line);
+    if (!m.hasMatch())
+        return std::nullopt;
+    static const QStringList weekdays = {u"monday"_s, u"tuesday"_s,  u"wednesday"_s, u"thursday"_s,
+                                         u"friday"_s, u"saturday"_s, u"sunday"_s};
+    // A word for a day, as of today: due on the next such weekday, done on the last.
+    const auto dayOf = [&](const QString &word, bool due) {
+        const QString lower = word.toLower();
+        if (lower == u"today")
+            return today;
+        if (lower == u"tomorrow")
+            return today.addDays(1);
+        if (lower == u"yesterday")
+            return today.addDays(-1);
+        const qsizetype weekday = weekdays.indexOf(lower);
+        if (weekday < 0)
+            return QDate();
+        const int ahead = (int(weekday) + 1 - today.dayOfWeek() + 7) % 7;
+        const int back = (today.dayOfWeek() - int(weekday) - 1 + 7) % 7;
+        return due ? today.addDays(ahead == 0 ? 7 : ahead) : today.addDays(back == 0 ? -7 : -back);
+    };
+    static const QRegularExpression said(
+        uR"((?:^|(?<=\s))@(due|done)(?!\s+\d{4}-\d{2}-\d{2})(?:\s+([A-Za-z]+))?(?=\s|$))"_s,
+        QRegularExpression::CaseInsensitiveOption);
+    QString text = line;
+    bool doneSaid = false;
+    bool changed = false;
+    QList<QRegularExpressionMatch> found;
+    for (const QRegularExpressionMatch &each : said.globalMatch(text, m.capturedStart(3)))
+        found.append(each);
+    for (auto it = found.crbegin(); it != found.crend(); ++it) {
+        const bool due = it->captured(1).toLower() == u"due";
+        const QDate day = dayOf(it->captured(2), due);
+        if (day.isValid()) {
+            text.replace(it->capturedStart(), it->capturedLength(),
+                         due ? dueMarker(day.toString(Qt::ISODate)) : doneMarker(day));
+        } else if (!due) {
+            // Done with no day, or with a word that is no day: done today, the word kept.
+            text.replace(it->capturedStart(1) - 1, it->capturedLength(1) + 1, doneMarker(today));
+        } else {
+            continue;
+        }
+        changed = true;
+        doneSaid = doneSaid || !due;
+    }
+    // Said done, it is ticked.
+    if (doneSaid && m.captured(2) == u" ") {
+        text[m.capturedEnd(1)] = u'x';
+        changed = true;
+    }
+    return changed ? std::optional(text) : std::nullopt;
 }
 
 QString withoutMarkers(const QString &text, const QList<TaskMarker::Kind> &kinds)

@@ -122,8 +122,15 @@ NoteScan scanNote(QStringView body, int firstLine)
 
     NoteScan scan;
     forEachProseLine(body, firstLine, [&](int number, qsizetype, const QString &line) {
-        if (const QRegularExpressionMatch m = task.match(line); m.hasMatch())
-            scan.tasks.append({number, m.captured(1) != u" ", m.captured(2).trimmed()});
+        if (const QRegularExpressionMatch m = task.match(line); m.hasMatch()) {
+            // Ticked, or said done in words.
+            const bool done =
+                m.captured(1) != u" " ||
+                std::ranges::any_of(taskMarkers(m.captured(2)), [](const TaskMarker &marker) {
+                    return marker.kind == TaskMarker::Done;
+                });
+            scan.tasks.append({number, done, m.captured(2).trimmed()});
+        }
 
         const QString text = withoutCodeSpans(line);
         QString rest = text;
@@ -457,6 +464,8 @@ QString readingMarkdown(QStringView original,
                     shown = u"🔁 "_s + line.mid(at + 1, length - 1);
                 else if (marker.kind == TaskMarker::Priority)
                     shown = u"🚩 "_s + priorityName(marker.value.toInt());
+                else if (marker.value.isEmpty())
+                    shown = u"✅"_s;
                 else
                     shown = (marker.kind == TaskMarker::Due ? u"📅 "_s : u"✅ "_s) +
                             readableDay(marker.value);

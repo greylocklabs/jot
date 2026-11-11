@@ -14,6 +14,7 @@ private Q_SLOTS:
     void reads();
     void findsWhereMarkersAre();
     void writesMarkers();
+    void writesDaysSaidInWordsAsDates();
     void offersMarkersAsTheyAreTyped();
     void findsTheNextDay();
     void writesTheNextOneWhenDone();
@@ -55,8 +56,9 @@ void TestTaskLine::reads_data()
     QTest::newRow("an address") << u"Mail hello@example.org"_s
                                 << TaskLine{u"Mail hello@example.org"_s, {}, {}, {}};
     QTest::newRow("a day that is not one")
-        << u"Pay @due soon @done 2026-02-30"_s
-        << TaskLine{u"Pay @due soon @done 2026-02-30"_s, {}, {}, {}};
+        << u"Pay @due soon"_s << TaskLine{u"Pay @due soon"_s, {}, {}, {}};
+    QTest::newRow("done with no day")
+        << u"Pay @done #home"_s << TaskLine{u"Pay #home"_s, {}, {}, {}};
 }
 
 void TestTaskLine::reads()
@@ -101,6 +103,26 @@ void TestTaskLine::writesMarkers()
     QCOMPARE(priorityOf(u"P3"_s), 3);
     QCOMPARE(priorityOf(u"@p4"_s), 4);
     QCOMPARE(priorityOf(u"p9"_s), 0);
+}
+
+void TestTaskLine::writesDaysSaidInWordsAsDates()
+{
+    const QDate wednesday(2026, 10, 28);
+    const auto tidied = [&](const QString &line) {
+        return tidiedTaskLine(line, wednesday).value_or(u"-"_s);
+    };
+    QCOMPARE(tidied(u"- [ ] Call @due tomorrow"_s), u"- [ ] Call @due 2026-10-29"_s);
+    QCOMPARE(tidied(u"- [ ] Call @due friday #calls"_s), u"- [ ] Call @due 2026-10-30 #calls"_s);
+    QCOMPARE(tidied(u"- [ ] Call @due Wednesday"_s), u"- [ ] Call @due 2026-11-04"_s);
+    // Said done, with a day or none, it is ticked; a weekday is the last one gone.
+    QCOMPARE(tidied(u"- [ ] Pay @done yesterday"_s), u"- [x] Pay @done 2026-10-27"_s);
+    QCOMPARE(tidied(u"  * [ ] Pay @done"_s), u"  * [x] Pay @done 2026-10-28"_s);
+    QCOMPARE(tidied(u"- [ ] Pay @done monday"_s), u"- [x] Pay @done 2026-10-26"_s);
+    QCOMPARE(tidied(u"- [ ] Pay @done soon"_s), u"- [x] Pay @done 2026-10-28 soon"_s);
+    // Dates already written, other lines and words that are no days stay as they are.
+    QCOMPARE(tidied(u"- [x] Pay @done 2026-10-01"_s), u"-"_s);
+    QCOMPARE(tidied(u"- [ ] Call @due soon"_s), u"-"_s);
+    QCOMPARE(tidied(u"Pay @done yesterday"_s), u"-"_s);
 }
 
 void TestTaskLine::offersMarkersAsTheyAreTyped()

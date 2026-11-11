@@ -59,12 +59,15 @@ after it, each starting with `@`:
 - [x] Pay rent @monthly @due 2026-11-01 @done 2026-11-01
 ```
 
-- `@due` and a date is when it is due, with a time after it if it has one.
+- `@due` and a date is when it is due, with a time after it if it has one. Typing `@due
+tomorrow`, `today` or a weekday writes its date once you leave the line.
 - `@daily`, `@weekly`, `@monthly`, `@yearly` and `@weekdays` repeat it. `@every` takes any
   other rule: `every 3 days`, `every other week`, `every monday`, `every 2 weeks on friday`.
   Ticking one that repeats writes the next one above it.
 - `@p1` is urgent, `@p2` high, `@p3` medium and `@p4` low. One without is of no priority.
-- `@done` and a date is when it was done. Jot writes it when you tick a to-do.
+- `@done` and a date is when it was done. Jot writes it when you tick a to-do, and `@done
+yesterday`, a weekday, or `@done` alone (today) are written as their dates, the to-do ticked,
+  once you leave the line.
 
 Typing `@` on a to-do offers all of these. Quick add, Ctrl+Shift+A, takes a to-do as you would
 say it, such as `call Soren tomorrow 3pm p1 #calls`, and Ctrl+Shift+D sets the day of the to-do

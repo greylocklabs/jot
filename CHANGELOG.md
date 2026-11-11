@@ -21,7 +21,9 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 - To-dos say when they are due, how they repeat and when they were done in plain words instead of
   emoji: `@due 2026-11-02 14:00`, `@daily`, `@weekly`, `@monthly`, `@yearly`, `@weekdays`,
-  `@every 2 weeks on monday` and `@done 2026-11-01`. Typing `@` on a to-do offers them, with
+  `@every 2 weeks on monday` and `@done 2026-11-01`. Days typed in words, as `@due tomorrow` or
+  `@done yesterday`, and `@done` alone, become dates when you leave the line, and a to-do said
+  done is ticked. Typing `@` on a to-do offers them, with
   today, tomorrow and next week as days. The editor colors each kind its own way, and Read mode
   shows them as 🔁 weekly, 📅 Nov 2 and ✅ Nov 1. **Breaking:** the emoji markers (📅, 🔁, ✅) are no
   longer read.
