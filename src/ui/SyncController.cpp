@@ -76,7 +76,8 @@ int SyncController::syncEvery() const
         return kEveryMs / 60000;
     bool ok = false;
     const int minutes = Vault(m_root).setting(u"syncEvery"_s).toInt(&ok);
-    return ok && minutes >= 0 ? minutes : kEveryMs / 60000;
+    // At most a week apart, which a timer's milliseconds still hold.
+    return ok && minutes >= 0 ? std::min(minutes, 7 * 24 * 60) : kEveryMs / 60000;
 }
 
 void SyncController::applyInterval()

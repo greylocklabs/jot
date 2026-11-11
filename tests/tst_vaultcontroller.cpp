@@ -2035,6 +2035,8 @@ void TestVaultController::syncsWithAGitRepository()
     QVERIFY(m_vault->setVaultSetting(u"syncEvery"_s, 15));
     QCOMPARE(sync->syncEvery(), 15);
     QVERIFY(readFile(m_root + u"/.jot/vault.yaml"_s).contains(u"syncEvery: 15\n"_s));
+    QVERIFY(m_vault->setVaultSetting(u"syncEvery"_s, 99999999));
+    QCOMPARE(sync->syncEvery(), 7 * 24 * 60);
     QVERIFY(m_vault->setVaultSetting(u"syncEvery"_s, 0));
     QCOMPARE(sync->syncEvery(), 0);
     QVERIFY(m_vault->setVaultSetting(u"syncEvery"_s, QVariant()));

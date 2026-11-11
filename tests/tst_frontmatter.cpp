@@ -119,6 +119,10 @@ void TestFrontMatter::addsAMissingKey()
     // Booleans and numbers are written as they are, not as text.
     QCOMPARE(jot::setFrontMatterKey(note, u"every"_s, 15),
              u"---\ntitle: T\nevery: 15\n---\nBody\n"_s);
+    QCOMPARE(jot::setFrontMatterKey(note, u"words"_s, 1234567),
+             u"---\ntitle: T\nwords: 1234567\n---\nBody\n"_s);
+    QCOMPARE(jot::setFrontMatterKey(note, u"ratio"_s, 0.1),
+             u"---\ntitle: T\nratio: 0.1\n---\nBody\n"_s);
     QCOMPARE(jot::setFrontMatterKey(note, u"hooks"_s, false),
              u"---\ntitle: T\nhooks: false\n---\nBody\n"_s);
 }
