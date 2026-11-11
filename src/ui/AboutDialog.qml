@@ -105,7 +105,7 @@ Popup {
             anchors.horizontalCenter: parent.horizontalCenter
             accent: true
             text: qsTr("What's new in %1").arg(Release.notesVersion)
-            visible: Release.notes !== ""
+            visible: Release.notes !== "" || Release.breaking !== ""
             onClicked: {
                 root.close()
                 root.whatsNewRequested()

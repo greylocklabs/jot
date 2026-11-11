@@ -1,7 +1,8 @@
 # Releasing Jot
 
 Notes for the next release collect under `## Unreleased` at the top of `CHANGELOG.md` as changes
-land, in words for the people using Jot. With everything for the release on `main`:
+land, in words for the people using Jot. Changes that break something people rely on, such as a file format
+or a setting, go in a `### Breaking` section first, which What's new shows in red. With everything for the release on `main`:
 
 ```sh
 make release-dry minor   # what it would do, changing nothing

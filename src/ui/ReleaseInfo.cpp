@@ -21,8 +21,24 @@ ReleaseInfo::ReleaseInfo(QObject *parent) : QObject(parent)
             greylock::ReleaseNotes::latest(greylock::ReleaseNotes::bundledChangelog())) {
         m_notesVersion = notes->version;
         m_notesDate = notes->date.startOfDay();
-        m_notes = notes->body;
+        std::tie(m_notes, m_breaking) = splitBreaking(notes->body);
     }
+}
+
+std::pair<QString, QString> ReleaseInfo::splitBreaking(const QString &notes)
+{
+    QStringList rest;
+    QStringList breaking;
+    bool inBreaking = false;
+    for (const QString &line : notes.split(u'\n')) {
+        if (line.startsWith(u"### "_s))
+            inBreaking = line.mid(4).trimmed().compare(u"Breaking"_s, Qt::CaseInsensitive) == 0;
+        else if (inBreaking)
+            breaking.append(line);
+        if (!inBreaking)
+            rest.append(line);
+    }
+    return {rest.join(u'\n').trimmed(), breaking.join(u'\n').trimmed()};
 }
 
 void ReleaseInfo::watchForUpdates(Settings *settings, greylock::UpdateCheck *check)
@@ -103,7 +119,7 @@ bool ReleaseInfo::takeUpdateNotice()
     Settings *settings = SettingsForeign::create(nullptr, nullptr);
     const QString last = settings->lastSeenVersion();
     settings->setLastSeenVersion(version());
-    return !last.isEmpty() && last != version() && !m_notes.isEmpty();
+    return !last.isEmpty() && last != version() && !(m_notes.isEmpty() && m_breaking.isEmpty());
 }
 
 bool ReleaseInfo::devel() const

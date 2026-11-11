@@ -7,6 +7,8 @@
 #include <QTimer>
 #include <QUrl>
 
+#include <utility>
+
 namespace greylock {
 class UpdateCheck;
 }
@@ -26,8 +28,11 @@ class ReleaseInfo : public QObject
     Q_PROPERTY(QString notesVersion READ notesVersion CONSTANT)
     /// The day those notes were released, as a local midnight for QML.
     Q_PROPERTY(QDateTime notesDate READ notesDate CONSTANT)
-    /// The notes themselves, Markdown.
+    /// The notes themselves, Markdown, but for their breaking changes.
     Q_PROPERTY(QString notes READ notes CONSTANT)
+    /// The changes in those notes that break something, from their `### Breaking` section,
+    /// Markdown without its heading; empty when there are none.
+    Q_PROPERTY(QString breaking READ breaking CONSTANT)
     Q_PROPERTY(QUrl website READ website CONSTANT)
     Q_PROPERTY(QUrl privacy READ privacy CONSTANT)
     Q_PROPERTY(QUrl terms READ terms CONSTANT)
@@ -50,6 +55,9 @@ public:
     [[nodiscard]] QString notesVersion() const { return m_notesVersion; }
     [[nodiscard]] QDateTime notesDate() const { return m_notesDate; }
     [[nodiscard]] QString notes() const { return m_notes; }
+    [[nodiscard]] QString breaking() const { return m_breaking; }
+    /// A release's notes, Markdown, as the rest and the body of their `### Breaking` section.
+    [[nodiscard]] static std::pair<QString, QString> splitBreaking(const QString &notes);
     [[nodiscard]] QUrl website() const;
     [[nodiscard]] QUrl privacy() const;
     [[nodiscard]] QUrl terms() const;
@@ -83,6 +91,7 @@ private:
     QString m_notesVersion;
     QDateTime m_notesDate;
     QString m_notes;
+    QString m_breaking;
 };
 
 } // namespace jot
