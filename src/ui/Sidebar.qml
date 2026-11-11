@@ -278,12 +278,25 @@ Rectangle {
                         border.color: Theme.accent
                     }
 
-                    // Typing a new name: Return or leaving keeps it, Escape does not.
+                    // How far the name is from the emoji's start, to type the new one where it was.
+                    TextMetrics {
+                        id: emojiRoom
+                        text: notebook.emoji !== "" ? notebook.emoji + "  " : ""
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.textMd
+                    }
+
+                    // Typing a new name, in the row's place and shape, its text where the name
+                    // was: Return or leaving keeps it, Escape does not.
                     Loader {
                         anchors {
                             fill: parent
-                            leftMargin: Theme.space3 + notebook.depth * Theme.treeIndent
+                            leftMargin: Theme.space4 + notebook.depth * Theme.treeIndent
+                                        + Theme.smallGlyphSize + Theme.space3
+                                        + emojiRoom.advanceWidth - Theme.space2
                             rightMargin: Theme.space3
+                            topMargin: Theme.space1
+                            bottomMargin: Theme.space1
                         }
                         active: notebook.renaming
                         sourceComponent: Field {
@@ -300,11 +313,18 @@ Rectangle {
                                 root.renamingPath = ""
                             }
 
+                            objectName: "notebookName"
                             text: notebook.name
-                            topPadding: Theme.space1
-                            bottomPadding: Theme.space1
+                            topPadding: 0
+                            bottomPadding: 0
                             leftPadding: Theme.space2
                             font.pixelSize: Theme.textMd
+                            background: Rectangle {
+                                radius: Theme.radiusSm
+                                color: Theme.surface
+                                border.width: 1
+                                border.color: Theme.accent
+                            }
                             Accessible.name: qsTr("Name of %1").arg(notebook.name)
                             Component.onCompleted: {
                                 forceActiveFocus()
@@ -347,8 +367,10 @@ Rectangle {
                                 rightMargin: Theme.space3
                                 verticalCenter: parent.verticalCenter
                             }
-                            text: notebook.emoji !== "" ? notebook.emoji + "  " + notebook.name :
-                                                          notebook.name
+                            // Renaming, only the emoji stays, beside the name being typed.
+                            text: notebook.renaming ? notebook.emoji : notebook.emoji !== ""
+                                                      ? notebook.emoji + "  " + notebook.name :
+                                                        notebook.name
                             elide: Text.ElideRight
                             color: notebook.selected ? Theme.text : Theme.textMuted
                             font.family: Theme.fontFamily
