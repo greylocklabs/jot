@@ -282,8 +282,7 @@ Rectangle {
                     TextMetrics {
                         id: emojiRoom
                         text: notebook.emoji !== "" ? notebook.emoji + "  " : ""
-                        font.family: Theme.fontFamily
-                        font.pixelSize: Theme.textMd
+                        font: nameLabel.font
                     }
 
                     // Typing a new name, in the row's place and shape, its text where the name
@@ -291,8 +290,8 @@ Rectangle {
                     Loader {
                         anchors {
                             fill: parent
-                            leftMargin: Theme.space4 + notebook.depth * Theme.treeIndent
-                                        + Theme.smallGlyphSize + Theme.space3
+                            // Where the name is drawn, past its emoji, less the field's own padding.
+                            leftMargin: notebook.contentItem.x + nameLabel.x
                                         + emojiRoom.advanceWidth - Theme.space2
                             rightMargin: Theme.space3
                             topMargin: Theme.space1
@@ -361,6 +360,8 @@ Rectangle {
                             }
                         }
                         Text {
+                            id: nameLabel
+
                             anchors {
                                 left: fold.right
                                 right: countLabel.left
