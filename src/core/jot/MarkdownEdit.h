@@ -92,6 +92,10 @@ struct EmojiQuery
 /// code, and nothing for a time such as 10:30 or a link such as https://.
 [[nodiscard]] std::optional<EmojiQuery> emojiAt(const QString &text, qsizetype cursor);
 
+/// The marker the cursor is typing on a to-do's line: the letters after an @ that starts a word
+/// past the box, maybe none yet. Nothing elsewhere, or in code.
+[[nodiscard]] std::optional<EmojiQuery> markerAt(const QString &text, qsizetype cursor);
+
 /// Puts `target` in the wikilink being typed at the cursor, closing it with `]]` unless it
 /// is closed already, and leaves the cursor after the link. A `|label` or `#heading` the link
 /// has already stays.

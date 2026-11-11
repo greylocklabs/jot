@@ -27,6 +27,8 @@ struct NoteInfo
     QString type;
     /// When a task note was done, from `done:`; empty when it is not said.
     QString done;
+    /// How a task note repeats, from `repeat:`, such as "every week"; empty when it does not.
+    QString repeat;
     /// When the file last changed, in nanoseconds since 1970.
     qint64 modified = 0;
 };
@@ -94,7 +96,7 @@ class VaultIndex
 {
 public:
     /// Raised whenever what the index stores changes shape; an older index is rebuilt.
-    static constexpr int kSchema = 7;
+    static constexpr int kSchema = 8;
 
     explicit VaultIndex(Vault vault, QString databasePath = {});
     ~VaultIndex();

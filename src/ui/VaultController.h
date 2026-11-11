@@ -332,7 +332,8 @@ public:
     /// note shown, in the editor's text.
     Q_INVOKABLE bool setTaskDone(const QString &path, int line, bool done,
                                  const QString &text = {});
-    /// Marks a note that is a task as done, with when it was.
+    /// Marks a note that is a task as done, with when it was; one that repeats is due again on
+    /// its next day after today instead.
     Q_INVOKABLE bool completeTask(const QString &path);
     /// Marks a note that is a done task as open again, forgetting when it was done.
     Q_INVOKABLE bool reopenTask(const QString &path);

@@ -95,10 +95,10 @@ void TestToDoReminders::write(const QString &path, const QString &text)
 
 void TestToDoReminders::remindsAtTheTimeAndInTheMorning()
 {
-    write(u"Today.md"_s, u"- [ ] Call Soren 📅 2026-10-28 14:00\n"
-                         "- [ ] Buy rope 📅 2026-10-28\n"
-                         "- [ ] Later 📅 2026-10-30\n"
-                         "- [x] Done already 📅 2026-10-28 10:00\n"_s);
+    write(u"Today.md"_s, u"- [ ] Call Soren @due 2026-10-28 14:00\n"
+                         "- [ ] Buy rope @due 2026-10-28\n"
+                         "- [ ] Later @due 2026-10-30\n"
+                         "- [x] Done already @due 2026-10-28 10:00\n"_s);
     QVERIFY(m_vault->openPath(m_dir->filePath(u"Notes"_s)));
     m_reminders.setup(m_vault.get(), &m_server, m_settings.get());
     QVERIFY(m_server.shown.isEmpty());
@@ -128,7 +128,7 @@ void TestToDoReminders::remindsAtTheTimeAndInTheMorning()
 
 void TestToDoReminders::tellsWhatCameDueWhileClosed()
 {
-    write(u"Today.md"_s, u"- [ ] Call Soren 📅 2026-10-27 14:00\n- [ ] Old 📅 2026-10-01\n"_s);
+    write(u"Today.md"_s, u"- [ ] Call Soren @due 2026-10-27 14:00\n- [ ] Old @due 2026-10-01\n"_s);
     // Last open yesterday at noon: Call Soren came due since, the old one long before.
     m_settings->setLastReminderCheck(QDateTime(QDate(2026, 10, 27), QTime(12, 0)));
     QVERIFY(m_vault->openPath(m_dir->filePath(u"Notes"_s)));
@@ -141,9 +141,9 @@ void TestToDoReminders::tellsWhatCameDueWhileClosed()
 
 void TestToDoReminders::manyAtOnceComeAsOne()
 {
-    write(u"Today.md"_s, u"- [ ] One 📅 2026-10-28\n- [ ] Two 📅 2026-10-28\n"
-                         "- [ ] Three 📅 2026-10-28\n- [ ] Four 📅 2026-10-28\n"
-                         "- [ ] Five 📅 2026-10-28\n"_s);
+    write(u"Today.md"_s, u"- [ ] One @due 2026-10-28\n- [ ] Two @due 2026-10-28\n"
+                         "- [ ] Three @due 2026-10-28\n- [ ] Four @due 2026-10-28\n"
+                         "- [ ] Five @due 2026-10-28\n"_s);
     QVERIFY(m_vault->openPath(m_dir->filePath(u"Notes"_s)));
     m_reminders.setup(m_vault.get(), &m_server, m_settings.get());
     QSignalSpy today(&m_reminders, &ToDoReminders::todayRequested);
@@ -158,7 +158,7 @@ void TestToDoReminders::manyAtOnceComeAsOne()
 
 void TestToDoReminders::buttonsOpenTickAndSnooze()
 {
-    write(u"Today.md"_s, u"# Today\n\n- [ ] Call Soren 📅 2026-10-28 09:00\n"_s);
+    write(u"Today.md"_s, u"# Today\n\n- [ ] Call Soren @due 2026-10-28 09:00\n"_s);
     write(u"Taxes.md"_s, u"---\ntask: open\ndue: 2026-10-28T09:00\n---\n"_s);
     QVERIFY(m_vault->openPath(m_dir->filePath(u"Notes"_s)));
     m_reminders.setup(m_vault.get(), &m_server, m_settings.get());
@@ -194,7 +194,7 @@ void TestToDoReminders::buttonsOpenTickAndSnooze()
 
 void TestToDoReminders::quietWhenTurnedOff()
 {
-    write(u"Today.md"_s, u"- [ ] Buy rope 📅 2026-10-28\n"_s);
+    write(u"Today.md"_s, u"- [ ] Buy rope @due 2026-10-28\n"_s);
     m_settings->setRemindersOn(false);
     QVERIFY(m_vault->openPath(m_dir->filePath(u"Notes"_s)));
     m_reminders.setup(m_vault.get(), &m_server, m_settings.get());
@@ -206,7 +206,7 @@ void TestToDoReminders::quietWhenTurnedOff()
 void TestToDoReminders::snoozedComesBackOnlyWhileOpen()
 {
     write(u"Today.md"_s,
-          u"- [ ] Call Soren 📅 2026-10-28 09:00\n- [ ] Buy rope 📅 2026-10-28 09:00\n"_s);
+          u"- [ ] Call Soren @due 2026-10-28 09:00\n- [ ] Buy rope @due 2026-10-28 09:00\n"_s);
     QVERIFY(m_vault->openPath(m_dir->filePath(u"Notes"_s)));
     m_reminders.setup(m_vault.get(), &m_server, m_settings.get());
     m_now = QDateTime(QDate(2026, 10, 28), QTime(9, 0));
@@ -234,13 +234,13 @@ void TestToDoReminders::snoozedComesBackOnlyWhileOpen()
 
 void TestToDoReminders::doneOpensWhatChangedSince()
 {
-    write(u"Today.md"_s, u"- [ ] Call Soren 📅 2026-10-28 09:00\n"_s);
+    write(u"Today.md"_s, u"- [ ] Call Soren @due 2026-10-28 09:00\n"_s);
     QVERIFY(m_vault->openPath(m_dir->filePath(u"Notes"_s)));
     m_reminders.setup(m_vault.get(), &m_server, m_settings.get());
     m_now = QDateTime(QDate(2026, 10, 28), QTime(9, 0));
     m_reminders.check();
     QCOMPARE(m_server.shown.size(), 1);
-    write(u"Today.md"_s, u"- [ ] Call Soren and Ada 📅 2026-10-28 09:00\n"_s);
+    write(u"Today.md"_s, u"- [ ] Call Soren and Ada @due 2026-10-28 09:00\n"_s);
     QSignalSpy opened(&m_reminders, &ToDoReminders::openRequested);
     m_server.click(1, u"done"_s);
     QCOMPARE(opened.size(), 1);
@@ -252,7 +252,7 @@ void TestToDoReminders::doneOpensWhatChangedSince()
 void TestToDoReminders::anotherVaultForgetsTheLast()
 {
     write(u"Today.md"_s,
-          u"- [ ] Call Soren 📅 2026-10-28 09:00\n- [ ] Buy rope 📅 2026-10-28 09:00\n"_s);
+          u"- [ ] Call Soren @due 2026-10-28 09:00\n- [ ] Buy rope @due 2026-10-28 09:00\n"_s);
     QVERIFY(QDir().mkpath(m_dir->filePath(u"Other"_s)));
     QVERIFY(m_vault->openPath(m_dir->filePath(u"Notes"_s)));
     m_reminders.setup(m_vault.get(), &m_server, m_settings.get());

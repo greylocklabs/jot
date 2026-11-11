@@ -11,11 +11,11 @@ namespace jot {
 /// A to-do as typed into quick add, read the way a to-do app reads it.
 struct QuickTask
 {
-    /// The words left once the day, time and repeat are taken out; @labels and #tags stay.
+    /// The words left once the day, time and repeat are taken out; #tags stay.
     QString title;
     /// "2026-10-29", or "2026-10-29T14:00" with a time; empty when no day was given.
     QString due;
-    /// How it repeats, as Obsidian Tasks writes it after 🔁, such as "every week".
+    /// How it repeats, as a rule such as "every week".
     QString repeat;
     /// The to-do as its checkbox line says it, without `- [ ] `.
     QString line;
@@ -23,16 +23,17 @@ struct QuickTask
     bool dayGiven = false;
 };
 
-/// Reads `typed`, such as "call Soren tomorrow 3pm @minutes", as of `now`. It understands
+/// Reads `typed`, such as "call Soren tomorrow 3pm #calls", as of `now`. It understands
 /// today, tomorrow, weekday names (the next one after today), next week, next month, the
 /// weekend, in N days, weeks or months, a month and day such as "oct 29", ISO dates, times
 /// such as "3pm", "3:30 pm", "15:00" and "noon", and repeats such as "every week", "every 2
 /// weeks", "every monday", "every weekday" and "daily". A time alone means today; a repeat
-/// alone starts on its first day.
+/// alone starts on its first day. Markers typed as written, such as `@weekly` or `@due
+/// 2026-11-02`, are taken as they say.
 [[nodiscard]] QuickTask readQuickTask(const QString &typed, const QDateTime &now);
 
 /// `text`, a checkbox's words after `- [ ] `, due on `due` and repeating as `repeat`, either
-/// empty to take it away, in Obsidian Tasks' markers. Its other markers stay as they are.
+/// empty to take it away, in Jot's markers, `@weekly @due 2026-11-02`. A done day stays.
 [[nodiscard]] QString withTaskSchedule(const QString &text, const QString &due,
                                        const QString &repeat);
 

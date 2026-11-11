@@ -62,6 +62,26 @@ QRegularExpression words(const QString &pattern)
 
 QuickTask readQuickTask(const QString &typed, const QDateTime &now)
 {
+    // Markers typed as they are written, such as @weekly or @due 2026-11-02, say it outright.
+    const TaskLine written = readTaskLine(typed);
+    if (!written.due.isEmpty() || !written.repeat.isEmpty()) {
+        QuickTask task = readQuickTask(written.title, now);
+        if (!written.repeat.isEmpty()) {
+            task.repeat = written.repeat;
+            if (task.due.isEmpty())
+                task.due = now.date().toString(Qt::ISODate);
+        }
+        if (!written.due.isEmpty()) {
+            task.due = written.due;
+            task.dayGiven = true;
+        }
+        task.line = task.title;
+        if (!task.repeat.isEmpty())
+            task.line += u' ' + repeatMarker(task.repeat);
+        if (!task.due.isEmpty())
+            task.line += u' ' + dueMarker(task.due);
+        return task;
+    }
     const QDate today = now.date();
     QString text = u' ' + typed + u' ';
     QDate day;
@@ -82,7 +102,7 @@ QuickTask readQuickTask(const QString &typed, const QDateTime &now)
         const QString count = m.captured(1).trimmed().toLower();
         const int n = count == u"other" ? 2 : count.isEmpty() ? 1 : count.toInt();
         if (const int wd = weekday(step); wd > 0) {
-            // Every other Monday is every two weeks, on Mondays, as Obsidian Tasks writes it.
+            // Every other Monday is every two weeks, on Mondays.
             repeat = n > 1 ? u"every %1 weeks on %2"_s.arg(n).arg(step) : u"every %1"_s.arg(step);
             firstDay = next(today, wd, true);
         } else {
@@ -193,74 +213,36 @@ QuickTask readQuickTask(const QString &typed, const QDateTime &now)
                        : day.toString(Qt::ISODate);
     task.line = task.title;
     if (!repeat.isEmpty())
-        task.line += u" 🔁 "_s + repeat;
-    if (day.isValid())
-        task.line += u" 📅 "_s + day.toString(Qt::ISODate) +
-                     (time.isValid() ? u' ' + time.toString(u"HH:mm"_s) : QString());
+        task.line += u' ' + repeatMarker(repeat);
+    if (!task.due.isEmpty())
+        task.line += u' ' + dueMarker(task.due);
     return task;
 }
 
-namespace {
-
-// Obsidian Tasks' markers, which end a to-do's own words.
-const QRegularExpression &taskMarker()
-{
-    static const QRegularExpression marker(u"(?:📅|⏳|🛫|➕|✅|❌|🔁|⏫|🔼|🔽|🔺|⏬)\\x{FE0F}?"_s);
-    return marker;
-}
-
-} // namespace
-
 QString withTaskSchedule(const QString &text, const QString &due, const QString &repeat)
 {
-    // The words, and each marker with what follows it up to the next; the day and repeat go.
-    QList<QRegularExpressionMatch> found;
-    for (const QRegularExpressionMatch &m : taskMarker().globalMatch(text))
-        found.append(m);
-    QString words = (found.isEmpty() ? text : text.first(found.first().capturedStart())).trimmed();
-    QStringList kept;
-    for (qsizetype i = 0; i < found.size(); ++i) {
-        const QRegularExpressionMatch &m = found.at(i);
-        const qsizetype end = i + 1 < found.size() ? found.at(i + 1).capturedStart() : text.size();
-        const QString marker = text.sliced(m.capturedStart(), end - m.capturedStart()).trimmed();
-        if (marker.startsWith(u"🔁"_s)) {
-            // A label or a tag after the rule is the to-do's own.
-            for (const QString &word : marker.split(u' ', Qt::SkipEmptyParts)) {
-                if (word.startsWith(u'@') || word.startsWith(u'#'))
-                    words += u' ' + word;
-            }
-            continue;
-        }
-        if (!marker.startsWith(u"📅"_s)) {
-            kept << marker;
-            continue;
-        }
-        // Words after the day, such as a tag, are the to-do's own too.
-        static const QRegularExpression day(
-            uR"(^📅\x{FE0F}?\s*\d{4}-\d{2}-\d{2}(?:[ T]\d{1,2}:\d{2})?)"_s);
-        const QString after = marker.sliced(day.match(marker).capturedLength()).trimmed();
-        if (!after.isEmpty())
-            words += u' ' + after;
-    }
-    QString line = words;
+    // The words with the day and repeat gone; a done day comes back after the new ones.
+    QString line = withoutMarkers(text, {TaskMarker::Due, TaskMarker::Repeat, TaskMarker::Done});
+    while (line.endsWith(u' '))
+        line.chop(1);
     if (!repeat.isEmpty())
-        line += u" 🔁 "_s + repeat;
+        line += u' ' + repeatMarker(repeat);
     if (!due.isEmpty())
-        line += u" 📅 "_s + QString(due).replace(u'T', u' ');
-    for (const QString &marker : std::as_const(kept))
-        line += u' ' + marker;
+        line += u' ' + dueMarker(due);
+    if (const QString done = readTaskLine(text).done; !done.isEmpty())
+        line += u' ' + doneMarker(QDate::fromString(done, Qt::ISODate));
     return line;
 }
 
 std::optional<QString> scheduledFromWords(const QString &text, const QDateTime &now)
 {
-    const QRegularExpressionMatch first = taskMarker().match(text);
-    const QString words = first.hasMatch() ? text.first(first.capturedStart()) : text;
-    const QuickTask said = readQuickTask(words, now);
+    const QList<TaskMarker> markers = taskMarkers(text);
+    const qsizetype first = markers.isEmpty() ? text.size() : markers.first().start;
+    const QuickTask said = readQuickTask(text.first(first), now);
     if (said.due.isEmpty() && said.repeat.isEmpty())
         return std::nullopt;
     const TaskLine was = readTaskLine(text);
-    const QString rest = first.hasMatch() ? text.sliced(first.capturedStart()) : QString();
+    const QString rest = text.sliced(first);
     // A day already written stays unless the words name another; a time said alone goes on it.
     QString due = said.due;
     if (!said.dayGiven && !was.due.isEmpty()) {

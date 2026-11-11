@@ -31,7 +31,7 @@ struct ToDo
     /// A checkbox's text as written, markers and all, which ticking it looks for; empty for a
     /// task note.
     QString text;
-    /// When it was done, from a checkbox's ✅ or a task note's `done:`; empty when it is open or
+    /// When it was done, from a checkbox's @done or a task note's `done:`; empty when it is open or
     /// that was not written.
     QString done;
 

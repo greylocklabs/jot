@@ -162,6 +162,9 @@ private:
     void merge(int start, int length, const QTextCharFormat &format);
     void mark(int start, int length);
     void inlineStyles(const QString &text, int from);
+    /// Colors an open to-do's markers, such as `@weekly` and `@due 2026-11-02`, each kind its own
+    /// way, keeping them as written.
+    void taskMarkerStyles(const QString &text);
     /// Styles a block in source mode: the marks colored or faded, but none hidden or resized.
     void sourceBlock(const QString &text, int state, bool first);
     /// Styles CriticMarkup's additions, deletions, substitutions, highlights and comments, and

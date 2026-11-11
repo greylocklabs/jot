@@ -207,7 +207,8 @@ void TestVaultCommands::listsWhatIsLeftToDo()
 
     // Views and tags, with their marks or without.
     QVERIFY(notefile::write(m_vault->absolute(u"Calls.md"_s),
-                            u"- [ ] Call Soren #calls 📅 2020-01-01\n- [ ] Call Mara\n"_s, &error));
+                            u"- [ ] Call Soren #calls @due 2020-01-01\n- [ ] Call Mara\n"_s,
+                            &error));
     m_index->update({u"Calls.md"_s});
     QCOMPARE(run([](auto &c) { return c.listTasks(true, u"today"_s, u"#calls"_s); }), 0);
     QCOMPARE(json().array().size(), 1);
@@ -218,7 +219,7 @@ void TestVaultCommands::listsWhatIsLeftToDo()
 
     // Done ones, under the day they were done.
     QVERIFY(notefile::write(m_vault->absolute(u"Calls.md"_s),
-                            u"- [x] Call Soren ✅ 2026-10-27\n- [x] Call Mara\n"_s, &error));
+                            u"- [x] Call Soren @done 2026-10-27\n- [x] Call Mara\n"_s, &error));
     m_index->update({u"Calls.md"_s});
     QCOMPARE(run([](auto &c) { return c.listTasks(true, u"done"_s); }), 0);
     QCOMPARE(json().array().first()[u"title"_s].toString(), u"Call Soren"_s);
@@ -260,7 +261,7 @@ void TestVaultCommands::addsAToDoToTheInbox()
     QCOMPARE(m_out, u"Inbox.md: - [ ] buy rope\n"_s);
     QString error;
     QCOMPARE(*notefile::read(m_vault->absolute(u"Inbox.md"_s), &error),
-             u"- [ ] pay rent #home 📅 %1\n- [ ] buy rope\n"_s.arg(
+             u"- [ ] pay rent #home @due %1\n- [ ] buy rope\n"_s.arg(
                  QDate::currentDate().toString(Qt::ISODate)));
     // The index knows them at once.
     QCOMPARE(run([](auto &c) { return c.listTasks(true, u"today"_s, u"home"_s); }), 0);

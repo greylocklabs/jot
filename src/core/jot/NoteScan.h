@@ -99,7 +99,7 @@ rewriteLinks(QStringView body,
 /// and nothing else changed. Given `text`, the task must say that: when lines have moved
 /// since `line` was read, the one task that does is changed instead. Ticking one writes
 /// `today` after it, and one that repeats gets its next one above it, as completedTaskLine()
-/// says; unticking one takes away its `✅` date. Nothing when there is no such task.
+/// says; unticking one takes away its `@done` day. Nothing when there is no such task.
 [[nodiscard]] std::optional<QString> setTaskDone(const QString &note, int line, bool done,
                                                  const QString &text = {},
                                                  const QDate &today = QDate::currentDate());

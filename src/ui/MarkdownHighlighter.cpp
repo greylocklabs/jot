@@ -5,6 +5,7 @@
 
 #include "jot/Diagram.h"
 #include "jot/FrontMatter.h"
+#include "jot/TaskLine.h"
 #include "jot/Vault.h"
 
 #include <Sonnet/Speller>
@@ -627,6 +628,7 @@ void MarkdownHighlighter::styleBlock(const QString &text)
         }
     }
     inlineStyles(text, from);
+    taskMarkerStyles(text);
 }
 
 void MarkdownHighlighter::sourceBlock(const QString &text, int state, bool first)
@@ -724,6 +726,26 @@ void MarkdownHighlighter::sourceBlock(const QString &text, int state, bool first
         }
     }
     inlineStyles(text, from);
+    taskMarkerStyles(text);
+}
+
+void MarkdownHighlighter::taskMarkerStyles(const QString &text)
+{
+    const QRegularExpressionMatch m = listPattern().match(text);
+    // Only an open to-do's: a done one is all faded.
+    if (!m.hasMatch() || m.capturedLength(4) == 0 || m.captured(5) != u" ")
+        return;
+    const int from = int(m.capturedEnd());
+    // Each kind in a color of its own from the theme's code colors, none the accent tags are
+    // in, so they tell apart at a glance in any theme.
+    for (const TaskMarker &marker : taskMarkers(QStringView(text).sliced(from))) {
+        QTextCharFormat marked;
+        marked.setForeground(marker.kind == TaskMarker::Due      ? m_look.code.number
+                             : marker.kind == TaskMarker::Repeat ? m_look.code.type
+                                                                 : m_look.code.string);
+        marked.setFontWeight(m_look.strongWeight);
+        merge(from + int(marker.start), int(marker.end - marker.start), marked);
+    }
 }
 
 QList<std::pair<int, int>> MarkdownHighlighter::criticStyles(const QString &text, int from)

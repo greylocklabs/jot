@@ -355,7 +355,7 @@ void TestNoteEditor::undoesATickOnTheShownNote()
     QCOMPARE(text(), u"\ufeffone\n- [ ] two\nthree\n"_s);
     QVERIFY(!body->property("canUndo").toBool());
     const QString ticked =
-        u"\ufeffone\n- [x] two ✅ %1\nthree\n"_s.arg(QDate::currentDate().toString(Qt::ISODate));
+        u"\ufeffone\n- [x] two @done %1\nthree\n"_s.arg(QDate::currentDate().toString(Qt::ISODate));
 
     // Each step is an edit in the editor, not a reload, so the editor's own undo keeps it.
     QVERIFY(m_vault->setTaskDone(u"Windows.md"_s, 2, true));
@@ -1236,7 +1236,7 @@ void TestNoteEditor::setsAToDosDayAndRepeat()
     // Words that say when become the markers, in one step to undo.
     body->setProperty("cursorPosition", 12);
     schedule();
-    QCOMPARE(text(), u"# Chores\n- [ ] water the plants 🔁 every week 📅 %1\nsweep\n"_s.arg(today));
+    QCOMPARE(text(), u"# Chores\n- [ ] water the plants @weekly @due %1\nsweep\n"_s.arg(today));
     QMetaObject::invokeMethod(body, "undo");
     QCOMPARE(text(), u"# Chores\n- [ ] water the plants every week\nsweep\n"_s);
 
@@ -1251,7 +1251,7 @@ void TestNoteEditor::setsAToDosDayAndRepeat()
     for (const QChar c : u"2026-12-24 every year"_s)
         QTest::keyClick(m_window.get(), c.toLatin1());
     QTest::keyClick(m_window.get(), Qt::Key_Return);
-    QTRY_VERIFY(text().contains(u"- [ ] sweep 🔁 every year 📅 2026-12-24\n"_s));
+    QTRY_VERIFY(text().contains(u"- [ ] sweep @yearly @due 2026-12-24\n"_s));
 
     // Asked again, it offers what is there; emptied, it takes the day and repeat away.
     body->setProperty("cursorPosition", int(text().indexOf(u"sweep"_s)) + 2);
@@ -1263,7 +1263,7 @@ void TestNoteEditor::setsAToDosDayAndRepeat()
     QTRY_VERIFY(text().contains(u"- [ ] sweep\n"_s));
 
     // A to-do of nothing but its day is cleared too.
-    body->setProperty("text", u"- [ ] 📅 2026-12-24"_s);
+    body->setProperty("text", u"- [ ] @due 2026-12-24"_s);
     body->setProperty("cursorPosition", 3);
     schedule();
     QTRY_VERIFY(popup->property("activeFocus").toBool());
@@ -1411,6 +1411,20 @@ void TestNoteEditor::putsInEmojiTypedAfterAColon()
     QTest::keyClick(m_window.get(), Qt::Key_Return);
 
     QCOMPARE(body->property("text").toString().mid(before.size()), u"Nice 🦊 at 10:30 :thumbs\n"_s);
+
+    // On a to-do's line, an @ offers its markers, written as they are kept.
+    type(u"- [ ] water @we"_s);
+    auto *markers = m_editor->findChild<QObject *>(u"markerPopup"_s);
+    QVERIFY(markers);
+    QTRY_VERIFY(markers->property("visible").toBool());
+    QCOMPARE(markers->property("items").toList().first().toMap().value(u"text"_s).toString(),
+             u"@weekly"_s);
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    type(u"@due"_s);
+    QTRY_VERIFY(markers->property("visible").toBool());
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    QTRY_VERIFY(body->property("text").toString().endsWith(
+        u"- [ ] water @weekly @due %1 "_s.arg(QDate::currentDate().toString(Qt::ISODate))));
 }
 
 void TestNoteEditor::togglesSourceMode()
@@ -1605,8 +1619,8 @@ void TestNoteEditor::tickingARepeatingToDoWritesTheNext()
 {
     const QString today = QDate::currentDate().toString(Qt::ISODate);
     QString error;
-    QVERIFY(notefile::write(m_root + u"/Chores.md"_s,
-                            u"- [ ] Water 🔁 every day 📅 %1\n"_s.arg(today), &error));
+    QVERIFY(notefile::write(m_root + u"/Chores.md"_s, u"- [ ] Water @daily @due %1\n"_s.arg(today),
+                            &error));
     QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Chores.md"_s), 3000);
     m_vault->setCurrent(u"Chores.md"_s);
     QQuickItem *body = find(u"body"_s);
@@ -1626,8 +1640,7 @@ void TestNoteEditor::tickingARepeatingToDoWritesTheNext()
     const QString tomorrow = QDate::currentDate().addDays(1).toString(Qt::ISODate);
     QTRY_COMPARE_WITH_TIMEOUT(
         body->property("text").toString(),
-        u"- [ ] Water 🔁 every day 📅 %1\n- [x] Water 🔁 every day 📅 %2 ✅ %2\n"_s.arg(tomorrow,
-                                                                                        today),
+        u"- [ ] Water @daily @due %1\n- [x] Water @daily @due %2 @done %2\n"_s.arg(tomorrow, today),
         3000);
 }
 

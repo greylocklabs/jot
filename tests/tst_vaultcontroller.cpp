@@ -1797,6 +1797,22 @@ void TestVaultController::listsAndTicksWhatIsLeftToDo()
     QVERIFY(m_vault->currentText().contains(u"\ndone: 20"_s));
     QCOMPARE(column(tasks, "kind"), QStringList(5, u"task"_s));
 
+    // A task note that repeats is due again on its next day after today, still open.
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Inbox/Rent.md"_s,
+                            u"---\ntask: open\ndue: 2026-01-01 09:00\nrepeat: every month\n---\n"_s,
+                            &error));
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Inbox/Rent.md"_s), 3000);
+    QCOMPARE(m_vault->index()->note(u"Inbox/Rent.md"_s)->repeat, u"every month"_s);
+    QVERIFY(m_vault->completeTask(u"Inbox/Rent.md"_s));
+    QDate next(2026, 1, 1);
+    while (next <= QDate::currentDate())
+        next = next.addMonths(1);
+    const QString rent = readFile(m_root + u"/Inbox/Rent.md"_s);
+    QVERIFY2(rent.contains(u"due: %1 09:00"_s.arg(next.toString(Qt::ISODate))), qPrintable(rent));
+    QVERIFY(rent.contains(u"task: open"_s));
+    QVERIFY(!rent.contains(u"\ndone:"_s));
+
     QSignalSpy reveal(m_vault.get(), &VaultController::revealPosition);
     m_vault->openAt(u"Ashfall/Characters/Soren.md"_s, 7);
     QCOMPARE(m_vault->current(), u"Ashfall/Characters/Soren.md"_s);
@@ -1834,7 +1850,7 @@ void TestVaultController::listsAndReopensDoneToDos()
     const QString groceries = readFile(m_root + u"/Inbox/Groceries.md"_s);
     QVERIFY(groceries.contains(u"task: open"_s));
     QVERIFY(!groceries.contains(u"\ndone:"_s));
-    QVERIFY(!readFile(m_root + u"/Ashfall/Characters/Soren.md"_s).contains(u"✅"_s));
+    QVERIFY(!readFile(m_root + u"/Ashfall/Characters/Soren.md"_s).contains(u"@done "_s));
     // Reopening is undone like a tick.
     QVERIFY(m_vault->undo());
     QVERIFY(readFile(m_root + u"/Inbox/Groceries.md"_s).contains(u"task: done"_s));
@@ -2131,14 +2147,14 @@ void TestVaultController::headsToDosByDay()
     const QDate today = QDate::currentDate();
     const auto day = [&today](int days) { return today.addDays(days).toString(Qt::ISODate); };
     QString error;
-    QVERIFY(
-        notefile::write(m_root + u"/Plans.md"_s,
-                        u"- [ ] Pay the fine 📅 %1\n"
-                        "- [ ] Call Soren #calls 📅 %2 14:00\n"
-                        "- [ ] Buy rope #calls 📅 %3\n"
-                        "- [ ] Water 🔁 every week 📅 %4\n"
-                        "- [ ] Next year 📅 %5\n"_s.arg(day(-2), day(0), day(1), day(3), day(400)),
-                        &error));
+    QVERIFY(notefile::write(
+        m_root + u"/Plans.md"_s,
+        u"- [ ] Pay the fine @due %1\n"
+        "- [ ] Call Soren #calls @due %2 14:00\n"
+        "- [ ] Buy rope #calls @due %3\n"
+        "- [ ] Water @weekly @due %4\n"
+        "- [ ] Next year @due %5\n"_s.arg(day(-2), day(0), day(1), day(3), day(400)),
+        &error));
     QVERIFY(m_vault->openPath(m_root));
     TaskModel &tasks = *m_vault->tasks();
     const QLocale locale;
@@ -2192,7 +2208,7 @@ void TestVaultController::addsToDosToTheInbox()
     QVERIFY(m_vault->addQuickTask(u"call Soren tomorrow 3pm #calls"_s));
     QVERIFY(m_vault->addQuickTask(u"buy rope"_s));
     const QString inbox = readFile(m_root + u"/Inbox.md"_s);
-    QVERIFY2(inbox.startsWith(u"- [ ] call Soren #calls 📅 "_s), qPrintable(inbox));
+    QVERIFY2(inbox.startsWith(u"- [ ] call Soren #calls @due "_s), qPrintable(inbox));
     QVERIFY(inbox.endsWith(u"15:00\n- [ ] buy rope\n"_s));
     m_vault->tasks()->setView(u"anytime"_s);
     QVERIFY(column(*m_vault->tasks(), "title").contains(u"buy rope"_s));
@@ -2202,8 +2218,8 @@ void TestVaultController::addsToDosToTheInbox()
     m_vault->setSaveDelay(60000);
     m_vault->edit(m_vault->currentText() + u"Notes for later.\n"_s);
     QVERIFY(m_vault->addQuickTask(u"water plants every week"_s));
-    QVERIFY(m_vault->currentText().contains(
-        u"Notes for later.\n- [ ] water plants 🔁 every week 📅 "_s));
+    QVERIFY(
+        m_vault->currentText().contains(u"Notes for later.\n- [ ] water plants @weekly @due "_s));
     QVERIFY(!m_vault->unsaved());
 
     // A vault can name its own inbox.
