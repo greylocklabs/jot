@@ -44,6 +44,7 @@ private Q_SLOTS:
     void leavesRoomUnderTheTitleBar();
     void renamesANotebookByDoubleClick();
     void escapeKeepsTheOldName();
+    void renamesANoteInItsRow();
     void makesANotebookReadyToName();
     void dropsNotesAndNotebooksOnNotebooks();
     void noteMenuMakesATask();
@@ -357,6 +358,41 @@ void TestLists::escapeKeepsTheOldName()
     QTest::keyClick(m_window.get(), Qt::Key_Escape);
     QCOMPARE(m_sidebar->property("renamingPath").toString(), QString());
     QVERIFY(QFileInfo(m_root + u"/Ashfall/Places"_s).isDir());
+}
+
+void TestLists::renamesANoteInItsRow()
+{
+    m_vault->notes()->setNotebook(u"Recipes"_s);
+    auto *notes = qobject_cast<QQuickItem *>(m_noteList.get());
+    QQuickItem *row = nullptr;
+    QTRY_VERIFY(row = findItem(
+                    [](QQuickItem *item) {
+                        return item->property("path").toString() == u"Recipes/Pancakes.md"_s &&
+                               item->isVisible();
+                    },
+                    notes));
+    // A double-click types a new title in the row, the old one picked to type over.
+    QTest::mouseDClick(m_window.get(), Qt::LeftButton, {},
+                       row->mapToScene({row->width() / 2, row->height() / 2}).toPoint());
+    QQuickItem *field = nullptr;
+    QTRY_VERIFY(field = findItem(
+                    [](QQuickItem *item) { return item->objectName() == u"noteName"_s; }, notes));
+    QTRY_VERIFY(field->hasActiveFocus());
+    QCOMPARE(field->property("selectedText").toString(), u"Pancakes"_s);
+    type(u"Crepes"_s);
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    QTRY_VERIFY(QFileInfo::exists(m_root + u"/Recipes/Crepes.md"_s));
+    QVERIFY(!QFileInfo::exists(m_root + u"/Recipes/Pancakes.md"_s));
+    QCOMPARE(m_noteList->property("renamingPath").toString(), QString());
+
+    // As does Rename, from the menu or a key; Escape keeps the title it had.
+    QMetaObject::invokeMethod(m_noteList.get(), "rename", Q_ARG(QVariant, u"Recipes/Crepes.md"_s));
+    QTRY_VERIFY(
+        findItem([](QQuickItem *item) { return item->objectName() == u"noteName"_s; }, notes));
+    type(u"Waffles"_s);
+    QTest::keyClick(m_window.get(), Qt::Key_Escape);
+    QTRY_COMPARE(m_noteList->property("renamingPath").toString(), QString());
+    QVERIFY(QFileInfo::exists(m_root + u"/Recipes/Crepes.md"_s));
 }
 
 void TestLists::makesANotebookReadyToName()

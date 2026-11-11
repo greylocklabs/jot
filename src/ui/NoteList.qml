@@ -8,7 +8,10 @@ import QtQuick.Controls
 Rectangle {
     id: root
 
-    /// Rename was chosen for the note now shown, whose title should take the typing.
+    /// The note whose title is being typed in its row, or empty.
+    property string renamingPath
+
+    /// Rename was chosen for a note the list does not show, so the editor's title takes it.
     signal titleEditRequested
     /// Past versions were asked for the note now shown.
     signal historyRequested
@@ -30,6 +33,20 @@ Rectangle {
         noteMenu.task = Vault.isTask(path)
         noteMenu.pinned = Vault.isPinned(path)
         noteMenu.popup(item, x, y)
+    }
+
+    /// Renames the note at `path` in its row, showing it; one the list does not hold is renamed
+    /// in the editor's title instead.
+    function rename(path) {
+        Vault.current = path
+        const row = Vault.notes.rowOf(path)
+        if (row < 0 || !Vault.writable) {
+            root.titleEditRequested()
+            return
+        }
+        list.currentIndex = row
+        list.positionViewAtIndex(row, ListView.Contain)
+        renamingPath = path
     }
 
     /// Puts the cursor in the search box.
@@ -185,6 +202,7 @@ Rectangle {
             required property string snippet
             required property bool pinned
             readonly property bool selected: Vault.current === path
+            readonly property bool renaming: root.renamingPath !== "" && root.renamingPath === path
 
             width: ListView.view.width
             height: card.implicitHeight + Theme.space2
@@ -238,6 +256,10 @@ Rectangle {
                 Vault.current = path
                 list.currentIndex = index
             }
+            onDoubleClicked: {
+                if (Vault.writable)
+                    root.rename(path)
+            }
 
             background: Rectangle {
                 anchors.fill: parent
@@ -271,16 +293,70 @@ Rectangle {
                         Accessible.name: qsTr("Pinned")
                     }
                     Text {
+                        id: noteTitle
+
                         width: note.width - card.leftPadding - card.rightPadding - (note.pinned
                                                                                     ? Theme.smallGlyphSize
                                                                                       + parent.spacing :
                                                                                       0)
                         text: note.title
                         elide: Text.ElideRight
-                        color: Theme.text
+                        // Hidden under the name being typed, which takes its place.
+                        color: note.renaming ? "transparent" : Theme.text
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.textBase
                         font.weight: note.selected ? Theme.weightBold : Theme.weightStrong
+
+                        // Typing a new title where it was: Return or leaving keeps it, Escape
+                        // does not.
+                        Loader {
+                            anchors {
+                                fill: parent
+                                leftMargin: -Theme.space2
+                                topMargin: -Theme.space1
+                                bottomMargin: -Theme.space1
+                            }
+                            active: note.renaming
+                            sourceComponent: Field {
+                                property bool done: false
+
+                                function finish(keep) {
+                                    if (done)
+                                        return
+                                    done = true
+                                    if (keep && text.trim() !== "" && text !== note.title) {
+                                        Vault.current = note.path
+                                        Vault.renameCurrent(text)
+                                    }
+                                    root.renamingPath = ""
+                                }
+
+                                objectName: "noteName"
+                                text: note.title
+                                topPadding: 0
+                                bottomPadding: 0
+                                leftPadding: Theme.space2
+                                font.pixelSize: Theme.textBase
+                                font.weight: Theme.weightBold
+                                Accessible.name: qsTr("Title of %1").arg(note.title)
+                                background: Rectangle {
+                                    radius: Theme.radiusSm
+                                    color: Theme.surface
+                                    border.width: 1
+                                    border.color: Theme.accent
+                                }
+                                Component.onCompleted: {
+                                    forceActiveFocus()
+                                    selectAll()
+                                }
+                                onAccepted: finish(true)
+                                onActiveFocusChanged: {
+                                    if (!activeFocus)
+                                        finish(true)
+                                }
+                                Keys.onEscapePressed: finish(false)
+                            }
+                        }
                     }
                 }
                 Text {
@@ -446,10 +522,7 @@ Rectangle {
         MenuEntry {
             text: qsTr("Rename")
             enabled: Vault.writable
-            onTriggered: {
-                Vault.current = noteMenu.path
-                root.titleEditRequested()
-            }
+            onTriggered: root.rename(noteMenu.path)
         }
         MenuCard {
             id: moveMenu
