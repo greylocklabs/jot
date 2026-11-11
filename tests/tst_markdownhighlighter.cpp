@@ -53,6 +53,7 @@ void TestMarkdownHighlighter::init()
     m_look.muted = QColor(u"#aaaaaa"_s);
     m_look.faint = QColor(u"#777777"_s);
     m_look.accent = QColor(u"#f08fb8"_s);
+    m_look.danger = QColor(u"#ee3344"_s);
     m_look.codeBackground = QColor(u"#333333"_s);
     m_look.code = {QColor(u"#ff0001"_s), QColor(u"#00ff02"_s), QColor(u"#0000f3"_s),
                    QColor(u"#ffff04"_s), QColor(u"#00fff5"_s)};
@@ -221,12 +222,13 @@ void TestMarkdownHighlighter::doneTasksAreStruckThrough()
 
 void TestMarkdownHighlighter::colorsAToDosMarkers()
 {
-    setText(u"- [ ] water @weekly #home @due 2026-11-02 @done 2026-11-01 @trip\n"
+    setText(u"- [ ] water @weekly #home @due 2026-11-02 @done 2026-11-01 @trip @p1\n"
             u"- [x] done @daily\nplain @weekly\n"_s);
     // Kept as written, each kind in its own of the theme's colors, on an open to-do alone.
     QCOMPARE(formatAt(find(u"@weekly"_s)).foreground().color(), m_look.code.type);
     QCOMPARE(formatAt(find(u"2026-11-02"_s)).foreground().color(), m_look.code.number);
     QCOMPARE(formatAt(find(u"@done"_s)).foreground().color(), m_look.code.string);
+    QCOMPARE(formatAt(find(u"@p1"_s)).foreground().color(), m_look.danger);
     QVERIFY(formatAt(find(u"@trip"_s)).foreground().color() != m_look.code.type);
     QVERIFY(formatAt(find(u"@daily"_s)).foreground().color() != m_look.code.type);
     QVERIFY(formatAt(find(u"@weekly"_s, find(u"plain"_s))).foreground().color() !=

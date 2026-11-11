@@ -28,6 +28,9 @@ void TestQuickAdd::reads_data()
         << u"call Soren tomorrow 3pm #calls"_s << u"call Soren #calls @due 2026-10-29 15:00"_s;
     QTest::newRow("markers typed as written")
         << u"water plants @weekly"_s << u"water plants @weekly @due 2026-10-28"_s;
+    QTest::newRow("a priority, as Todoist writes it")
+        << u"call Soren p1 tomorrow"_s << u"call Soren @due 2026-10-29 @p1"_s;
+    QTest::newRow("a priority marker") << u"call Soren @p2"_s << u"call Soren @p2"_s;
     QTest::newRow("a day typed as written")
         << u"pay rent @due 2026-11-01 9:00"_s << u"pay rent @due 2026-11-01 09:00"_s;
     QTest::newRow("today") << u"pay rent today"_s << u"pay rent @due 2026-10-28"_s;

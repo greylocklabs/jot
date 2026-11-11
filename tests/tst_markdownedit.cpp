@@ -462,6 +462,7 @@ void TestMarkdownEdit::findsTheMarkerBeingTyped()
     };
     // After an @ on a to-do's line, even before any letter.
     QCOMPARE(typed(u"- [ ] water @we|"_s), u"@we"_s);
+    QCOMPARE(typed(u"- [ ] call @p1|"_s), u"@p1"_s);
     QCOMPARE(typed(u"  1. [x] water @|"_s), u"@"_s);
     // Not in an address, the box itself, other lines or code.
     QCOMPARE(typed(u"- [ ] mail me@ex|"_s), u"-"_s);

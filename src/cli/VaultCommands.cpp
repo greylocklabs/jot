@@ -8,6 +8,7 @@
 #include "jot/Secrets.h"
 #include "jot/Settings.h"
 #include "jot/Sync.h"
+#include "jot/TaskLine.h"
 #include "jot/ToDos.h"
 
 #include <QDateTime>
@@ -278,17 +279,22 @@ int VaultCommands::show(const QString &name)
     return 0;
 }
 
-int VaultCommands::listTasks(bool json, const QString &view, const QString &tag)
+int VaultCommands::listTasks(bool json, const QString &view, const QString &tag,
+                             const QString &priority)
 {
     const std::optional<ToDoView> shown = toDoView(view.isEmpty() ? u"all"_s : view);
-    if (!shown) {
-        m_err << tr("usage: jot tasks [--view today|upcoming|anytime|all|done] [--tag name]")
+    const int level = priorityOf(priority);
+    const bool none = priority.compare(u"none"_s, Qt::CaseInsensitive) == 0;
+    if (!shown || (!priority.isEmpty() && level == 0 && !none)) {
+        m_err << tr("usage: jot tasks [--view today|upcoming|anytime|all|done] [--tag name] "
+                    "[--priority p1|p2|p3|p4|none]")
               << "\n";
         return 2;
     }
     const QDate today = QDate::currentDate();
     // Written with its mark or without: #calls or calls.
-    const QList<ToDo> list = toDos(m_index, *shown, today, tag.startsWith(u'#') ? tag.mid(1) : tag);
+    const QList<ToDo> list = toDos(m_index, *shown, today, tag.startsWith(u'#') ? tag.mid(1) : tag,
+                                   priority.isEmpty() ? std::nullopt : std::optional(level));
     if (json) {
         QJsonArray array;
         for (const ToDo &each : list)
@@ -298,6 +304,7 @@ int VaultCommands::listTasks(bool json, const QString &view, const QString &tag)
                                      {u"title"_s, each.title},
                                      {u"note"_s, each.note},
                                      {u"due"_s, each.due},
+                                     {u"priority"_s, each.priority},
                                      {u"repeat"_s, each.repeat},
                                      {u"tags"_s, QJsonArray::fromStringList(each.tags)},
                                      {u"done"_s, each.done}});
@@ -323,6 +330,8 @@ int VaultCommands::listTasks(bool json, const QString &view, const QString &tag)
             last = group;
         }
         QStringList extra;
+        if (each.priority > 0)
+            extra << priorityMarker(each.priority);
         if (!each.repeat.isEmpty())
             extra << each.repeat;
         if (!done && due.isValid() && due != today)

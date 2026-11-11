@@ -8,6 +8,8 @@
 #include <QString>
 #include <QStringList>
 
+#include <optional>
+
 namespace jot {
 
 /// A to-do: a checkbox in a note, or a note that is a task.
@@ -26,6 +28,8 @@ struct ToDo
     QString due;
     /// How it repeats, as written, such as "every week".
     QString repeat;
+    /// 1 urgent, 2 high, 3 medium, 4 low; 0 for none.
+    int priority = 0;
     /// A checkbox's own #tags, or a task note's.
     QStringList tags;
     /// A checkbox's text as written, markers and all, which ticking it looks for; empty for a
@@ -66,11 +70,13 @@ enum class ToDoView {
 /// another.
 [[nodiscard]] std::optional<ToDoView> toDoView(const QString &name);
 
-/// The to-dos in `view` as of `today`, with `tag` or one nested in it when it is given. Open ones
+/// The to-dos in `view` as of `today`, with `tag` or one nested in it when it is given, and of
+/// `priority`, 0 for none, when that is. Open ones
 /// that are dated come soonest first, a day's untimed ones before its timed ones; undated ones come
 /// task notes first, then by note. Done ones come most recently done first, then those with no day
 /// written.
 [[nodiscard]] QList<ToDo> toDos(const VaultIndex &index, ToDoView view, const QDate &today,
-                                const QString &tag = {});
+                                const QString &tag = {},
+                                std::optional<int> priority = std::nullopt);
 
 } // namespace jot

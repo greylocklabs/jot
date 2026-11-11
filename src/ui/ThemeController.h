@@ -159,6 +159,9 @@ public:
     /// leaves a family empty gets the system's monospace or serif font for it.
     Q_INVOKABLE QString noteFontFamily(const QString &choice) const;
     Q_INVOKABLE double contrast(const QColor &a, const QColor &b) const;
+    /// What a to-do's priority is flagged in: red for 1, urgent, then the theme's own orange and
+    /// blue for 2 and 3, and muted text for 4, low. Clear for none.
+    Q_INVOKABLE QColor priorityColor(int priority) const;
     /// The widest stretch of `text` in `font` that a line cannot break inside, by the same
     /// rules text wraps by: a word, or a single character of text written without spaces.
     Q_INVOKABLE qreal widestUnbreakable(const QString &text, const QFont &font) const;

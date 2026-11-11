@@ -37,11 +37,21 @@ void TaskModel::setTag(const QString &tag)
     refill();
 }
 
+void TaskModel::setPriority(int priority)
+{
+    if (m_priority == priority)
+        return;
+    m_priority = priority;
+    Q_EMIT filterChanged();
+    refill();
+}
+
 void TaskModel::refill()
 {
     beginResetModel();
     m_today = QDate::currentDate();
-    m_rows = m_index ? toDos(*m_index, toDoView(m_view).value_or(ToDoView::Today), m_today, m_tag)
+    m_rows = m_index ? toDos(*m_index, toDoView(m_view).value_or(ToDoView::Today), m_today, m_tag,
+                             m_priority < 0 ? std::nullopt : std::optional(m_priority))
                      : QList<ToDo>();
     m_todayCount = m_index ? int(toDos(*m_index, ToDoView::Today, m_today).size()) : 0;
     endResetModel();
@@ -82,6 +92,7 @@ QVariant TaskModel::data(const QModelIndex &index, int role) const
     case OverdueRole: return !done && due.isValid() && due < m_today;
     case RepeatsRole: return !row.repeat.isEmpty();
     case DoneRole: return done;
+    case PriorityRole: return row.priority;
     case GroupRole:
         if (done) {
             const QDate on = row.doneAt().date();
@@ -110,10 +121,10 @@ QVariant TaskModel::data(const QModelIndex &index, int role) const
 
 QHash<int, QByteArray> TaskModel::roleNames() const
 {
-    return {{KindRole, "kind"},       {PathRole, "path"},       {TitleRole, "title"},
-            {NoteRole, "note"},       {LineRole, "line"},       {DueRole, "due"},
-            {OverdueRole, "overdue"}, {RepeatsRole, "repeats"}, {GroupRole, "group"},
-            {DoneRole, "done"}};
+    return {{KindRole, "kind"},       {PathRole, "path"},        {TitleRole, "title"},
+            {NoteRole, "note"},       {LineRole, "line"},        {DueRole, "due"},
+            {OverdueRole, "overdue"}, {RepeatsRole, "repeats"},  {GroupRole, "group"},
+            {DoneRole, "done"},       {PriorityRole, "priority"}};
 }
 
 } // namespace jot

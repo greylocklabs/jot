@@ -148,13 +148,17 @@ Rectangle {
 
                 objectName: "taskFilter"
                 anchors.verticalCenter: parent.verticalCenter
-                visible: Vault.tasks.tag !== ""
-                label: "#" + Vault.tasks.tag
+                visible: Vault.tasks.tag !== "" || Vault.tasks.priority >= 0
+                label: [Vault.tasks.tag !== "" ? "#" + Vault.tasks.tag : "", Vault.tasks.priority
+                    >= 0 ? Vault.priorityName(Vault.tasks.priority) : ""].filter(part => part
+                                                                                         !== "").join(
+                    " ")
                 selected: true
                 tip: qsTr("Show every to-do again")
                 Accessible.name: qsTr("Show every to-do again")
                 onClicked: {
                     Vault.tasks.tag = ""
+                    Vault.tasks.priority = -1
                 }
             }
         }
@@ -205,6 +209,7 @@ Rectangle {
             required property bool overdue
             required property bool repeats
             required property bool done
+            required property int priority
 
             width: ListView.view.width
             height: Math.max(Theme.listRowHeight, words.implicitHeight + 2 * Theme.space2)
@@ -267,7 +272,7 @@ Rectangle {
                     anchors {
                         left: box.right
                         leftMargin: Theme.space4
-                        right: dueLabel.left
+                        right: flag.left
                         rightMargin: Theme.space3
                         verticalCenter: parent.verticalCenter
                     }
@@ -297,6 +302,22 @@ Rectangle {
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.textSm
                     }
+                }
+                // Its priority, flagged in the priority's color.
+                Glyph {
+                    id: flag
+
+                    objectName: "priorityFlag"
+                    anchors {
+                        right: dueLabel.visible ? dueLabel.left : parent.right
+                        rightMargin: dueLabel.visible ? Theme.space2 : Theme.space5
+                        verticalCenter: parent.verticalCenter
+                    }
+                    width: item.priority > 0 && !item.done ? Theme.smallGlyphSize : 0
+                    height: Theme.smallGlyphSize
+                    visible: width > 0
+                    name: "flag"
+                    color: Theme.priorityColor(item.priority)
                 }
                 Text {
                     id: dueLabel

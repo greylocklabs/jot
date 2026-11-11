@@ -70,7 +70,8 @@ std::optional<ToDoView> toDoView(const QString &name)
     return std::nullopt;
 }
 
-QList<ToDo> toDos(const VaultIndex &index, ToDoView view, const QDate &today, const QString &tag)
+QList<ToDo> toDos(const VaultIndex &index, ToDoView view, const QDate &today, const QString &tag,
+                  std::optional<int> priority)
 {
     const bool done = view == ToDoView::Done;
     QList<ToDo> all;
@@ -82,6 +83,7 @@ QList<ToDo> toDos(const VaultIndex &index, ToDoView view, const QDate &today, co
                     {},
                     note.due.trimmed(),
                     note.repeat.trimmed(),
+                    note.priority,
                     note.tags,
                     {},
                     note.done.trimmed()});
@@ -92,8 +94,8 @@ QList<ToDo> toDos(const VaultIndex &index, ToDoView view, const QDate &today, co
             titles.insert(task.path, info ? info->title : task.path);
         }
         all.append({u"task"_s, task.path, task.line, task.parts.title, titles.value(task.path),
-                    task.parts.due, task.parts.repeat, scanNote(task.parts.title).tags, task.text,
-                    task.parts.done});
+                    task.parts.due, task.parts.repeat, task.parts.priority,
+                    scanNote(task.parts.title).tags, task.text, task.parts.done});
     }
 
     QList<ToDo> shown;
@@ -106,6 +108,8 @@ QList<ToDo> toDos(const VaultIndex &index, ToDoView view, const QDate &today, co
         if (!wanted)
             continue;
         if (!tag.isEmpty() && !hasTag(each.tags, tag))
+            continue;
+        if (priority && each.priority != *priority)
             continue;
         shown.append(each);
     }

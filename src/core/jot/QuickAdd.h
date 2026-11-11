@@ -17,6 +17,8 @@ struct QuickTask
     QString due;
     /// How it repeats, as a rule such as "every week".
     QString repeat;
+    /// 1 urgent to 4 low, from `p1` to `p4`, with or without an @; 0 for none.
+    int priority = 0;
     /// The to-do as its checkbox line says it, without `- [ ] `.
     QString line;
     /// The words named a day, rather than it being today for a time alone or a repeat's first.
@@ -28,12 +30,13 @@ struct QuickTask
 /// weekend, in N days, weeks or months, a month and day such as "oct 29", ISO dates, times
 /// such as "3pm", "3:30 pm", "15:00" and "noon", and repeats such as "every week", "every 2
 /// weeks", "every monday", "every weekday" and "daily". A time alone means today; a repeat
-/// alone starts on its first day. Markers typed as written, such as `@weekly` or `@due
-/// 2026-11-02`, are taken as they say.
+/// alone starts on its first day. `p1` to `p4` is its priority. Markers typed as written, such as
+/// `@weekly` or `@due 2026-11-02`, are taken as they say.
 [[nodiscard]] QuickTask readQuickTask(const QString &typed, const QDateTime &now);
 
 /// `text`, a checkbox's words after `- [ ] `, due on `due` and repeating as `repeat`, either
-/// empty to take it away, in Jot's markers, `@weekly @due 2026-11-02`. A done day stays.
+/// empty to take it away, in Jot's markers, `@weekly @due 2026-11-02`. Its priority and done day
+/// stay.
 [[nodiscard]] QString withTaskSchedule(const QString &text, const QString &due,
                                        const QString &repeat);
 

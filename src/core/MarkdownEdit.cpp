@@ -861,7 +861,7 @@ std::optional<EmojiQuery> markerAt(const QString &text, qsizetype cursor)
     cursor = std::clamp<qsizetype>(cursor, 0, text.size());
     const qsizetype line = lineStartOf(text, cursor);
     qsizetype at = cursor;
-    while (at > line && text.at(at - 1).isLetter())
+    while (at > line && text.at(at - 1).isLetterOrNumber())
         --at;
     if (at == line || text.at(at - 1) != u'@')
         return std::nullopt;

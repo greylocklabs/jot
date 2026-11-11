@@ -446,7 +446,7 @@ QString readingMarkdown(QStringView original,
             }
             rest.replace(m.capturedStart(), m.capturedLength(), QString(m.capturedLength(), u' '));
         }
-        // A to-do's markers, said as a reader would: 🔁 weekly, 📅 Nov 2, ✅ Nov 1.
+        // A to-do's markers, said as a reader would: 🔁 weekly, 📅 Nov 2, ✅ Nov 1, 🚩 Urgent.
         if (const QRegularExpressionMatch box = checkboxLine().match(prose); box.hasMatch()) {
             const qsizetype from = box.capturedStart(2);
             for (const TaskMarker &marker : taskMarkers(QStringView(rest).sliced(from))) {
@@ -455,6 +455,8 @@ QString readingMarkdown(QStringView original,
                 QString shown;
                 if (marker.kind == TaskMarker::Repeat)
                     shown = u"🔁 "_s + line.mid(at + 1, length - 1);
+                else if (marker.kind == TaskMarker::Priority)
+                    shown = u"🚩 "_s + priorityName(marker.value.toInt());
                 else
                     shown = (marker.kind == TaskMarker::Due ? u"📅 "_s : u"✅ "_s) +
                             readableDay(marker.value);

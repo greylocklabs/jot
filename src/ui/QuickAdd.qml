@@ -69,8 +69,10 @@ Popup {
             width: parent.width
             leftPadding: Theme.space2
             visible: root.task.title !== ""
-            text: [root.task.when, root.task.repeat !== "" ? "🔁 " + root.task.repeat : ""].filter(
-                part => part !== "").join("   ") || qsTr("No day: it goes in Anytime")
+            text: [root.task.when, root.task.repeat !== "" ? "🔁 " + root.task.repeat : "",
+                root.task.priority ? "🚩 " + root.task.priority : ""].filter(part => part
+                                                                                    !== "").join(
+                "   ") || qsTr("No day: it goes in Anytime")
             elide: Text.ElideRight
             color: Theme.textMuted
             font.family: Theme.fontFamily

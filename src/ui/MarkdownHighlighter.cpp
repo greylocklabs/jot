@@ -740,9 +740,10 @@ void MarkdownHighlighter::taskMarkerStyles(const QString &text)
     // in, so they tell apart at a glance in any theme.
     for (const TaskMarker &marker : taskMarkers(QStringView(text).sliced(from))) {
         QTextCharFormat marked;
-        marked.setForeground(marker.kind == TaskMarker::Due      ? m_look.code.number
-                             : marker.kind == TaskMarker::Repeat ? m_look.code.type
-                                                                 : m_look.code.string);
+        marked.setForeground(marker.kind == TaskMarker::Due        ? m_look.code.number
+                             : marker.kind == TaskMarker::Repeat   ? m_look.code.type
+                             : marker.kind == TaskMarker::Priority ? m_look.danger
+                                                                   : m_look.code.string);
         marked.setFontWeight(m_look.strongWeight);
         merge(from + int(marker.start), int(marker.end - marker.start), marked);
     }

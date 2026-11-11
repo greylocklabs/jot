@@ -95,18 +95,20 @@ Jot reads a simple subset of YAML: `key: value` with plain or quoted strings, an
 
 Keys Jot understands:
 
-| Key       | Type                       | Meaning                                        |
-| --------- | -------------------------- | ---------------------------------------------- |
-| `title`   | string                     | Title, when the file name cannot hold it       |
-| `tags`    | list of strings            | Tags, nested with `/`: `cast/lead`             |
-| `aliases` | list of strings            | Other names links and mentions can use         |
-| `created` | ISO 8601 date-time         | When the note was created                      |
-| `task`    | `open` or `done`           | Makes the note a task                          |
-| `due`     | ISO 8601 date or date-time | When a task is due                             |
-| `done`    | ISO 8601 date-time         | When a task was completed                      |
-| `type`    | string                     | The note's type; searchable as `type:` for now |
-| `target`  | whole number               | Words the note is meant to reach               |
-| `lang`    | language code, as `en_GB`  | The language spelling is checked in            |
+| Key        | Type                       | Meaning                                        |
+| ---------- | -------------------------- | ---------------------------------------------- |
+| `title`    | string                     | Title, when the file name cannot hold it       |
+| `tags`     | list of strings            | Tags, nested with `/`: `cast/lead`             |
+| `aliases`  | list of strings            | Other names links and mentions can use         |
+| `created`  | ISO 8601 date-time         | When the note was created                      |
+| `task`     | `open` or `done`           | Makes the note a task                          |
+| `due`      | ISO 8601 date or date-time | When a task is due                             |
+| `done`     | ISO 8601 date-time         | When a task was completed                      |
+| `repeat`   | rule, as `every week`      | How a task repeats                             |
+| `priority` | `p1` to `p4`               | A task's priority: urgent, high, medium, low   |
+| `type`     | string                     | The note's type; searchable as `type:` for now |
+| `target`   | whole number               | Words the note is meant to reach               |
+| `lang`     | language code, as `en_GB`  | The language spelling is checked in            |
 
 Rules:
 
@@ -204,14 +206,14 @@ There are two kinds, and the task view shows both:
 - **Checkboxes** in any note: a list item starting `[ ]` or `[x]` (or `[X]`), after `-`, `*`, `+`,
   `1.` or `1)`. Ticking one in Jot edits that line.
 - **Task notes**: a note with `task: open` or `task: done` in its front matter, and optionally
-  `due`, `done` and `repeat`. Completing one sets `task: done` and `done:` to the current time; one
+  `due`, `done`, `repeat` and `priority`. Completing one sets `task: done` and `done:` to the current time; one
   that repeats, with a `due` day, is due again on its next day after today instead, and stays
   open.
 
 A checkbox says more about itself in plain words on its own line, each starting with an `@`:
 
 ```markdown
-- [ ] Call Soren #calls @due 2026-10-29 14:00
+- [ ] Call Soren #calls @due 2026-10-29 14:00 @p1
 - [ ] Water the plants @weekly @due 2026-10-30
 - [ ] Review the budget @every 2 weeks on monday @due 2026-11-02
 - [x] Pay rent @monthly @due 2026-10-01 @done 2026-10-01
@@ -227,16 +229,18 @@ sunday`, and `every 2 weeks on monday`, in any case. A rule runs up to the next 
 - `@done` and a date is when it was done. Ticking one that repeats and is due writes the next one
   above it, unticked and due on its next day after today, and gives the ticked one `@done` and
   today's date. A rule Jot does not read is kept, and only ticked.
+- `@p1` to `@p4` is its priority: urgent, high, medium or low. One without any has none.
 - A checkbox that does not repeat is only ticked or unticked; a `@done` already there stays.
 - Markers are found case aside, each at the start of a word, so `hello@example.org` is no marker.
   `@due` and `@done` without a valid date, and any other `@word`, are just words.
 - `#tags` work as they do anywhere in a note.
 
 Quick add appends a checkbox to the note `inbox:` names in `.jot/vault.yaml`, `Inbox.md` at the top
-of the vault by default, making the note if need be. It writes the repeat before the date:
+of the vault by default, making the note if need be. It reads `p1` to `p4` as the priority, as
+Todoist does, and writes the repeat, the date and the priority in that order:
 
 ```markdown
-- [ ] Call Soren #calls @weekly @due 2026-10-29 14:00
+- [ ] Call Soren #calls @weekly @due 2026-10-29 14:00 @p1
 ```
 
 ## Notebook appearance and pins

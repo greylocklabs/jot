@@ -2150,7 +2150,7 @@ void TestVaultController::headsToDosByDay()
     QVERIFY(notefile::write(
         m_root + u"/Plans.md"_s,
         u"- [ ] Pay the fine @due %1\n"
-        "- [ ] Call Soren #calls @due %2 14:00\n"
+        "- [ ] Call Soren #calls @due %2 14:00 @p1\n"
         "- [ ] Buy rope #calls @due %3\n"
         "- [ ] Water @weekly @due %4\n"
         "- [ ] Next year @due %5\n"_s.arg(day(-2), day(0), day(1), day(3), day(400)),
@@ -2194,6 +2194,16 @@ void TestVaultController::headsToDosByDay()
     tasks.setTag(u"calls"_s);
     tasks.setView(u"all"_s);
     QCOMPARE(column(tasks, "title"), (QStringList{u"Call Soren #calls"_s, u"Buy rope #calls"_s}));
+    // Or to a priority; the sidebar lists those in use, urgent first, then those with none.
+    tasks.setTag({});
+    tasks.setPriority(1);
+    QCOMPARE(column(tasks, "title"), QStringList{u"Call Soren #calls"_s});
+    QCOMPARE(column(tasks, "priority"), QStringList{u"1"_s});
+    const QVariantList priorities = m_vault->priorities();
+    QCOMPARE(priorities.first().toMap().value(u"name"_s).toString(), u"Urgent"_s);
+    QCOMPARE(priorities.first().toMap().value(u"count"_s).toInt(), 1);
+    QCOMPARE(priorities.last().toMap().value(u"name"_s).toString(), u"None"_s);
+    tasks.setPriority(-1);
 }
 
 void TestVaultController::addsToDosToTheInbox()

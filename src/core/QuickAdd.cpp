@@ -64,8 +64,10 @@ QuickTask readQuickTask(const QString &typed, const QDateTime &now)
 {
     // Markers typed as they are written, such as @weekly or @due 2026-11-02, say it outright.
     const TaskLine written = readTaskLine(typed);
-    if (!written.due.isEmpty() || !written.repeat.isEmpty()) {
+    if (!written.due.isEmpty() || !written.repeat.isEmpty() || written.priority > 0) {
         QuickTask task = readQuickTask(written.title, now);
+        if (written.priority > 0)
+            task.priority = written.priority;
         if (!written.repeat.isEmpty()) {
             task.repeat = written.repeat;
             if (task.due.isEmpty())
@@ -80,6 +82,8 @@ QuickTask readQuickTask(const QString &typed, const QDateTime &now)
             task.line += u' ' + repeatMarker(task.repeat);
         if (!task.due.isEmpty())
             task.line += u' ' + dueMarker(task.due);
+        if (task.priority > 0)
+            task.line += u' ' + priorityMarker(task.priority);
         return task;
     }
     const QDate today = now.date();
@@ -199,6 +203,12 @@ QuickTask readQuickTask(const QString &typed, const QDateTime &now)
     if (!time.isValid())
         text = beforeTime;
 
+    // Its priority, as Todoist writes it: p1 to p4.
+    static const QRegularExpression level = words(uR"(p([1-4]))"_s);
+    int priority = 0;
+    if (const QRegularExpressionMatch m = take(text, level); m.hasMatch())
+        priority = m.captured(1).toInt();
+
     const bool dayGiven = day.isValid();
     if (!day.isValid())
         day = firstDay.isValid() ? firstDay : time.isValid() ? today : QDate();
@@ -206,6 +216,7 @@ QuickTask readQuickTask(const QString &typed, const QDateTime &now)
     QuickTask task;
     task.title = text.simplified();
     task.repeat = repeat;
+    task.priority = priority;
     task.dayGiven = dayGiven;
     if (day.isValid())
         task.due = time.isValid()
@@ -216,21 +227,28 @@ QuickTask readQuickTask(const QString &typed, const QDateTime &now)
         task.line += u' ' + repeatMarker(repeat);
     if (!task.due.isEmpty())
         task.line += u' ' + dueMarker(task.due);
+    if (priority > 0)
+        task.line += u' ' + priorityMarker(priority);
     return task;
 }
 
 QString withTaskSchedule(const QString &text, const QString &due, const QString &repeat)
 {
-    // The words with the day and repeat gone; a done day comes back after the new ones.
-    QString line = withoutMarkers(text, {TaskMarker::Due, TaskMarker::Repeat, TaskMarker::Done});
+    // The words with the markers gone; the day and repeat go back as given, then the priority
+    // and done day as they were.
+    QString line = withoutMarkers(
+        text, {TaskMarker::Due, TaskMarker::Repeat, TaskMarker::Done, TaskMarker::Priority});
     while (line.endsWith(u' '))
         line.chop(1);
+    const TaskLine was = readTaskLine(text);
     if (!repeat.isEmpty())
         line += u' ' + repeatMarker(repeat);
     if (!due.isEmpty())
         line += u' ' + dueMarker(due);
-    if (const QString done = readTaskLine(text).done; !done.isEmpty())
-        line += u' ' + doneMarker(QDate::fromString(done, Qt::ISODate));
+    if (was.priority > 0)
+        line += u' ' + priorityMarker(was.priority);
+    if (!was.done.isEmpty())
+        line += u' ' + doneMarker(QDate::fromString(was.done, Qt::ISODate));
     return line;
 }
 

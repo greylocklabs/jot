@@ -5,7 +5,7 @@ import QtQuick
 /// A small line icon drawn from rounded bars, so icons need no image files and
 /// take the text color: chevron-left, chevron-right, chevron-down, minimize, maximize,
 /// restore, close, check, plus, refresh, bell, search, settings, menu, video, more,
-/// list-bullet, list-number, task, quote, table, pin, trash, note, braces, clock, mic, stop or sidebar.
+/// list-bullet, list-number, task, quote, table, pin, trash, note, braces, clock, mic, stop, sidebar or flag.
 Item {
     id: root
 
@@ -125,6 +125,7 @@ Item {
                               "clock": clockShape,
                               "mic": micShape,
                               "stop": stopShape,
+                              "flag": flagShape,
                               "maximize": frameShape,
                               "restore": frameShape
                           })[root.name] ?? null
@@ -425,6 +426,29 @@ Item {
                 function onColorChanged() {
                     mic.requestPaint()
                 }
+            }
+        }
+    }
+
+    // A flag: its pole, and the flag flying filled from its top.
+    Component {
+        id: flagShape
+
+        Item {
+            Rectangle {
+                x: root.width * 0.16
+                width: root.stroke
+                height: root.height
+                radius: root.stroke / 2
+                color: root.color
+            }
+            Rectangle {
+                x: root.width * 0.16 + root.stroke
+                y: root.height * 0.04
+                width: root.width * 0.66
+                height: root.height * 0.5
+                radius: root.stroke / 2
+                color: root.color
             }
         }
     }

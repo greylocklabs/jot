@@ -23,6 +23,7 @@
 #include <QUrl>
 #include <QVariantMap>
 
+#include "jot/TaskLine.h"
 #include "jot/WritingStats.h"
 
 #include <QDate>
@@ -56,6 +57,9 @@ class VaultController : public QObject
     Q_PROPERTY(QString error READ error NOTIFY errorChanged)
     Q_PROPERTY(int noteCount READ noteCount NOTIFY notesChanged)
     Q_PROPERTY(QStringList tags READ tags NOTIFY notesChanged)
+    /// The priorities open to-dos have, urgent first: `{priority, name, count}` for each with
+    /// any, and None with how many have none, when any has one.
+    Q_PROPERTY(QVariantList priorities READ priorities NOTIFY notesChanged)
     /// Each notebook's emoji, by its path, for those that have one.
     Q_PROPERTY(QVariantMap notebookEmoji READ notebookEmoji NOTIFY notesChanged)
     /// The emoji before Tasks and Trash in the sidebar, by view, each empty for none.
@@ -293,7 +297,7 @@ public:
     /// cursor just after it.
     Q_INVOKABLE QVariantMap placeBlock(const QString &text, int position,
                                        const QString &markdown) const;
-    /// How quick add reads `typed`: `{title, due, when, repeat, line}`, where `when` says
+    /// How quick add reads `typed`: `{title, due, when, repeat, priority, line}`, where `when` says
     /// the day and time for people, and `line` is the checkbox it would add.
     Q_INVOKABLE QVariantMap readQuickTask(const QString &typed) const;
     /// A checkbox's words, `text`, with the day and repeat they say written as markers, as
@@ -411,6 +415,9 @@ public:
     [[nodiscard]] bool writable() const;
     [[nodiscard]] QString error() const { return m_error; }
     [[nodiscard]] int noteCount() const;
+    [[nodiscard]] QVariantList priorities() const;
+    /// What a priority is called: Urgent, High, Medium, Low, or None for 0.
+    Q_INVOKABLE static QString priorityName(int priority) { return jot::priorityName(priority); }
     [[nodiscard]] QStringList tags() const;
     [[nodiscard]] QVariantMap notebookEmoji() const { return m_notebookEmoji; }
     [[nodiscard]] QVariantMap currentTarget() const { return m_currentTarget; }

@@ -35,8 +35,10 @@ public:
     int show(const QString &name);
     /// Adds a to-do, read from `typed` as quick add reads it, to the inbox note.
     int addTask(const QString &typed, bool json);
-    /// The to-dos left in `view`, "all" when empty, with `tag` when given.
-    int listTasks(bool json, const QString &view = {}, const QString &tag = {});
+    /// The to-dos left in `view`, "all" when empty, with `tag` and of `priority`, p1 to p4 or
+    /// none, when given.
+    int listTasks(bool json, const QString &view = {}, const QString &tag = {},
+                  const QString &priority = {});
     /// Every tag, with how many notes have it or a tag nested in it.
     int listTags(bool json);
     /// Imports the Joplin JEX export at `file` under `notebook`, or says what it would do.

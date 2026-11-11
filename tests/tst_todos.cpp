@@ -18,6 +18,7 @@ private Q_SLOTS:
     void showsEachView();
     void listsDoneOnesMostRecentFirst();
     void filtersByTag();
+    void filtersByPriority();
     void remindsAtTheTimeOrInTheMorning();
 
 private:
@@ -38,13 +39,13 @@ void TestToDos::init()
         QString error;
         QVERIFY2(notefile::write(m_vault->absolute(path), text, &error), qPrintable(error));
     };
-    write(u"Inbox.md"_s, u"- [ ] Call Soren #calls @due 2026-10-28 14:00\n"
+    write(u"Inbox.md"_s, u"- [ ] Call Soren #calls @due 2026-10-28 14:00 @p1\n"
                          "- [ ] Buy rope @due 2026-10-28\n"
                          "- [ ] Late fee #home/money @due 2026-10-20\n"
                          "- [ ] Plan trip @due 2026-11-02\n"
                          "- [ ] Someday read Proust\n"
                          "- [x] Done already @due 2026-10-28\n"_s);
-    write(u"Taxes.md"_s, u"---\ntask: open\ndue: 2026-10-30\ntags: [home]\n---\n"_s);
+    write(u"Taxes.md"_s, u"---\ntask: open\ndue: 2026-10-30\ntags: [home]\npriority: p1\n---\n"_s);
     write(u"Fence.md"_s, u"---\ntask: open\n---\n"_s);
     // A time written with a space, as YAML allows, sorts by the clock too.
     write(u"Dentist.md"_s, u"---\ntask: open\ndue: 2026-10-28 09:00\n---\n"_s);
@@ -121,6 +122,22 @@ void TestToDos::filtersByTag()
     QCOMPARE(titles(ToDoView::Today, u"calls"_s), QStringList{u"Call Soren #calls"_s});
 }
 
+void TestToDos::filtersByPriority()
+{
+    // A checkbox's @p1 and a task note's priority: p1, and those with none.
+    const auto of = [this](int priority) {
+        QStringList found;
+        for (const ToDo &each : toDos(*m_index, ToDoView::All, m_today, {}, priority))
+            found << each.title;
+        return found;
+    };
+    QCOMPARE(of(1), (QStringList{u"Call Soren #calls"_s, u"Taxes"_s}));
+    QVERIFY(of(2).isEmpty());
+    QVERIFY(of(0).contains(u"Buy rope"_s));
+    QVERIFY(!of(0).contains(u"Taxes"_s));
+    QCOMPARE(toDos(*m_index, ToDoView::Today, m_today).last().priority, 1);
+}
+
 void TestToDos::remindsAtTheTimeOrInTheMorning()
 {
     const QTime nine(9, 0);
@@ -138,7 +155,7 @@ void TestToDos::remindsAtTheTimeOrInTheMorning()
 
     // Ticking finds a checkbox by its text as written.
     const ToDo call = toDos(*m_index, ToDoView::Today, m_today).last();
-    QCOMPARE(call.text, u"Call Soren #calls @due 2026-10-28 14:00"_s);
+    QCOMPARE(call.text, u"Call Soren #calls @due 2026-10-28 14:00 @p1"_s);
 }
 
 QTEST_GUILESS_MAIN(TestToDos)
