@@ -23,6 +23,7 @@ private Q_SLOTS:
     void seesRemovedFolders();
     void ignoresItsOwnWrites();
     void ignoresHiddenFilesAndOtherFiles();
+    void leavesOutWhatTheVaultIgnores();
     void rescanFindsWhatEventsMissed();
 
 private:
@@ -136,6 +137,21 @@ void TestVaultWatcher::ignoresHiddenFilesAndOtherFiles()
     write(u"Old.assets/sketch.png"_s, "x\n");
     QVERIFY(!m_changed->wait(500));
     QVERIFY(m_folders->isEmpty());
+}
+
+void TestVaultWatcher::leavesOutWhatTheVaultIgnores()
+{
+    write(u".gitignore"_s, "Scratch/\n");
+    QSignalSpy ignoreChanged(m_watcher.get(), &VaultWatcher::ignoreChanged);
+    QVERIFY(ignoreChanged.wait(2000));
+    m_watcher->start();
+    write(u"Scratch/Idea.md"_s, "idea\n");
+    QVERIFY(!m_changed->wait(500));
+    QVERIFY(m_folders->isEmpty());
+
+    // A change to what is ignored asks for the vault to be read again.
+    write(u".gitignore"_s, "Other/\n");
+    QVERIFY(ignoreChanged.wait(2000));
 }
 
 void TestVaultWatcher::rescanFindsWhatEventsMissed()

@@ -1,4 +1,5 @@
 #include "jot/Vault.h"
+#include "jot/VaultIgnore.h"
 
 #include "jot/FrontMatter.h"
 #include "jot/Logging.h"
@@ -127,10 +128,32 @@ QString Vault::setting(const QString &key) const
     return settings ? readFrontMatter(*settings).value(key).toString().trimmed() : QString();
 }
 
+bool Vault::setSetting(const QString &key, const QVariant &value, QString *error) const
+{
+    const QString path = absolute(kSettingsFolder + u"/vault.yaml"_s);
+    QString text = u"format: %1\n"_s.arg(kFormat);
+    if (QFileInfo::exists(path)) {
+        const std::optional<QString> held = notefile::read(path, error);
+        if (!held)
+            return false;
+        text = *held;
+    }
+    if (!text.isEmpty() && !text.endsWith(u'\n'))
+        text += u'\n';
+    // The settings are front matter without its fences, so they are set as a note's would be.
+    const QString fenced = setFrontMatterKey(u"---\n"_s + text + u"---\n"_s, key, value);
+    const qsizetype close = fenced.lastIndexOf(u"---\n"_s);
+    if (!QDir().mkpath(absolute(kSettingsFolder))) {
+        *error = QObject::tr("could not create %1").arg(absolute(kSettingsFolder));
+        return false;
+    }
+    return notefile::write(path, fenced.sliced(4, close - 4), error);
+}
+
 QList<VaultEntry> Vault::entries() const
 {
     QList<VaultEntry> found;
-    collect({}, found);
+    collect({}, VaultIgnore(*this), found);
     return found;
 }
 
@@ -144,7 +167,7 @@ QStringList Vault::notes() const
     return paths;
 }
 
-void Vault::collect(const QString &folder, QList<VaultEntry> &into) const
+void Vault::collect(const QString &folder, const VaultIgnore &ignore, QList<VaultEntry> &into) const
 {
     const QDir dir(absolute(folder));
     const QFileInfoList all = dir.entryInfoList(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot);
@@ -157,7 +180,7 @@ void Vault::collect(const QString &folder, QList<VaultEntry> &into) const
     QList<QFileInfo> kept;
     for (const QFileInfo &info : all) {
         const QString name = info.fileName();
-        if (name.startsWith(u'.'))
+        if (name.startsWith(u'.') || ignore.ignoredIn(folder, name, info.isDir()))
             continue;
         if (info.isDir()) {
             // A note's attachments show under the note, not as a notebook.
@@ -178,7 +201,7 @@ void Vault::collect(const QString &folder, QList<VaultEntry> &into) const
         into.append({path, info.isDir()});
         // A link to a folder is shown but not followed, so a loop cannot hang the scan.
         if (info.isDir() && !info.isSymLink())
-            collect(path, into);
+            collect(path, ignore, into);
     }
 }
 

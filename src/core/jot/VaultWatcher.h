@@ -1,6 +1,7 @@
 #pragma once
 
 #include "jot/Vault.h"
+#include "jot/VaultIgnore.h"
 
 #include <QByteArray>
 #include <QFileSystemWatcher>
@@ -38,6 +39,8 @@ Q_SIGNALS:
     void changed(const QStringList &notes);
     /// Folders added or removed, so the notebook tree should be read again.
     void foldersChanged();
+    /// A `.gitignore` in the vault changed, so what the vault holds should be read again whole.
+    void ignoreChanged();
 
 private:
     struct Seen
@@ -54,9 +57,13 @@ private:
     void compare(const QString &folder);
     void flush();
     void watchNote(const QString &path);
+    /// Records the `.gitignore` in `folder`; whether it differs from what was recorded before.
+    bool noteGitignore(const QString &folder);
     [[nodiscard]] bool expected(const QString &path);
 
     Vault m_vault;
+    VaultIgnore m_ignore;
+    QHash<QString, Seen> m_gitignores;
     QFileSystemWatcher m_watcher;
     QTimer m_settle;
     QHash<QString, Seen> m_notes;

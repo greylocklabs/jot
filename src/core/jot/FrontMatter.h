@@ -28,7 +28,7 @@ NoteParts splitFrontMatter(QStringView note);
 /// the YAML that notes use, not every YAML document.
 [[nodiscard]] QVariantMap readFrontMatter(QStringView yaml);
 
-/// `note` with `key` set to `value`, a QString or QStringList, or removed when `value` is
+/// `note` with `key` set to `value`, a QString, QStringList or bool, or removed when `value` is
 /// null. Only that key's lines change, so the rest of the front matter keeps its order,
 /// comments and quoting. A note without front matter gets some.
 [[nodiscard]] QString setFrontMatterKey(const QString &note, const QString &key,

@@ -181,6 +181,15 @@ public:
     {
         return m_vault ? m_vault->setting(key) : QString();
     }
+    /// The vault's own ignore patterns, as `ignore:` in `.jot/vault.yaml` lists them.
+    Q_INVOKABLE QStringList ignorePatterns() const;
+    /// Whether the vault leaves out what its `.gitignore` files ignore.
+    Q_INVOKABLE bool respectsGitignore() const;
+    /// Sets what the vault ignores, `patterns` read as a `.gitignore` is, and reads the vault
+    /// again. Whether the settings could be written.
+    Q_INVOKABLE bool setIgnore(const QStringList &patterns, bool gitignore);
+    /// Adds the notebook at `path` to the vault's ignore patterns.
+    Q_INVOKABLE bool ignoreNotebook(const QString &path);
     /// The notebook templates are kept in.
     Q_INVOKABLE QString templatesFolder() const;
     /// Makes a note in the notebook shown from the template at `path`, its variables filled
@@ -493,6 +502,8 @@ private:
     void close();
     void notesChangedOnDisk(const QStringList &paths);
     void reloadModels();
+    /// Reads the whole vault again after what it ignores changed.
+    void readIgnoreAgain();
     /// Works out currentTarget() again.
     void refreshTarget();
     /// Reads the trash again for Trash.

@@ -15,6 +15,7 @@
 #include "jot/Settings.h"
 #include "jot/TaskLine.h"
 #include "jot/Templates.h"
+#include "jot/VaultIgnore.h"
 
 #include <QBuffer>
 #include <QClipboard>
@@ -150,6 +151,7 @@ bool VaultController::openPath(const QString &path)
     m_watcher = std::make_unique<VaultWatcher>(*m_vault);
     connect(m_watcher.get(), &VaultWatcher::changed, this, &VaultController::notesChangedOnDisk);
     connect(m_watcher.get(), &VaultWatcher::foldersChanged, this, &VaultController::reloadModels);
+    connect(m_watcher.get(), &VaultWatcher::ignoreChanged, this, &VaultController::readIgnoreAgain);
     m_watcher->start();
     m_settings.setVaultPath(m_vault->root());
     // Named for the computer, to read, and by an id of its own, as two can share a name.
@@ -2432,6 +2434,59 @@ void VaultController::readCurrent()
     m_byteOrderMark = m_currentText.startsWith(QChar(0xfeff));
     Q_EMIT currentChanged();
     Q_EMIT currentConflictsChanged();
+}
+
+QStringList VaultController::ignorePatterns() const
+{
+    return m_vault ? VaultIgnore::patternsOf(*m_vault) : QStringList();
+}
+
+bool VaultController::respectsGitignore() const
+{
+    return !m_vault || VaultIgnore::respectsGitignore(*m_vault);
+}
+
+bool VaultController::setIgnore(const QStringList &patterns, bool gitignore)
+{
+    if (!m_vault || !m_vault->writable())
+        return false;
+    QStringList kept;
+    for (const QString &pattern : patterns) {
+        if (!pattern.trimmed().isEmpty())
+            kept.append(pattern.trimmed());
+    }
+    QString error;
+    // Respecting .gitignore is the default, so only turning it off is written down.
+    if (!m_vault->setSetting(u"ignore"_s, kept.isEmpty() ? QVariant() : QVariant(kept), &error) ||
+        !m_vault->setSetting(u"gitignore"_s, gitignore ? QVariant() : QVariant(false), &error)) {
+        qCWarning(lcVault) << "could not set what the vault ignores" << error;
+        setProblem(tr("Could not set what the vault ignores: %1").arg(error));
+        return false;
+    }
+    readIgnoreAgain();
+    return true;
+}
+
+bool VaultController::ignoreNotebook(const QString &path)
+{
+    if (path.isEmpty())
+        return false;
+    QStringList patterns = ignorePatterns();
+    const QString pattern = u'/' + path + u'/';
+    if (!patterns.contains(pattern))
+        patterns.append(pattern);
+    return setIgnore(patterns, respectsGitignore());
+}
+
+void VaultController::readIgnoreAgain()
+{
+    if (!m_vault)
+        return;
+    qCInfo(lcVault) << "what the vault ignores changed; reading it again";
+    m_index->refresh();
+    if (m_watcher)
+        m_watcher->start();
+    reloadModels();
 }
 
 } // namespace jot

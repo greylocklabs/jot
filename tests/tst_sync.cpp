@@ -25,6 +25,7 @@ private Q_SLOTS:
     void cleanup();
     void sendsAndBringsNewFiles();
     void deletesGoToTheTrash();
+    void leavesIgnoredFilesAlone();
     void anEditBeatsADelete();
     void mergesEditsToDifferentLines();
     void mergesFrontMatterKeyByKey();
@@ -155,6 +156,28 @@ void TestSync::sendsAndBringsNewFiles()
     settle({&laptop, &desk});
     QCOMPARE(files(laptop), files(desk));
     QCOMPARE(files(laptop).size(), 3);
+}
+
+void TestSync::leavesIgnoredFilesAlone()
+{
+    Device laptop = device(u"laptop"_s);
+    Device desk = device(u"desk"_s);
+    write(laptop, u"Ferry.md"_s, "# Ferry\n");
+    write(laptop, u"Draft.md"_s, "draft\n");
+    settle({&laptop, &desk});
+    QVERIFY(exists(desk, u"Draft.md"_s));
+
+    // Ignoring a synced file is no delete: it stays on the other side, even once gone here.
+    write(laptop, u".jot/vault.yaml"_s, "format: 1\nignore: [Draft.md, Scratch/]\n");
+    settle({&laptop, &desk});
+    QCOMPARE(read(desk, u".jot/vault.yaml"_s), read(laptop, u".jot/vault.yaml"_s));
+    QVERIFY(QFile::remove(laptop.root + u"/Draft.md"_s));
+    write(laptop, u"Scratch/Idea.md"_s, "idea\n");
+    settle({&laptop, &desk});
+    QCOMPARE(read(desk, u"Draft.md"_s), QByteArray("draft\n"));
+    QVERIFY(remoteFiles().contains(u"Draft.md"_s));
+    QVERIFY(!exists(desk, u"Scratch/Idea.md"_s));
+    QVERIFY(!remoteFiles().contains(u"Scratch/Idea.md"_s));
 }
 
 void TestSync::deletesGoToTheTrash()
