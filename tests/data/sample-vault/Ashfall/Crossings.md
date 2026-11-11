@@ -15,8 +15,8 @@ timetable is in [crossings.csv](Records/crossings.csv).
 ## Still to do
 
 - [x] Match the ledger to [[Mara Vey]]'s voice
-- [ ] Fares for act two @writing 📅 2026-10-27
-- [ ] Ask playtesters about the stranger @writing
+- [ ] Fares for act two 📅 2026-10-27
+- [ ] Ask playtesters about the stranger
 
 ## Fare rule
 

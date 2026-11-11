@@ -12,7 +12,6 @@ TaskLine readTaskLine(const QString &text)
     // the priorities. Each is followed by its value, up to the next marker.
     static const QRegularExpression marker(u"(📅|⏳|🛫|➕|✅|❌|🔁|⏫|🔼|🔽|🔺|⏬)\\x{FE0F}?"_s);
     static const QRegularExpression date(uR"(^\s*(\d{4}-\d{2}-\d{2})(?:[ T](\d{1,2}:\d{2}))?)"_s);
-    static const QRegularExpression label(uR"((?:^|(?<=\s))@([\p{L}\p{N}_-]+))"_s);
 
     TaskLine line;
     // Everything before the first marker is the to-do's own words; each marker owns what
@@ -35,7 +34,7 @@ TaskLine readTaskLine(const QString &text)
         } else if (kind == u"✅"_s && day.hasMatch()) {
             line.done = day.captured(1);
         } else if (kind == u"🔁"_s) {
-            // A label or a tag after the rule is the to-do's, not part of the rule.
+            // A tag after the rule is the to-do's, not part of the rule.
             QStringList rule;
             for (const QString &word : value.split(u' ', Qt::SkipEmptyParts)) {
                 if (word.startsWith(u'@') || word.startsWith(u'#'))
@@ -52,11 +51,6 @@ TaskLine readTaskLine(const QString &text)
         if (!rest.isEmpty())
             words += u' ' + rest;
     }
-    for (const QRegularExpressionMatch &m : label.globalMatch(words)) {
-        if (!line.labels.contains(m.captured(1), Qt::CaseInsensitive))
-            line.labels.append(m.captured(1));
-    }
-    words.remove(label);
     line.title = words.simplified();
     return line;
 }

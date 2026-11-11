@@ -21,32 +21,30 @@ void TestTaskLine::reads_data()
     QTest::addColumn<QString>("text");
     QTest::addColumn<TaskLine>("line");
 
-    QTest::newRow("plain") << u"Buy rope"_s << TaskLine{u"Buy rope"_s, {}, {}, {}, {}};
+    QTest::newRow("plain") << u"Buy rope"_s << TaskLine{u"Buy rope"_s, {}, {}, {}};
     QTest::newRow("due") << u"Call Soren 📅 2026-10-29"_s
-                         << TaskLine{u"Call Soren"_s, u"2026-10-29"_s, {}, {}, {}};
+                         << TaskLine{u"Call Soren"_s, u"2026-10-29"_s, {}, {}};
     QTest::newRow("due at a time") << u"Call Soren 📅 2026-10-29 9:30"_s
-                                   << TaskLine{u"Call Soren"_s, u"2026-10-29T09:30"_s, {}, {}, {}};
-    QTest::newRow("labels and tags")
-        << u"Call Soren @minutes #calls @Phone 📅 2026-10-29 14:00"_s
-        << TaskLine{
-               u"Call Soren #calls"_s, u"2026-10-29T14:00"_s, {}, {}, {u"minutes"_s, u"Phone"_s}};
+                                   << TaskLine{u"Call Soren"_s, u"2026-10-29T09:30"_s, {}, {}};
+    QTest::newRow("tags, and words with an @")
+        << u"Call Soren @minutes #calls 📅 2026-10-29 14:00"_s
+        << TaskLine{u"Call Soren @minutes #calls"_s, u"2026-10-29T14:00"_s, {}, {}};
     QTest::newRow("repeats and done")
         << u"Water plants 🔁 every week 📅 2026-10-27 ✅ 2026-10-27"_s
-        << TaskLine{u"Water plants"_s, u"2026-10-27"_s, u"every week"_s, u"2026-10-27"_s, {}};
-    QTest::newRow("words after the date")
-        << u"Pay rent 📅 2026-11-01 #home"_s
-        << TaskLine{u"Pay rent #home"_s, u"2026-11-01"_s, {}, {}, {}};
+        << TaskLine{u"Water plants"_s, u"2026-10-27"_s, u"every week"_s, u"2026-10-27"_s};
+    QTest::newRow("words after the date") << u"Pay rent 📅 2026-11-01 #home"_s
+                                          << TaskLine{u"Pay rent #home"_s, u"2026-11-01"_s, {}, {}};
     QTest::newRow("other markers left out")
-        << u"Plan ⏫ ⏳ 2026-10-30 🛫 2026-10-28"_s << TaskLine{u"Plan"_s, {}, {}, {}, {}};
-    QTest::newRow("labels and tags after the rule")
-        << u"Water plants 🔁 every week @day #home"_s
-        << TaskLine{u"Water plants #home"_s, {}, u"every week"_s, {}, {u"day"_s}};
+        << u"Plan ⏫ ⏳ 2026-10-30 🛫 2026-10-28"_s << TaskLine{u"Plan"_s, {}, {}, {}};
+    QTest::newRow("tags after the rule")
+        << u"Water plants 🔁 every week #home"_s
+        << TaskLine{u"Water plants #home"_s, {}, u"every week"_s, {}};
     QTest::newRow("words after a priority")
-        << u"Plan ⏫ the trip @days"_s << TaskLine{u"Plan the trip"_s, {}, {}, {}, {u"days"_s}};
-    QTest::newRow("an address is no label")
-        << u"Mail hello@example.org"_s << TaskLine{u"Mail hello@example.org"_s, {}, {}, {}, {}};
+        << u"Plan ⏫ the trip @days"_s << TaskLine{u"Plan the trip @days"_s, {}, {}, {}};
+    QTest::newRow("an address") << u"Mail hello@example.org"_s
+                                << TaskLine{u"Mail hello@example.org"_s, {}, {}, {}};
     QTest::newRow("a date that is not one")
-        << u"Pay 📅 soon @bills"_s << TaskLine{u"Pay soon"_s, {}, {}, {}, {u"bills"_s}};
+        << u"Pay 📅 soon @bills"_s << TaskLine{u"Pay soon @bills"_s, {}, {}, {}};
 }
 
 void TestTaskLine::reads()
@@ -58,7 +56,6 @@ void TestTaskLine::reads()
     QCOMPARE(read.due, line.due);
     QCOMPARE(read.repeat, line.repeat);
     QCOMPARE(read.done, line.done);
-    QCOMPARE(read.labels, line.labels);
 }
 
 void TestTaskLine::findsTheNextDay()

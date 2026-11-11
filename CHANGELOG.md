@@ -3,6 +3,14 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## Unreleased
+
+### Removed
+
+- @labels on to-dos and task notes, with the Labels section of the sidebar, the label filter
+  and `jot tasks --label`. Tags are the one way to sort notes and to-dos; an `@word` is now just
+  a word.
+
 ## 0.5.2 - 2026-11-10
 
 ### Added

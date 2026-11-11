@@ -1461,7 +1461,6 @@ QVariantMap VaultController::readQuickTask(const QString &typed) const
             {u"due"_s, task.due},
             {u"when"_s, when},
             {u"repeat"_s, task.repeat},
-            {u"labels"_s, readTaskLine(task.line).labels},
             {u"line"_s, task.line}};
 }
 
@@ -2305,16 +2304,6 @@ bool VaultController::writable() const
 int VaultController::noteCount() const
 {
     return m_index ? m_index->noteCount() : 0;
-}
-
-QVariantList VaultController::labels() const
-{
-    QVariantList labels;
-    if (m_index) {
-        for (const TagCount &each : m_index->labels())
-            labels.append(QVariantMap{{u"label"_s, each.tag}, {u"count"_s, each.notes}});
-    }
-    return labels;
 }
 
 QStringList VaultController::tags() const

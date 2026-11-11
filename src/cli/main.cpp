@@ -318,9 +318,6 @@ int main(int argc, char *argv[])
         u"view"_s, u"With tasks: today, upcoming, anytime, all (the default) or done."_s,
         u"view"_s);
     addOption(viewOption);
-    const QCommandLineOption labelOption(u"label"_s, u"With tasks: only those with this @label."_s,
-                                         u"label"_s);
-    addOption(labelOption);
     const QCommandLineOption tagOption(
         u"tag"_s, u"With tasks: only those with this #tag, or one nested in it."_s, u"tag"_s);
     addOption(tagOption);
@@ -465,8 +462,7 @@ int main(int argc, char *argv[])
         if (command == u"show")
             return commands.show(rest);
         if (command == u"tasks")
-            return commands.listTasks(json, parser.value(viewOption), parser.value(labelOption),
-                                      parser.value(tagOption));
+            return commands.listTasks(json, parser.value(viewOption), parser.value(tagOption));
         if (command == u"tags")
             return commands.listTags(json);
         if (command == u"add")

@@ -9,7 +9,7 @@ namespace jot {
 /// What a to-do says about itself on its own line, in the Obsidian Tasks plugin's format, so
 /// vaults stay readable there: `📅 2026-10-29` when it is due, with a time after it if it has
 /// one (`📅 2026-10-29 14:00`, Jot's own addition), `🔁 every week` how it repeats, and
-/// `✅ 2026-10-28` when it was done. `@labels` sort it, as Todoist's labels do.
+/// `✅ 2026-10-28` when it was done.
 struct TaskLine
 {
     /// The to-do's words, without what is above; #tags and links stay.
@@ -20,8 +20,6 @@ struct TaskLine
     QString repeat;
     /// The day it was done, from ✅; empty when it was not, or not said.
     QString done;
-    /// Its labels, without the @, in the order written.
-    QStringList labels;
 
     bool operator==(const TaskLine &) const = default;
 };

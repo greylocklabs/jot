@@ -2133,10 +2133,10 @@ void TestVaultController::headsToDosByDay()
     QString error;
     QVERIFY(
         notefile::write(m_root + u"/Plans.md"_s,
-                        u"- [ ] Pay the fine @hours 📅 %1\n"
-                        "- [ ] Call Soren @minutes 📅 %2 14:00\n"
-                        "- [ ] Buy rope @minutes 📅 %3\n"
-                        "- [ ] Water @day 🔁 every week 📅 %4\n"
+                        u"- [ ] Pay the fine 📅 %1\n"
+                        "- [ ] Call Soren #calls 📅 %2 14:00\n"
+                        "- [ ] Buy rope #calls 📅 %3\n"
+                        "- [ ] Water 🔁 every week 📅 %4\n"
                         "- [ ] Next year 📅 %5\n"_s.arg(day(-2), day(0), day(1), day(3), day(400)),
                         &error));
     QVERIFY(m_vault->openPath(m_root));
@@ -2174,32 +2174,25 @@ void TestVaultController::headsToDosByDay()
     tasks.setView(u"anytime"_s);
     QVERIFY(!column(tasks, "title").contains(u"Buy rope"_s));
 
-    // The sidebar's labels, with how many open to-dos have each.
-    QCOMPARE(m_vault->labels(),
-             (QVariantList{QVariantMap{{u"label"_s, u"day"_s}, {u"count"_s, 1}},
-                           QVariantMap{{u"label"_s, u"hours"_s}, {u"count"_s, 1}},
-                           QVariantMap{{u"label"_s, u"kitchen"_s}, {u"count"_s, 1}},
-                           QVariantMap{{u"label"_s, u"minutes"_s}, {u"count"_s, 2}},
-                           QVariantMap{{u"label"_s, u"writing"_s}, {u"count"_s, 2}}}));
-    tasks.setLabel(u"minutes"_s);
+    // Narrowed to a tag.
+    tasks.setTag(u"calls"_s);
     tasks.setView(u"all"_s);
-    QCOMPARE(column(tasks, "title"), (QStringList{u"Call Soren"_s, u"Buy rope"_s}));
+    QCOMPARE(column(tasks, "title"), (QStringList{u"Call Soren #calls"_s, u"Buy rope #calls"_s}));
 }
 
 void TestVaultController::addsToDosToTheInbox()
 {
     QVERIFY(m_vault->openPath(m_root));
-    const QVariantMap read = m_vault->readQuickTask(u"call Soren tomorrow 3pm @minutes"_s);
-    QCOMPARE(read.value(u"title"_s).toString(), u"call Soren @minutes"_s);
+    const QVariantMap read = m_vault->readQuickTask(u"call Soren tomorrow 3pm #calls"_s);
+    QCOMPARE(read.value(u"title"_s).toString(), u"call Soren #calls"_s);
     QVERIFY(read.value(u"when"_s).toString().startsWith(u"Tomorrow, "_s));
-    QCOMPARE(read.value(u"labels"_s).toStringList(), QStringList{u"minutes"_s});
     QVERIFY(!m_vault->addQuickTask(u"   "_s));
 
     // The inbox is made on the first, and added to after.
-    QVERIFY(m_vault->addQuickTask(u"call Soren tomorrow 3pm @minutes"_s));
+    QVERIFY(m_vault->addQuickTask(u"call Soren tomorrow 3pm #calls"_s));
     QVERIFY(m_vault->addQuickTask(u"buy rope"_s));
     const QString inbox = readFile(m_root + u"/Inbox.md"_s);
-    QVERIFY2(inbox.startsWith(u"- [ ] call Soren @minutes 📅 "_s), qPrintable(inbox));
+    QVERIFY2(inbox.startsWith(u"- [ ] call Soren #calls 📅 "_s), qPrintable(inbox));
     QVERIFY(inbox.endsWith(u"15:00\n- [ ] buy rope\n"_s));
     m_vault->tasks()->setView(u"anytime"_s);
     QVERIFY(column(*m_vault->tasks(), "title").contains(u"buy rope"_s));

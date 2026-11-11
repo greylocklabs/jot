@@ -148,14 +148,12 @@ Rectangle {
 
                 objectName: "taskFilter"
                 anchors.verticalCenter: parent.verticalCenter
-                visible: Vault.tasks.label !== "" || Vault.tasks.tag !== ""
-                label: [Vault.tasks.label !== "" ? "@" + Vault.tasks.label : "", Vault.tasks.tag
-                    !== "" ? "#" + Vault.tasks.tag : ""].filter(part => part !== "").join(" ")
+                visible: Vault.tasks.tag !== ""
+                label: "#" + Vault.tasks.tag
                 selected: true
                 tip: qsTr("Show every to-do again")
                 Accessible.name: qsTr("Show every to-do again")
                 onClicked: {
-                    Vault.tasks.label = ""
                     Vault.tasks.tag = ""
                 }
             }
@@ -205,7 +203,6 @@ Rectangle {
             required property int line
             required property string due
             required property bool overdue
-            required property var labels
             required property bool repeats
             required property bool done
 
@@ -287,16 +284,14 @@ Rectangle {
                         font.pixelSize: Theme.textBase
                         font.weight: item.kind === "note" ? Theme.weightBold : Theme.weightStrong
                     }
-                    // Where it is written, unless the heading says so, its labels, and whether
-                    // it repeats.
+                    // Where it is written, unless the heading says so, and whether it repeats.
                     Text {
                         width: parent.width
                         visible: text !== ""
                         text: [item.repeats ? "🔁" : "", item.note !== "" && item.note
-                            !== item.ListView.section ? item.note : ""].concat(item.labels.map(
-                                                                                   label => "@"
-                                                                                            + label)).filter(
-                            part => part !== "").join("  ")
+                            !== item.ListView.section ? item.note : ""].filter(part => part !== "").join(
+                            "  ")
+
                         elide: Text.ElideRight
                         color: Theme.textFaint
                         font.family: Theme.fontFamily

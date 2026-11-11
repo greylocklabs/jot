@@ -70,8 +70,7 @@ std::optional<ToDoView> toDoView(const QString &name)
     return std::nullopt;
 }
 
-QList<ToDo> toDos(const VaultIndex &index, ToDoView view, const QDate &today, const QString &label,
-                  const QString &tag)
+QList<ToDo> toDos(const VaultIndex &index, ToDoView view, const QDate &today, const QString &tag)
 {
     const bool done = view == ToDoView::Done;
     QList<ToDo> all;
@@ -83,7 +82,6 @@ QList<ToDo> toDos(const VaultIndex &index, ToDoView view, const QDate &today, co
                     {},
                     note.due.trimmed(),
                     {},
-                    note.labels,
                     note.tags,
                     {},
                     note.done.trimmed()});
@@ -94,8 +92,8 @@ QList<ToDo> toDos(const VaultIndex &index, ToDoView view, const QDate &today, co
             titles.insert(task.path, info ? info->title : task.path);
         }
         all.append({u"task"_s, task.path, task.line, task.parts.title, titles.value(task.path),
-                    task.parts.due, task.parts.repeat, task.parts.labels,
-                    scanNote(task.parts.title).tags, task.text, task.parts.done});
+                    task.parts.due, task.parts.repeat, scanNote(task.parts.title).tags, task.text,
+                    task.parts.done});
     }
 
     QList<ToDo> shown;
@@ -106,8 +104,6 @@ QList<ToDo> toDos(const VaultIndex &index, ToDoView view, const QDate &today, co
                             (view == ToDoView::Upcoming && due.isValid() && due > today) ||
                             (view == ToDoView::Anytime && !due.isValid());
         if (!wanted)
-            continue;
-        if (!label.isEmpty() && !each.labels.contains(label, Qt::CaseInsensitive))
             continue;
         if (!tag.isEmpty() && !hasTag(each.tags, tag))
             continue;

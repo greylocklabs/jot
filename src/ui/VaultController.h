@@ -56,8 +56,6 @@ class VaultController : public QObject
     Q_PROPERTY(QString error READ error NOTIFY errorChanged)
     Q_PROPERTY(int noteCount READ noteCount NOTIFY notesChanged)
     Q_PROPERTY(QStringList tags READ tags NOTIFY notesChanged)
-    /// The @labels on open to-dos: `{label, count}` for each, alphabetically.
-    Q_PROPERTY(QVariantList labels READ labels NOTIFY notesChanged)
     /// Each notebook's emoji, by its path, for those that have one.
     Q_PROPERTY(QVariantMap notebookEmoji READ notebookEmoji NOTIFY notesChanged)
     /// The emoji before Tasks and Trash in the sidebar, by view, each empty for none.
@@ -295,7 +293,7 @@ public:
     /// cursor just after it.
     Q_INVOKABLE QVariantMap placeBlock(const QString &text, int position,
                                        const QString &markdown) const;
-    /// How quick add reads `typed`: `{title, due, when, repeat, labels, line}`, where `when` says
+    /// How quick add reads `typed`: `{title, due, when, repeat, line}`, where `when` says
     /// the day and time for people, and `line` is the checkbox it would add.
     Q_INVOKABLE QVariantMap readQuickTask(const QString &typed) const;
     /// A checkbox's words, `text`, with the day and repeat they say written as markers, as
@@ -413,7 +411,6 @@ public:
     [[nodiscard]] QString error() const { return m_error; }
     [[nodiscard]] int noteCount() const;
     [[nodiscard]] QStringList tags() const;
-    [[nodiscard]] QVariantList labels() const;
     [[nodiscard]] QVariantMap notebookEmoji() const { return m_notebookEmoji; }
     [[nodiscard]] QVariantMap currentTarget() const { return m_currentTarget; }
     [[nodiscard]] QVariantMap viewEmoji() const { return m_viewEmoji; }
