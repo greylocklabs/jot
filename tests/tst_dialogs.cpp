@@ -8,6 +8,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QGuiApplication>
 #include <QQmlComponent>
 #include <QQmlEngine>
 #include <QQuickItem>
@@ -16,6 +17,7 @@
 #include <QQuickWindow>
 #include <QRegularExpression>
 #include <QSignalSpy>
+#include <QStyleHints>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QtQml/qqmlextensionplugin.h>
@@ -614,8 +616,17 @@ void TestDialogs::columnsGiveWayToTheNote()
                       row->mapToScene({row->width() / 2, row->height() / 2}).toPoint());
     QTRY_VERIFY(!list->isVisible());
     QCOMPARE(m_vault->current(), u"Pick me.md"_s);
+    // A double-click there renames the note in its row, the flyout staying for it.
     click();
-    QTRY_VERIFY(sidebar->isVisible());
+    QTRY_VERIFY((row = rowOf(list)) != nullptr && list->isVisible());
+    QTest::mouseDClick(window, Qt::LeftButton, {},
+                       row->mapToScene({row->width() / 2, row->height() / 2}).toPoint());
+    QTRY_COMPARE(list->property("renamingPath").toString(), u"Pick me.md"_s);
+    QTest::qWait(QGuiApplication::styleHints()->mouseDoubleClickInterval() + 100);
+    QVERIFY(list->isVisible());
+    QTest::keyClick(window, Qt::Key_Escape);
+    QTRY_COMPARE(list->property("renamingPath").toString(), QString());
+    QVERIFY(sidebar->isVisible());
     widen(1280);
     widen(600);
     QTRY_VERIFY(!sidebar->isVisible() && !list->isVisible());
