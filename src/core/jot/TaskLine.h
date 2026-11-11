@@ -10,16 +10,17 @@ namespace jot {
 /// One of a to-do's markers, the plain words after its box that say when it is due, how it
 /// repeats and when it was done: `@due 2026-10-29`, with a time after it if it has one
 /// (`@due 2026-10-29 14:00`), `@daily`, `@weekly`, `@monthly`, `@yearly`, `@weekdays` or
-/// `@every 2 weeks on monday`, and `@done 2026-10-28`. Each starts a word, case aside.
+/// `@every 2 weeks on monday`, `@done 2026-10-28`, and its priority, `@p1` (urgent) to `@p4`
+/// (low). Each starts a word, case aside.
 struct TaskMarker
 {
-    enum Kind { Due, Repeat, Done };
+    enum Kind { Due, Repeat, Done, Priority };
     Kind kind = Due;
     /// Where it is in the to-do's text, from its @ to the end of its value.
     qsizetype start = 0;
     qsizetype end = 0;
     /// What it says: the day, "2026-10-29" or "2026-10-29T14:00", for Due and Done, and the
-    /// rule for Repeat, such as "every week".
+    /// rule for Repeat, such as "every week", and "1" to "4" for Priority.
     QString value;
 
     bool operator==(const TaskMarker &) const = default;
@@ -40,6 +41,8 @@ struct TaskLine
     QString repeat;
     /// The day it was done; empty when it was not, or not said.
     QString done;
+    /// 1 urgent, 2 high, 3 medium, 4 low; 0 for none.
+    int priority = 0;
 
     bool operator==(const TaskLine &) const = default;
 };
@@ -54,6 +57,12 @@ struct TaskLine
 [[nodiscard]] QString dueMarker(const QString &due);
 /// `@done 2026-10-28`.
 [[nodiscard]] QString doneMarker(const QDate &day);
+/// `@p1` for 1, urgent, to `@p4` for 4, low; empty for none.
+[[nodiscard]] QString priorityMarker(int priority);
+/// What a priority is called: Urgent, High, Medium or Low, or None for 0.
+[[nodiscard]] QString priorityName(int priority);
+/// The priority a name gives, "p1" to "p4", with or without its @ and case aside; 0 for none.
+[[nodiscard]] int priorityOf(const QString &name);
 /// `text` without its markers of `kinds`, its spaces tidied where they were.
 [[nodiscard]] QString withoutMarkers(const QString &text, const QList<TaskMarker::Kind> &kinds);
 

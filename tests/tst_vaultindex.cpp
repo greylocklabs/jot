@@ -396,7 +396,8 @@ void TestVaultIndex::readsToDoDatesAndLabels()
     write(u"Calls.md"_s, u"- [ ] Call Soren #calls @due 2026-10-29 14:00\n"
                          "- [x] Call Mara @done 2026-10-27\n"
                          "- [ ] Water plants @weekly @due 2026-10-30\n"_s);
-    write(u"Taxes.md"_s, u"---\ntask: open\ndue: 2026-11-15\n---\n"_s);
+    write(u"Taxes.md"_s,
+          u"---\ntask: open\ndue: 2026-11-15\nrepeat: every year\npriority: P2\n---\n"_s);
     open();
     const QList<NoteTask> tasks = m_index->openTasks();
     QCOMPARE(tasks.size(), 2);
@@ -404,6 +405,8 @@ void TestVaultIndex::readsToDoDatesAndLabels()
     QCOMPARE(tasks.at(0).parts.due, u"2026-10-29T14:00"_s);
     QCOMPARE(tasks.at(1).parts.repeat, u"every week"_s);
     QCOMPARE(m_index->openTaskNotes().first().due, u"2026-11-15"_s);
+    QCOMPARE(m_index->openTaskNotes().first().repeat, u"every year"_s);
+    QCOMPARE(m_index->openTaskNotes().first().priority, 2);
 }
 
 QTEST_GUILESS_MAIN(TestVaultIndex)

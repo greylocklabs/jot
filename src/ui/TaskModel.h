@@ -9,8 +9,8 @@
 
 namespace jot {
 
-/// The to-dos Tasks shows: one view of them, Today, Upcoming, Anytime, All or Done, with a tag to
-/// narrow it, under headings for the day or the note they are in.
+/// The to-dos Tasks shows: one view of them, Today, Upcoming, Anytime, All or Done, with a tag or a
+/// priority to narrow it, under headings for the day or the note they are in.
 class TaskModel : public QAbstractListModel
 {
     Q_OBJECT
@@ -21,6 +21,8 @@ class TaskModel : public QAbstractListModel
     Q_PROPERTY(QString view READ view WRITE setView NOTIFY filterChanged)
     /// Only to-dos with this #tag or one nested in it, when set.
     Q_PROPERTY(QString tag READ tag WRITE setTag NOTIFY filterChanged)
+    /// Only to-dos of this priority, 1 urgent to 4 low, or 0 for those with none; -1 for all.
+    Q_PROPERTY(int priority READ priority WRITE setPriority NOTIFY filterChanged)
     /// How many are overdue or due today, whatever the view.
     Q_PROPERTY(int todayCount READ todayCount NOTIFY countChanged)
 
@@ -44,6 +46,8 @@ public:
         GroupRole,
         /// It is done.
         DoneRole,
+        /// 1 urgent to 4 low, or 0 for none.
+        PriorityRole,
     };
 
     explicit TaskModel(QObject *parent = nullptr);
@@ -54,6 +58,8 @@ public:
     void setView(const QString &view);
     [[nodiscard]] QString tag() const { return m_tag; }
     void setTag(const QString &tag);
+    [[nodiscard]] int priority() const { return m_priority; }
+    void setPriority(int priority);
     [[nodiscard]] int todayCount() const { return m_todayCount; }
 
     [[nodiscard]] int rowCount(const QModelIndex &parent = {}) const override;
@@ -70,6 +76,7 @@ private:
     const VaultIndex *m_index = nullptr;
     QString m_view = QStringLiteral("today");
     QString m_tag;
+    int m_priority = -1;
     QDate m_today;
     QList<ToDo> m_rows;
     int m_todayCount = 0;

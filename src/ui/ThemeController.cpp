@@ -2,6 +2,7 @@
 
 #include "greylock/Color.h"
 #include "greylock/ThemeLoader.h"
+#include "jot/CodeColors.h"
 #include "jot/Logging.h"
 
 #include <QCoreApplication>
@@ -212,6 +213,18 @@ int ThemeController::fittingPixelSize(const QString &text, const QFont &font, qr
     if (widest <= width || widest <= 0)
         return full;
     return std::clamp(int(std::floor(full * width / widest)), std::min(smallest, full), full);
+}
+
+QColor ThemeController::priorityColor(int priority) const
+{
+    const CodeColors code = codeColors(m_spec);
+    switch (priority) {
+    case 1: return danger();
+    case 2: return code.number;
+    case 3: return code.type;
+    case 4: return textMuted();
+    default: return Qt::transparent;
+    }
 }
 
 } // namespace jot

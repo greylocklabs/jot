@@ -183,6 +183,7 @@ void TestNoteScan::readsAsMarkdownWithLinks()
                  .arg(QLocale().toString(QDate(year, 11, 2), u"MMM d"_s),
                       QLocale().toString(QDate(year, 11, 1), u"MMM d"_s))
                  .arg(year));
+    QCOMPARE(readingMarkdown(u"- [ ] Call @p1\n"_s, embed), u"- [ ] Call 🚩 Urgent\n"_s);
     QCOMPARE(readingMarkdown(u"- [ ] Call @every 2 weeks @due 2000-01-05 14:00\n"_s, embed),
              u"- [ ] Call 🔁 every 2 weeks 📅 %1\n"_s.arg(
                  QLocale().toString(QDate(2000, 1, 5), u"MMM d, yyyy"_s) + u", "_s +

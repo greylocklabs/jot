@@ -46,6 +46,10 @@ void TestTaskLine::reads_data()
         << u"Call @due 2026-11-02T9:30"_s << TaskLine{u"Call"_s, u"2026-11-02T09:30"_s, {}, {}};
     QTest::newRow("@ words that are no markers")
         << u"Plan @trip and @every"_s << TaskLine{u"Plan @trip and @every"_s, {}, {}, {}};
+    QTest::newRow("a priority") << u"Call @P1 @due 2026-11-02 #calls"_s
+                                << TaskLine{u"Call #calls"_s, u"2026-11-02"_s, {}, {}, 1};
+    QTest::newRow("no priority past p4")
+        << u"Call @p5 @p0"_s << TaskLine{u"Call @p5 @p0"_s, {}, {}, {}, 0};
     QTest::newRow("an address") << u"Mail hello@example.org"_s
                                 << TaskLine{u"Mail hello@example.org"_s, {}, {}, {}};
     QTest::newRow("a day that is not one")
@@ -62,6 +66,7 @@ void TestTaskLine::reads()
     QCOMPARE(read.due, line.due);
     QCOMPARE(read.repeat, line.repeat);
     QCOMPARE(read.done, line.done);
+    QCOMPARE(read.priority, line.priority);
 }
 
 void TestTaskLine::findsWhereMarkersAre()
@@ -87,6 +92,13 @@ void TestTaskLine::writesMarkers()
     QCOMPARE(repeatMarker(u"every 2 weeks on monday"_s), u"@every 2 weeks on monday"_s);
     QCOMPARE(dueMarker(u"2026-11-02T14:00"_s), u"@due 2026-11-02 14:00"_s);
     QCOMPARE(doneMarker(QDate(2026, 11, 1)), u"@done 2026-11-01"_s);
+    QCOMPARE(priorityMarker(2), u"@p2"_s);
+    QCOMPARE(priorityMarker(0), QString());
+    QCOMPARE(priorityName(1), u"Urgent"_s);
+    QCOMPARE(priorityName(0), u"None"_s);
+    QCOMPARE(priorityOf(u"P3"_s), 3);
+    QCOMPARE(priorityOf(u"@p4"_s), 4);
+    QCOMPARE(priorityOf(u"p9"_s), 0);
 }
 
 void TestTaskLine::offersMarkersAsTheyAreTyped()
@@ -99,6 +111,8 @@ void TestTaskLine::offersMarkersAsTheyAreTyped()
         return out;
     };
     QCOMPARE(shown(u"we"_s), (QStringList{u"@weekly"_s, u"@weekdays"_s}));
+    QCOMPARE(shown(u"p"_s), (QStringList{u"@p1"_s, u"@p2"_s, u"@p3"_s, u"@p4"_s}));
+    QCOMPARE(shown(u"p2"_s), QStringList{u"@p2"_s});
     QCOMPARE(shown(u"DUE"_s).size(), 4);
     QVERIFY(shown(u""_s).size() > 8);
     QVERIFY(shown(u"zz"_s).isEmpty());

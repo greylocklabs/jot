@@ -215,6 +215,14 @@ void TestVaultCommands::listsWhatIsLeftToDo()
     QCOMPARE(json().array().first()[u"due"_s].toString(), u"2020-01-01"_s);
     QCOMPARE(run([](auto &c) { return c.listTasks(true, u"anytime"_s, u"calls"_s); }), 0);
     QVERIFY(json().array().isEmpty());
+    // And of a priority, or none.
+    QCOMPARE(run([](auto &c) { return c.listTasks(true, u"all"_s, {}, u"p1"_s); }), 0);
+    QVERIFY(json().array().isEmpty());
+    QCOMPARE(run([](auto &c) { return c.listTasks(true, u"all"_s, {}, u"none"_s); }), 0);
+    QVERIFY(json().array().size() >= 2);
+    for (const QJsonValue &each : json().array())
+        QCOMPARE(each[u"priority"_s].toInt(), 0);
+    QCOMPARE(run([](auto &c) { return c.listTasks(false, u"all"_s, {}, u"urgent"_s); }), 2);
     QCOMPARE(run([](auto &c) { return c.listTasks(false, u"later"_s); }), 2);
 
     // Done ones, under the day they were done.

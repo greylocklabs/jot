@@ -321,6 +321,10 @@ int main(int argc, char *argv[])
     const QCommandLineOption tagOption(
         u"tag"_s, u"With tasks: only those with this #tag, or one nested in it."_s, u"tag"_s);
     addOption(tagOption);
+    const QCommandLineOption priorityOption(
+        u"priority"_s, u"With tasks: only those of this priority, p1 to p4, or none."_s,
+        u"priority"_s);
+    addOption(priorityOption);
     const QCommandLineOption jsonOption(
         u"json"_s,
         u"With status, ls, search, new, tasks, tags and import: print JSON for scripts."_s);
@@ -462,7 +466,8 @@ int main(int argc, char *argv[])
         if (command == u"show")
             return commands.show(rest);
         if (command == u"tasks")
-            return commands.listTasks(json, parser.value(viewOption), parser.value(tagOption));
+            return commands.listTasks(json, parser.value(viewOption), parser.value(tagOption),
+                                      parser.value(priorityOption));
         if (command == u"tags")
             return commands.listTags(json);
         if (command == u"add")

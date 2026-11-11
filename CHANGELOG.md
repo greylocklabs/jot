@@ -5,6 +5,13 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ## Unreleased
 
+### Added
+
+- To-dos have a priority, as in Todoist: `@p1` urgent, `@p2` high, `@p3` medium and `@p4` low, or
+  `priority: p1` on a task note. Quick add reads a bare `p1` too. The task list flags each in its
+  color, the sidebar lists the priorities in use to show their to-dos, Read mode says 🚩 Urgent,
+  and `jot tasks --priority p1` narrows the list.
+
 ### Changed
 
 - To-dos say when they are due, how they repeat and when they were done in plain words instead of

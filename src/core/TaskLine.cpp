@@ -11,7 +11,7 @@ namespace jot {
 
 QList<TaskMarker> taskMarkers(QStringView text)
 {
-    static const QRegularExpression word(uR"((?:^|(?<=\s))@([A-Za-z]+)(?=\s|$))"_s);
+    static const QRegularExpression word(uR"((?:^|(?<=\s))@([A-Za-z]+[1-4]?)(?=\s|$))"_s);
     static const QRegularExpression day(
         uR"(^\s+(\d{4}-\d{2}-\d{2})(?:[ T](\d{1,2}:\d{2}))?(?=\s|$))"_s);
     static const QHash<QString, QString> every = {{u"daily"_s, u"every day"_s},
@@ -23,7 +23,9 @@ QList<TaskMarker> taskMarkers(QStringView text)
     for (const QRegularExpressionMatch &m : word.globalMatchView(text)) {
         const QString name = m.captured(1).toLower();
         const qsizetype start = m.capturedStart();
-        if (const auto shortcut = every.constFind(name); shortcut != every.cend()) {
+        if (const int priority = priorityOf(name); priority > 0) {
+            found.append({TaskMarker::Priority, start, m.capturedEnd(), QString::number(priority)});
+        } else if (const auto shortcut = every.constFind(name); shortcut != every.cend()) {
             found.append({TaskMarker::Repeat, start, m.capturedEnd(), *shortcut});
         } else if (name == u"every") {
             // The rule's words, up to the next marker or tag.
@@ -65,14 +67,20 @@ TaskLine readTaskLine(const QString &text)
 {
     TaskLine line;
     for (const TaskMarker &marker : taskMarkers(text)) {
+        if (marker.kind == TaskMarker::Priority) {
+            if (line.priority == 0)
+                line.priority = marker.value.toInt();
+            continue;
+        }
         QString &value = marker.kind == TaskMarker::Due      ? line.due
                          : marker.kind == TaskMarker::Repeat ? line.repeat
                                                              : line.done;
         if (value.isEmpty())
             value = marker.value;
     }
-    line.title =
-        withoutMarkers(text, {TaskMarker::Due, TaskMarker::Repeat, TaskMarker::Done}).simplified();
+    line.title = withoutMarkers(text, {TaskMarker::Due, TaskMarker::Repeat, TaskMarker::Done,
+                                       TaskMarker::Priority})
+                     .simplified();
     return line;
 }
 
@@ -93,6 +101,10 @@ QList<MarkerSuggestion> markerSuggestions(const QString &typed, const QDate &tod
         {u"@yearly"_s, u"@yearly"_s, QObject::tr("Repeats every year")},
         {u"@every "_s, u"@every …"_s, QObject::tr("Repeats as written: every 2 weeks on monday")},
         {doneMarker(today), u"@done today"_s, QObject::tr("Done today")},
+        {u"@p1"_s, u"@p1"_s, QObject::tr("Urgent priority")},
+        {u"@p2"_s, u"@p2"_s, QObject::tr("High priority")},
+        {u"@p3"_s, u"@p3"_s, QObject::tr("Medium priority")},
+        {u"@p4"_s, u"@p4"_s, QObject::tr("Low priority")},
     };
     QList<MarkerSuggestion> found;
     const QString wanted = typed.toLower();
@@ -124,6 +136,29 @@ QString dueMarker(const QString &due)
 QString doneMarker(const QDate &day)
 {
     return u"@done "_s + day.toString(Qt::ISODate);
+}
+
+QString priorityMarker(int priority)
+{
+    return priority >= 1 && priority <= 4 ? u"@p"_s + QString::number(priority) : QString();
+}
+
+QString priorityName(int priority)
+{
+    switch (priority) {
+    case 1: return QObject::tr("Urgent");
+    case 2: return QObject::tr("High");
+    case 3: return QObject::tr("Medium");
+    case 4: return QObject::tr("Low");
+    default: return QObject::tr("None");
+    }
+}
+
+int priorityOf(const QString &name)
+{
+    static const QRegularExpression level(uR"(^@?[pP]([1-4])$)"_s);
+    const QRegularExpressionMatch m = level.match(name.trimmed());
+    return m.hasMatch() ? m.captured(1).toInt() : 0;
 }
 
 QString withoutMarkers(const QString &text, const QList<TaskMarker::Kind> &kinds)
