@@ -45,7 +45,6 @@ public:
                         QString *error) = 0;
 };
 
-/// What a sync did, path by path.
 /// What a sync is asked to do beyond what the remote does on its own, for one that commits or
 /// pushes by hand.
 struct SyncRequest
@@ -56,6 +55,7 @@ struct SyncRequest
     bool push = false;
 };
 
+/// What a sync did, path by path.
 struct SyncReport
 {
     /// Changed here from the remote, deleted here included.
