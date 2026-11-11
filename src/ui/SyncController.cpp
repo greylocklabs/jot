@@ -6,6 +6,7 @@
 #include "jot/Logging.h"
 #include "jot/S3Transport.h"
 #include "jot/Secrets.h"
+#include "jot/Vault.h"
 
 #include <QDesktopServices>
 #include <QDir>
@@ -58,20 +59,48 @@ void SyncController::setVault(const QString &root, std::function<void()> save)
     m_problem.clear();
     m_lastSynced = {};
     m_soon.stop();
+    applyInterval();
     if (configured()) {
-        m_every.start();
         m_clock.start();
-        m_soon.start(0);
+        if (syncEvery() > 0)
+            m_soon.start(0);
     } else {
-        m_every.stop();
         m_clock.stop();
     }
     Q_EMIT changed();
 }
 
+int SyncController::syncEvery() const
+{
+    if (m_root.isEmpty())
+        return kEveryMs / 60000;
+    bool ok = false;
+    const int minutes = Vault(m_root).setting(u"syncEvery"_s).toInt(&ok);
+    return ok && minutes >= 0 ? minutes : kEveryMs / 60000;
+}
+
+void SyncController::applyInterval()
+{
+    const int minutes = syncEvery();
+    if (configured() && minutes > 0) {
+        m_every.setInterval(minutes * 60 * 1000);
+        m_every.start();
+    } else {
+        m_every.stop();
+        m_soon.stop();
+    }
+}
+
+void SyncController::reloadOptions()
+{
+    applyInterval();
+    Q_EMIT changed();
+}
+
 void SyncController::localChanged()
 {
-    if (configured() && !m_soon.isActive())
+    // Syncing only when asked, an edit does not start one either.
+    if (configured() && syncEvery() > 0 && !m_soon.isActive())
         m_soon.start(kAfterChangeMs);
 }
 
@@ -325,6 +354,9 @@ void SyncController::connectRemote(const QString &remote, const QString &secret,
                 m_dropboxVerifier.clear();
                 m_settings.setSyncRemote(m_root, remote);
                 setVault(m_root, m_save);
+                // Connecting was asking for a sync, even where they run only when asked.
+                if (syncEvery() == 0)
+                    start();
             },
             Qt::QueuedConnection);
     });
@@ -419,7 +451,7 @@ void SyncController::done(const SyncReport &report)
                         ? QString()
                         : tr("%n file(s) did not sync; Jot tries again shortly.", nullptr,
                              int(report.errors.size()));
-        if (!report.errors.isEmpty() && !m_soon.isActive())
+        if (!report.errors.isEmpty() && syncEvery() > 0 && !m_soon.isActive())
             m_soon.start(kAfterChangeMs);
     }
     Q_EMIT changed();

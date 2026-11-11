@@ -372,6 +372,7 @@ gitSign: true # sign git sync's commits; unset leaves it to git
 gitPull: merge # bring in what others pushed by merging; rebase when missing
 gitCommit: manual # commit only when asked; each sync commits when missing
 gitPush: manual # push only when asked; each sync pushes when missing
+syncEvery: 15 # minutes between automatic syncs; 0 syncs only when asked
 ```
 
 - `format` is the vault's format number, as [Versioning](#versioning) says. One that is missing
@@ -403,6 +404,9 @@ gitPush: manual # push only when asked; each sync pushes when missing
   filled in from `gitMessage`; syncs still bring in what others pushed, but not into a file
   changed here and not committed yet. `gitPush: manual` keeps commits here until Push is asked
   for. Both are `auto` when missing.
+- `syncEvery` is the minutes between automatic syncs, for every kind of remote: 5 when missing.
+  With 0, Jot syncs only when asked, with F5 or Sync now, and not when the vault opens or after
+  an edit either.
 
 ## Versioning
 

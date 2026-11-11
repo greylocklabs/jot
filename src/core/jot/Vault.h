@@ -42,8 +42,8 @@ public:
     [[nodiscard]] int format() const;
     /// The value of `key` in `.jot/vault.yaml`, as text; empty when it is not there.
     [[nodiscard]] QString setting(const QString &key) const;
-    /// Sets `key` in `.jot/vault.yaml` to `value`, a QString, QStringList or bool, or removes it
-    /// when `value` is null, keeping the file's other lines as they are.
+    /// Sets `key` in `.jot/vault.yaml` to `value`, a QString, QStringList, bool or number, or
+    /// removes it when `value` is null, keeping the file's other lines as they are.
     bool setSetting(const QString &key, const QVariant &value, QString *error) const;
     /// False for a vault from a newer Jot, which this one only reads.
     [[nodiscard]] bool writable() const { return format() <= kFormat; }
