@@ -1,5 +1,7 @@
 #include "jot/TaskLine.h"
 
+#include "jot/QuickAdd.h"
+
 #include <QHash>
 #include <QObject>
 #include <QRegularExpression>
@@ -179,40 +181,62 @@ std::optional<QString> tidiedTaskLine(const QString &line, const QDate &today)
         return std::nullopt;
     static const QStringList weekdays = {u"monday"_s, u"tuesday"_s,  u"wednesday"_s, u"thursday"_s,
                                          u"friday"_s, u"saturday"_s, u"sunday"_s};
-    // A word for a day, as of today: due on the next such weekday, done on the last.
-    const auto dayOf = [&](const QString &word, bool due) {
-        const QString lower = word.toLower();
-        if (lower == u"today")
-            return today;
-        if (lower == u"tomorrow")
-            return today.addDays(1);
-        if (lower == u"yesterday")
-            return today.addDays(-1);
-        const qsizetype weekday = weekdays.indexOf(lower);
-        if (weekday < 0)
-            return QDate();
-        const int ahead = (int(weekday) + 1 - today.dayOfWeek() + 7) % 7;
-        const int back = (today.dayOfWeek() - int(weekday) - 1 + 7) % 7;
-        return due ? today.addDays(ahead == 0 ? 7 : ahead) : today.addDays(back == 0 ? -7 : -back);
+    // What the words after a marker say: the day they name, as quick add reads it, and the time
+    // for a due one; and how many of the words that took. Done is said of a day gone, so
+    // yesterday, and a weekday is the last one.
+    const auto said = [&](const QStringList &words, bool due) -> std::pair<QString, qsizetype> {
+        if (!words.isEmpty()) {
+            const QString first = words.first().toLower();
+            if (first == u"yesterday")
+                return {today.addDays(-1).toString(Qt::ISODate), 1};
+            if (const qsizetype weekday = weekdays.indexOf(first); !due && weekday >= 0) {
+                const int back = (today.dayOfWeek() - int(weekday) - 1 + 7) % 7;
+                return {today.addDays(back == 0 ? -7 : -back).toString(Qt::ISODate), 1};
+            }
+        }
+        // The most words that read as a day, and a time, and nothing else.
+        for (qsizetype count = words.size(); count > 0; --count) {
+            const QuickTask read =
+                readQuickTask(words.first(count).join(u' '), QDateTime(today, QTime(12, 0)));
+            if (!read.due.isEmpty() && read.title.isEmpty() && read.repeat.isEmpty() &&
+                read.priority == 0)
+                return {due ? read.due : read.due.left(10), count};
+        }
+        return {{}, 0};
     };
-    static const QRegularExpression said(
-        uR"((?:^|(?<=\s))@(due|done)(?!\s+\d{4}-\d{2}-\d{2})(?:\s+([A-Za-z]+))?(?=\s|$))"_s,
+    static const QRegularExpression marker(
+        uR"((?:^|(?<=\s))@(due|done)(?!\s+\d{4}-\d{2}-\d{2})(?=\s|$))"_s,
         QRegularExpression::CaseInsensitiveOption);
     QString text = line;
     bool doneSaid = false;
     bool changed = false;
     QList<QRegularExpressionMatch> found;
-    for (const QRegularExpressionMatch &each : said.globalMatch(text, m.capturedStart(3)))
+    for (const QRegularExpressionMatch &each : marker.globalMatch(text, m.capturedStart(3)))
         found.append(each);
     for (auto it = found.crbegin(); it != found.crend(); ++it) {
         const bool due = it->captured(1).toLower() == u"due";
-        const QDate day = dayOf(it->captured(2), due);
-        if (day.isValid()) {
-            text.replace(it->capturedStart(), it->capturedLength(),
-                         due ? dueMarker(day.toString(Qt::ISODate)) : doneMarker(day));
+        // Up to four words after it, short of the next marker or tag.
+        QStringList words;
+        QList<qsizetype> ends;
+        qsizetype at = it->capturedEnd();
+        while (words.size() < 4) {
+            while (at < text.size() && text.at(at).isSpace())
+                ++at;
+            const qsizetype from = at;
+            while (at < text.size() && !text.at(at).isSpace())
+                ++at;
+            if (from == at || text.at(from) == u'@' || text.at(from) == u'#')
+                break;
+            words.append(text.sliced(from, at - from));
+            ends.append(at);
+        }
+        const auto [day, used] = said(words, due);
+        if (!day.isEmpty()) {
+            text.replace(it->capturedStart(), ends.at(used - 1) - it->capturedStart(),
+                         due ? dueMarker(day) : doneMarker(QDate::fromString(day, Qt::ISODate)));
         } else if (!due) {
-            // Done with no day, or with a word that is no day: done today, the word kept.
-            text.replace(it->capturedStart(1) - 1, it->capturedLength(1) + 1, doneMarker(today));
+            // Done with no day said: done today, any words after it kept.
+            text.replace(it->capturedStart(), it->capturedLength(), doneMarker(today));
         } else {
             continue;
         }

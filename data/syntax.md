@@ -59,8 +59,9 @@ after it, each starting with `@`:
 - [x] Pay rent @monthly @due 2026-11-01 @done 2026-11-01
 ```
 
-- `@due` and a date is when it is due, with a time after it if it has one. Typing `@due
-tomorrow`, `today` or a weekday writes its date once you leave the line.
+- `@due` and a date is when it is due, with a time after it if it has one. Other ways of saying
+  a day, as `@due tomorrow 3pm`, `@due friday`, `@due nov 14` or `@due 11-14-2026` (month first),
+  are written as its date once you leave the line.
 - `@daily`, `@weekly`, `@monthly`, `@yearly` and `@weekdays` repeat it. `@every` takes any
   other rule: `every 3 days`, `every other week`, `every monday`, `every 2 weeks on friday`.
   Ticking one that repeats writes the next one above it.
