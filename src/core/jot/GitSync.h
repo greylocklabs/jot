@@ -111,8 +111,8 @@ private:
     bool prepare(QString *error);
     /// Commits what changed here with `message`; gives the paths.
     std::optional<QStringList> commit(const QString &message, QString *error);
-    /// Files changed here that the fetched commits change too, so bringing them in would have to
-    /// wait for those to be committed.
+    /// Files changed here that the fetched commits change, rename or delete too, so bringing
+    /// them in would have to wait for those to be committed.
     [[nodiscard]] QStringList clashingChanges() const;
     /// The author Jot commits as when git has none: `Jot <jot@localhost>`.
     [[nodiscard]] QStringList identity() const;

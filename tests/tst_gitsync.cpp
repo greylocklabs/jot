@@ -264,6 +264,20 @@ void TestGitSync::commitsAndPushesByHandWhenTheVaultSays()
     QVERIFY(run(m_dir->path(), {u"--git-dir="_s + m_remote, u"log"_s, u"--format=%s"_s, u"main"_s})
                 .contains("notes: desk's Mara"));
 
+    // A file renamed there is changed there too.
+    QVERIFY(sync(laptop).failure.isEmpty());
+    write(desk, u"Mara.md"_s, "# Mara\ndesk again\n");
+    QVERIFY(QFile::rename(laptop.root + u"/Mara.md"_s, laptop.root + u"/Mara Vey.md"_s));
+    // The vault's settings came to the laptop too, so it commits by hand now as well.
+    QVERIFY(syncAs(laptop, {u"notes: Mara's full name"_s, false}).failure.isEmpty());
+    report = sync(desk);
+    QVERIFY2(report.failure.contains(u"commit the changes to Mara.md"_s),
+             qPrintable(report.failure));
+    QCOMPARE(read(desk, u"Mara.md"_s), QByteArray("# Mara\ndesk again\n"));
+    report = syncAs(desk, {u"notes: desk's Mara again"_s, false});
+    QVERIFY2(report.failure.isEmpty(), qPrintable(report.failure));
+    QVERIFY(report.pulled.contains(u"Mara Vey.md"_s));
+
     // Pushes by hand: commits wait here until a push is asked for.
     write(desk, u".jot/vault.yaml"_s, "format: 1\ngitPush: manual\n");
     write(desk, u"Ashfall.md"_s, "# Ashfall\n");
