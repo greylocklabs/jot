@@ -128,18 +128,21 @@ Item {
         }
     }
 
-    Row {
+    // The tools wrap onto more lines on a narrow note, rather than running off its edge.
+    Flow {
         id: tools
 
+        objectName: "tableTools"
         anchors.top: partTabs.bottom
         anchors.topMargin: partTabs.visible ? Theme.space2 : 0
+        width: parent.width
         spacing: Theme.space2
 
         Field {
             id: filterField
 
             objectName: "tableFilter"
-            width: 220
+            width: Math.min(220, tools.width)
             placeholderText: qsTr("Filter rows")
             text: root.records.filter
             onTextChanged: root.records.filter = text
@@ -172,7 +175,7 @@ Item {
 
             objectName: "newColumn"
             visible: false
-            width: 180
+            width: Math.min(180, tools.width)
             placeholderText: qsTr("Column name")
             onAccepted: {
                 if (root.records.addColumn(text)) {

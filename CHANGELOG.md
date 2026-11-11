@@ -18,6 +18,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 ### Fixed
 
 - Renaming a notebook types the new name where the old one was, in a field the shape of its row.
+- A data table's tools, Undo and Redo among them, wrap onto more lines on a narrow window instead
+  of being cut off.
 
 ## 0.5.3 - 2026-11-11
 
