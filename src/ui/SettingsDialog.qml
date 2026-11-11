@@ -880,6 +880,8 @@ Popup {
                         gitHooks.checked = ["true", "yes", "on"].includes(Vault.vaultSetting(
                                                                               "gitHooks").toLowerCase(
                                                                               ))
+                        gitPull.currentValue = Vault.vaultSetting("gitPull").toLowerCase()
+                                === "merge" ? "merge" : "rebase"
                         const sign = Vault.vaultSetting("gitSign").toLowerCase()
                         gitSign.currentValue = ["true", "yes", "on"].includes(sign) ? "always" : ["false",
                                                                                                   "no", "off"].includes(
@@ -929,6 +931,38 @@ Popup {
                         enabled: Vault.writable
                         text: qsTr("Run the repository's hooks on each commit")
                         onToggled: Vault.setVaultSetting("gitHooks", checked ? true : null)
+                    }
+                    Row {
+                        spacing: Theme.space3
+
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: qsTr("Bring in changes by")
+                            color: Theme.text
+                            font.family: Theme.fontFamily
+                            font.pixelSize: Theme.textMd
+                        }
+                        Dropdown {
+                            id: gitPull
+
+                            objectName: "gitPull"
+                            anchors.verticalCenter: parent.verticalCenter
+                            enabled: Vault.writable
+                            model: [
+                                {
+                                    "id": "rebase",
+                                    "name": qsTr("Rebasing")
+                                },
+                                {
+                                    "id": "merge",
+                                    "name": qsTr("Merging")
+                                }
+                            ]
+                            currentValue: "rebase"
+                            onActivated: value => Vault.setVaultSetting("gitPull", value
+                                                                        === "merge" ? "merge" :
+                                                                                      null)
+                        }
                     }
                     Row {
                         spacing: Theme.space3

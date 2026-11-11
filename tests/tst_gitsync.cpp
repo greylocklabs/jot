@@ -21,6 +21,7 @@ private Q_SLOTS:
     void init();
     void sendsAndBringsNotes();
     void mergesEditsGitCanMerge();
+    void rebasesOrMergesAsTheVaultSays();
     void mergesFrontMatterGitCannot();
     void keepsAConflictCopyWithoutMarkers();
     void anEditBeatsADelete();
@@ -167,6 +168,54 @@ void TestGitSync::mergesEditsGitCanMerge()
     sync(laptop);
     QCOMPARE(read(laptop, u"Mara.md"_s), QByteArray("# Mara\n\nFIRST\n\nmiddle\n\nLAST\n"));
     QCOMPARE(notes(laptop), notes(desk));
+}
+
+void TestGitSync::rebasesOrMergesAsTheVaultSays()
+{
+    const Computer laptop = computer(u"laptop"_s);
+    const Computer desk = computer(u"desk"_s);
+    write(laptop, u"Mara.md"_s, "# Mara\n");
+    QVERIFY(sync(laptop).failure.isEmpty());
+    QVERIFY(sync(desk).failure.isEmpty());
+    const auto merges = [this] {
+        return run(m_dir->path(), {u"--git-dir="_s + m_remote, u"log"_s, u"--merges"_s,
+                                   u"--format=%h"_s, u"main"_s});
+    };
+
+    // Rebased by default: work from both computers in a line. The first sync of each joined
+    // two histories, which only a merge can.
+    const QByteArray joined = merges();
+    write(laptop, u"Soren.md"_s, "# Soren\n");
+    write(desk, u"Ashfall.md"_s, "# Ashfall\n");
+    QVERIFY(sync(laptop).failure.isEmpty());
+    QVERIFY(sync(desk).failure.isEmpty());
+    QCOMPARE(merges(), joined);
+    QCOMPARE(read(desk, u"Soren.md"_s), QByteArray("# Soren\n"));
+
+    // A clash stops the rebase, and the merge Jot falls back on keeps both versions.
+    QVERIFY(sync(laptop).failure.isEmpty());
+    write(laptop, u"Mara.md"_s, "# Mara\nlaptop\n");
+    write(desk, u"Mara.md"_s, "# Mara\ndesk\n");
+    QVERIFY(sync(laptop).failure.isEmpty());
+    const SyncReport clashed = sync(desk);
+    QVERIFY2(clashed.failure.isEmpty(), qPrintable(clashed.failure));
+    QVERIFY(!clashed.conflicts.isEmpty() || !clashed.merged.isEmpty());
+    QVERIFY(!QFileInfo::exists(desk.gitDir + u"/rebase-merge"_s));
+    QVERIFY(!read(desk, u"Mara.md"_s).contains("<<<<<<<"));
+
+    // Merging, as the vault says, makes merge commits again.
+    for (const Computer *each : {&laptop, &desk})
+        write(*each, u".jot/vault.yaml"_s, "format: 1\ngitPull: merge\n");
+    QVERIFY(sync(laptop).failure.isEmpty());
+    QVERIFY(sync(desk).failure.isEmpty());
+    QVERIFY(sync(laptop).failure.isEmpty());
+    const QByteArray before = merges();
+    write(laptop, u"Soren.md"_s, "# Soren\nagain\n");
+    write(desk, u"Ashfall.md"_s, "# Ashfall\nagain\n");
+    QVERIFY(sync(laptop).failure.isEmpty());
+    QVERIFY(sync(desk).failure.isEmpty());
+    QVERIFY(merges().size() > before.size());
+    QVERIFY(!GitSync::optionsOf(desk.root).rebase);
 }
 
 void TestGitSync::mergesFrontMatterGitCannot()

@@ -61,6 +61,10 @@ public:
         bool hooks = false;
         /// Whether commits are signed: `gitSign`; unset leaves it to git's own settings.
         std::optional<bool> sign;
+        /// Whether what is fetched is brought in by rebasing onto it, `gitPull: rebase`, the
+        /// default, or by merging it, `gitPull: merge`. A rebase that stops on a conflict is
+        /// given up for a merge, which Jot can always finish.
+        bool rebase = true;
     };
     /// The commit message used when the vault sets none.
     static const QString kDefaultMessage;
@@ -100,9 +104,18 @@ private:
     [[nodiscard]] QStringList identity() const;
     /// What a commit is given: its author when git has none, its hooks and its signing.
     [[nodiscard]] QStringList commitArguments() const;
+    /// Brings in what was fetched, by rebasing or merging as Options say; false, with `error`,
+    /// when it could not be.
+    bool bringIn(SyncReport &report, QString *error);
+    /// Rebases onto what was fetched; false, with the rebase given up, when it stops.
+    bool rebase();
     /// Merges what was fetched, resolving what git could not; false, with `error`, when it
     /// could not be made.
     bool merge(SyncReport &report, QString *error);
+    /// Adds what changed between `before` and HEAD to `report.pulled`.
+    void notePulled(const QString &before, SyncReport &report) const;
+    /// Whether a rebase is under way in the repository.
+    [[nodiscard]] bool rebasing() const;
     bool resolve(const QString &path, SyncReport &report, QString *error);
     [[nodiscard]] QString remoteBranch() const;
     /// Whether the repository keeps files in Git LFS, which is not installed; says so if it does.
