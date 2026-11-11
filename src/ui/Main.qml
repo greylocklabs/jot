@@ -847,7 +847,13 @@ ApplicationWindow {
             editor.write()
             break
         case "rename":
-            editor.editTitle()
+            // In the note's row, as a double-click there does, with the list shown for it.
+            if (Vault.showingTasks || Vault.showingTrash) {
+                editor.editTitle()
+            } else {
+                columns.revealList()
+                noteList.rename(Vault.current)
+            }
             break
         case "trash":
             noteList.askToTrash(Vault.current)

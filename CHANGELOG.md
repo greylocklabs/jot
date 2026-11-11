@@ -5,6 +5,11 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ## Unreleased
 
+### Added
+
+- Double-click a note in the list to rename it there. Rename, from a note's menu or the keyboard,
+  does the same, bringing the list back if it was put away.
+
 ### Fixed
 
 - Renaming a notebook types the new name where the old one was, in a field the shape of its row.

@@ -7,6 +7,7 @@
 
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QQmlComponent>
 #include <QQmlEngine>
 #include <QQuickItem>
@@ -45,6 +46,7 @@ private Q_SLOTS:
     void columnsGiveWayToTheNote();
     void showsTheSyntaxGuide();
     void filtersToDosByPriority();
+    void renamesANoteInTheWindow();
     void offersToRemoveATargetOnlyWhenThereIsOne();
 
 private:
@@ -652,4 +654,49 @@ void TestDialogs::filtersToDosByPriority()
     QMetaObject::invokeMethod(filter, "activated", Q_ARG(QVariant, -1));
     QCOMPARE(m_vault->tasks()->priority(), -1);
     m_vault->setShowingTasks(false);
+}
+
+void TestDialogs::renamesANoteInTheWindow()
+{
+    QFile note(m_dir.filePath(u"Notes/Ferry log.md"_s));
+    QVERIFY(note.open(QIODevice::WriteOnly));
+    note.write("Some words.\n");
+    note.close();
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Ferry log.md"_s), 3000);
+    QQmlEngine engine;
+    QQmlComponent component(&engine);
+    component.loadFromModule("Jot.Ui", "Main");
+    std::unique_ptr<QObject> main(component.create());
+    QVERIFY2(main, qPrintable(component.errorString()));
+    auto *window = qobject_cast<QQuickWindow *>(main.get());
+    QVERIFY(QTest::qWaitForWindowExposed(window));
+    window->resize(1280, 700);
+    const std::function<QQuickItem *(QQuickItem *, const std::function<bool(QQuickItem *)> &)>
+        find = [&find](QQuickItem *at,
+                       const std::function<bool(QQuickItem *)> &match) -> QQuickItem * {
+        for (QQuickItem *child : at->childItems()) {
+            if (match(child))
+                return child;
+            if (QQuickItem *found = find(child, match))
+                return found;
+        }
+        return nullptr;
+    };
+    QQuickItem *row = nullptr;
+    QTRY_VERIFY(row = find(window->contentItem(), [](QQuickItem *item) {
+                    return item->property("path").toString() == u"Ferry log.md"_s &&
+                           item->isVisible() && item->height() > 0;
+                }));
+    // The note opens on the first click, and the editor does not take the typing from the row.
+    QTest::mouseDClick(window, Qt::LeftButton, {},
+                       row->mapToScene({row->width() / 2, row->height() / 2}).toPoint());
+    QQuickItem *field = nullptr;
+    QTRY_VERIFY(field = find(window->contentItem(),
+                             [](QQuickItem *item) { return item->objectName() == u"noteName"_s; }));
+    QTest::qWait(300);
+    QVERIFY(field->hasActiveFocus());
+    for (const char key : QByteArrayView("Crossing log"))
+        QTest::keyClick(window, key);
+    QTest::keyClick(window, Qt::Key_Return);
+    QTRY_VERIFY(QFileInfo::exists(m_dir.filePath(u"Notes/Crossing log.md"_s)));
 }
