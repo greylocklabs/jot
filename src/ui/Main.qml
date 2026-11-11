@@ -458,10 +458,11 @@ ApplicationWindow {
                 }
                 columnWidth: sidebar.width
                 // No wider than leaves the note its room beside both, so a drag never puts
-                // them away.
-                onResized: width => Settings.sidebarWidth = Math.min(width, columns.width
-                                                                     - columns.wantedList
-                                                                     - Theme.noteRoomWidth)
+                // them away; brought back by hand on a narrow window, as wide as dragged.
+                onResized: width => Settings.sidebarWidth = columns.shownByHand ? width : Math.min(
+                                                                                      width, columns.width
+                                                                                      - columns.wantedList
+                                                                                      - Theme.noteRoomWidth)
                 onReset: Settings.resetSidebarWidth()
             }
             TaskList {
@@ -500,9 +501,10 @@ ApplicationWindow {
                     bottom: parent.bottom
                 }
                 columnWidth: noteList.width
-                onResized: width => Settings.noteListWidth = Math.min(width, columns.width
-                                                                      - columns.wantedSidebar
-                                                                      - Theme.noteRoomWidth)
+                onResized: width => Settings.noteListWidth = columns.shownByHand ? width : Math.min(
+                                                                                       width, columns.width
+                                                                                       - columns.wantedSidebar
+                                                                                       - Theme.noteRoomWidth)
                 onReset: Settings.resetNoteListWidth()
             }
             TrashList {

@@ -552,6 +552,17 @@ void TestDialogs::columnsGiveWayToTheNote()
     QTRY_COMPARE(m_settings->noteListWidth(), 1100 - 240 - 480);
     QVERIFY(sidebar->isVisible() && list->isVisible());
     m_settings->resetNoteListWidth();
+    // Brought back by hand on a narrow window, a drag sets the width it is dragged to.
+    widen(800);
+    QTRY_VERIFY(!list->isVisible());
+    click();
+    QTRY_VERIFY(list->isVisible());
+    QMetaObject::invokeMethod(splitter, "resized", Q_ARG(int, 260));
+    QTRY_COMPARE(m_settings->noteListWidth(), 260);
+    click();
+    QTRY_VERIFY(!list->isVisible());
+    m_settings->setColumnsHidden(false);
+    m_settings->resetNoteListWidth();
 
     // As the window narrows, both go together once the note would have less than its room
     // beside them, as the toggle puts both away; and they come back together.
