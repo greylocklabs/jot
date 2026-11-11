@@ -8,6 +8,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QProcess>
+#include <QRegularExpression>
 #include <QSaveFile>
 #include <QStringDecoder>
 
@@ -73,6 +74,52 @@ GitSync::GitSync(QString root, QString url, QString branch, QString gitDir, QStr
         m_gitDir = m_root + u"/.git"_s;
         m_own = true;
     }
+}
+
+GitSync::OwnRepository GitSync::ownRepository(const QString &root)
+{
+    OwnRepository own;
+    const QString gitDir = QDir(root).absolutePath() + u"/.git"_s;
+    if (!QFileInfo(gitDir).isDir())
+        return own;
+    own.exists = true;
+    const QStringList at{u"--git-dir="_s + gitDir};
+    if (const Run origin =
+            command(at + QStringList{u"remote"_s, u"get-url"_s, u"origin"_s}, root, 30 * 1000);
+        origin.ok())
+        own.origin = QString::fromUtf8(origin.out).trimmed();
+    if (const Run branch = command(
+            at + QStringList{u"symbolic-ref"_s, u"--short"_s, u"-q"_s, u"HEAD"_s}, root, 30 * 1000);
+        branch.ok())
+        own.branch = QString::fromUtf8(branch.out).trimmed();
+    return own;
+}
+
+bool GitSync::sameRemote(const QString &a, const QString &b)
+{
+    // Down to host and path: "git@host:me/notes.git", "ssh://git@host:22/me/notes" and
+    // "https://Host/me/notes/" all become "host/me/notes".
+    const auto key = [](QString address) {
+        address = address.trimmed();
+        while (address.endsWith(u'/'))
+            address.chop(1);
+        if (address.endsWith(u".git"_s))
+            address.chop(4);
+        static const QRegularExpression scp(u"^(?:[^@/:]+@)?([^/:]+):(?!//)(.*)$"_s);
+        static const QRegularExpression url(
+            u"^(?:[a-z+]+)://(?:[^@/]+@)?([^/:]+)(?::\\d+)?/(.*)$"_s,
+            QRegularExpression::CaseInsensitiveOption);
+        QRegularExpressionMatch match = url.match(address);
+        if (!match.hasMatch() && !QDir::isAbsolutePath(address))
+            match = scp.match(address);
+        if (!match.hasMatch())
+            return QDir::cleanPath(address);
+        QString path = match.captured(2);
+        while (path.startsWith(u'/'))
+            path.remove(0, 1);
+        return match.captured(1).toLower() + u'/' + path;
+    };
+    return key(a) == key(b);
 }
 
 bool GitSync::lfsMissing(QString *error) const
@@ -207,15 +254,26 @@ bool GitSync::prepare(QString *error)
     // A vault that is a repository of its own is the person's: Jot syncs it only on its origin and
     // branch, and leaves how it is set up alone.
     if (m_own) {
-        if (!remote.ok() || QString::fromUtf8(remote.out).trimmed() != m_url) {
-            *error =
-                QObject::tr("the vault's own repository has another origin than %1").arg(m_url);
+        const OwnRepository own = ownRepository(m_root);
+        if (own.origin.isEmpty()) {
+            *error = QObject::tr("the vault's own repository has no origin; add one with git "
+                                 "remote add origin %1")
+                         .arg(m_url);
             return false;
         }
-        const Run branch = git({u"symbolic-ref"_s, u"--short"_s, u"-q"_s, u"HEAD"_s});
-        if (QString::fromUtf8(branch.out).trimmed() != m_branch) {
-            *error =
-                QObject::tr("the vault's own repository is not on the branch %1").arg(m_branch);
+        if (!sameRemote(own.origin, m_url)) {
+            *error = QObject::tr("the vault's own repository has the origin %1, not %2")
+                         .arg(own.origin, m_url);
+            return false;
+        }
+        if (own.branch.isEmpty()) {
+            *error = QObject::tr("the vault's own repository is on no branch; check out %1")
+                         .arg(m_branch);
+            return false;
+        }
+        if (own.branch != m_branch) {
+            *error = QObject::tr("the vault's own repository is on the branch %1, not %2")
+                         .arg(own.branch, m_branch);
             return false;
         }
     } else if (!remote.ok()) {

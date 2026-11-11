@@ -238,6 +238,13 @@ void SyncController::connectGit(const QString &url, const QString &branch)
     });
 }
 
+QVariantMap SyncController::ownRepository() const
+{
+    const GitSync::OwnRepository own =
+        m_root.isEmpty() ? GitSync::OwnRepository{} : GitSync::ownRepository(m_root);
+    return {{u"exists"_s, own.exists}, {u"origin"_s, own.origin}, {u"branch"_s, own.branch}};
+}
+
 void SyncController::connectRemote(const QString &remote, const QString &secret,
                                    std::function<QString(QString *secret, QString *remote)> check)
 {

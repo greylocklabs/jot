@@ -20,8 +20,8 @@ class GitSync
 public:
     /// Syncs the vault at `root` with the repository at `url`, on `branch`. The repository's own
     /// files live in `gitDir`, outside the vault, unless the vault has a `.git` of its own: that
-    /// one is used as it is set up, so it must already have `url` as its origin and `branch`
-    /// checked out, and its large files go to LFS only as it says.
+    /// one is used as it is set up, so its origin must be `url`, however either is written, and
+    /// `branch` checked out, and its large files go to LFS only as it says.
     /// `device` names this computer in commits and conflict copies.
     GitSync(QString root, QString url, QString branch, QString gitDir, QString device);
 
@@ -34,6 +34,21 @@ public:
     /// Whether the repository at `url` answers, as with the keys and settings this computer
     /// has; says why not otherwise.
     static bool reachable(const QString &url, QString *error);
+
+    /// A vault's own git repository, as it is set up.
+    struct OwnRepository
+    {
+        bool exists = false;
+        /// Its origin's address; empty when it has none.
+        QString origin;
+        /// The branch checked out; empty when HEAD is detached.
+        QString branch;
+    };
+    /// The git repository the vault at `root` is, if it is one.
+    [[nodiscard]] static OwnRepository ownRepository(const QString &root);
+    /// Whether two addresses name the same repository: SSH and HTTPS forms, with or without
+    /// `.git` or a trailing slash, and the host in any case.
+    [[nodiscard]] static bool sameRemote(const QString &a, const QString &b);
 
     /// Files kept in Git LFS, by their extensions.
     static const QStringList kLargeFiles;
