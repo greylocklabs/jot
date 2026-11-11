@@ -498,7 +498,17 @@ ApplicationWindow {
                 onTitleEditRequested: editor.editTitle()
                 onHistoryRequested: window.run("history")
                 onExportRequested: path => window.exportNote(path)
-                onNotePicked: columns.closeFlyout()
+                // Once it is clear the click is no double-click to rename the note in its row.
+                onNotePicked: closeAfterPick.restart()
+
+                Timer {
+                    id: closeAfterPick
+                    interval: Application.styleHints.mouseDoubleClickInterval
+                    onTriggered: {
+                        if (noteList.renamingPath === "")
+                            columns.closeFlyout()
+                    }
+                }
                 visible: Vault.isOpen && !Vault.showingTasks && !Vault.showingTrash
                          && columns.showList
 
