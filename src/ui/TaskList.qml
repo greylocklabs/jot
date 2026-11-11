@@ -11,6 +11,8 @@ Rectangle {
 
     /// The + was pressed, to add a to-do.
     signal addRequested
+    /// A to-do was chosen with a click, opening its note.
+    signal taskPicked
 
     color: Theme.bg
 
@@ -189,23 +191,29 @@ Rectangle {
 
         section.property: "group"
         section.criteria: ViewSection.FullString
-        section.delegate: Text {
+        section.delegate: Item {
             required property string section
 
-            // Ordered other than by day, the list has no headings.
-            visible: section !== ""
-            height: visible ? implicitHeight : 0
             width: ListView.view.width
-            leftPadding: Theme.space5
-            topPadding: Theme.space4
-            bottomPadding: Theme.space1
-            text: section
-            elide: Text.ElideRight
-            color: Theme.textFaint
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.textXs
-            font.weight: Theme.weightBold
-            font.capitalization: Font.AllUppercase
+            // Ordered other than by day, the list has no headings.
+            height: section !== "" ? heading.implicitHeight : 0
+            visible: section !== ""
+
+            Text {
+                id: heading
+
+                width: parent.width
+                leftPadding: Theme.space5
+                topPadding: Theme.space4
+                bottomPadding: Theme.space1
+                text: parent.section
+                elide: Text.ElideRight
+                color: Theme.textFaint
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.textXs
+                font.weight: Theme.weightBold
+                font.capitalization: Font.AllUppercase
+            }
         }
 
         delegate: AbstractButton {
@@ -226,7 +234,10 @@ Rectangle {
             height: Math.max(Theme.listRowHeight, words.implicitHeight + 2 * Theme.space2)
             hoverEnabled: true
             Accessible.name: title
-            onClicked: Vault.openAt(path, line)
+            onClicked: {
+                Vault.openAt(path, line)
+                root.taskPicked()
+            }
 
             background: Rectangle {
                 anchors.fill: parent

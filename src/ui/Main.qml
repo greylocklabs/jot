@@ -482,6 +482,7 @@ ApplicationWindow {
 
                 z: columns.flyout ? 3 : 0
                 onAddRequested: quickAdd.open()
+                onTaskPicked: closeAfterPick.restart()
                 visible: Vault.isOpen && Vault.showingTasks && columns.showList
                 anchors {
                     left: sidebar.right

@@ -627,6 +627,34 @@ void TestDialogs::columnsGiveWayToTheNote()
     QTest::keyClick(window, Qt::Key_Escape);
     QTRY_COMPARE(list->property("renamingPath").toString(), QString());
     QVERIFY(sidebar->isVisible());
+    // So does picking a to-do in Tasks, opening its note.
+    QFile todo(m_dir.filePath(u"Notes/Errands.md"_s));
+    QVERIFY(todo.open(QIODevice::WriteOnly));
+    todo.write("- [ ] post the letter\n");
+    todo.close();
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Errands.md"_s), 3000);
+    m_vault->tasks()->setView(u"all"_s);
+    m_vault->setShowingTasks(true);
+    const std::function<QQuickItem *(QQuickItem *)> taskRow =
+        [&taskRow](QQuickItem *at) -> QQuickItem * {
+        for (QQuickItem *child : at->childItems()) {
+            if (child->property("path").toString() == u"Errands.md"_s &&
+                child->property("kind").toString() == u"task"_s && child->isVisible())
+                return child;
+            if (QQuickItem *found = taskRow(child))
+                return found;
+        }
+        return nullptr;
+    };
+    QQuickItem *task = nullptr;
+    QTRY_VERIFY((task = taskRow(window->contentItem())) != nullptr);
+    QTest::mouseClick(window, Qt::LeftButton, {},
+                      task->mapToScene({task->width() / 2, task->height() / 2}).toPoint());
+    QTRY_VERIFY(!sidebar->isVisible());
+    QCOMPARE(m_vault->current(), u"Errands.md"_s);
+    m_vault->setShowingTasks(false);
+    click();
+    QTRY_VERIFY(sidebar->isVisible());
     widen(1280);
     widen(600);
     QTRY_VERIFY(!sidebar->isVisible() && !list->isVisible());
