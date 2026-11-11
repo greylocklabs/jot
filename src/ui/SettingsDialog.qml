@@ -871,6 +871,102 @@ Popup {
                     }
                 }
 
+                // How Jot commits to a git remote; kept in the vault, so every computer agrees.
+                Section {
+                    id: gitOptions
+
+                    function load() {
+                        gitMessage.text = Vault.vaultSetting("gitMessage")
+                        gitHooks.checked = ["true", "yes", "on"].includes(Vault.vaultSetting(
+                                                                              "gitHooks").toLowerCase(
+                                                                              ))
+                        const sign = Vault.vaultSetting("gitSign").toLowerCase()
+                        gitSign.currentValue = ["true", "yes", "on"].includes(sign) ? "always" : ["false",
+                                                                                                  "no", "off"].includes(
+                                                                                          sign) ? "never" :
+                                                                                                  "git"
+                    }
+
+                    objectName: "gitOptions"
+                    title: qsTr("Git commits")
+                    visible: root.tab === "sync" && Vault.sync.git
+                    onVisibleChanged: if (visible)
+                                          load()
+
+                    Text {
+                        width: parent.width
+                        wrapMode: Text.Wrap
+                        text: qsTr(
+                                  "Kept with the notes, so every computer commits the same way. Commits are made as git's own user, or as Jot when git has none.")
+                        color: Theme.textMuted
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.textSm
+                    }
+                    Field {
+                        id: gitMessage
+
+                        objectName: "gitMessage"
+                        width: parent.width
+                        enabled: Vault.writable
+                        placeholderText: Vault.sync.defaultCommitMessage()
+                        Accessible.name: qsTr("Commit message")
+                        onEditingFinished: Vault.setVaultSetting("gitMessage", text.trim())
+                    }
+                    Text {
+                        width: parent.width
+                        wrapMode: Text.Wrap
+                        text: qsTr(
+                                  "{device}, {date} and {time} say where and when; {count} and {files} say what changed.")
+                        color: Theme.textFaint
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.textXs
+                    }
+                    Toggle {
+                        id: gitHooks
+
+                        objectName: "gitHooks"
+                        width: parent.width
+                        enabled: Vault.writable
+                        text: qsTr("Run the repository's hooks on each commit")
+                        onToggled: Vault.setVaultSetting("gitHooks", checked ? true : null)
+                    }
+                    Row {
+                        spacing: Theme.space3
+
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: qsTr("Sign commits")
+                            color: Theme.text
+                            font.family: Theme.fontFamily
+                            font.pixelSize: Theme.textMd
+                        }
+                        Dropdown {
+                            id: gitSign
+
+                            objectName: "gitSign"
+                            anchors.verticalCenter: parent.verticalCenter
+                            enabled: Vault.writable
+                            model: [
+                                {
+                                    "id": "git",
+                                    "name": qsTr("As git is set up")
+                                },
+                                {
+                                    "id": "always",
+                                    "name": qsTr("Always")
+                                },
+                                {
+                                    "id": "never",
+                                    "name": qsTr("Never")
+                                }
+                            ]
+                            currentValue: "git"
+                            onActivated: value => Vault.setVaultSetting("gitSign", value === "git"
+                                                                        ? null : value === "always")
+                        }
+                    }
+                }
+
                 Section {
                     title: qsTr("Updates")
                     visible: root.tab === "general" && !Release.devel

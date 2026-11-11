@@ -2436,6 +2436,22 @@ void VaultController::readCurrent()
     Q_EMIT currentConflictsChanged();
 }
 
+bool VaultController::setVaultSetting(const QString &key, const QVariant &value)
+{
+    if (!m_vault || !m_vault->writable())
+        return false;
+    const bool none =
+        !value.isValid() || value.isNull() ||
+        (value.typeId() == QMetaType::QString && value.toString().trimmed().isEmpty());
+    QString error;
+    if (!m_vault->setSetting(key, none ? QVariant() : value, &error)) {
+        qCWarning(lcVault) << "could not set" << key << "in the vault's settings" << error;
+        setProblem(tr("Could not change the vault's settings: %1").arg(error));
+        return false;
+    }
+    return true;
+}
+
 QStringList VaultController::ignorePatterns() const
 {
     return m_vault ? VaultIgnore::patternsOf(*m_vault) : QStringList();

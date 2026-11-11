@@ -366,6 +366,9 @@ daily: Daily # where daily notes go, one per day as YYYY-MM-DD.md
 language: en_GB # spelling is checked in this, unless a note says otherwise
 ignore: [node_modules/, "*.log"] # files and folders Jot leaves out
 gitignore: false # leave .gitignore files out of it; they count unless this says false
+gitMessage: "chore(sync): jot commit from {device}, {date} {time}" # git sync's commit message
+gitHooks: false # whether git sync's commits run the repository's hooks
+gitSign: true # sign git sync's commits; unset leaves it to git
 ```
 
 - `format` is the vault's format number, as [Versioning](#versioning) says. One that is missing
@@ -384,6 +387,12 @@ gitignore: false # leave .gitignore files out of it; they count unless this says
   matches stays out of the app, the index, search, tasks and sync. Unless `gitignore` is `false`,
   the vault's `.gitignore` files count too, as git reads them, deeper ones after the vault's own
   patterns. Nothing inside an ignored folder comes back, and `.jot/` is never ignored.
+- `gitMessage`, `gitHooks` and `gitSign` say how git sync commits, the same on every computer.
+  The message fills in `{device}`, `{date}`, `{time}`, `{count}` (files changed) and `{files}`
+  (up to three of them); it is `chore(sync): jot commit from {device}, {date} {time}` when
+  missing. Hooks run only when `gitHooks` is `true`. Commits are signed with `gitSign: true`,
+  not with `false`, and as git's own settings say when it is missing. They are made as git's
+  user, or as `Jot <jot@localhost>` when git has none.
 
 ## Versioning
 

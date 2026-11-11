@@ -27,6 +27,10 @@ private Q_SLOTS:
     void joinsTwoVaultsThatStartedApart();
     void leavesHiddenFilesAndTheTrashHere();
     void leavesWhatTheVaultIgnoresHere();
+    void writesCommitMessagesFromTheTemplate();
+    void fillsInTheCommitMessage();
+    void runsHooksOnlyWhenTheVaultSays();
+    void commitsAsJotWhenGitHasNoUser();
     void keepsLargeFilesInLfs();
     void keepsBothPicturesWhenBothChanged();
     void refusesAnLfsRepositoryWithoutLfs();
@@ -276,6 +280,79 @@ void TestGitSync::leavesWhatTheVaultIgnoresHere()
     QCOMPARE(excluded.count("# Jot: the vault's ignore patterns."), 1);
     QVERIFY(excluded.contains("Other/\n"));
     QVERIFY(!excluded.contains("Scratch/\n"));
+}
+
+void TestGitSync::writesCommitMessagesFromTheTemplate()
+{
+    const Computer laptop = computer(u"laptop"_s);
+    write(laptop, u"Mara.md"_s, "# Mara\n");
+    QVERIFY(sync(laptop).failure.isEmpty());
+    const auto subject = [this] {
+        return run(m_dir->path(),
+                   {u"--git-dir="_s + m_remote, u"log"_s, u"-1"_s, u"--format=%s"_s, u"main"_s});
+    };
+    QCOMPARE(subject(), QByteArray("chore(sync): jot commit from laptop, 2026-11-03 09:30"));
+
+    write(laptop, u".jot/vault.yaml"_s,
+          "format: 1\ngitMessage: \"notes: {count} from {device}\"\n");
+    write(laptop, u"Mara.md"_s, "# Mara\nedited\n");
+    QVERIFY(sync(laptop).failure.isEmpty());
+    QCOMPARE(subject(), QByteArray("notes: 2 from laptop"));
+}
+
+void TestGitSync::fillsInTheCommitMessage()
+{
+    const QDateTime at(QDate(2026, 11, 3), QTime(9, 30));
+    QCOMPARE(GitSync::commitMessage(u"{device} {date} {time}: {files}"_s, u"desk"_s, at,
+                                    {u"a.md"_s, u"b.md"_s}),
+             u"desk 2026-11-03 09:30: a.md, b.md"_s);
+    QCOMPARE(GitSync::commitMessage(u"{count}: {files}"_s, u"desk"_s, at,
+                                    {u"a.md"_s, u"b.md"_s, u"c.md"_s, u"d.md"_s, u"e.md"_s}),
+             u"5: a.md, b.md, c.md and 2 more"_s);
+    QCOMPARE(GitSync::optionsOf(m_dir->path()).message, GitSync::kDefaultMessage);
+}
+
+void TestGitSync::runsHooksOnlyWhenTheVaultSays()
+{
+    const Computer laptop = computer(u"laptop"_s);
+    run(laptop.root, {u"init"_s, u"-q"_s, u"-b"_s, u"main"_s});
+    run(laptop.root, {u"remote"_s, u"add"_s, u"origin"_s, m_remote});
+    run(laptop.root, {u"config"_s, u"user.name"_s, u"Mara"_s});
+    run(laptop.root, {u"config"_s, u"user.email"_s, u"mara@example.org"_s});
+    QFile hook(laptop.root + u"/.git/hooks/commit-msg"_s);
+    QVERIFY(hook.open(QIODevice::WriteOnly));
+    hook.write("#!/bin/sh\necho 'rejected by the hook' >&2\nexit 1\n");
+    hook.close();
+    hook.setPermissions(hook.permissions() | QFileDevice::ExeOwner);
+
+    write(laptop, u"Mara.md"_s, "# Mara\n");
+    QVERIFY(sync(laptop).failure.isEmpty());
+    write(laptop, u".jot/vault.yaml"_s, "format: 1\ngitHooks: true\n");
+    write(laptop, u"Mara.md"_s, "# Mara\nedited\n");
+    QVERIFY(sync(laptop).failure.contains(u"rejected by the hook"_s));
+    QVERIFY(GitSync::optionsOf(laptop.root).hooks);
+    QVERIFY(!GitSync::optionsOf(laptop.root).sign);
+    write(laptop, u".jot/vault.yaml"_s, "format: 1\ngitSign: false\n");
+    QCOMPARE(GitSync::optionsOf(laptop.root).sign, std::optional<bool>(false));
+}
+
+void TestGitSync::commitsAsJotWhenGitHasNoUser()
+{
+    // No global or system git settings, as on a computer where git was never set up.
+    QTemporaryDir home;
+    const QByteArray global = qgetenv("GIT_CONFIG_GLOBAL");
+    const QByteArray system = qgetenv("GIT_CONFIG_NOSYSTEM");
+    qputenv("GIT_CONFIG_GLOBAL", home.filePath(u"gitconfig"_s).toUtf8());
+    qputenv("GIT_CONFIG_NOSYSTEM", "1");
+    const Computer laptop = computer(u"laptop"_s);
+    write(laptop, u"Mara.md"_s, "# Mara\n");
+    const SyncReport report = sync(laptop);
+    global.isNull() ? qunsetenv("GIT_CONFIG_GLOBAL") : qputenv("GIT_CONFIG_GLOBAL", global);
+    system.isNull() ? qunsetenv("GIT_CONFIG_NOSYSTEM") : qputenv("GIT_CONFIG_NOSYSTEM", system);
+    QVERIFY2(report.failure.isEmpty(), qPrintable(report.failure));
+    QCOMPARE(run(m_dir->path(), {u"--git-dir="_s + m_remote, u"log"_s, u"-1"_s,
+                                 u"--format=%an <%ae>"_s, u"main"_s}),
+             QByteArray("Jot <jot@localhost>"));
 }
 
 void TestGitSync::keepsLargeFilesInLfs()

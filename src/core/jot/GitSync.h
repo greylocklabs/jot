@@ -22,7 +22,8 @@ public:
     /// files live in `gitDir`, outside the vault, unless the vault has a `.git` of its own: that
     /// one is used as it is set up, so its origin must be `url`, however either is written, and
     /// `branch` checked out, and its large files go to LFS only as it says.
-    /// `device` names this computer in commits and conflict copies.
+    /// `device` names this computer in commit messages and conflict copies. Commits are made as
+    /// git's own user, or as `Jot <jot@localhost>` when git has none, as Options say.
     GitSync(QString root, QString url, QString branch, QString gitDir, QString device);
 
     SyncReport sync(const QDateTime &now = QDateTime::currentDateTime());
@@ -50,6 +51,26 @@ public:
     /// `.git` or a trailing slash, and the host in any case.
     [[nodiscard]] static bool sameRemote(const QString &a, const QString &b);
 
+    /// How Jot commits to a git remote, as `.jot/vault.yaml` sets it for every computer.
+    struct Options
+    {
+        /// The commit message, with `{device}`, `{date}`, `{time}`, `{count}` and `{files}`
+        /// filled in: `gitMessage`.
+        QString message;
+        /// Whether commits run the repository's hooks: `gitHooks`, off unless it says true.
+        bool hooks = false;
+        /// Whether commits are signed: `gitSign`; unset leaves it to git's own settings.
+        std::optional<bool> sign;
+    };
+    /// The commit message used when the vault sets none.
+    static const QString kDefaultMessage;
+    /// The options the vault at `root` sets.
+    [[nodiscard]] static Options optionsOf(const QString &root);
+    /// `pattern` with its placeholders filled in for a commit of `paths` from `device` at `now`:
+    /// `{files}` names up to three and says how many more.
+    [[nodiscard]] static QString commitMessage(const QString &pattern, const QString &device,
+                                               const QDateTime &now, const QStringList &paths);
+
     /// Files kept in Git LFS, by their extensions.
     static const QStringList kLargeFiles;
     /// The `.gitattributes` pattern for files with `extension`, in either case.
@@ -75,6 +96,10 @@ private:
     bool prepare(QString *error);
     /// Commits what changed here; gives the paths.
     std::optional<QStringList> commit(QString *error);
+    /// The author Jot commits as when git has none: `Jot <jot@localhost>`.
+    [[nodiscard]] QStringList identity() const;
+    /// What a commit is given: its author when git has none, its hooks and its signing.
+    [[nodiscard]] QStringList commitArguments() const;
     /// Merges what was fetched, resolving what git could not; false, with `error`, when it
     /// could not be made.
     bool merge(SyncReport &report, QString *error);
@@ -90,6 +115,7 @@ private:
     QString m_gitDir;
     QString m_device;
     QDateTime m_now;
+    Options m_options;
     /// The vault is a repository of its own, which Jot uses as it is.
     bool m_own = false;
     /// Whether to keep SSH from asking anything, found out at the first git run.
