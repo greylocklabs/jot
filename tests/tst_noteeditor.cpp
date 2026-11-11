@@ -2109,6 +2109,18 @@ void TestNoteEditor::wrapsTheTableToolsWhenNarrow()
                      qPrintable(tool->property("text").toString()));
     }
     qobject_cast<QQuickItem *>(m_editor.get())->setWidth(900);
+
+    // In vi mode the status line shows only while the file is edited as text, not as a table.
+    m_settings->setViMode(true);
+    QQuickItem *line = find(u"viStatusLine"_s);
+    QTRY_VERIFY(!line->isVisible());
+    QQuickItem *viewSwitch = find(u"viewSwitch"_s);
+    QTest::mouseClick(
+        m_window.get(), Qt::LeftButton, {},
+        viewSwitch->mapToScene({viewSwitch->width() / 2, viewSwitch->height() / 2}).toPoint());
+    QTRY_VERIFY(find(u"body"_s)->isVisible());
+    QTRY_VERIFY(line->isVisible());
+    m_settings->setViMode(false);
 }
 
 void TestNoteEditor::scrollsAWideTableAcross()
