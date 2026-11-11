@@ -11,6 +11,7 @@
 #include <QQmlEngine>
 #include <QQuickItem>
 #include <QQuickStyle>
+#include <QQuickTextDocument>
 #include <QQuickWindow>
 #include <QRegularExpression>
 #include <QSignalSpy>
@@ -42,6 +43,7 @@ private Q_SLOTS:
     void asksBeforeTrashingSharedAttachments();
     void narrowWindowOverlapsNothing();
     void columnsGiveWayToTheNote();
+    void showsTheSyntaxGuide();
     void offersToRemoveATargetOnlyWhenThereIsOne();
 
 private:
@@ -79,6 +81,7 @@ void TestDialogs::opensCleanly_data()
     QTest::newRow("report a problem") << u"ReportDialog {}"_s;
     QTest::newRow("past versions") << u"HistoryDialog {}"_s;
     QTest::newRow("word target") << u"NotebookTarget { path: 'Ashfall' }"_s;
+    QTest::newRow("syntax guide") << u"SyntaxGuide {}"_s;
     QTest::newRow("export") << u"ExportDialog { path: 'Welcome.md' }"_s;
     QTest::newRow("import from joplin")
         << uR"(JoplinImport { summary: ({ ok: true, created: 3, updated: 1, unchanged: 2, notebooks: 1,
@@ -139,7 +142,7 @@ void TestDialogs::everyModalHasAClose_data()
          {u"SettingsDialog {}"_s, u"KeyHelp { actions: [] }"_s, u"AboutDialog {}"_s,
           u"WhatsNewDialog {}"_s, u"UpdateDialog {}"_s, u"ThemeEditor {}"_s, u"TrashConfirm {}"_s,
           u"QuickSwitcher {}"_s, u"CommandPalette {}"_s, u"EmojiPicker {}"_s, u"QuickAdd {}"_s,
-          u"JoplinImport {}"_s, u"HistoryDialog {}"_s, u"NotebookTarget {}"_s})
+          u"JoplinImport {}"_s, u"HistoryDialog {}"_s, u"NotebookTarget {}"_s, u"SyntaxGuide {}"_s})
         QTest::newRow(qPrintable(dialog)) << dialog;
 }
 
@@ -591,4 +594,29 @@ void TestDialogs::columnsGiveWayToTheNote()
     const QString first = m_vault->current();
     QMetaObject::invokeMethod(main.get(), "run", Q_ARG(QVariant, u"nextNote"_s));
     QTRY_VERIFY(m_vault->current() != first);
+}
+
+void TestDialogs::showsTheSyntaxGuide()
+{
+    QQuickWindow window;
+    window.resize(900, 700);
+    window.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&window));
+    QQmlEngine engine;
+    QQmlComponent component(&engine);
+    component.setData("import Jot.Ui\nSyntaxGuide {}\n", QUrl(u"qrc:/test.qml"_s));
+    std::unique_ptr<QObject> guide(component.create());
+    QVERIFY2(guide, qPrintable(component.errorString()));
+    guide->setProperty("parent", QVariant::fromValue(window.contentItem()));
+    QMetaObject::invokeMethod(guide.get(), "open");
+    QTRY_VERIFY(guide->property("opened").toBool());
+    auto *text = guide->property("contentItem")
+                     .value<QQuickItem *>()
+                     ->findChild<QQuickItem *>(u"syntaxGuide"_s);
+    QVERIFY(text);
+    // Drawn from data/syntax.md as a note is read: headings, and examples as written.
+    auto *doc = text->property("textDocument").value<QQuickTextDocument *>()->textDocument();
+    QTRY_VERIFY(doc->toPlainText().contains(u"To-dos"_s));
+    QVERIFY(doc->toPlainText().contains(u"@every 2 weeks on monday"_s));
+    QVERIFY(!doc->toPlainText().contains(u"## To-dos"_s));
 }

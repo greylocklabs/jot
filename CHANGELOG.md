@@ -13,6 +13,9 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   and `jot tasks --priority p1` narrows the list.
 - Settings has a Tasks tab, in place of Reminders, with the reminders and a choice of how the
   to-do list is ordered: by due date, when the note was made, name or priority, either way round.
+- A syntax guide in the help menu, below Keyboard shortcuts, explains what Jot reads in a note:
+  links and embeds, tags, to-dos and their markers, front matter, tables, math, diagrams and
+  CriticMarkup.
 
 ### Changed
 

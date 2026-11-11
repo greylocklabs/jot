@@ -340,6 +340,10 @@ ApplicationWindow {
                             onTriggered: keyHelp.open()
                         }
                         MenuEntry {
+                            text: qsTr("Syntax guide")
+                            onTriggered: syntaxGuide.open()
+                        }
+                        MenuEntry {
                             text: qsTr("What's new")
                             visible: Release.notes !== ""
                             height: visible ? implicitHeight : 0
@@ -582,6 +586,10 @@ ApplicationWindow {
         sourceComponent: KeyHelp {
             actions: keys.actions
         }
+    }
+    LazyPopup {
+        id: syntaxGuide
+        sourceComponent: SyntaxGuide {}
     }
     LazyPopup {
         id: about
