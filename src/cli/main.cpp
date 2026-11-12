@@ -7,12 +7,12 @@
 
 #include "greylock/Identity.h"
 #include "greylock/Releases.h"
+#include "greylock/Translations.h"
 #include "greylock/UpdateCheck.h"
 #include "jot/Diagnostics.h"
 #include "jot/JsonSchema.h"
 #include "jot/LogFile.h"
 #include "jot/Settings.h"
-#include "jot/Translations.h"
 
 #include <QCommandLineParser>
 #include <QCoreApplication>
@@ -273,7 +273,7 @@ int runCompletions(const QString &shell)
 int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
-    jot::installTranslations(app);
+    greylock::installTranslations(app);
     app.setApplicationName(greylock::identity::dirName());
     app.setApplicationVersion(QStringLiteral(JOT_VERSION));
 
