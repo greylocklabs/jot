@@ -923,6 +923,8 @@ ApplicationWindow {
             palette.open()
             break
         case "search":
+            // Searching is in the notes, so it leaves a tag's view for them.
+            Vault.dropTag()
             columns.revealList()
             noteList.focusSearch()
             break
@@ -976,7 +978,7 @@ ApplicationWindow {
             break
         case "rename":
             // In the note's row, as a double-click there does, with the list shown for it.
-            if (Vault.showingTasks || Vault.showingTrash) {
+            if (Vault.showingTasks || Vault.showingTrash || Vault.shownTag !== "") {
                 editor.editTitle()
             } else {
                 columns.revealList()

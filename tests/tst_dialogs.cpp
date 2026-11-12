@@ -964,6 +964,18 @@ void TestDialogs::aTagShowsItsNotesAndToDos()
     QTest::keyClick(window, Qt::Key_Escape);
     QTRY_VERIFY(window->activeFocusItem()->property("isSidebarRow").toBool());
 
+    // Renaming there renames the note shown, in its title, the list being hidden.
+    m_vault->setShownTag(u"harbor"_s);
+    m_vault->setCurrent(u"Harbor.md"_s);
+    QMetaObject::invokeMethod(main.get(), "run", Q_ARG(QVariant, u"rename"_s));
+    QTRY_COMPARE(window->activeFocusItem()->objectName(), u"title"_s);
+    // Searching is in the notes, so it leaves the tag for them.
+    QMetaObject::invokeMethod(main.get(), "run", Q_ARG(QVariant, u"search"_s));
+    QTRY_VERIFY(m_vault->shownTag().isEmpty());
+    QTRY_VERIFY(find(window->contentItem(), u"noteList"_s, {})->isVisible());
+    m_vault->setShownTag(u"harbor"_s);
+    QTRY_VERIFY(view->isVisible());
+
     // Its chip goes back to the notes.
     QMetaObject::invokeMethod(find(view, u"tagChip"_s, {}), "clicked");
     QTRY_VERIFY(!view->isVisible());
