@@ -229,6 +229,10 @@ Rectangle {
             Vault.follow(decodeURIComponent(link.slice("jot-wiki-sound:".length)), true)
         } else if (link.startsWith("jot-sound:")) {
             Vault.follow(decodeURIComponent(link.slice("jot-sound:".length)), false)
+        } else if (link.startsWith("jot-wiki-video:")) {
+            Vault.follow(decodeURIComponent(link.slice("jot-wiki-video:".length)), true)
+        } else if (link.startsWith("jot-video:")) {
+            Vault.follow(decodeURIComponent(link.slice("jot-video:".length)), false)
         } else if (link.startsWith("jot-heading:")) {
             // A table of contents entry scrolls its heading to the top.
             goToHeading(Number(link.slice("jot-heading:".length)))
@@ -813,11 +817,13 @@ Rectangle {
                 Repeater {
                     id: readPlayers
 
-                    model: reading.sounds.length
+                    readonly property var sounds: reading.sounds.filter(each => !each.video)
+
+                    model: sounds.length
 
                     AudioPlayer {
                         required property int index
-                        readonly property var sound: reading.sounds[index] ?? ({})
+                        readonly property var sound: readPlayers.sounds[index] ?? ({})
                         readonly property rect line: {
                             reader.width
                             reader.contentHeight
@@ -830,6 +836,31 @@ Rectangle {
                         width: sound.width ?? 0
                         height: sound.height ?? 0
                         source: sound.source ?? ""
+                    }
+                }
+                // A video too.
+                Repeater {
+                    id: readVideos
+
+                    readonly property var videos: reading.sounds.filter(each => each.video)
+
+                    model: videos.length
+
+                    VideoPlayer {
+                        required property int index
+                        readonly property var video: readVideos.videos[index] ?? ({})
+                        readonly property rect line: {
+                            reader.width
+                            reader.contentHeight
+                            return reader.positionToRectangle(video.position ?? 0)
+                        }
+
+                        objectName: "readVideoPlayer"
+                        x: line.x
+                        y: line.y + (line.height - height) / 2
+                        width: video.width ?? 0
+                        height: video.height ?? 0
+                        source: video.source ?? ""
                     }
                 }
                 // A click on a checkbox, left of its text, ticks it in the note.
@@ -1272,7 +1303,7 @@ Rectangle {
                 }
 
                 Repeater {
-                    model: styler.images.filter(each => !each.audio)
+                    model: styler.images.filter(each => !each.audio && !each.video)
 
                     Image {
                         required property var modelData
@@ -1323,6 +1354,32 @@ Rectangle {
                         width: sound.width ?? 0
                         height: sound.height ?? 0
                         source: sound.source ?? ""
+                    }
+                }
+
+                // A video embedded on a line of its own plays there, as a sound does.
+                Repeater {
+                    id: videoPlayers
+
+                    readonly property var videos: styler.images.filter(each => each.video)
+
+                    model: videos.length
+
+                    VideoPlayer {
+                        required property int index
+                        readonly property var video: videoPlayers.videos[index] ?? ({})
+
+                        readonly property rect line: {
+                            body.layoutTick
+                            return body.positionToRectangle(Math.min(video.position ?? 0,
+                                                                     body.length))
+                        }
+
+                        objectName: "videoPlayer"
+                        y: line.y
+                        width: video.width ?? 0
+                        height: video.height ?? 0
+                        source: video.source ?? ""
                     }
                 }
 

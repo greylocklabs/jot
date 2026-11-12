@@ -6,6 +6,7 @@
 #include "VaultController.h"
 
 #include "jot/Settings.h"
+#include "jot/Vault.h"
 
 #include <QDir>
 #include <QDirIterator>
@@ -88,6 +89,7 @@ private Q_SLOTS:
     void showsCriticCommentsInTheMargin();
     void underlinesMisspelledWords();
     void playsSoundsWhereTheyAreEmbedded();
+    void playsVideosWhereTheyAreEmbedded();
     void drawsMath();
     void readsMathAtHalfItsDrawnSize();
     void switchingAwayFromAPictureLeavesNoStalePlace();
@@ -1071,6 +1073,55 @@ void TestNoteEditor::underlinesMisspelledWords()
 
     m_settings->setSpellcheck(false);
     QTRY_VERIFY(wrong(u"ferrie"_s).isEmpty());
+}
+
+void TestNoteEditor::playsVideosWhereTheyAreEmbedded()
+{
+    QVERIFY(Vault::isVideoFile(u"a/Ferry.MP4"_s));
+    QVERIFY(Vault::isVideoFile(u"clip.webm"_s));
+    QVERIFY(!Vault::isVideoFile(u"clip.mp4/notes"_s));
+    QVERIFY(!Vault::isVideoFile(u"Take 1.wav"_s));
+    QVERIFY(QDir().mkpath(m_root + u"/Welcome.assets"_s));
+    QFile clip(m_root + u"/Welcome.assets/clip.mp4"_s);
+    QVERIFY(clip.open(QIODevice::WriteOnly));
+    clip.write(QByteArray(64, '\0'));
+    clip.close();
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    const QString text = u"Before\n\n![](Welcome.assets/clip.mp4)\n\nAfter\n"_s;
+    body->forceActiveFocus();
+    body->setProperty("text", text);
+    body->setProperty("cursorPosition", 1);
+    const auto players = [this](const QString &name) {
+        QList<QQuickItem *> found;
+        const std::function<void(QQuickItem *)> look = [&](QQuickItem *item) {
+            if (item->objectName() == name)
+                found.append(item);
+            for (QQuickItem *child : item->childItems())
+                look(child);
+        };
+        look(qobject_cast<QQuickItem *>(m_editor.get()));
+        return found;
+    };
+    // A player at the picture's width, never playing by itself.
+    QTRY_COMPARE(players(u"videoPlayer"_s).size(), 1);
+    QQuickItem *player = players(u"videoPlayer"_s).first();
+    QTRY_VERIFY2(player->width() > 0 && player->height() > player->width() * 9 / 16,
+                 qPrintable(u"%1x%2"_s.arg(player->width()).arg(player->height())));
+    QVERIFY(!player->property("playing").toBool());
+    QVERIFY(player->property("source").toUrl().toLocalFile().endsWith(u"/clip.mp4"_s));
+    // In source mode the link shows as written, as a sound's does.
+    m_settings->setSourceMode(true);
+    QTRY_COMPARE(players(u"videoPlayer"_s).size(), 0);
+    m_settings->setSourceMode(false);
+    QTRY_COMPARE(players(u"videoPlayer"_s).size(), 1);
+
+    // Read, it plays in place too.
+    m_settings->setReadMode(true);
+    QTRY_VERIFY(find(u"reader"_s)->isVisible());
+    QTRY_COMPARE(players(u"readVideoPlayer"_s).size(), 1);
+    QVERIFY(players(u"readAudioPlayer"_s).isEmpty());
+    m_settings->setReadMode(false);
 }
 
 void TestNoteEditor::playsSoundsWhereTheyAreEmbedded()

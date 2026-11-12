@@ -564,7 +564,8 @@ QVariantList MarkdownStyler::images() const
                                       {u"source"_s, QUrl::fromLocalFile(image->path)},
                                       {u"width"_s, image->size.width()},
                                       {u"height"_s, image->size.height()},
-                                      {u"audio"_s, image->audio}});
+                                      {u"audio"_s, image->audio},
+                                      {u"video"_s, image->video}});
         if (const auto *line =
                 dynamic_cast<const MarkdownHighlighter::Inlines *>(block.userData())) {
             for (const MarkdownHighlighter::Math &math : line->math)
