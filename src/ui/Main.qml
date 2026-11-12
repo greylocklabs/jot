@@ -453,6 +453,7 @@ ApplicationWindow {
                 objectName: "sidebar"
                 onNoteMade: editor.editTitle()
                 onJoplinImportRequested: folder => joplinImport.start(folder)
+                onEntered: window.focusShownList()
                 visible: Vault.isOpen && columns.showSidebar
                 anchors {
                     left: parent.left
@@ -479,8 +480,10 @@ ApplicationWindow {
                 onReset: Settings.resetSidebarWidth()
             }
             TaskList {
+                id: taskList
 
                 z: columns.flyout ? 3 : 0
+                onLeftList: sidebar.focusRows()
                 onAddRequested: quickAdd.open()
                 onTaskPicked: closeAfterPick.restart()
                 visible: Vault.isOpen && Vault.showingTasks && columns.showList
@@ -493,6 +496,8 @@ ApplicationWindow {
             }
             NoteList {
                 id: noteList
+
+                onLeftList: sidebar.focusRows()
 
                 z: columns.flyout ? 3 : 0
                 objectName: "noteList"
@@ -538,6 +543,8 @@ ApplicationWindow {
             }
             TrashList {
                 id: trashList
+
+                onLeftList: sidebar.focusRows()
 
                 z: columns.flyout ? 3 : 0
                 visible: Vault.isOpen && Vault.showingTrash && columns.showList
@@ -752,6 +759,17 @@ ApplicationWindow {
     }
 
     // ---- Keyboard ----------------------------------------------------------------
+    /// Gives the keyboard to the list shown: the to-dos, the trash or the notes.
+    function focusShownList() {
+        columns.revealList()
+        if (Vault.showingTasks)
+            taskList.focusList()
+        else if (Vault.showingTrash)
+            trashList.focusList()
+        else
+            noteList.focusList()
+    }
+
     /// Whether the command with this KeyRouter action id can run now.
     function can(id) {
         const note = Vault.current !== ""
@@ -792,7 +810,7 @@ ApplicationWindow {
         case "previousNote":
         case "firstNote":
         case "lastNote":
-            return Vault.isOpen && !Vault.showingTasks && !Vault.showingTrash
+            return Vault.isOpen
         case "closeTab":
             return Vault.tabs.length > 0
         case "nextTab":
@@ -923,8 +941,16 @@ ApplicationWindow {
         case "previousNote":
         case "firstNote":
         case "lastNote":
+            // Through the sidebar while it has the keys, else the list shown.
             columns.revealList()
-            noteList.step(id)
+            if (sidebar.hasKeys())
+                sidebar.step(id)
+            else if (Vault.showingTasks)
+                taskList.step(id)
+            else if (Vault.showingTrash)
+                trashList.step(id)
+            else
+                noteList.step(id)
             break
         case "editNote":
             editor.write()

@@ -16,6 +16,57 @@ Rectangle {
     signal noteMade
     /// Import from Joplin was chosen for the notebook at `folder`.
     signal joplinImportRequested(string folder)
+    /// A notebook, tag, Tasks or Trash opened from the keyboard, so its list takes the keys.
+    signal entered
+
+    /// The rows the keyboard moves through, top to bottom: Tasks, notebooks, tags and Trash.
+    function rows() {
+        const found = []
+        const walk = item => {
+            for (const child of item.children) {
+                if (child.isSidebarRow === true && child.visible)
+                    found.push(child)
+                else
+                    walk(child)
+            }
+        }
+        walk(root)
+        // The trash sits at the foot, below everything that scrolls.
+        const trash = found.indexOf(trashEntry)
+        if (trash >= 0)
+            found.push(found.splice(trash, 1)[0])
+        return found
+    }
+
+    /// Whether the keyboard is on one of the sidebar's rows.
+    function hasKeys() {
+        return rows().some(row => row.activeFocus)
+    }
+
+    /// Puts the keyboard on the row shown, or the first.
+    function focusRows() {
+        const all = rows()
+        const shown = all.find(row => row.selected) ?? all[0]
+        if (shown)
+            shown.forceActiveFocus()
+    }
+
+    /// Moves the keyboard to the next, previous, first or last row, by KeyRouter's action id.
+    function step(id) {
+        const all = rows()
+        if (all.length === 0)
+            return
+        let at = all.findIndex(row => row.activeFocus)
+        if (id === "firstNote" || at < 0)
+            at = 0
+        else if (id === "lastNote")
+            at = all.length - 1
+        else if (id === "nextNote")
+            at = Math.min(at + 1, all.length - 1)
+        else
+            at = Math.max(at - 1, 0)
+        all[at].forceActiveFocus()
+    }
 
     /// Moves what was dropped, a note or a notebook, into the notebook at `path`.
     function dropInto(path, drop) {
@@ -46,10 +97,27 @@ Rectangle {
 
         property bool selected: false
         property string label
+        readonly property bool isSidebarRow: true
 
         height: Theme.listRowHeight
         hoverEnabled: true
         Accessible.name: label
+        // Enter, or l in vi mode, opens the row and gives its list the keyboard.
+        Keys.onReturnPressed: {
+            row.clicked()
+            root.entered()
+        }
+        Keys.onEnterPressed: {
+            row.clicked()
+            root.entered()
+        }
+        Keys.onPressed: event => {
+            if (Settings.viMode && event.text === "l" && event.modifiers === Qt.NoModifier) {
+                row.clicked()
+                root.entered()
+                event.accepted = true
+            }
+        }
 
         background: Rectangle {
             anchors.fill: parent
@@ -59,6 +127,8 @@ Rectangle {
             color: row.selected ? Theme.tint(Theme.accent, 0.18) : row.hovered ? Theme.surfaceAlt :
                                                                                  "transparent"
 
+            border.width: row.activeFocus ? 1 : 0
+            border.color: Theme.accent
         }
     }
 

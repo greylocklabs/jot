@@ -12,6 +12,31 @@ Rectangle {
     readonly property string chosen: Vault.chosenTrashed
 
     signal notePicked
+    /// Esc in the list, to go out to the sidebar.
+    signal leftList
+
+    /// Puts the keyboard in the trash's list, on the first note if none is chosen.
+    function focusList() {
+        list.forceActiveFocus()
+        if (list.currentIndex < 0 && list.count > 0)
+            list.currentIndex = 0
+    }
+
+    /// Moves to the next, previous, first or last trashed note and shows it, by KeyRouter's
+    /// action id.
+    function step(id) {
+        if (list.count === 0)
+            return
+        list.forceActiveFocus()
+        if (id === "firstNote" || list.currentIndex < 0)
+            list.currentIndex = 0
+        else if (id === "lastNote")
+            list.currentIndex = list.count - 1
+        else if (id === "nextNote")
+            list.incrementCurrentIndex()
+        else
+            list.decrementCurrentIndex()
+    }
 
     color: Theme.bg
 
@@ -105,6 +130,9 @@ Rectangle {
         clip: true
         model: Vault.trash
         spacing: Theme.space1
+        keyNavigationEnabled: true
+        currentIndex: -1
+        Keys.onEscapePressed: root.leftList()
         ScrollBar.vertical: ScrollBar {}
 
         delegate: AbstractButton {
@@ -122,6 +150,11 @@ Rectangle {
             onClicked: {
                 Vault.chosenTrashed = location
                 root.notePicked()
+            }
+            // Moved to with the keyboard, it shows as a click does.
+            ListView.onIsCurrentItemChanged: {
+                if (ListView.isCurrentItem && ListView.view.activeFocus)
+                    Vault.chosenTrashed = location
             }
 
             TapHandler {

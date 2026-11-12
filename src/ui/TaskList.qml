@@ -13,6 +13,31 @@ Rectangle {
     signal addRequested
     /// A to-do was chosen with a click, opening its note.
     signal taskPicked
+    /// Esc in the list, to go out to the sidebar.
+    signal leftList
+
+    /// Puts the keyboard in the list of to-dos, on the first if none is chosen.
+    function focusList() {
+        list.forceActiveFocus()
+        if (list.currentIndex < 0 && list.count > 0)
+            list.currentIndex = 0
+    }
+
+    /// Moves to the next, previous, first or last to-do and opens its note there, by
+    /// KeyRouter's action id.
+    function step(id) {
+        if (list.count === 0)
+            return
+        list.forceActiveFocus()
+        if (id === "firstNote" || list.currentIndex < 0)
+            list.currentIndex = 0
+        else if (id === "lastNote")
+            list.currentIndex = list.count - 1
+        else if (id === "nextNote")
+            list.incrementCurrentIndex()
+        else
+            list.decrementCurrentIndex()
+    }
 
     color: Theme.bg
 
@@ -177,6 +202,7 @@ Rectangle {
     ListView {
         id: list
 
+        objectName: "taskRows"
         anchors {
             left: parent.left
             right: parent.right
@@ -187,6 +213,9 @@ Rectangle {
         clip: true
         model: Vault.tasks
         spacing: Theme.space1
+        keyNavigationEnabled: true
+        currentIndex: -1
+        Keys.onEscapePressed: root.leftList()
         ScrollBar.vertical: ScrollBar {}
 
         section.property: "group"
@@ -239,6 +268,14 @@ Rectangle {
                 Vault.openAt(path, line)
                 root.taskPicked()
             }
+            // Moved to with the keyboard, it opens its note there as a click does, and the keys
+            // stay in the list to move on.
+            ListView.onIsCurrentItemChanged: {
+                if (!ListView.isCurrentItem || !ListView.view.activeFocus)
+                    return
+                Vault.openAt(path, line)
+                ListView.view.forceActiveFocus()
+            }
             // A double-click sets its day and repeat, as Ctrl+Shift+D does in the note.
             onDoubleClicked: {
                 if (!Vault.writable || done)
@@ -255,7 +292,10 @@ Rectangle {
                 anchors.leftMargin: Theme.space3
                 anchors.rightMargin: Theme.space3
                 radius: Theme.radiusSm
-                color: item.hovered ? Theme.surfaceAlt : Theme.bg
+                color: item.ListView.isCurrentItem && list.activeFocus ? Theme.tint(Theme.accent,
+                                                                                    0.18) : item.hovered
+                                                                         ? Theme.surfaceAlt :
+                                                                           Theme.bg
             }
 
             contentItem: Item {
