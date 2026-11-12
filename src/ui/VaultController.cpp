@@ -1400,9 +1400,9 @@ QString VaultController::attachFilesTo(const QString &note, const QList<QUrl> &f
                     : tr("%1 is not a file on this computer").arg(url.toDisplayString()));
             continue;
         }
-        // Sounds are embedded like pictures, to play where they are.
+        // Sounds and videos are embedded like pictures, to play where they are.
         const bool image = !QImageReader::imageFormat(m_vault->absolute(*path)).isEmpty() ||
-                           Vault::isAudioFile(*path);
+                           Vault::isAudioFile(*path) || Vault::isVideoFile(*path);
         lines.append((image ? u"![](%1)"_s : u"[%2](%1)"_s)
                          .arg(Vault::linkTarget(note, *path), QFileInfo(*path).fileName()));
     }
