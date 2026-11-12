@@ -2133,6 +2133,13 @@ void TestNoteEditor::editsAListOfRecordsAsATable()
     pick(0);
     QTRY_VERIFY(find(u"tableView"_s)->isVisible());
 
+    // Held as text while in Styled already, picking Styled reads it as a table again.
+    m_editor->setProperty("keptAsText", true);
+    QTRY_VERIFY(body->isVisible());
+    QVERIFY(!m_settings->sourceMode() && !m_settings->readMode());
+    pick(0);
+    QTRY_VERIFY(find(u"tableView"_s)->isVisible());
+
     // A file that is no table opens as its text, with no table to ask for.
     QFile schema(m_root + u"/cast.schema.json"_s);
     QVERIFY(schema.open(QIODevice::WriteOnly));
