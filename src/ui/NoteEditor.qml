@@ -1696,7 +1696,7 @@ Rectangle {
         objectName: "wordCount"
         anchors {
             left: parent.left
-            right: outline.visible ? outline.left : parent.right
+            right: outline.visible && !outline.floating ? outline.left : parent.right
             bottom: statusLine.visible ? statusLine.top : parent.bottom
         }
         visible: Vault.current !== "" && !root.dataFile
