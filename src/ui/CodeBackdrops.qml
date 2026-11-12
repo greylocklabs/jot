@@ -23,12 +23,12 @@ Repeater {
         readonly property rect firstLine: {
             root.view.width
             root.view.contentHeight
-            return root.view.positionToRectangle(run.start ?? 0)
+            return root.view.positionToRectangle(Math.min(run.start ?? 0, root.view.length))
         }
         readonly property rect lastLine: {
             root.view.width
             root.view.contentHeight
-            return root.view.positionToRectangle(run.end ?? 0)
+            return root.view.positionToRectangle(Math.min(run.end ?? 0, root.view.length))
         }
 
         objectName: "codeBackdrop"

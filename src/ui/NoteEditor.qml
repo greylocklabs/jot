@@ -201,7 +201,7 @@ Rectangle {
         if (Settings.readMode) {
             const position = reading.headingPosition(index)
             if (position >= 0)
-                scrollTo(reader.y + reader.positionToRectangle(position).y)
+                scrollTo(reader.y + reader.positionToRectangle(Math.min(position, reader.length)).y)
             return
         }
         const heading = styler.headings[index]
@@ -209,7 +209,7 @@ Rectangle {
             return
         body.forceActiveFocus()
         body.cursorPosition = heading.position
-        scrollTo(body.y + body.positionToRectangle(heading.position).y)
+        scrollTo(body.y + body.positionToRectangle(Math.min(heading.position, body.length)).y)
     }
 
     /// Scrolls so `y`, in the page, is near the top.
@@ -827,7 +827,8 @@ Rectangle {
                         readonly property rect line: {
                             reader.width
                             reader.contentHeight
-                            return reader.positionToRectangle(sound.position ?? 0)
+                            return reader.positionToRectangle(Math.min(sound.position ?? 0,
+                                                                       reader.length))
                         }
 
                         objectName: "readAudioPlayer"
@@ -852,7 +853,8 @@ Rectangle {
                         readonly property rect line: {
                             reader.width
                             reader.contentHeight
-                            return reader.positionToRectangle(video.position ?? 0)
+                            return reader.positionToRectangle(Math.min(video.position ?? 0,
+                                                                       reader.length))
                         }
 
                         objectName: "readVideoPlayer"
@@ -870,7 +872,8 @@ Rectangle {
                         const position = reader.positionAt(point.position.x, point.position.y)
                         const task = reading.taskAt(position)
                         if (task.line === undefined || point.position.x
-                                >= reader.positionToRectangle(task.textStart).x)
+                                >= reader.positionToRectangle(Math.min(task.textStart,
+                                                                       reader.length)).x)
                             return
                         Vault.setTaskDone(Vault.current, task.line, !task.done, task.text)
                     }
@@ -1228,7 +1231,7 @@ Rectangle {
                         required property int modelData
                         readonly property rect at: {
                             body.layoutTick
-                            return body.positionToRectangle(modelData)
+                            return body.positionToRectangle(Math.min(modelData, body.length))
                         }
 
                         z: -1
