@@ -29,4 +29,4 @@ site-screenshots: ## Render the website's screenshots into www/screenshots from 
 	@$(GENTLY) cmake --preset release >/dev/null
 	@$(GENTLY) cmake --build --preset release --target $(GUI_TARGET)
 	@$(GENTLY) tools/site-screenshots.sh build/release/src/gui/$(GUI_TARGET)
-.PHONY: site-screenshots
+.PHONY: translations site-screenshots
