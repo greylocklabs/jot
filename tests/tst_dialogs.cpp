@@ -22,6 +22,7 @@
 #include <QStyleHints>
 #include <QTemporaryDir>
 #include <QTest>
+#include <QTextTable>
 #include <QtQml/qqmlextensionplugin.h>
 
 Q_IMPORT_QML_PLUGIN(Jot_UiPlugin)
@@ -815,6 +816,17 @@ void TestDialogs::showsTheSyntaxGuide()
     QTRY_VERIFY(doc->toPlainText().contains(u"To-dos"_s));
     QVERIFY(doc->toPlainText().contains(u"@every 2 weeks on monday"_s));
     QVERIFY(!doc->toPlainText().contains(u"## To-dos"_s));
+    // Code is drawn on a surface behind the text, not in frames, whose text Qt drew again and
+    // again around a selection.
+    for (QTextFrame *frame : doc->rootFrame()->childFrames())
+        QVERIFY(qobject_cast<QTextTable *>(frame));
+    const std::function<int(QQuickItem *)> backdrops = [&backdrops](QQuickItem *item) {
+        int found = item->objectName() == u"codeBackdrop"_s && item->height() > 0;
+        for (QQuickItem *child : item->childItems())
+            found += backdrops(child);
+        return found;
+    };
+    QTRY_VERIFY(backdrops(text) >= 5);
 }
 
 void TestDialogs::filtersToDosByPriority()

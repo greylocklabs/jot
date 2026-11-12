@@ -28,6 +28,10 @@ class NoteReader : public QObject
     /// The sounds embedded on lines of their own, each `{position, source, width, height}`: where
     /// in the document the room kept for its player is, and the file it plays.
     Q_PROPERTY(QVariantList sounds READ sounds NOTIFY soundsChanged)
+    /// Where each run of code lines is, `{start, end}` as positions in the document, for the
+    /// view to draw the raised surface behind them, `pad` around the text.
+    Q_PROPERTY(QVariantList codeRuns READ codeRuns NOTIFY codeRunsChanged)
+    Q_PROPERTY(qreal codePadding READ codePadding NOTIFY changed)
 
 public:
     explicit NoteReader(QObject *parent = nullptr);
@@ -43,6 +47,8 @@ public:
     [[nodiscard]] int width() const { return m_width; }
     void setWidth(int width);
     [[nodiscard]] QVariantList sounds() const { return m_sounds; }
+    [[nodiscard]] QVariantList codeRuns() const { return m_codeRuns; }
+    [[nodiscard]] qreal codePadding() const { return m_pixelSize * 0.6; }
 
     /// The checkbox task drawn at `position`: `{line, done, text, textStart}`, with its line in
     /// the note's file and where its text starts after the box, or empty when there is none there.
@@ -57,6 +63,7 @@ public:
 Q_SIGNALS:
     void changed();
     void soundsChanged();
+    void codeRunsChanged();
 
 private:
     void schedule();
@@ -82,6 +89,7 @@ private:
     QList<Task> m_tasks;
     QList<int> m_taskBlocks;
     QVariantList m_sounds;
+    QVariantList m_codeRuns;
 };
 
 } // namespace jot

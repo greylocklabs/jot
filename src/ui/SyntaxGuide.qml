@@ -83,7 +83,15 @@ Popup {
                 font.pixelSize: Theme.textBase
                 Accessible.name: title.text
 
+                CodeBackdrops {
+                    view: guide
+                    runs: guideReader.codeRuns
+                    padding: guideReader.codePadding
+                }
+
                 NoteReader {
+                    id: guideReader
+
                     document: guide.textDocument
                     text: Support.syntaxGuide()
                     fontFamily: Theme.fontFamily
