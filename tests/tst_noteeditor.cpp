@@ -670,9 +670,24 @@ void TestNoteEditor::outlinesTheNoteBesideIt()
     QCOMPARE(outline->property("current").toInt(), 1);
     QVERIFY(find(u"scroll"_s)->property("contentY").toReal() > 0);
 
-    // Too narrow a window keeps the room for the note.
+    // Too narrow a window keeps the room for the note: the outline lies over its edge.
     m_window->resize(600, 700);
     qobject_cast<QQuickItem *>(m_editor.get())->setSize(m_window->size());
+    QTRY_VERIFY(outline->property("floating").toBool());
+    QVERIFY(outline->isVisible());
+    QQuickItem *backdrop = find(u"outlineBackdrop"_s);
+    QVERIFY(backdrop && backdrop->isVisible());
+    QCOMPARE(find(u"scroll"_s)->width(), m_window->width());
+    // Choosing a heading there puts it away, as does a click on the note beside it.
+    QVERIFY(QMetaObject::invokeMethod(outline, "chosen", Q_ARG(int, 0)));
+    QTRY_VERIFY(!outline->isVisible());
+    QVERIFY(!m_settings->outlineShown());
+    QVERIFY(!backdrop->isVisible());
+    m_settings->setOutlineShown(true);
+    QTRY_VERIFY(backdrop->isVisible());
+    QTest::mouseClick(
+        m_window.get(), Qt::LeftButton, {},
+        backdrop->mapToScene({backdrop->width() / 2, backdrop->height() / 2}).toPoint());
     QTRY_VERIFY(!outline->isVisible());
 }
 

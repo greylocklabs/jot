@@ -414,7 +414,7 @@ Rectangle {
 
         anchors {
             left: parent.left
-            right: outline.visible ? outline.left : parent.right
+            right: outline.visible && !outline.floating ? outline.left : parent.right
             top: formatBar.visible ? formatBar.bottom : noteTabs.bottom
             bottom: wordCount.visible ? wordCount.top : statusLine.visible ? statusLine.top :
                                                                              parent.bottom
@@ -1762,24 +1762,66 @@ Rectangle {
         }
     }
 
+    // Over the note while the outline lies on it: a click there puts it away.
+    Scrim {
+        objectName: "outlineBackdrop"
+        z: 2
+        visible: outline.visible && outline.floating
+        anchors {
+            left: flick.left
+            right: outline.left
+            top: flick.top
+            bottom: flick.bottom
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: Settings.outlineShown = false
+        }
+    }
+    Shortcut {
+        sequence: "Escape"
+        enabled: outline.visible && outline.floating
+        onActivated: Settings.outlineShown = false
+    }
+
     Outline {
         id: outline
 
+        /// Without room for the note beside it, it lies over the note's edge instead.
+        readonly property bool floating: root.width < implicitWidth + Theme.noteRoomWidth
+
         objectName: "outline"
+        z: floating ? 3 : 0
         anchors {
             right: parent.right
             top: flick.top
             bottom: flick.bottom
         }
-        // Only where the note keeps room enough beside it.
-        visible: Settings.outlineShown && Vault.current !== "" && !root.dataFile && root.width
-                 >= implicitWidth + 480
-        width: implicitWidth
+        visible: Settings.outlineShown && Vault.current !== "" && !root.dataFile
+        width: Math.min(implicitWidth, root.width - 2 * Theme.space7)
         // Read only while shown, as it is the whole note again after each edit.
         headings: visible ? styler.headings : []
         current: Settings.readMode || !body.activeFocus ? -1 : styler.headingAt(headings,
                                                                                 body.cursorPosition)
-        onChosen: index => root.goToHeading(index)
+        onChosen: index => {
+            root.goToHeading(index)
+            // Lying over the note, it gets out of the way of the heading it went to.
+            if (outline.floating)
+                Settings.outlineShown = false
+        }
+
+        // Its own ground, so the note does not show through where it lies over it.
+        Rectangle {
+            z: -1
+            visible: outline.floating
+            anchors.fill: parent
+            color: Theme.bg
+
+            SoftShadow {
+                anchors.fill: parent
+            }
+        }
     }
 
     ViStatusLine {
