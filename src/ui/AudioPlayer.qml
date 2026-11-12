@@ -24,13 +24,15 @@ Rectangle {
     MediaPlayer {
         id: player
         source: root.source
-        audioOutput: AudioOutput {}
+        audioOutput: AudioOutput {
+            id: sound
+        }
     }
 
     Row {
         anchors {
             fill: parent
-            leftMargin: Theme.space2
+            leftMargin: Theme.space3
             rightMargin: Theme.space3
         }
         spacing: Theme.space2
@@ -38,15 +40,18 @@ Rectangle {
         StickerButton {
             objectName: "playButton"
             anchors.verticalCenter: parent.verticalCenter
-            text: player.playbackState === MediaPlayer.PlayingState ? qsTr("Pause") : qsTr("Play")
+            glyph: player.playbackState === MediaPlayer.PlayingState ? "pause" : "play"
+            Accessible.name: player.playbackState === MediaPlayer.PlayingState ? qsTr("Pause") :
+                                                                                 qsTr("Play")
+            tip: Accessible.name
             onClicked: player.playbackState === MediaPlayer.PlayingState ? player.pause() :
                                                                            player.play()
         }
-        Slider {
+        SeekBar {
             id: seek
 
             anchors.verticalCenter: parent.verticalCenter
-            width: parent.width - x - time.width - parent.spacing
+            width: parent.width - x - time.width - mute.width - 2 * parent.spacing
             from: 0
             to: Math.max(1, player.duration)
             value: player.position
@@ -65,6 +70,16 @@ Rectangle {
             font.features: {
                 "tnum": 1
             }
+        }
+        StickerButton {
+            id: mute
+
+            objectName: "muteButton"
+            anchors.verticalCenter: parent.verticalCenter
+            glyph: sound.muted ? "muted" : "sound"
+            Accessible.name: sound.muted ? qsTr("Sound on") : qsTr("Mute")
+            tip: Accessible.name
+            onClicked: sound.muted = !sound.muted
         }
     }
 }
