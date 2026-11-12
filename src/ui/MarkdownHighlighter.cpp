@@ -134,6 +134,17 @@ bool MarkdownHighlighter::imageLine(const QString &text)
                   QSize(std::min(m_look.imageWidth, 420), 2 * m_look.pixelSize + 16), true);
         return true;
     }
+    // A video gets a player as wide as a picture can be, a 16:9 picture with its controls under.
+    if (!path.isEmpty() && Vault::isVideoFile(path)) {
+        if (m_cursorHere)
+            return false;
+        // No taller than a picture may be, narrower to keep its shape.
+        const int picture = std::min(m_look.imageWidth * 9 / 16, m_look.imageHeight);
+        const int controls = 2 * m_look.pixelSize + 16;
+        showImage(text, int(m.capturedLength(1)), path, QSize(picture * 16 / 9, picture + controls),
+                  false, true);
+        return true;
+    }
     const QSize natural = path.isEmpty() ? QSize() : imageSize(path);
     if (!natural.isValid() || natural.isEmpty())
         return false;
@@ -151,12 +162,13 @@ bool MarkdownHighlighter::imageLine(const QString &text)
 }
 
 void MarkdownHighlighter::showImage(const QString &text, int bang, const QString &path, QSize shown,
-                                    bool audio)
+                                    bool audio, bool video)
 {
     auto *image = new Image;
     image->path = path;
     image->size = shown;
     image->audio = audio;
+    image->video = video;
     setCurrentBlockUserData(image);
     reserve(text, bang, shown.height());
 }

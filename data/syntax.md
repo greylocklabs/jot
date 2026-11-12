@@ -32,11 +32,12 @@ Return carries a list on, and Return on an empty item ends it.
 [[Another note#A heading]]
 ![[picture.png]]
 ![[recording.ogg]]
+![[clip.mp4]]
 [A website](https://example.org)
 ```
 
 A link to a note that does not exist yet makes it when followed. An embed shows a picture, or plays
-a sound, in place. Typing `[[` offers the notes to link to.
+a sound or a video, in place. Typing `[[` offers the notes to link to.
 
 ## Tags
 

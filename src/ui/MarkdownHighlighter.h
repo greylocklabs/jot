@@ -69,6 +69,8 @@ public:
         QSize size;
         /// A sound, drawn as a player rather than a picture.
         bool audio = false;
+        /// A video, drawn as a player showing its picture.
+        bool video = false;
     };
 
     /// A table of contents shown in place of a `${toc}` line: room for `rows` headings,
@@ -179,7 +181,7 @@ private:
     /// Makes the character at `bang` exactly as tall as `shown` and folds away the rest of the
     /// line, reserving the room the image at `path` is drawn into.
     void showImage(const QString &text, int bang, const QString &path, QSize shown,
-                   bool audio = false);
+                   bool audio = false, bool video = false);
     /// Makes the character at `at` exactly `height` tall and folds away the rest of the line.
     void reserve(const QString &text, int at, int height);
     /// Shows the note's headings in place of a table of contents marker; says whether it did.

@@ -259,6 +259,14 @@ bool Vault::isAudioFile(QStringView path)
            suffixes.contains(path.sliced(dot + 1).toString(), Qt::CaseInsensitive);
 }
 
+bool Vault::isVideoFile(QStringView path)
+{
+    static const QStringList suffixes{u"mp4"_s, u"m4v"_s, u"mov"_s, u"webm"_s, u"mkv"_s, u"ogv"_s};
+    const qsizetype dot = path.lastIndexOf(u'.');
+    return dot > path.lastIndexOf(u'/') + 1 &&
+           suffixes.contains(path.sliced(dot + 1).toString(), Qt::CaseInsensitive);
+}
+
 bool Vault::isListed(const QString &path)
 {
     return path.endsWith(kNoteSuffix) || isDataFile(path);

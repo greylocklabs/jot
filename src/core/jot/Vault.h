@@ -61,6 +61,8 @@ public:
     [[nodiscard]] static bool isDataFile(const QString &path);
     /// Whether `path` names a sound file, which plays where it is embedded.
     [[nodiscard]] static bool isAudioFile(QStringView path);
+    /// Whether `path` names a video file, which plays where it is embedded.
+    [[nodiscard]] static bool isVideoFile(QStringView path);
     /// Whether `path` names a note or a data file, which the vault lists.
     [[nodiscard]] static bool isListed(const QString &path);
     [[nodiscard]] QString absolute(const QString &path) const;

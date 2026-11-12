@@ -419,6 +419,8 @@ QString readingMarkdown(QStringView original,
             QString text = u"[%1](jot-note:%2)"_s.arg(escape(label), encode(target));
             if (!m.captured(1).isEmpty() && Vault::isAudioFile(target)) {
                 text = u"[%1](jot-wiki-sound:%2)"_s.arg(escape(label), encode(target));
+            } else if (!m.captured(1).isEmpty() && Vault::isVideoFile(target)) {
+                text = u"[%1](jot-wiki-video:%2)"_s.arg(escape(label), encode(target));
             } else if (!m.captured(1).isEmpty()) {
                 if (const QString url = embedUrl(target); !url.isEmpty())
                     text = u"![%1](<%2>)"_s.arg(escape(label), url);
@@ -431,14 +433,17 @@ QString readingMarkdown(QStringView original,
             const QString target = m.captured(2);
             const QString bare =
                 target.startsWith(u'<') ? target.mid(1, target.size() - 2) : target;
-            // A sound is a link the reader can play, named for its file when it has no words.
-            if (!m.captured(1).isEmpty() && Vault::isAudioFile(bare)) {
+            // A sound or a video is a link the reader can play, named for its file when it has
+            // no words.
+            if (!m.captured(1).isEmpty() &&
+                (Vault::isAudioFile(bare) || Vault::isVideoFile(bare))) {
                 static const QRegularExpression words(uR"(^!\[((?:[^\[\]]|\[[^\[\]]*\])*)\])"_s);
                 QString label = words.match(m.captured()).captured(1);
                 if (label.isEmpty())
                     label = escape(QUrl::fromPercentEncoding(bare.section(u'/', -1).toUtf8()));
+                const QString scheme = Vault::isVideoFile(bare) ? u"jot-video"_s : u"jot-sound"_s;
                 changes.append({m.capturedStart(), m.capturedLength(),
-                                u"[%1](jot-sound:%2)"_s.arg(label, encode(bare))});
+                                u"[%1](%2:%3)"_s.arg(label, scheme, encode(bare))});
             } else if (!m.captured(1).isEmpty() &&
                        isUrl(target.startsWith(u'<') ? target.mid(1) : target) &&
                        !target.contains(u"file:"_s)) {

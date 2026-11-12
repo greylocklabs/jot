@@ -225,6 +225,11 @@ void TestNoteScan::readsAsMarkdownWithLinks()
              u"[Take 1.ogg](jot-sound:Notes.assets/Take%25201.ogg) "
              u"[My Take.wav](jot-wiki-sound:My%20Take.wav) [Mara](jot-sound:m%201.mp3) "
              u"[plain](m.mp3)\n"_s);
+    // So is a video.
+    QCOMPARE(readingMarkdown(
+                 u"![](Notes.assets/clip.mp4) ![[Ferry at dawn.webm]] [plain](v.mov)\n"_s, embed),
+             u"[clip.mp4](jot-video:Notes.assets/clip.mp4) "
+             u"[Ferry at dawn.webm](jot-wiki-video:Ferry%20at%20dawn.webm) [plain](v.mov)\n"_s);
     // Code is left as it is.
     const QString code = u"`[[not]] #code`\n```\n[[Mara]] #tag\n```\n"_s;
     QCOMPARE(readingMarkdown(code, embed), code);

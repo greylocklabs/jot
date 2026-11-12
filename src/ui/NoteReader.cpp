@@ -494,8 +494,12 @@ void NoteReader::placeSounds()
     QTextDocument *doc = m_document->textDocument();
     const VaultController *vault = VaultController::instance();
     QVariantList sounds;
-    // The player is as wide as an image can be, at most 420, and as tall as in the editor.
-    const QSize room(std::min(m_width, 420), 2 * m_pixelSize + 16);
+    // A sound's player is as wide as an image can be, at most 420, and as tall as in the editor;
+    // a video's is a 16:9 picture as wide as the note, at most 640, with the controls under.
+    const int controls = 2 * m_pixelSize + 16;
+    const QSize soundRoom(std::min(m_width, 420), controls);
+    const int videoWidth = std::min(m_width, 640);
+    const QSize videoRoom(videoWidth, videoWidth * 9 / 16 + controls);
     for (QTextBlock block = doc->begin(); block.isValid(); block = block.next()) {
         // A line of its own: one sound's link and nothing else.
         QString href;
@@ -510,11 +514,15 @@ void NoteReader::placeSounds()
             else
                 alone = false;
         }
-        const bool wiki = href.startsWith(u"jot-wiki-sound:"_s);
-        // A table cell has no room for a player, so the sound stays a link there.
-        if (!alone || !(wiki || href.startsWith(u"jot-sound:"_s)) || !vault ||
+        const bool video =
+            href.startsWith(u"jot-video:"_s) || href.startsWith(u"jot-wiki-video:"_s);
+        const bool wiki =
+            href.startsWith(u"jot-wiki-sound:"_s) || href.startsWith(u"jot-wiki-video:"_s);
+        // A table cell has no room for a player, so the sound or video stays a link there.
+        if (!alone || !(wiki || video || href.startsWith(u"jot-sound:"_s)) || !vault ||
             QTextCursor(block).currentTable())
             continue;
+        const QSize room = video ? videoRoom : soundRoom;
         const QString target = QUrl::fromPercentEncoding(href.section(u':', 1).toUtf8());
         const QUrl beside = doc->baseUrl().resolved(QUrl(target));
         const QString path =
@@ -540,7 +548,8 @@ void NoteReader::placeSounds()
         sounds.append(QVariantMap{{u"position"_s, block.position()},
                                   {u"source"_s, QUrl::fromLocalFile(path)},
                                   {u"width"_s, room.width()},
-                                  {u"height"_s, room.height()}});
+                                  {u"height"_s, room.height()},
+                                  {u"video"_s, video}});
     }
     if (sounds != m_sounds) {
         m_sounds = sounds;
