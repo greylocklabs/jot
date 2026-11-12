@@ -25,10 +25,8 @@ class NoteReader : public QObject
     Q_PROPERTY(int pixelSize READ pixelSize WRITE setPixelSize NOTIFY changed)
     /// The width of the text, which images fit within.
     Q_PROPERTY(int width READ width WRITE setWidth NOTIFY changed)
-    /// The sounds embedded on lines of their own, each `{position, source, width, height}`: where
-    /// in the document the room kept for its player is, and the file it plays.
-    /// The sounds and videos embedded on lines of their own, `{position, source, width, height,
-    /// video}`, for the view to put players where their lines keep room.
+    /// The sounds and videos embedded on lines of their own, each `{position, source, width,
+    /// height, video}`: where in the document the room kept for its player is, and the file.
     Q_PROPERTY(QVariantList sounds READ sounds NOTIFY soundsChanged)
     /// Where each run of code lines is, `{start, end}` as positions in the document, for the
     /// view to draw the raised surface behind them, `pad` around the text.

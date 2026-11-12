@@ -1081,12 +1081,14 @@ void TestNoteEditor::playsVideosWhereTheyAreEmbedded()
     QVERIFY(Vault::isVideoFile(u"clip.webm"_s));
     QVERIFY(!Vault::isVideoFile(u"clip.mp4/notes"_s));
     QVERIFY(!Vault::isVideoFile(u"Take 1.wav"_s));
-    QVERIFY(QDir().mkpath(m_root + u"/Welcome.assets"_s));
-    QFile clip(m_root + u"/Welcome.assets/clip.mp4"_s);
+    // Attached, a video is embedded, to play there.
+    QFile clip(m_dir->filePath(u"clip.mp4"_s));
     QVERIFY(clip.open(QIODevice::WriteOnly));
     clip.write(QByteArray(64, '\0'));
     clip.close();
     m_vault->setCurrent(u"Welcome.md"_s);
+    QCOMPARE(m_vault->attachFiles({QUrl::fromLocalFile(clip.fileName())}),
+             u"![](Welcome.assets/clip.mp4)"_s);
     QQuickItem *body = find(u"body"_s);
     const QString text = u"Before\n\n![](Welcome.assets/clip.mp4)\n\nAfter\n"_s;
     body->forceActiveFocus();
