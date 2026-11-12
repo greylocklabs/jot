@@ -19,9 +19,9 @@ trap 'rm -rf "$work"' EXIT
 cp "$words" "$work/jot_en.ts"
 "$lupdate" -silent -project "$work/project.json" -ts "$work/jot_en.ts" -locations none \
     -no-obsolete >/dev/null 2>&1 || { echo "lupdate failed" >&2; exit 1; }
-if ! diff -q "$words" "$work/jot_en.ts" >/dev/null; then
+# cmake compares the files, as diff is not on every system that builds Jot.
+if ! "$cmake" -E compare_files "$words" "$work/jot_en.ts"; then
     echo "translations/jot_en.ts is out of date with the code; run make translations" >&2
-    diff "$words" "$work/jot_en.ts" | head -20 >&2
     exit 1
 fi
 echo "translations/jot_en.ts matches the code"
