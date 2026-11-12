@@ -954,6 +954,16 @@ void TestDialogs::aTagShowsItsNotesAndToDos()
     QTRY_VERIFY(find(view, u"tagNote"_s, {}));
     QTRY_VERIFY(find(view, u"tagTask"_s, {}));
 
+    // The list keys go through its rows, opening each, and Esc goes out to the sidebar.
+    m_vault->setCurrent({});
+    QMetaObject::invokeMethod(main.get(), "run", Q_ARG(QVariant, u"firstNote"_s));
+    QTRY_COMPARE(m_vault->current(), u"Harbor.md"_s);
+    QTRY_COMPARE(window->activeFocusItem()->objectName(), u"tagNote"_s);
+    QMetaObject::invokeMethod(main.get(), "run", Q_ARG(QVariant, u"nextNote"_s));
+    QTRY_COMPARE(window->activeFocusItem()->objectName(), u"tagTask"_s);
+    QTest::keyClick(window, Qt::Key_Escape);
+    QTRY_VERIFY(window->activeFocusItem()->property("isSidebarRow").toBool());
+
     // Its chip goes back to the notes.
     QMetaObject::invokeMethod(find(view, u"tagChip"_s, {}), "clicked");
     QTRY_VERIFY(!view->isVisible());

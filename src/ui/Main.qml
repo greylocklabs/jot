@@ -542,7 +542,10 @@ ApplicationWindow {
                 onReset: Settings.resetNoteListWidth()
             }
             TagView {
+                id: tagView
+
                 objectName: "tagView"
+                onLeftList: sidebar.focusRows()
                 z: columns.flyout ? 3 : 0
                 visible: Vault.isOpen && Vault.shownTag !== "" && columns.showList
                 onPicked: closeAfterPick.restart()
@@ -774,7 +777,9 @@ ApplicationWindow {
     /// Gives the keyboard to the list shown: the to-dos, the trash or the notes.
     function focusShownList() {
         columns.revealList()
-        if (Vault.showingTasks)
+        if (Vault.shownTag !== "")
+            tagView.focusList()
+        else if (Vault.showingTasks)
             taskList.focusList()
         else if (Vault.showingTrash)
             trashList.focusList()
@@ -957,6 +962,8 @@ ApplicationWindow {
             columns.revealList()
             if (sidebar.hasKeys())
                 sidebar.step(id)
+            else if (Vault.shownTag !== "")
+                tagView.step(id)
             else if (Vault.showingTasks)
                 taskList.step(id)
             else if (Vault.showingTrash)

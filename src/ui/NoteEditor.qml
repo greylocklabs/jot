@@ -218,13 +218,11 @@ Rectangle {
                                               - flick.height))
     }
 
-    /// Opens what a link in the reading view leads to: a note, a tag's notes, or anything
+    /// Opens what a link in the reading view leads to: a note, a tag's view, or anything
     /// else with the desktop.
     function openLink(link) {
         if (link.startsWith("jot-tag:")) {
-            Vault.showingTasks = false
-            Vault.showingTrash = false
-            Vault.notes.tag = decodeURIComponent(link.slice("jot-tag:".length))
+            Vault.shownTag = decodeURIComponent(link.slice("jot-tag:".length))
         } else if (link.startsWith("jot-note:")) {
             Vault.follow(decodeURIComponent(link.slice("jot-note:".length)), true)
         } else if (link.startsWith("jot-wiki-sound:")) {
