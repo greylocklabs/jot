@@ -109,6 +109,16 @@ if(BASH)
     set_tests_properties(completion_script PROPERTIES ENVIRONMENT "TZ=UTC;NO_COLOR=1")
 endif()
 
+# qmlformat laying out every QML file, where it is installed: one it cannot read it mangles.
+find_program(QMLFORMAT qmlformat
+    HINTS "${QT6_INSTALL_PREFIX}/${QT6_INSTALL_BINS}" /usr/lib64/qt6/bin /usr/lib/qt6/bin
+        /usr/lib/x86_64-linux-gnu/qt6/bin)
+if(QMLFORMAT)
+    add_test(NAME qmlformat_reads
+        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/qmlformat_test.sh ${QMLFORMAT}
+            ${PROJECT_SOURCE_DIR}/src/ui)
+endif()
+
 # The installer jotwriter.org serves, against stand-in systems and a stand-in
 # GitHub release. Release tarballs leave out the site, and the installer only
 # runs on x86_64.
