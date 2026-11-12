@@ -451,13 +451,12 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
                 return std::nullopt;
             return Vault::linkTarget(path, attachment);
         };
-        QString body =
-            rewriteLinks(raw, [&](const QString &link, bool wiki) -> std::optional<QString> {
-                const QString id = joplinTarget(link);
-                if (wiki || id.isEmpty())
-                    return std::nullopt;
-                return target(id);
-            });
+        QString body = rewriteLinks(raw, [&](const QString &link) -> std::optional<QString> {
+            const QString id = joplinTarget(link);
+            if (id.isEmpty())
+                return std::nullopt;
+            return target(id);
+        });
         if (note.html) {
             // Joplin's HTML notes link with src and href attributes rather than Markdown.
             static const QRegularExpression attribute(

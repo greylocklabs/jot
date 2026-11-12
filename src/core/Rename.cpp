@@ -33,22 +33,30 @@ void followInLayout(const Vault &vault, const QString &from, const QString &to)
         qCWarning(lcVault) << "could not update" << Layout::kPath << "after moving" << from << why;
 }
 
+/// The vault path a Markdown link's target names as written, as other tools read it: from the
+/// vault's root when it starts with `/`, otherwise from `folder`.
+QString literalPath(const QString &raw, const QString &folder)
+{
+    const QString path = QUrl::fromPercentEncoding(raw.section(u'#', 0, 0).toUtf8());
+    if (path.startsWith(u'/'))
+        return QDir::cleanPath(path.mid(1));
+    return QDir::cleanPath(folder.isEmpty() ? path : folder + u'/' + path);
+}
+
 } // namespace
 
-QString retarget(const QString &raw, bool wiki, const QString &source, const QString &to)
+QString retarget(const QString &raw, const QString &source, const QString &to)
 {
     const qsizetype hash = raw.indexOf(u'#');
     const QString anchor = hash < 0 ? QString() : raw.mid(hash);
     const QString target = hash < 0 ? raw : raw.left(hash);
     const QString decoded = QUrl::fromPercentEncoding(target.toUtf8());
 
-    if (wiki) {
-        const QString stem = to.endsWith(kNoteSuffix) ? to.chopped(kNoteSuffix.size()) : to;
-        // A name stays a name; a path, which was there to tell notes apart, stays a path.
-        return (decoded.contains(u'/') ? stem : Vault::titleFromPath(to)) + anchor;
-    }
     const QString folder = folderOf(source);
-    QString path = folder.isEmpty() ? to : QDir(u"/"_s + folder).relativeFilePath(u"/"_s + to);
+    // A link from the vault's root stays one.
+    QString path = decoded.startsWith(u'/') ? u'/' + to
+                   : folder.isEmpty()       ? to
+                                            : QDir(u"/"_s + folder).relativeFilePath(u"/"_s + to);
     if (!decoded.endsWith(kNoteSuffix, Qt::CaseInsensitive) && path.endsWith(kNoteSuffix))
         path.chop(kNoteSuffix.size());
     return path + anchor;
@@ -80,10 +88,9 @@ std::optional<QStringList> renameNote(const Vault &vault, VaultIndex &index, con
         if (!text)
             return std::nullopt;
         const NoteParts parts = splitFrontMatter(*text);
-        const QString body = rewriteLinks(parts.body, [&](const QString &raw, bool wiki) {
+        const QString body = rewriteLinks(parts.body, [&](const QString &raw) {
             const QString moved = movedTo(index.resolve(raw, source));
-            return moved.isEmpty() ? std::nullopt
-                                   : std::optional(retarget(raw, wiki, source, moved));
+            return moved.isEmpty() ? std::nullopt : std::optional(retarget(raw, source, moved));
         });
         rewrites.append({source, text->first(parts.body.data() - text->data()) + body});
     }
@@ -95,29 +102,22 @@ std::optional<QStringList> renameNote(const Vault &vault, VaultIndex &index, con
     // A data file holds no Markdown links, only text that might look like them.
     const NoteParts ownParts =
         Vault::isDataFile(from) ? NoteParts{{}, QStringView(*own), false} : splitFrontMatter(*own);
-    const QString ownBody =
-        Vault::isDataFile(from)
-            ? ownParts.body.toString()
-            : rewriteLinks(ownParts.body, [&](const QString &raw, bool wiki) {
-                  const QString target = index.resolve(raw, from);
-                  // A wikilink by name finds the note, or its own attachment, wherever they go.
-                  const bool byName = !QUrl::fromPercentEncoding(raw.toUtf8()).contains(u'/');
-                  if (target.isEmpty() ||
-                      (wiki && (target != from && (movedTo(target).isEmpty() || byName))))
-                      return std::optional<QString>();
-                  const QString moved = movedTo(target).isEmpty() ? target : movedTo(target);
-                  if (!wiki) {
-                      // Other tools read a Markdown path literally, so it must still name the file
-                      // from the new folder, even where Jot would find it by name.
-                      const QString path = raw.section(u'#', 0, 0);
-                      const QString decoded = QUrl::fromPercentEncoding(path.toUtf8());
-                      const QString literal = QDir::cleanPath(
-                          folderOf(to).isEmpty() ? decoded : folderOf(to) + u'/' + decoded);
-                      if (literal == moved || literal + kNoteSuffix == moved)
-                          return std::optional<QString>();
-                  }
-                  return std::optional(retarget(raw, wiki, to, moved));
-              });
+    const QString ownBody = Vault::isDataFile(from)
+                                ? ownParts.body.toString()
+                                : rewriteLinks(ownParts.body, [&](const QString &raw) {
+                                      const QString target = index.resolve(raw, from);
+                                      if (target.isEmpty())
+                                          return std::optional<QString>();
+                                      const QString moved =
+                                          movedTo(target).isEmpty() ? target : movedTo(target);
+                                      // Other tools read a Markdown path literally, so it must
+                                      // still name the file from the new folder, even where Jot
+                                      // would find it by name.
+                                      const QString literal = literalPath(raw, folderOf(to));
+                                      if (literal == moved || literal + kNoteSuffix == moved)
+                                          return std::optional<QString>();
+                                      return std::optional(retarget(raw, to, moved));
+                                  });
     const QString ownText = own->first(ownParts.body.data() - own->data()) + ownBody;
 
     if (!vault.moveNote(from, to, error))
@@ -170,25 +170,17 @@ std::optional<QStringList> moveNotebook(const Vault &vault, VaultIndex &index, c
             return std::nullopt;
         const QString newSource = after(source);
         const NoteParts parts = splitFrontMatter(*text);
-        const QString body = rewriteLinks(parts.body, [&](const QString &raw, bool wiki) {
+        const QString body = rewriteLinks(parts.body, [&](const QString &raw) {
             const QString target = index.resolve(raw, source);
             if (target.isEmpty() || (!inside(target) && !inside(source)))
                 return std::optional<QString>();
             const QString newTarget = after(target);
-            if (wiki) {
-                // A wikilink by name, or by a path that did not change, still reaches it.
-                return target == newTarget
-                           ? std::optional<QString>()
-                           : std::optional(retarget(raw, wiki, newSource, newTarget));
-            }
             // Other tools read a Markdown path literally, so it must name the file from the
             // note's folder after the move.
-            const QString path = QUrl::fromPercentEncoding(raw.section(u'#', 0, 0).toUtf8());
-            const QString folder = folderOf(newSource);
-            const QString literal = QDir::cleanPath(folder.isEmpty() ? path : folder + u'/' + path);
+            const QString literal = literalPath(raw, folderOf(newSource));
             if (literal == newTarget || literal + kNoteSuffix == newTarget)
                 return std::optional<QString>();
-            return std::optional(retarget(raw, wiki, newSource, newTarget));
+            return std::optional(retarget(raw, newSource, newTarget));
         });
         if (body != parts.body)
             rewrites.append({newSource, text->first(parts.body.data() - text->data()) + body});

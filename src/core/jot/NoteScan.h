@@ -12,14 +12,14 @@
 namespace jot {
 
 /// What a note's Markdown body holds that the index cares about. Code blocks and code
-/// spans are skipped, since a `#include` or `[[x]]` in code is not a tag or a link.
+/// spans are skipped, since a `#include` or `[x](y)` in code is not a tag or a link.
 struct NoteScan
 {
     struct Link
     {
         /// The target as written, without the label: "Mara", "Mara#Voice", "a%20b.md".
         QString raw;
-        /// "link", "wiki" or "embed".
+        /// "link" or "embed".
         QString kind;
         /// Counted from 1, in the whole file.
         int line = 0;
@@ -75,26 +75,23 @@ struct Heading
 /// Whether `line` is a table of contents marker, `${toc}` as Joplin writes it.
 [[nodiscard]] bool isTocMarker(QStringView line);
 
-/// `body` as Markdown for reading: [[wikilinks]] become links to `jot-note:` targets,
-/// ![[embeds]] images at the URL `embedUrl` gives for their target (links when it gives
-/// none), and #tags links to `jot-tag:` ones. Images from the web become links to them, so
-/// drawing the note fetches nothing. Embedded sounds become links to `jot-sound:` targets, or
-/// `jot-wiki-sound:` for wikilinks, and videos to `jot-video:` or `jot-wiki-video:` ones, named
-/// for their file when they have no words. Targets are
-/// percent-encoded. A table of contents marker becomes a list of links to `jot-heading:` targets,
-/// each heading's number from 0. CriticMarkup reads as its edits made, with deletions struck
-/// through and comments in italics. Math becomes the picture at the URL `mathUrl` gives for its
-/// TeX, and whether it is set apart, and stays as written when it gives none. Code is left alone.
+/// `body` as Markdown for reading: #tags become links to `jot-tag:` targets, and images from
+/// the web links to them, so drawing the note fetches nothing. Embedded sounds become links to
+/// `jot-sound:` targets and videos to `jot-video:` ones, named for their file when they have no
+/// words. Targets are percent-encoded. A table of contents marker becomes a list of links to
+/// `jot-heading:` targets, each heading's number from 0. CriticMarkup reads as its edits made,
+/// with deletions struck through and comments in italics. Math becomes the picture at the URL
+/// `mathUrl` gives for its TeX, and whether it is set apart, and stays as written when it gives
+/// none. Code is left alone.
 [[nodiscard]] QString
-readingMarkdown(QStringView body, const std::function<QString(const QString &)> &embedUrl,
+readingMarkdown(QStringView body,
                 const std::function<QString(const QString &, bool)> &mathUrl = {});
 
 /// `body` with link targets changed: `replace` gets each link's target as written, without
-/// its label, and whether it is a [[wikilink]], and gives a new target or nothing to leave
-/// it. Code is left alone.
+/// its label, and gives a new target or nothing to leave it. Code is left alone.
 [[nodiscard]] QString
 rewriteLinks(QStringView body,
-             const std::function<std::optional<QString>(const QString &raw, bool wiki)> &replace);
+             const std::function<std::optional<QString>(const QString &raw)> &replace);
 
 /// `note` with the words of the task on `line` (counted from 1, in the whole file), which say
 /// `text`, replaced with `now`, its box and the rest of the note as they were. Found as

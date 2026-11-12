@@ -66,7 +66,7 @@ class VaultController : public QObject
     Q_PROPERTY(jot::TagModel *tagTree READ tagTree CONSTANT)
     Q_PROPERTY(jot::NoteListModel *notes READ notes CONSTANT)
     Q_PROPERTY(jot::SwitcherModel *switcher READ switcher CONSTANT)
-    /// The notes offered while typing a wikilink.
+    /// The notes offered while typing a link's target.
     Q_PROPERTY(jot::SwitcherModel *linkSuggestions READ linkSuggestions CONSTANT)
     /// What is left to do across the vault.
     Q_PROPERTY(jot::TaskModel *tasks READ tasks CONSTANT)
@@ -255,8 +255,11 @@ public:
     Q_INVOKABLE bool setTask(const QString &path, bool task);
     /// Whether the note at `path` is a task, done or not.
     Q_INVOKABLE bool isTask(const QString &path) const;
-    /// A wikilink to the note at `path`: by its name, or its path when another note shares it.
+    /// A Markdown link to the note at `path`, by its title and its path from the vault's root,
+    /// for pasting into any note: `[Soren](/Ashfall/Soren.md)`.
     Q_INVOKABLE QString linkTo(const QString &path) const;
+    /// The target a link in the note shown writes for `path`: its path from the note's folder.
+    Q_INVOKABLE QString linkTargetTo(const QString &path) const;
     /// Opens the folder holding the note at `path`, or the notebook at `path`, in Files.
     Q_INVOKABLE void showInFiles(const QString &path) const;
     /// Every notebook's path, folded or not, in the order the sidebar lists them.
@@ -290,9 +293,9 @@ public:
     Q_INVOKABLE bool moveNotebook(const QString &path, const QString &parent);
     /// Moves the note at `path`, and its attachments, into `notebook`, rewriting links.
     Q_INVOKABLE bool moveNoteTo(const QString &path, const QString &notebook);
-    /// Follows a link written in the note shown: opens a note, makes one a wikilink names
-    /// but nothing holds yet, or opens anything else with the desktop.
-    Q_INVOKABLE bool follow(const QString &target, bool wiki);
+    /// Follows a link written in the note shown: opens a note, makes the note a link to a
+    /// `.md` file names when there is none yet, or opens anything else with the desktop.
+    Q_INVOKABLE bool follow(const QString &target);
     /// Keeps the clipboard's image as an attachment of the note shown and gives the Markdown
     /// that shows it, or nothing when the clipboard holds no image.
     Q_INVOKABLE QString pasteImage();
@@ -336,13 +339,12 @@ public:
     /// shown now that it has changed, such as by an outside edit merged in.
     Q_INVOKABLE int movedCursor(const QString &shown, int cursor) const;
     /// The file an image link in the note shown reaches, or empty for none.
-    Q_INVOKABLE QString attachmentPath(const QString &target, bool wiki) const
+    Q_INVOKABLE QString attachmentPath(const QString &target) const
     {
-        return attachmentPathFrom(m_current, target, wiki);
+        return attachmentPathFrom(m_current, target);
     }
     /// As attachmentPath(), for a link in the note at `from` rather than the one shown.
-    [[nodiscard]] QString attachmentPathFrom(const QString &from, const QString &target,
-                                             bool wiki) const;
+    [[nodiscard]] QString attachmentPathFrom(const QString &from, const QString &target) const;
     /// What a link in the note shown leads to, for a preview: `{path, title, text}`, where
     /// `text` is the start of the note without its front matter. Empty when it leads to no note.
     Q_INVOKABLE QVariantMap preview(const QString &target) const;

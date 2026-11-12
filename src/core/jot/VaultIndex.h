@@ -43,7 +43,7 @@ struct NoteLink
     QString raw;
     /// The vault path it reaches, or empty when it reaches nothing.
     QString target;
-    /// "link" for [x](y), "wiki" for [[y]], "embed" for ![x](y) or ![[y]].
+    /// "link" for [x](y), "embed" for ![x](y).
     QString kind;
     int line = 0;
 

@@ -87,22 +87,16 @@ QString SwitcherModel::pathAt(int row) const
 
 QVariantList SwitcherModel::suggestions(int limit) const
 {
-    // Wikilinks find notes by file name, which a front matter title can differ from.
-    QHash<QString, int> names;
-    for (const NoteInfo &note : std::as_const(m_notes))
-        ++names[Vault::titleFromPath(note.path).toCaseFolded()];
     QVariantList items;
     for (const Row &row : std::as_const(m_rows)) {
         if (items.size() == limit)
             break;
-        const QString name = Vault::titleFromPath(row.path);
-        const bool shared = names.value(name.toCaseFolded()) > 1;
         const QString notebook =
             row.path.contains(u'/') ? row.path.section(u'/', 0, -2) : QString();
         items.append(QVariantMap{
             {u"text"_s, row.title},
             {u"detail"_s, row.alias.isEmpty() ? notebook : row.alias},
-            {u"target"_s, Vault::wikilinkName(row.path, shared)},
+            {u"path"_s, row.path},
         });
     }
     return items;

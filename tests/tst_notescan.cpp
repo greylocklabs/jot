@@ -32,19 +32,18 @@ private Q_SLOTS:
 
 void TestNoteScan::findsEveryKindOfLink()
 {
-    const NoteScan scan = scanNote(uR"(See [[Mara]], [[Cast/Soren|her brother]] and [[Mara#Voice]].
-![[map.png]] and [the ferry](Places/The%20Ferry.md "title") and ![sketch](Mara.assets/sketch.png)
-[odd](<With spaces.md>) and [[ spaced ]]
+    const NoteScan scan = scanNote(uR"(See [Mara](Mara.md) and [her voice](Cast/Mara.md#voice).
+![map](map.png) and [the ferry](Places/The%20Ferry.md "title") and ![sketch](Mara.assets/sketch.png)
+[odd](<With spaces.md>) and [root](/Ashfall/Soren.md), but [[Mara]] and ![[map.png]] are words
 )"_s);
     const QList<NoteScan::Link> expected{
-        {u"Mara"_s, u"wiki"_s, 1},
-        {u"Cast/Soren"_s, u"wiki"_s, 1},
-        {u"Mara#Voice"_s, u"wiki"_s, 1},
+        {u"Mara.md"_s, u"link"_s, 1},
+        {u"Cast/Mara.md#voice"_s, u"link"_s, 1},
         {u"map.png"_s, u"embed"_s, 2},
         {u"Places/The%20Ferry.md"_s, u"link"_s, 2},
         {u"Mara.assets/sketch.png"_s, u"embed"_s, 2},
         {u"With spaces.md"_s, u"link"_s, 3},
-        {u"spaced"_s, u"wiki"_s, 3},
+        {u"/Ashfall/Soren.md"_s, u"link"_s, 3},
     };
     QCOMPARE(scan.links, expected);
 }
@@ -70,16 +69,16 @@ Not a tag: a#b, [[#Heading]], issue #12, [link](#anchor)
 void TestNoteScan::skipsCode()
 {
     const NoteScan scan = scanNote(uR"(```cpp
-#include <x> [[NotALink]]
+#include <x> [no](NotALink.md)
 ```
 ~~~
 - [ ] not a task
 ~~~
-Inline `#notatag [[NotALink]]` but #real and [[Real]].
-    indented #code [[NotALink]]
+Inline `#notatag [no](NotALink.md)` but #real and [yes](Real.md).
+    indented #code [no](NotALink.md)
 )"_s);
     QCOMPARE(scan.tags, QStringList{u"real"_s});
-    QCOMPARE(scan.links, (QList<NoteScan::Link>{{u"Real"_s, u"wiki"_s, 7}}));
+    QCOMPARE(scan.links, (QList<NoteScan::Link>{{u"Real.md"_s, u"link"_s, 7}}));
     QVERIFY(scan.tasks.isEmpty());
 }
 
@@ -104,7 +103,7 @@ void TestNoteScan::findsTasks()
 
 void TestNoteScan::countsLinesFromTheTopOfTheFile()
 {
-    const QString note = u"---\ntitle: x\n---\nline four [[A]]\r\n- [ ] five\r\n"_s;
+    const QString note = u"---\ntitle: x\n---\nline four [a](A.md)\r\n- [ ] five\r\n"_s;
     const NoteParts parts = splitFrontMatter(note);
     const int first = bodyFirstLine(note, parts.body);
     QCOMPARE(first, 4);
@@ -185,56 +184,47 @@ void TestNoteScan::findsWhereLinesStart()
 
 void TestNoteScan::readsAsMarkdownWithLinks()
 {
-    const auto embed = [](const QString &target) {
-        return target == u"map.png"_s ? u"file:///v/map.png"_s : QString();
-    };
     // A to-do's markers are said as a reader would; elsewhere they are words.
     const int year = QDate::currentDate().year();
     QCOMPARE(readingMarkdown(u"- [ ] Water @weekly @due %1-11-02 #home\n- [x] Pay @done %1-11-01\n"
-                             u"Sent @due %1-11-02\n"_s.arg(year),
-                             embed),
+                             u"Sent @due %1-11-02\n"_s.arg(year)),
              u"- [ ] Water 🔁 weekly 📅 %1 [#home](jot-tag:home)\n- [x] Pay ✅ %2\n"
              u"Sent @due %3-11-02\n"_s
                  .arg(QLocale().toString(QDate(year, 11, 2), u"MMM d"_s),
                       QLocale().toString(QDate(year, 11, 1), u"MMM d"_s))
                  .arg(year));
-    QCOMPARE(readingMarkdown(u"- [ ] Call @p1\n"_s, embed), u"- [ ] Call 🚩 Urgent\n"_s);
-    QCOMPARE(readingMarkdown(u"- [x] Call @done\n"_s, embed), u"- [x] Call ✅\n"_s);
-    QCOMPARE(readingMarkdown(u"- [ ] Call @every 2 weeks @due 2000-01-05 14:00\n"_s, embed),
+    QCOMPARE(readingMarkdown(u"- [ ] Call @p1\n"_s), u"- [ ] Call 🚩 Urgent\n"_s);
+    QCOMPARE(readingMarkdown(u"- [x] Call @done\n"_s), u"- [x] Call ✅\n"_s);
+    QCOMPARE(readingMarkdown(u"- [ ] Call @every 2 weeks @due 2000-01-05 14:00\n"_s),
              u"- [ ] Call 🔁 every 2 weeks 📅 %1\n"_s.arg(
                  QLocale().toString(QDate(2000, 1, 5), u"MMM d, yyyy"_s) + u", "_s +
                  QLocale().toString(QTime(14, 0), QLocale::ShortFormat)));
-    QCOMPARE(readingMarkdown(u"See [[Mara Vey]] and [[Cast/Soren|her brother]].\n"_s, embed),
-             u"See [Mara Vey](jot-note:Mara%20Vey) and [her brother](jot-note:Cast/Soren).\n"_s);
-    QCOMPARE(readingMarkdown(u"![[map.png]] ![[gone.png]]\n"_s, embed),
-             u"![map.png](<file:///v/map.png>) [gone.png](jot-note:gone.png)\n"_s);
-    QCOMPARE(readingMarkdown(u"#ferry and #cast/lead, not [x](#heading)\n"_s, embed),
+    // Wikilinks are words, as other Markdown tools read them.
+    QCOMPARE(readingMarkdown(u"See [[Mara Vey]] and ![[map.png]].\n"_s),
+             u"See [[Mara Vey]] and ![[map.png]].\n"_s);
+    QCOMPARE(readingMarkdown(u"#ferry and #cast/lead, not [x](#heading)\n"_s),
              u"[#ferry](jot-tag:ferry) and [#cast/lead](jot-tag:cast/lead), not [x](#heading)\n"_s);
     // An image from the web is only linked to; one in the vault stays an image.
-    QCOMPARE(readingMarkdown(u"![pixel](https://tracker.example/p.png) ![map](map.png)\n"_s, embed),
+    QCOMPARE(readingMarkdown(u"![pixel](https://tracker.example/p.png) ![map](map.png)\n"_s),
              u"[pixel](https://tracker.example/p.png) ![map](map.png)\n"_s);
     // A target that is only an opening bracket reads as written.
-    QCOMPARE(readingMarkdown(u"[x](<) ![](<)\n"_s, embed), u"[x](<) ![](<)\n"_s);
+    QCOMPARE(readingMarkdown(u"[x](<) ![](<)\n"_s), u"[x](<) ![](<)\n"_s);
     // An image without words is named for its file, which Qt needs to draw it.
-    QCOMPARE(readingMarkdown(u"![](Note.assets/my%20photo.png) ![kept](map.png)\n"_s, embed),
+    QCOMPARE(readingMarkdown(u"![](Note.assets/my%20photo.png) ![kept](map.png)\n"_s),
              u"![my photo.png](Note.assets/my%20photo.png) ![kept](map.png)\n"_s);
     // A sound is a link the reader can play, with its target as written; a link to one is not.
-    QCOMPARE(readingMarkdown(u"![](Notes.assets/Take%201.ogg) ![[My Take.wav]] ![Mara](<m 1.mp3>) "
-                             u"[plain](m.mp3)\n"_s,
-                             embed),
-             u"[Take 1.ogg](jot-sound:Notes.assets/Take%25201.ogg) "
-             u"[My Take.wav](jot-wiki-sound:My%20Take.wav) [Mara](jot-sound:m%201.mp3) "
-             u"[plain](m.mp3)\n"_s);
+    QCOMPARE(
+        readingMarkdown(u"![](Notes.assets/Take%201.ogg) ![Mara](<m 1.mp3>) [plain](m.mp3)\n"_s),
+        u"[Take 1.ogg](jot-sound:Notes.assets/Take%25201.ogg) [Mara](jot-sound:m%201.mp3) "
+        u"[plain](m.mp3)\n"_s);
     // So is a video.
-    QCOMPARE(readingMarkdown(
-                 u"![](Notes.assets/clip.mp4) ![[Ferry at dawn.webm]] [plain](v.mov)\n"_s, embed),
-             u"[clip.mp4](jot-video:Notes.assets/clip.mp4) "
-             u"[Ferry at dawn.webm](jot-wiki-video:Ferry%20at%20dawn.webm) [plain](v.mov)\n"_s);
+    QCOMPARE(readingMarkdown(u"![](Notes.assets/clip.mp4) [plain](v.mov)\n"_s),
+             u"[clip.mp4](jot-video:Notes.assets/clip.mp4) [plain](v.mov)\n"_s);
     // Code is left as it is.
-    const QString code = u"`[[not]] #code`\n```\n[[Mara]] #tag\n```\n"_s;
-    QCOMPARE(readingMarkdown(code, embed), code);
+    const QString code = u"`[x](not.md) #code`\n```\n[x](Mara.md) #tag\n```\n"_s;
+    QCOMPARE(readingMarkdown(code), code);
     // A heading's # is not a tag, and lines keep their Windows line breaks.
-    QCOMPARE(readingMarkdown(u"# Title\r\nA #tag\r\n"_s, embed),
+    QCOMPARE(readingMarkdown(u"# Title\r\nA #tag\r\n"_s),
              u"# Title\r\nA [#tag](jot-tag:tag)\r\n"_s);
 }
 
@@ -279,27 +269,24 @@ void TestNoteScan::findsHeadingsForAContentsList()
     QVERIFY(!isTocMarker(u"see ${toc}"));
 
     // Read as nested links to each heading by number, its brackets kept as text.
-    const auto none = [](const QString &) { return QString(); };
     QCOMPARE(
-        readingMarkdown(note, none),
+        readingMarkdown(note),
         u"# Ferry\n\n- [Ferry](jot-heading:0)\n  - [Crossing](jot-heading:1)\n"
         "    - [\\[\\[Mara\\]\\] *aboard*](jot-heading:2)\n\n## Crossing ##\n```\n# not one\n```\n"
-        "### [Mara](jot-note:Mara) *aboard*\n[#tag](jot-tag:tag)\n"_s);
+        "### [[Mara]] *aboard*\n[#tag](jot-tag:tag)\n"_s);
     // Without headings there is nothing to list, and a marker in code stays.
-    QCOMPARE(readingMarkdown(u"${toc}\nText\n"_s, none), u"\nText\n"_s);
-    QCOMPARE(readingMarkdown(u"`${toc}`\n"_s, none), u"`${toc}`\n"_s);
+    QCOMPARE(readingMarkdown(u"${toc}\nText\n"_s), u"\nText\n"_s);
+    QCOMPARE(readingMarkdown(u"`${toc}`\n"_s), u"`${toc}`\n"_s);
 }
 
 void TestNoteScan::readsCriticMarkupWithItsEditsMade()
 {
-    const auto none = [](const QString &) { return QString(); };
     QCOMPARE(readingMarkdown(u"A {++new++} and {--old--} {~~cat~>dog~~} {==bright==}"
-                             "{>> check this <<}\n"_s,
-                             none),
+                             "{>> check this <<}\n"_s),
              u"A new and ~~old~~ ~~cat~~ dog bright *(check this)*\n"_s);
-    // A link inside an addition is still a link; code keeps the marks as written.
-    QCOMPARE(readingMarkdown(u"{++see [[Mara]]++} `{--x--}`\n"_s, none),
-             u"see [Mara](jot-note:Mara) `{--x--}`\n"_s);
+    // A tag inside an addition is still a tag; code keeps the marks as written.
+    QCOMPARE(readingMarkdown(u"{++see #mara++} `{--x--}`\n"_s),
+             u"see [#mara](jot-tag:mara) `{--x--}`\n"_s);
 }
 
 void TestNoteScan::findsMathAsPandocDoes()
@@ -321,15 +308,14 @@ void TestNoteScan::findsMathAsPandocDoes()
     QCOMPARE(math, u"x^2"_s);
     QVERIFY(!isMathFence(u"$$ x"));
 
-    const auto none = [](const QString &) { return QString(); };
     const auto drawn = [](const QString &tex, bool display) {
         return u"file:///m/%1%2.png"_s.arg(display ? u"d-"_s : QString()).arg(tex.size());
     };
     QCOMPARE(
-        readingMarkdown(u"So $a+b$ is.\n$$\nx\ny\n$$\n```\n$c$\n```\n"_s, none, drawn),
+        readingMarkdown(u"So $a+b$ is.\n$$\nx\ny\n$$\n```\n$c$\n```\n"_s, drawn),
         u"So ![a+b](<file:///m/3.png>) is.\n\n![x y](<file:///m/d-3.png>)\n\n```\n$c$\n```\n"_s);
     // Without a way to draw it, math stays as written.
-    QCOMPARE(readingMarkdown(u"So $a$.\n"_s, none), u"So $a$.\n"_s);
+    QCOMPARE(readingMarkdown(u"So $a$.\n"_s), u"So $a$.\n"_s);
 }
 
 void TestNoteScan::tickingARepeatingTaskWritesTheNext()

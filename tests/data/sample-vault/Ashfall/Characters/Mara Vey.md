@@ -13,8 +13,8 @@ Short sentences. Answers a question with a question when she is hiding something
 
 ## Relationships
 
-- Older sister of [[Soren]]
-- Owes a debt to the harbor master at [[The Ferry]]
+- Older sister of [Soren](Soren.md)
+- Owes a debt to the harbor master at [The Ferry](../Places/The%20Ferry.md)
 
 Her voice, from the first read-through:
 

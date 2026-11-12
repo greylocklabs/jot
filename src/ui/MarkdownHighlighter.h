@@ -98,14 +98,14 @@ public:
         QList<Math> math;
     };
 
-    /// Finds the file an image link reaches: its target as written, and whether it is a
-    /// wikilink. Empty when it reaches none.
-    using Resolver = std::function<QString(const QString &target, bool wiki)>;
+    /// Finds the file an image link reaches, from its target as written. Empty when it reaches
+    /// none.
+    using Resolver = std::function<QString(const QString &target)>;
 
     /// What sits under a position: a link's target, or the box of a task.
     struct Hit
     {
-        enum Kind { None, Link, Wikilink, Url, TaskBox };
+        enum Kind { None, Link, Url, TaskBox };
         Kind kind = None;
         /// The link's target as written, without its label.
         QString target;

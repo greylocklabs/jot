@@ -1,7 +1,7 @@
 ---
 tags: [ashfall]
 ---
-Every crossing Mara logs, in her own hand. The route is drawn in [[Route]], and the
+Every crossing Mara logs, in her own hand. The route is drawn in [Route](Route.md), and the
 timetable is in [crossings.csv](Records/crossings.csv).
 
 ## Ledger
@@ -14,7 +14,7 @@ timetable is in [crossings.csv](Records/crossings.csv).
 
 ## Still to do
 
-- [x] Match the ledger to [[Mara Vey]]'s voice
+- [x] Match the ledger to [Mara Vey](Characters/Mara%20Vey.md)'s voice
 - [ ] Fares for act two #ashfall/act-two @due 2026-10-27 @p2
 - [ ] Ask playtesters about the stranger @p4
 

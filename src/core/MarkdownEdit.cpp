@@ -550,8 +550,9 @@ Edit link(const QString &text, qsizetype from, qsizetype to)
     const QString selected = text.mid(from, to - from);
     const bool isUrl = url.match(selected).hasMatch();
     const QString made = isUrl ? u"[]("_s + selected + u')' : u'[' + selected + u"]()"_s;
-    // The cursor goes where the half still missing is typed.
-    const qsizetype cursor = isUrl || selected.isEmpty() ? from + 1 : from + selected.size() + 3;
+    // The cursor goes where the half still missing is typed: the words for a URL, otherwise the
+    // target, where notes are offered.
+    const qsizetype cursor = isUrl ? from + 1 : from + selected.size() + 3;
     return difference(text, text.left(from) + made + text.mid(to), cursor, cursor);
 }
 
@@ -816,23 +817,28 @@ Edit insertTable(const QString &text, qsizetype from, qsizetype to)
     return difference(text, changed, selection, selection + heading.size());
 }
 
-std::optional<WikilinkQuery> wikilinkAt(const QString &text, qsizetype cursor)
+std::optional<LinkTargetQuery> linkTargetAt(const QString &text, qsizetype cursor)
 {
     cursor = std::clamp<qsizetype>(cursor, 0, text.size());
     const qsizetype line = lineStartOf(text, cursor);
     if (inCode(text, line))
         return std::nullopt;
-    const qsizetype open = text.lastIndexOf(u"[["_s, cursor - 1);
+    const qsizetype open = text.lastIndexOf(u"]("_s, cursor - 1);
     if (open < line || open + 2 > cursor)
         return std::nullopt;
     const QString typed = text.mid(open + 2, cursor - open - 2);
-    static const QRegularExpression ends(uR"(\]\]|\||#|\[\[)"_s);
+    static const QRegularExpression ends(uR"([()#]|\]\(|^[A-Za-z][A-Za-z0-9+.-]*:)"_s);
     if (typed.contains(ends))
         return std::nullopt;
-    // Backticks before it on the line, unpaired, put it in inline code.
-    if (text.mid(line, open - line).count(u'`') % 2 == 1)
+    // The words' opening bracket, on the same line; an image's is no note link.
+    const qsizetype bracket = text.lastIndexOf(u'[', open);
+    if (bracket < line || text.mid(bracket + 1, open - bracket - 1).contains(u']') ||
+        (bracket > line && text.at(bracket - 1) == u'!'))
         return std::nullopt;
-    return WikilinkQuery{open + 2, typed};
+    // Backticks before it on the line, unpaired, put it in inline code.
+    if (text.mid(line, bracket - line).count(u'`') % 2 == 1)
+        return std::nullopt;
+    return LinkTargetQuery{open + 2, typed, bracket + 1, open};
 }
 
 std::optional<EmojiQuery> emojiAt(const QString &text, qsizetype cursor)
@@ -876,27 +882,38 @@ std::optional<EmojiQuery> markerAt(const QString &text, qsizetype cursor)
     return EmojiQuery{at, text.mid(at + 1, cursor - at - 1)};
 }
 
-std::optional<Edit> completeWikilink(const QString &text, qsizetype cursor, const QString &target)
+std::optional<Edit> completeLinkTarget(const QString &text, qsizetype cursor, const QString &target,
+                                       const QString &words)
 {
-    const std::optional<WikilinkQuery> query = wikilinkAt(text, cursor);
+    const std::optional<LinkTargetQuery> query = linkTargetAt(text, cursor);
     if (!query)
         return std::nullopt;
     const qsizetype lineEnd = lineEndOf(text, cursor);
-    const qsizetype close = text.indexOf(u"]]"_s, cursor);
+    // A `)` ends this target only with nothing between that a target never holds, so a later
+    // link's on the line is left to it.
+    const qsizetype close = text.indexOf(u')', cursor);
+    static const QRegularExpression foreign(uR"([\[\s])"_s);
     const bool closed =
-        close >= 0 && close <= lineEnd && !text.mid(cursor, close - cursor).contains(u"[["_s);
+        close >= 0 && close <= lineEnd && !text.mid(cursor, close - cursor).contains(foreign);
     // In a closed link, the rest of the target after the cursor is replaced too, but not a
-    // `|label` or `#heading` after it. An open one is closed where the cursor is.
+    // `#heading` after it. An open one is closed where the cursor is.
     qsizetype end = cursor;
     if (closed) {
-        while (end < close && text.at(end) != u'|' && text.at(end) != u'#')
+        while (end < close && text.at(end) != u'#')
             ++end;
     }
-    const QString changed =
-        text.left(query->start) + target + (closed ? QString() : u"]]"_s) + text.mid(end);
-    // The cursor goes after the whole link, its label and heading included.
-    const qsizetype after = closed ? close + target.size() - (end - query->start) + 2
-                                   : query->start + target.size() + 2;
+    QString label;
+    if (query->labelStart == query->labelEnd) {
+        label = words;
+        label.replace(u'[', u"\\["_s).replace(u']', u"\\]"_s);
+    }
+    const QString changed = text.left(query->labelStart) + label +
+                            text.mid(query->labelStart, query->start - query->labelStart) + target +
+                            (closed ? QString() : u")"_s) + text.mid(end);
+    // The cursor goes after the whole link, its heading included.
+    const qsizetype after =
+        label.size() + (closed ? close + 1 - (end - query->start) + target.size()
+                               : query->start + target.size() + 1);
     return difference(text, changed, after, after);
 }
 

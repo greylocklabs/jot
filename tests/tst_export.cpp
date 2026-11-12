@@ -16,20 +16,23 @@ private Q_SLOTS:
 
 void TestExport::writesTheNoteForPandoc()
 {
-    const auto embed = [](const QString &target, bool) {
+    const auto embed = [](const QString &target) {
         return target == u"map.png"_s ? u"/v/map.png"_s : QString();
     };
     bool toc = true;
-    QCOMPARE(exportMarkdown(u"---\ncreated: 2026-11-09T10:00:00Z\n---\n# Ferry\n\nSee [[Mara]] and "
-                            "[[Cast/Soren|her brother]].\n"_s,
-                            embed, &toc),
-             u"# Ferry\n\nSee Mara and her brother.\n"_s);
+    QCOMPARE(
+        exportMarkdown(u"---\ncreated: 2026-11-09T10:00:00Z\n---\n# Ferry\n\nSee [Mara](Mara.md) "
+                       "and [[Soren]].\n"_s,
+                       embed, &toc),
+        u"# Ferry\n\nSee [Mara](Mara.md) and [[Soren]].\n"_s);
     QVERIFY(!toc);
-    // Embeds become images, edits are made and comments go; the contents marker asks for one.
-    QCOMPARE(exportMarkdown(u"${toc}\n![[map.png]] ![[gone.png]]\nA {++new++}{--old--} "
-                            "{~~cat~>dog~~} {==bright==}{>>check<<}\n"_s,
-                            embed, &toc),
-             u"![map.png](</v/map.png>) gone.png\nA new dog bright\n"_s);
+    // Pictures are found in the vault, edits are made and comments go; the contents marker asks
+    // for one.
+    QCOMPARE(
+        exportMarkdown(u"${toc}\n![map.png](map.png) ![gone.png](gone.png)\nA {++new++}{--old--} "
+                       "{~~cat~>dog~~} {==bright==}{>>check<<}\n"_s,
+                       embed, &toc),
+        u"![map.png](</v/map.png>) gone.png\nA new dog bright\n"_s);
     QVERIFY(toc);
     // Only pictures in the vault reach Pandoc; others, on this computer or the web, are their
     // words, and a reference to a file outside the vault loses its path.
@@ -42,15 +45,15 @@ void TestExport::writesTheNoteForPandoc()
     // Every way of writing a picture's title is read, and one that cannot be read is a link.
     QCOMPARE(
         exportMarkdown(u"![a](/etc/a 'x') ![b](/etc/b (x)) ![c](/etc/c \"x\") ![d](map.png 'x')\n"
-                       "![e](/etc/e \"unclosed) ![[map.png]]\n"_s,
+                       "![e](/etc/e \"unclosed)\n"_s,
                        embed, &toc),
-        u"a b c ![d](</v/map.png>)\n[e](/etc/e \"unclosed) ![map.png](</v/map.png>)\n"_s);
+        u"a b c ![d](</v/map.png>)\n[e](/etc/e \"unclosed)\n"_s);
     // A footnote is no reference: its words stay.
     QCOMPARE(exportMarkdown(u"See[^1].\n\n[^1]: Some words here.\n"_s, embed, &toc),
              u"See[^1].\n\n[^1]: Some words here.\n"_s);
     // Code is left as written.
-    const QString code = u"`[[not]] {++x++}`\n```\n[[Mara]] ${toc}\n~~~\n${toc}\n```\n"
-                         "    [[indented]]\n"_s;
+    const QString code = u"`![x](not.png) {++x++}`\n```\n![x](map.png) ${toc}\n~~~\n${toc}\n```\n"
+                         "    ![x](indented.png)\n"_s;
     QCOMPARE(exportMarkdown(code, embed, &toc), code);
     QVERIFY(!toc);
 }

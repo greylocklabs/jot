@@ -114,9 +114,9 @@ void MarkdownStyler::setDocument(QQuickTextDocument *document)
     m_document = document;
     if (document && document->textDocument()) {
         m_highlighter = new MarkdownHighlighter(document->textDocument());
-        m_highlighter->setResolver([](const QString &target, bool wiki) {
+        m_highlighter->setResolver([](const QString &target) {
             VaultController *vault = VaultController::instance();
-            return vault ? vault->attachmentPath(target, wiki) : QString();
+            return vault ? vault->attachmentPath(target) : QString();
         });
         applyLook();
         m_highlighter->setSourceMode(m_sourceMode);
@@ -246,12 +246,12 @@ bool MarkdownStyler::tidyTaskLine(int line)
     return true;
 }
 
-QVariantMap MarkdownStyler::wikilinkAt(int position) const
+QVariantMap MarkdownStyler::linkTargetAt(int position) const
 {
     if (!m_document || !m_document->textDocument())
         return {};
-    const std::optional<markdownedit::WikilinkQuery> query =
-        markdownedit::wikilinkAt(m_document->textDocument()->toPlainText(), position);
+    const std::optional<markdownedit::LinkTargetQuery> query =
+        markdownedit::linkTargetAt(m_document->textDocument()->toPlainText(), position);
     if (!query)
         return {};
     return {{u"start"_s, int(query->start)}, {u"text"_s, query->text}};
@@ -330,8 +330,9 @@ QVariantMap MarkdownStyler::format(const QString &action, int from, int to, cons
         if (!edit)
             return {};
         step(*edit);
-    } else if (action == u"wikilink") {
-        const std::optional<Edit> edit = completeWikilink(working, from, argument);
+    } else if (action == u"linkTarget") {
+        const std::optional<Edit> edit = completeLinkTarget(
+            working, from, argument.section(u'\n', 0, 0), argument.section(u'\n', 1));
         if (!edit)
             return {};
         step(*edit);
@@ -610,7 +611,7 @@ QVariantMap MarkdownStyler::hitAt(int position) const
     if (!m_highlighter)
         return {};
     const MarkdownHighlighter::Hit hit = m_highlighter->hitAt(position);
-    static const char *kinds[] = {"", "link", "wikilink", "url", "task"};
+    static const char *kinds[] = {"", "link", "url", "task"};
     return {{u"kind"_s, QLatin1String(kinds[hit.kind])},
             {u"target"_s, hit.target},
             {u"position"_s, hit.position}};

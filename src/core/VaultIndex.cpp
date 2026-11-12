@@ -417,8 +417,13 @@ public:
         if (target.isEmpty())
             return anchor >= 0 ? from : QString();
 
-        // A path from the note's folder, then from the vault's root, never climbing out.
-        for (const QString &base : {folderOf(from), QString()}) {
+        // A path from the note's folder, then from the vault's root, never climbing out. One
+        // that starts with a slash is from the root, as GitHub and other editors read it.
+        const bool rooted = target.startsWith(u'/');
+        if (rooted)
+            target = target.mid(1);
+        for (const QString &base :
+             rooted ? QStringList{QString()} : QStringList{folderOf(from), QString()}) {
             const QString path = QDir::cleanPath(base.isEmpty() ? target : base + u'/' + target);
             if (path.isEmpty() || path == u".." || path.startsWith(u"../"_s) ||
                 QDir::isAbsolutePath(path))

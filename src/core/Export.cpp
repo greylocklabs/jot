@@ -20,8 +20,8 @@ QList<ExportFormat> exportFormats()
             {u"html"_s, QObject::tr("Web page (.html)"), u"html"_s}};
 }
 
-QString exportMarkdown(QStringView note,
-                       const std::function<QString(const QString &, bool)> &embedPath, bool *toc)
+QString exportMarkdown(QStringView note, const std::function<QString(const QString &)> &embedPath,
+                       bool *toc)
 {
     static const QRegularExpression image(
         uR"(!\[([^\]]*)\]\(\s*(<[^>]*>|[^\s)]+)(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*\))"_s);
@@ -34,7 +34,6 @@ QString exportMarkdown(QStringView note,
     };
     static const QRegularExpression critic(
         uR"(\{\+\+(.+?)\+\+\}|\{--(.+?)--\}|\{~~(.*?)~>(.*?)~~\}|\{==(.+?)==\}|\{>>(.*?)<<\})"_s);
-    static const QRegularExpression wiki(uR"((!?)\[\[([^\[\]|]*?)(?:\|([^\[\]]*))?\]\])"_s);
     const QString body = splitFrontMatter(note).body.toString();
     *toc = false;
     QStringList lines;
@@ -69,7 +68,7 @@ QString exportMarkdown(QStringView note,
         if (const QRegularExpressionMatch m = reference.match(line); m.hasMatch()) {
             const QString target = bare(m.captured(2));
             if (!scheme.match(target).hasMatch() && !target.startsWith(u'#')) {
-                const QString path = embedPath(target, false);
+                const QString path = embedPath(target);
                 lines << m.captured(1) + (path.isEmpty() ? u"#"_s : u"<%1>"_s.arg(path)) +
                              m.captured(3);
                 continue;
@@ -77,22 +76,20 @@ QString exportMarkdown(QStringView note,
         }
         // Code spans keep what is in them, so matches are found with them blanked.
         QString text = line;
-        for (const QRegularExpression *pattern : {&critic, &image, &wiki}) {
+        for (const QRegularExpression *pattern : {&critic, &image}) {
             static const QRegularExpression span(uR"((`+)(.+?)\1)"_s);
             QString prose = text;
             for (const QRegularExpressionMatch &m : span.globalMatch(text))
                 prose.replace(m.capturedStart(), m.capturedLength(),
                               QString(m.capturedLength(), u' '));
             // Between the pictures read, anything else written as one, which the pattern could
-            // not read, becomes a plain link, whose target Pandoc never opens; an `![[embed]]` is
-            // left for the wikilink pass.
+            // not read, becomes a plain link, whose target Pandoc never opens.
             const auto between = [&](qsizetype from, qsizetype to) {
                 QString kept = text.mid(from, to - from);
                 if (pattern != &image)
                     return kept;
                 for (qsizetype i = to - 2; i >= from; --i) {
-                    if (prose.at(i) == u'!' && prose.at(i + 1) == u'[' &&
-                        (i + 2 >= prose.size() || prose.at(i + 2) != u'['))
+                    if (prose.at(i) == u'!' && prose.at(i + 1) == u'[')
                         kept.remove(i - from, 1);
                 }
                 return kept;
@@ -107,16 +104,11 @@ QString exportMarkdown(QStringView note,
                 if (pattern == &critic) {
                     // Edits made: what was added or put in, never what went or a comment.
                     out += part(1) + part(4) + part(5);
-                } else if (pattern == &image) {
+                } else {
                     const QString target = bare(part(2));
                     const QString path =
-                        scheme.match(target).hasMatch() ? QString() : embedPath(target, false);
+                        scheme.match(target).hasMatch() ? QString() : embedPath(target);
                     out += path.isEmpty() ? part(1) : u"![%1](<%2>)"_s.arg(part(1), path);
-                } else {
-                    const QString target = part(2).trimmed();
-                    const QString label = part(3).isEmpty() ? target : part(3).trimmed();
-                    const QString path = part(1).isEmpty() ? QString() : embedPath(target, true);
-                    out += path.isEmpty() ? label : u"![%1](<%2>)"_s.arg(label, path);
                 }
                 at = m.capturedEnd();
             }
