@@ -373,6 +373,13 @@ public:
     /// Shows the note opened before this one, or after it once gone back, as a browser does.
     Q_INVOKABLE bool goBack();
     Q_INVOKABLE bool goForward();
+    /// Jumps `steps` notes back, when negative, or forward, as picked from trailBehind() or
+    /// trailAhead().
+    Q_INVOKABLE bool goBy(int steps);
+    /// The notes back or forward lists, nearest first, as {path, title}: the one at index i
+    /// is goBy(-(i + 1)) or goBy(i + 1) away. A browser's menu shows the nearest few, as these do.
+    Q_INVOKABLE QVariantList trailBehind() const;
+    Q_INVOKABLE QVariantList trailAhead() const;
     [[nodiscard]] bool canGoBack() const { return m_trail.canGoBack(); }
     [[nodiscard]] bool canGoForward() const { return m_trail.canGoForward(); }
     [[nodiscard]] int openingCursor() const { return m_openingCursor; }
@@ -558,6 +565,7 @@ private:
     void afterMove(const QString &current, const QStringList &written);
     /// Goes back (`by` -1) or forward (1) through the notes opened.
     bool travel(int by);
+    [[nodiscard]] QVariantList trailEntries(int direction) const;
     /// Puts `text` in place of the note shown, keeping what it replaces in the note's history.
     bool replaceCurrentText(const QString &text);
     /// Replaces the whole text of the note at `path`, through the editor's copy when shown.

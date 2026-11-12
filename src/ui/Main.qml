@@ -168,20 +168,69 @@ ApplicationWindow {
                     spacing: Theme.space2
 
                     StickerButton {
+                        id: backButton
+
                         objectName: "goBack"
                         enabled: Vault.canGoBack
                         glyph: "chevron-left"
                         Accessible.name: qsTr("Back")
-                        tip: qsTr("Back to the note before (Alt+Left)")
+                        tip: qsTr("Back to the note before (Alt+Left); hold for more")
                         onClicked: Vault.goBack()
+                        onPressAndHold: trailMenu.show(backButton, false)
+
+                        TapHandler {
+                            acceptedButtons: Qt.RightButton
+                            onTapped: trailMenu.show(backButton, false)
+                        }
                     }
                     StickerButton {
+                        id: forwardButton
+
                         objectName: "goForward"
                         enabled: Vault.canGoForward
                         glyph: "chevron-right"
                         Accessible.name: qsTr("Forward")
-                        tip: qsTr("Forward to the note after (Alt+Right)")
+                        tip: qsTr("Forward to the note after (Alt+Right); hold for more")
                         onClicked: Vault.goForward()
+                        onPressAndHold: trailMenu.show(forwardButton, true)
+
+                        TapHandler {
+                            acceptedButtons: Qt.RightButton
+                            onTapped: trailMenu.show(forwardButton, true)
+                        }
+                    }
+
+                    // The notes back or forward, nearest first, to jump straight to one.
+                    MenuCard {
+                        id: trailMenu
+
+                        property bool forward: false
+                        property var entries: []
+
+                        function show(button, forward) {
+                            trailMenu.forward = forward
+                            entries = forward ? Vault.trailAhead() : Vault.trailBehind()
+                            if (entries.length > 0)
+                                popup(button, 0, button.height + Theme.space1)
+                        }
+
+                        objectName: "trailMenu"
+
+                        Instantiator {
+                            model: trailMenu.entries
+
+                            MenuEntry {
+                                required property var modelData
+                                required property int index
+
+                                text: modelData.title
+                                onTriggered: Vault.goBy(trailMenu.forward ? index + 1 : -(index
+                                                                                          + 1))
+
+                            }
+                            onObjectAdded: (index, object) => trailMenu.insertItem(index, object)
+                            onObjectRemoved: (index, object) => trailMenu.removeItem(object)
+                        }
                     }
                 }
             }
