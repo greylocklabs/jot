@@ -57,6 +57,9 @@ Rectangle {
         search.selectAll()
     }
 
+    /// Esc in the list, to go out to the sidebar.
+    signal leftList
+
     /// Puts the keyboard in the list of notes.
     function focusList() {
         list.forceActiveFocus()
@@ -168,6 +171,9 @@ Rectangle {
             if (menu && currentItem) {
                 root.showMenu(Vault.notes.pathAt(currentIndex), currentItem, Theme.space5,
                               currentItem.height / 2)
+                event.accepted = true
+            } else if (event.key === Qt.Key_Escape && event.modifiers === Qt.NoModifier) {
+                root.leftList()
                 event.accepted = true
             } else if (event.key === Qt.Key_Delete && currentItem && Vault.writable) {
                 // Delete asks first, as the menu's Move to trash does.

@@ -52,6 +52,7 @@ private Q_SLOTS:
     void columnsGiveWayToTheNote();
     void showsTheSyntaxGuide();
     void filtersToDosByPriority();
+    void viKeysMoveThroughTheListShownAndTheSidebar();
     void renamesANoteInTheWindow();
     void offersToRemoveATargetOnlyWhenThereIsOne();
 
@@ -844,6 +845,74 @@ void TestDialogs::filtersToDosByPriority()
     QCOMPARE(m_vault->tasks()->priority(), 2);
     QMetaObject::invokeMethod(filter, "activated", Q_ARG(QVariant, -1));
     QCOMPARE(m_vault->tasks()->priority(), -1);
+    m_vault->setShowingTasks(false);
+}
+
+void TestDialogs::viKeysMoveThroughTheListShownAndTheSidebar()
+{
+    QQmlEngine engine;
+    QQmlComponent component(&engine);
+    component.loadFromModule("Jot.Ui", "Main");
+    std::unique_ptr<QObject> main(component.create());
+    QVERIFY2(main, qPrintable(component.errorString()));
+    auto *window = qobject_cast<QQuickWindow *>(main.get());
+    QVERIFY(QTest::qWaitForWindowExposed(window));
+    window->resize(1200, 700);
+    const std::function<QQuickItem *(QQuickItem *, const QString &)> find =
+        [&find](QQuickItem *at, const QString &name) -> QQuickItem * {
+        for (QQuickItem *child : at->childItems()) {
+            if (child->objectName() == name)
+                return child;
+            if (QQuickItem *found = find(child, name))
+                return found;
+        }
+        return nullptr;
+    };
+    const auto run = [&main](const QString &id) {
+        QMetaObject::invokeMethod(main.get(), "run", Q_ARG(QVariant, id));
+    };
+    QQuickItem *sidebar = find(window->contentItem(), u"sidebar"_s);
+    QVERIFY(sidebar);
+    const auto sidebarHasKeys = [sidebar] {
+        QVariant has;
+        QMetaObject::invokeMethod(sidebar, "hasKeys", Q_RETURN_ARG(QVariant, has));
+        return has.toBool();
+    };
+
+    // In Tasks, j and k go through the to-dos, opening each one's note.
+    QFile todos(m_dir.filePath(u"Notes/Chores.md"_s));
+    QVERIFY(todos.open(QIODevice::WriteOnly));
+    todos.write("- [ ] sweep\n- [ ] dust\n- [ ] mop\n");
+    todos.close();
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Chores.md"_s), 3000);
+    m_vault->tasks()->setView(u"all"_s);
+    m_vault->setShowingTasks(true);
+    QTRY_VERIFY(m_vault->tasks()->rowCount() > 1);
+    QQuickItem *rows = nullptr;
+    QTRY_VERIFY((rows = find(window->contentItem(), u"taskRows"_s)) && rows->isVisible());
+    run(u"firstNote"_s);
+    QTRY_COMPARE(rows->property("currentIndex").toInt(), 0);
+    QTRY_VERIFY(!m_vault->current().isEmpty());
+    run(u"nextNote"_s);
+    QTRY_COMPARE(rows->property("currentIndex").toInt(), 1);
+    run(u"lastNote"_s);
+    QTRY_COMPARE(rows->property("currentIndex").toInt(), rows->property("count").toInt() - 1);
+
+    // Esc from the list goes to the sidebar, where they go through its rows, and Enter opens one.
+    QTest::keyClick(window, Qt::Key_Escape);
+    QTRY_VERIFY(sidebarHasKeys());
+    run(u"lastNote"_s);
+    QTRY_COMPARE(window->activeFocusItem()->objectName(), u"trashEntry"_s);
+    QTest::keyClick(window, Qt::Key_Return);
+    QTRY_VERIFY(m_vault->showingTrash());
+    QTRY_VERIFY(!sidebarHasKeys());
+
+    // Up from the trash, back to Tasks, and into the notes.
+    QTest::keyClick(window, Qt::Key_Escape);
+    QTRY_VERIFY(sidebarHasKeys());
+    run(u"firstNote"_s);
+    QTest::keyClick(window, Qt::Key_Return);
+    QTRY_VERIFY(m_vault->showingTasks());
     m_vault->setShowingTasks(false);
 }
 
