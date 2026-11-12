@@ -88,6 +88,9 @@ void TestRename::retargetsInTheStyleWritten_data()
                              << u"Cast/Mara Vey.md#voice"_s;
     QTest::newRow("from the root")
         << u"/Mara.md"_s << u"Acts/Scene.md"_s << u"Cast/Mara.md"_s << u"/Cast/Mara.md"_s;
+    // A hash in the new name is the name's own; the heading after it stays an anchor.
+    QTest::newRow("hash in the name") << u"Mara.md#voice"_s << u"Scene.md"_s
+                                      << u"Cast/Chapter #1.md"_s << u"Cast/Chapter %231.md#voice"_s;
 }
 
 void TestRename::retargetsInTheStyleWritten()
