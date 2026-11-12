@@ -901,10 +901,7 @@ void VaultController::exportNote(const QString &path, const QString &format, con
         QFile::copy(u":/jot/export/"_s + name, work->filePath(name));
     bool toc = false;
     const QString markdown = exportMarkdown(
-        *note,
-        [this, path](const QString &target, bool wiki) {
-            return attachmentPathFrom(path, target, wiki);
-        },
+        *note, [this, path](const QString &target) { return attachmentPathFrom(path, target); },
         &toc);
     const QString input = work->filePath(u"note.md"_s);
     if (!notefile::write(input, markdown, &error))
@@ -1522,13 +1519,12 @@ int VaultController::movedCursor(const QString &shown, int cursor) const
     return movedPosition(shown, now, cursor);
 }
 
-QString VaultController::attachmentPathFrom(const QString &from, const QString &target,
-                                            bool wiki) const
+QString VaultController::attachmentPathFrom(const QString &from, const QString &target) const
 {
-    if (!m_vault || !m_index || from.isEmpty())
+    if (!m_vault || !m_index || from.isEmpty() || target.contains(u':'))
         return {};
     // A path written in a Markdown link names the file outright, so the disk answers it.
-    if (!wiki && !target.contains(u':')) {
+    if (!target.startsWith(u'/')) {
         const QString folder = from.contains(u'/') ? from.section(u'/', 0, -2) : QString();
         const QString decoded = QUrl::fromPercentEncoding(target.section(u'#', 0, 0).toUtf8());
         const QString path = QDir::cleanPath(folder.isEmpty() ? decoded : folder + u'/' + decoded);
@@ -1538,7 +1534,7 @@ QString VaultController::attachmentPathFrom(const QString &from, const QString &
     }
     const QString path = m_index->resolve(target, from);
     // Notes and data files open in Jot; anything else is an attachment.
-    if (path.isEmpty() || Vault::isListed(path) || !(wiki || !target.contains(u':')))
+    if (path.isEmpty() || Vault::isListed(path))
         return {};
     const QString file = m_vault->absolute(path);
     return QFileInfo(file).isFile() ? file : QString();
@@ -2193,13 +2189,16 @@ QString VaultController::linkTo(const QString &path) const
 {
     if (!m_index || path.isEmpty())
         return {};
-    // Wikilinks find notes by file name, so a name two notes share needs the path.
-    const QString name = Vault::titleFromPath(path);
-    const qsizetype sharing =
-        std::ranges::count_if(m_index->notesIn({}), [&](const NoteInfo &note) {
-            return Vault::titleFromPath(note.path).compare(name, Qt::CaseInsensitive) == 0;
-        });
-    return u"[["_s + Vault::wikilinkName(path, sharing > 1) + u"]]"_s;
+    QString title = titleOf(path);
+    title.replace(u'[', u"\\["_s).replace(u']', u"\\]"_s);
+    // From the vault's root, as GitHub and other editors read a leading slash, so the link
+    // works pasted into a note in any folder.
+    return u"[%1](%2)"_s.arg(title, u'/' + Vault::linkTarget({}, path));
+}
+
+QString VaultController::linkTargetTo(const QString &path) const
+{
+    return path.isEmpty() ? QString() : Vault::linkTarget(m_current, path);
 }
 
 void VaultController::showInFiles(const QString &path) const
@@ -2222,12 +2221,12 @@ QStringList VaultController::notebookPaths() const
     return paths;
 }
 
-bool VaultController::follow(const QString &target, bool wiki)
+bool VaultController::follow(const QString &target)
 {
     if (!m_vault)
         return false;
     static const QRegularExpression scheme(u"^[A-Za-z][A-Za-z0-9+.-]*:"_s);
-    if (!wiki && scheme.match(target).hasMatch())
+    if (scheme.match(target).hasMatch())
         return QDesktopServices::openUrl(QUrl(target));
     const QString path = m_index->resolve(target, m_current);
     if (Vault::isListed(path)) {
@@ -2236,15 +2235,24 @@ bool VaultController::follow(const QString &target, bool wiki)
     }
     if (!path.isEmpty())
         return QDesktopServices::openUrl(QUrl::fromLocalFile(m_vault->absolute(path)));
-    if (!wiki)
+    // A link to a note that is not there yet makes it, where the link says, inside the vault.
+    const QString written =
+        QUrl::fromPercentEncoding(target.section(u'#', 0, 0).toUtf8()).trimmed();
+    if (!written.endsWith(u".md"_s, Qt::CaseInsensitive))
         return false;
-    // A wikilink to nothing yet makes the note, beside the one that links to it.
-    const QString name = target.section(u'#', 0, 0).section(u'/', -1).trimmed();
+    const QString here = m_current.contains(u'/') ? m_current.section(u'/', 0, -2) : QString();
+    const QString wanted = QDir::cleanPath(written.startsWith(u'/') ? written.mid(1)
+                                           : here.isEmpty()         ? written
+                                                                    : here + u'/' + written);
+    if (wanted.isEmpty() || wanted == u".." || wanted.startsWith(u"../"_s) ||
+        QDir::isAbsolutePath(wanted))
+        return false;
+    const QString name = Vault::titleFromPath(wanted);
+    const QString folder = wanted.contains(u'/') ? wanted.section(u'/', 0, -2) : QString();
     if (name.isEmpty())
         return false;
-    if (!readyToLeave([this, target, wiki] { follow(target, wiki); }))
+    if (!readyToLeave([this, target] { follow(target); }))
         return true;
-    const QString folder = m_current.contains(u'/') ? m_current.section(u'/', 0, -2) : QString();
     saveNow();
     QString error;
     const std::optional<QString> created =

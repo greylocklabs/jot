@@ -278,13 +278,6 @@ QString Vault::titleFromPath(const QString &path)
     return name.endsWith(kNoteSuffix) ? name.chopped(kNoteSuffix.size()) : name;
 }
 
-QString Vault::wikilinkName(const QString &path, bool shared)
-{
-    if (!shared)
-        return titleFromPath(path);
-    return path.endsWith(kNoteSuffix) ? path.chopped(kNoteSuffix.size()) : path;
-}
-
 QString Vault::notebookOf(const QString &path)
 {
     return path.contains(u'/') ? path.section(u'/', 0, -2) : QString();

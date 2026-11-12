@@ -29,9 +29,8 @@ std::optional<QStringList> moveNotebook(const Vault &vault, VaultIndex &index, c
                                         const BeforeWrite &beforeWrite = {});
 
 /// The target to write for a link that reached `from` from `source` and should now reach `to`:
-/// a name or vault path for a wikilink, as `raw` was; a path from the source's folder for a
-/// Markdown link. Any `#heading` stays.
-[[nodiscard]] QString retarget(const QString &raw, bool wiki, const QString &source,
-                               const QString &to);
+/// a path from the source's folder, or from the vault's root when `raw` started with `/`, with
+/// `.md` only when `raw` had it. Any `#heading` stays.
+[[nodiscard]] QString retarget(const QString &raw, const QString &source, const QString &to);
 
 } // namespace jot

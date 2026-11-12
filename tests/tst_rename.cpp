@@ -75,40 +75,36 @@ void TestRename::open()
 void TestRename::retargetsInTheStyleWritten_data()
 {
     QTest::addColumn<QString>("raw");
-    QTest::addColumn<bool>("wiki");
     QTest::addColumn<QString>("source");
     QTest::addColumn<QString>("to");
     QTest::addColumn<QString>("expected");
-    QTest::newRow("name") << u"Mara"_s << true << u"Scene.md"_s << u"Cast/Mara Vey.md"_s
-                          << u"Mara Vey"_s;
-    QTest::newRow("name and heading")
-        << u"Mara#Voice"_s << true << u"Scene.md"_s << u"Cast/Mara Vey.md"_s << u"Mara Vey#Voice"_s;
-    QTest::newRow("wiki path") << u"Old/Mara"_s << true << u"Scene.md"_s << u"Cast/Mara.md"_s
-                               << u"Cast/Mara"_s;
-    QTest::newRow("markdown") << u"Mara.md"_s << false << u"Scene.md"_s << u"Cast/Mara.md"_s
-                              << u"Cast/Mara.md"_s;
-    QTest::newRow("markdown up") << u"../Mara.md"_s << false << u"Acts/Scene.md"_s
-                                 << u"Cast/Mara.md"_s << u"../Cast/Mara.md"_s;
-    QTest::newRow("no extension") << u"Mara"_s << false << u"Scene.md"_s << u"Cast/Mara.md"_s
+    QTest::newRow("beside") << u"Mara.md"_s << u"Scene.md"_s << u"Cast/Mara.md"_s
+                            << u"Cast/Mara.md"_s;
+    QTest::newRow("up") << u"../Mara.md"_s << u"Acts/Scene.md"_s << u"Cast/Mara.md"_s
+                        << u"../Cast/Mara.md"_s;
+    QTest::newRow("no extension") << u"Mara"_s << u"Scene.md"_s << u"Cast/Mara.md"_s
                                   << u"Cast/Mara"_s;
+    QTest::newRow("heading") << u"Mara.md#voice"_s << u"Scene.md"_s << u"Cast/Mara Vey.md"_s
+                             << u"Cast/Mara Vey.md#voice"_s;
+    QTest::newRow("from the root")
+        << u"/Mara.md"_s << u"Acts/Scene.md"_s << u"Cast/Mara.md"_s << u"/Cast/Mara.md"_s;
 }
 
 void TestRename::retargetsInTheStyleWritten()
 {
     QFETCH(QString, raw);
-    QFETCH(bool, wiki);
     QFETCH(QString, source);
     QFETCH(QString, to);
     QFETCH(QString, expected);
-    QCOMPARE(retarget(raw, wiki, source, to), expected);
+    QCOMPARE(retarget(raw, source, to), expected);
 }
 
 void TestRename::rewritesLinksThatReachedTheNote()
 {
     write(u"Mara.md"_s, u"mara\n"_s);
     write(u"Scene.md"_s,
-          u"---\ntitle: Scene [[Mara]]\n---\n[[Mara]], [[Mara|her]], ![[Mara#Voice]]\n"
-          u"and [the ferrywoman](Mara.md)\n"_s);
+          u"---\ntitle: Scene [x](Mara.md)\n---\n[Mara](Mara.md), [her](Mara.md#voice), "
+          u"[root](/Mara.md)\nand [the ferrywoman](Mara.md)\n"_s);
     write(u"Acts/One.md"_s, u"[up](../Mara.md)\n"_s);
     open();
 
@@ -118,10 +114,10 @@ void TestRename::rewritesLinksThatReachedTheNote()
     QVERIFY2(rewritten, qPrintable(error));
     QCOMPARE(*rewritten, (QStringList{u"Acts/One.md"_s, u"Scene.md"_s}));
     // Front matter is the user's, not a link.
-    QCOMPARE(
-        read(u"Scene.md"_s),
-        u"---\ntitle: Scene [[Mara]]\n---\n[[Mara Vey]], [[Mara Vey|her]], ![[Mara Vey#Voice]]\n"
-        u"and [the ferrywoman](Cast/Mara%20Vey.md)\n"_s);
+    QCOMPARE(read(u"Scene.md"_s),
+             u"---\ntitle: Scene [x](Mara.md)\n---\n[Mara](Cast/Mara%20Vey.md), "
+             u"[her](Cast/Mara%20Vey.md#voice), [root](/Cast/Mara%20Vey.md)\n"
+             u"and [the ferrywoman](Cast/Mara%20Vey.md)\n"_s);
     QCOMPARE(read(u"Acts/One.md"_s), u"[up](../Cast/Mara%20Vey.md)\n"_s);
     QCOMPARE(m_index->backlinks(u"Cast/Mara Vey.md"_s).size(), 5);
     QVERIFY(m_index->unresolved().isEmpty());
@@ -131,33 +127,37 @@ void TestRename::leavesOtherLinksAndCodeAlone()
 {
     write(u"Mara.md"_s, u"mara\n"_s);
     write(u"Old/Mara.md"_s, u"another Mara\n"_s);
-    write(u"Scene.md"_s, u"[[Old/Mara]] `[[Mara]]`\n```\n[[Mara]]\n```\n[[Mara]]\n"_s);
+    write(u"Scene.md"_s,
+          u"[o](Old/Mara.md) `[m](Mara.md)`\n```\n[m](Mara.md)\n```\n[m](Mara.md) [[Mara]]\n"_s);
     open();
 
     QString error;
     QVERIFY(renameNote(*m_vault, *m_index, u"Mara.md"_s, u"Mara Vey.md"_s, &error));
-    QCOMPARE(read(u"Scene.md"_s), u"[[Old/Mara]] `[[Mara]]`\n```\n[[Mara]]\n```\n[[Mara Vey]]\n"_s);
+    // Code, and a wikilink, which is only words, stay as written.
+    QCOMPARE(read(u"Scene.md"_s),
+             u"[o](Old/Mara.md) `[m](Mara.md)`\n```\n[m](Mara.md)\n```\n[m](Mara%20Vey.md) "
+             u"[[Mara]]\n"_s);
 }
 
 void TestRename::keepsTheMovedNotesOwnPathsWorking()
 {
-    write(u"Mara.md"_s, u"[ferry](Places/Ferry.md), [[Ferry]], [self](Mara.md#top)\n"_s);
+    write(u"Mara.md"_s, u"[ferry](Places/Ferry.md), [by name](Ferry.md), [self](Mara.md#top)\n"_s);
     write(u"Places/Ferry.md"_s, u"ferry\n"_s);
     open();
 
     QString error;
     QVERIFY(renameNote(*m_vault, *m_index, u"Mara.md"_s, u"Cast/Mara.md"_s, &error));
-    QCOMPARE(read(u"Cast/Mara.md"_s),
-             u"[ferry](../Places/Ferry.md), [[Ferry]], [self](Mara.md#top)\n"_s);
+    QCOMPARE(
+        read(u"Cast/Mara.md"_s),
+        u"[ferry](../Places/Ferry.md), [by name](../Places/Ferry.md), [self](Mara.md#top)\n"_s);
     QVERIFY(m_index->unresolved().isEmpty());
 }
 
 void TestRename::followsLinksIntoItsAttachments()
 {
-    write(u"Mara.md"_s,
-          u"![sketch](Mara.assets/sketch.png) ![[sketch.png]] ![[Mara.assets/sketch.png]]\n"_s);
+    write(u"Mara.md"_s, u"![sketch](Mara.assets/sketch.png)\n"_s);
     write(u"Mara.assets/sketch.png"_s, u"png"_s);
-    write(u"Places/Scene.md"_s, u"![s](../Mara.assets/sketch.png) and [[Mara]]\n"_s);
+    write(u"Places/Scene.md"_s, u"![s](../Mara.assets/sketch.png) and [Mara](../Mara.md)\n"_s);
     // Linking only the attachment, not the note.
     write(u"Gallery.md"_s, u"![s](Mara.assets/sketch.png)\n"_s);
     write(u"Other.md"_s, u"![x](Other.assets/x.png)\n"_s);
@@ -170,12 +170,9 @@ void TestRename::followsLinksIntoItsAttachments()
     QVERIFY2(written, qPrintable(error));
     QCOMPARE(*written, (QStringList{u"Gallery.md"_s, u"Places/Scene.md"_s}));
     QVERIFY(QFileInfo::exists(m_vault->absolute(u"Cast/Mara Vell.assets/sketch.png"_s)));
-    // A bare name finds the note's own attachment wherever it goes, so it stays as written.
-    QCOMPARE(read(u"Cast/Mara Vell.md"_s),
-             u"![sketch](Mara%20Vell.assets/sketch.png) ![[sketch.png]] "
-             "![[Cast/Mara Vell.assets/sketch.png]]\n"_s);
+    QCOMPARE(read(u"Cast/Mara Vell.md"_s), u"![sketch](Mara%20Vell.assets/sketch.png)\n"_s);
     QCOMPARE(read(u"Places/Scene.md"_s),
-             u"![s](../Cast/Mara%20Vell.assets/sketch.png) and [[Mara Vell]]\n"_s);
+             u"![s](../Cast/Mara%20Vell.assets/sketch.png) and [Mara](../Cast/Mara%20Vell.md)\n"_s);
     QCOMPARE(read(u"Gallery.md"_s), u"![s](Cast/Mara%20Vell.assets/sketch.png)\n"_s);
     QCOMPARE(read(u"Other.md"_s), u"![x](Other.assets/x.png)\n"_s);
     QVERIFY(m_index->unresolved().isEmpty());
@@ -184,7 +181,7 @@ void TestRename::followsLinksIntoItsAttachments()
 void TestRename::reportsWhatItWrote()
 {
     write(u"Mara.md"_s, u"mara\n"_s);
-    write(u"Scene.md"_s, u"[[Mara]]\n"_s);
+    write(u"Scene.md"_s, u"[m](Mara.md)\n"_s);
     open();
 
     QStringList expected;
@@ -198,7 +195,7 @@ void TestRename::reportsWhatItWrote()
     m_index->update({u"Taken.md"_s});
     QVERIFY(!renameNote(*m_vault, *m_index, u"Mara Vey.md"_s, u"Taken.md"_s, &error));
     QVERIFY(error.contains(u"already exists"_s));
-    QCOMPARE(read(u"Scene.md"_s), u"[[Mara Vey]]\n"_s);
+    QCOMPARE(read(u"Scene.md"_s), u"[m](Mara%20Vey.md)\n"_s);
 }
 
 void TestRename::parenthesesStayInsideTheLink()
@@ -219,10 +216,10 @@ void TestRename::parenthesesStayInsideTheLink()
 void TestRename::movesANotebookAndKeepsItsLinksWorking()
 {
     write(u"Pitch.md"_s,
-          u"[Mara](Cast/Mara.md), [[Mara]], [[Cast/Soren]], [deep](Cast/Minor/Tam.md)\n"_s);
+          u"[Mara](Cast/Mara.md), [Soren](Cast/Soren.md), [deep](Cast/Minor/Tam.md)\n"_s);
     write(u"Board.md"_s, u"![face](Cast/Mara.assets/face.png)\n"_s);
     write(u"Cast/Mara.md"_s,
-          u"[brother](Soren.md), [pitch](../Pitch.md), [[Pitch]], ![](Mara.assets/face.png)\n"_s);
+          u"[brother](Soren.md), [pitch](../Pitch.md), ![](Mara.assets/face.png)\n"_s);
     write(u"Cast/Soren.md"_s, u"soren\n"_s);
     write(u"Cast/Minor/Tam.md"_s, u"[mara](../Mara.md)\n"_s);
     write(u"Cast/Mara.assets/face.png"_s, u"png"_s);
@@ -239,14 +236,12 @@ void TestRename::movesANotebookAndKeepsItsLinksWorking()
 
     QVERIFY(!QFileInfo::exists(m_vault->absolute(u"Cast"_s)));
     QVERIFY(QFileInfo::exists(m_vault->absolute(u"Story/People/Mara.assets/face.png"_s)));
-    QCOMPARE(read(u"Pitch.md"_s),
-             u"[Mara](Story/People/Mara.md), [[Mara]], [[Story/People/Soren]], "
-             "[deep](Story/People/Minor/Tam.md)\n"_s);
+    QCOMPARE(read(u"Pitch.md"_s), u"[Mara](Story/People/Mara.md), [Soren](Story/People/Soren.md), "
+                                  "[deep](Story/People/Minor/Tam.md)\n"_s);
     // Inside, paths between its own notes still work; the one out has a level more.
     // Its own picture moved with it, so that link stays; one from outside follows it.
     QCOMPARE(read(u"Story/People/Mara.md"_s),
-             u"[brother](Soren.md), [pitch](../../Pitch.md), [[Pitch]], "
-             "![](Mara.assets/face.png)\n"_s);
+             u"[brother](Soren.md), [pitch](../../Pitch.md), ![](Mara.assets/face.png)\n"_s);
     QCOMPARE(read(u"Board.md"_s), u"![face](Story/People/Mara.assets/face.png)\n"_s);
     QCOMPARE(read(u"Story/People/lines.csv"_s), data);
     QCOMPARE(read(u"Story/People/Minor/Tam.md"_s), u"[mara](../Mara.md)\n"_s);

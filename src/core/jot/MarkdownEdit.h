@@ -36,8 +36,8 @@ enum class LineStyle { Bullet, Numbered, Task, Quote, Heading1, Heading2, Headin
 /// Lists replace one another, so a bullet becomes a task.
 [[nodiscard]] Edit styleLines(const QString &text, qsizetype from, qsizetype to, LineStyle style);
 
-/// Makes the selection a link's label, or its target when it is a URL, and leaves the
-/// cursor where the other half goes.
+/// Makes the selection a link's words, or its target when it is a URL, and leaves the cursor
+/// in the half still to fill: the target, where notes are offered, or the words for a URL.
 [[nodiscard]] Edit link(const QString &text, qsizetype from, qsizetype to);
 
 /// Fences the lines the selection touches as a code block, or unfences them.
@@ -68,16 +68,20 @@ enum class LineStyle { Bullet, Numbered, Task, Quote, Heading1, Heading2, Headin
 /// A two-column table on lines of its own at the cursor, with its first heading selected.
 [[nodiscard]] Edit insertTable(const QString &text, qsizetype from, qsizetype to);
 
-/// A wikilink being typed: where its target starts, just after `[[`, and what is typed so far.
-struct WikilinkQuery
+/// A link's target being typed: where it starts, just after `](`, what is typed so far, and
+/// where the link's words are, between its brackets.
+struct LinkTargetQuery
 {
     qsizetype start = 0;
     QString text;
+    qsizetype labelStart = 0;
+    qsizetype labelEnd = 0;
 };
 
-/// The wikilink the cursor is typing, if it is after an unclosed `[[` on its line and
-/// before any `|` or `#` that ends the target. Nothing in code.
-[[nodiscard]] std::optional<WikilinkQuery> wikilinkAt(const QString &text, qsizetype cursor);
+/// The target the cursor is typing in a Markdown link, `[words](` and what follows on its line,
+/// before any `)` or `#` that ends it. Nothing for an image, for a target with a scheme such as
+/// `https:`, or in code.
+[[nodiscard]] std::optional<LinkTargetQuery> linkTargetAt(const QString &text, qsizetype cursor);
 
 /// An emoji name being typed after a colon, as `:thumbs`: where the colon is, and the name
 /// so far with its underscores as spaces.
@@ -96,11 +100,11 @@ struct EmojiQuery
 /// past the box, maybe none yet. Nothing elsewhere, or in code.
 [[nodiscard]] std::optional<EmojiQuery> markerAt(const QString &text, qsizetype cursor);
 
-/// Puts `target` in the wikilink being typed at the cursor, closing it with `]]` unless it
-/// is closed already, and leaves the cursor after the link. A `|label` or `#heading` the link
-/// has already stays.
-[[nodiscard]] std::optional<Edit> completeWikilink(const QString &text, qsizetype cursor,
-                                                   const QString &target);
+/// Puts `target` in the link whose target is being typed at the cursor, closing it with `)`
+/// unless it is closed already, and gives it `words` when it has none. A `#heading` the target
+/// has already stays, and the cursor goes after the link.
+[[nodiscard]] std::optional<Edit> completeLinkTarget(const QString &text, qsizetype cursor,
+                                                     const QString &target, const QString &words);
 
 /// Sets front matter `key` to `value`, or removes it when `value` is null, keeping the
 /// selection on the same text.

@@ -223,21 +223,15 @@ Rectangle {
     function openLink(link) {
         if (link.startsWith("jot-tag:")) {
             Vault.shownTag = decodeURIComponent(link.slice("jot-tag:".length))
-        } else if (link.startsWith("jot-note:")) {
-            Vault.follow(decodeURIComponent(link.slice("jot-note:".length)), true)
-        } else if (link.startsWith("jot-wiki-sound:")) {
-            Vault.follow(decodeURIComponent(link.slice("jot-wiki-sound:".length)), true)
         } else if (link.startsWith("jot-sound:")) {
-            Vault.follow(decodeURIComponent(link.slice("jot-sound:".length)), false)
-        } else if (link.startsWith("jot-wiki-video:")) {
-            Vault.follow(decodeURIComponent(link.slice("jot-wiki-video:".length)), true)
+            Vault.follow(decodeURIComponent(link.slice("jot-sound:".length)))
         } else if (link.startsWith("jot-video:")) {
-            Vault.follow(decodeURIComponent(link.slice("jot-video:".length)), false)
+            Vault.follow(decodeURIComponent(link.slice("jot-video:".length)))
         } else if (link.startsWith("jot-heading:")) {
             // A table of contents entry scrolls its heading to the top.
             goToHeading(Number(link.slice("jot-heading:".length)))
         } else {
-            Vault.follow(link, false)
+            Vault.follow(link)
         }
     }
 
@@ -929,15 +923,15 @@ Rectangle {
                 /// Bumped when lines may have moved, so the images find their lines again.
                 property int layoutTick: 0
 
-                /// Where the wikilink being typed starts, or -1, and the one Escape put away.
+                /// Where the link target being typed starts, or -1, and the one Escape put away.
                 property int linkStart: -1
                 property int dismissedLink: -1
 
-                /// Offers notes for the wikilink being typed at the cursor, if any. Only typing
+                /// Offers notes for the link target being typed at the cursor, if any. Only typing
                 /// asks, so moving through an existing link leaves Return and Tab alone.
                 function findLink() {
                     const query = activeFocus && !readOnly && selectionStart === selectionEnd
-                          ? styler.wikilinkAt(cursorPosition) : ({})
+                          ? styler.linkTargetAt(cursorPosition) : ({})
                     linkStart = query.start === undefined ? -1 : query.start
                     if (linkStart < 0 || linkStart === dismissedLink) {
                         if (linkStart < 0)
@@ -953,7 +947,7 @@ Rectangle {
                 function pickLink(index) {
                     const item = linkPopup.items[index]
                     if (item)
-                        root.format("wikilink", item.target)
+                        root.format("linkTarget", Vault.linkTargetTo(item.path) + "\n" + item.text)
                 }
 
                 /// Where the emoji name being typed starts, at its colon, or -1, and the one
@@ -961,7 +955,7 @@ Rectangle {
                 property int emojiStart: -1
                 property int dismissedEmoji: -1
 
-                /// Offers emoji for the name being typed after a colon, as for wikilinks.
+                /// Offers emoji for the name being typed after a colon, as for links.
                 function findEmoji() {
                     const query = activeFocus && !readOnly && selectionStart === selectionEnd
                           && linkStart < 0 ? styler.emojiAt(cursorPosition) : ({})
@@ -1070,7 +1064,7 @@ Rectangle {
                     tidyLeftLine()
                     if (!root.loading)
                         Vault.cursorPosition = cursorPosition
-                    if (linkPopup.items.length > 0 && styler.wikilinkAt(cursorPosition).start
+                    if (linkPopup.items.length > 0 && styler.linkTargetAt(cursorPosition).start
                             !== linkStart)
                         linkPopup.items = []
                     if (emojiPopup.items.length > 0 && styler.emojiAt(cursorPosition).start
@@ -1089,7 +1083,7 @@ Rectangle {
                 }
 
                 Keys.onPressed: event => {
-                    // While notes are offered for a wikilink, the arrows choose one and
+                    // While notes are offered for a link, the arrows choose one and
                     // Return or Tab puts it in.
                     if (linkPopup.visible && body.suggestionKey(event, linkPopup, body.pickLink, ()
                                                                 => {
@@ -1262,7 +1256,7 @@ Rectangle {
                     }
                 }
 
-                // The card of notes for a wikilink sits under the cursor, kept inside the note.
+                // The card of notes for a link sits under the cursor, kept inside the note.
                 Item {
                     x: Math.max(0, Math.min(body.cursorRectangle.x, body.width - width))
                     y: body.cursorRectangle.y
@@ -1618,8 +1612,8 @@ Rectangle {
                         const hit = styler.hitAt(body.positionAt(point.position.x,
                                                                  point.position.y))
 
-                        if (hit.kind === "wikilink" || hit.kind === "link" || hit.kind === "url")
-                            Vault.follow(hit.target, hit.kind === "wikilink")
+                        if (hit.kind === "link" || hit.kind === "url")
+                            Vault.follow(hit.target)
                     }
                 }
                 TapHandler {
@@ -1664,7 +1658,7 @@ Rectangle {
                     onTriggered: {
                         const at = body.positionAt(hover.point.position.x, hover.point.position.y)
                         const hit = styler.hitAt(at)
-                        if (hit.kind !== "wikilink" && hit.kind !== "link") {
+                        if (hit.kind !== "link") {
                             preview.close()
                             return
                         }

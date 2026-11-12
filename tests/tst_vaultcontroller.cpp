@@ -453,13 +453,13 @@ void TestVaultController::pinsNotesToTheTop()
 
 void TestVaultController::suggestsLinksThatResolve()
 {
-    // A second Pancakes makes the title ambiguous, so links to both say their path.
+    // A second Pancakes shares the title; links go by path, so each still finds its own.
     QVERIFY(QDir().mkpath(m_root + u"/Breakfast"_s));
     QFile twin(m_root + u"/Breakfast/Pancakes.md"_s);
     QVERIFY(twin.open(QIODevice::WriteOnly));
     twin.write("Another stack.\n");
     twin.close();
-    // A front matter title the file name cannot hold: links still use the file name.
+    // A front matter title the file name cannot hold: links use the file's path.
     QFile titled(m_root + u"/Inbox/meeting-2026.md"_s);
     QVERIFY(titled.open(QIODevice::WriteOnly));
     titled.write("---\ntitle: Team sync\n---\nAgenda.\n");
@@ -470,23 +470,25 @@ void TestVaultController::suggestsLinksThatResolve()
     links.setQuery(u"team sync"_s);
     const QVariantMap meeting = links.suggestions(8).first().toMap();
     QCOMPARE(meeting.value(u"text"_s).toString(), u"Team sync"_s);
-    QCOMPARE(meeting.value(u"target"_s).toString(), u"meeting-2026"_s);
-    QCOMPARE(m_vault->index()->resolve(u"meeting-2026"_s, {}), u"Inbox/meeting-2026.md"_s);
+    QCOMPARE(meeting.value(u"path"_s).toString(), u"Inbox/meeting-2026.md"_s);
 
     links.setQuery(u"ferrywoman"_s);
     const QVariantMap mara = links.suggestions(8).first().toMap();
     QCOMPARE(mara.value(u"text"_s).toString(), u"Mara Vey"_s);
     QCOMPARE(mara.value(u"detail"_s).toString(), u"the Ferrywoman"_s);
-    QCOMPARE(mara.value(u"target"_s).toString(), u"Mara Vey"_s);
+    QCOMPARE(mara.value(u"path"_s).toString(), u"Ashfall/Characters/Mara Vey.md"_s);
 
+    // The target written from the note shown leads back to each.
+    m_vault->setCurrent(u"Ashfall/Pitch.md"_s);
     links.setQuery(u"pancakes"_s);
-    QStringList targets;
+    QStringList paths;
     for (const QVariant &item : links.suggestions(8))
-        targets.append(item.toMap().value(u"target"_s).toString());
-    QVERIFY(targets.contains(u"Recipes/Pancakes"_s));
-    QVERIFY(targets.contains(u"Breakfast/Pancakes"_s));
-    for (const QString &target : std::as_const(targets))
-        QCOMPARE(m_vault->index()->resolve(target, {}), target + u".md"_s);
+        paths.append(item.toMap().value(u"path"_s).toString());
+    QVERIFY(paths.contains(u"Recipes/Pancakes.md"_s));
+    QVERIFY(paths.contains(u"Breakfast/Pancakes.md"_s));
+    for (const QString &path : std::as_const(paths))
+        QCOMPARE(m_vault->index()->resolve(m_vault->linkTargetTo(path), u"Ashfall/Pitch.md"_s),
+                 path);
     QCOMPARE(links.suggestions(1).size(), 1);
 }
 
@@ -505,7 +507,7 @@ void TestVaultController::makesRenamesAndMovesNotebooks()
     m_vault->notes()->setNotebook(u"Ashfall/Characters"_s);
     QVERIFY(m_vault->renameNotebook(u"Ashfall/Characters"_s, u"Cast"_s));
     QCOMPARE(m_vault->current(), u"Ashfall/Cast/Mara Vey.md"_s);
-    QVERIFY(m_vault->currentText().contains(u"[[Soren]]"_s));
+    QVERIFY(m_vault->currentText().contains(u"[Soren](Soren.md)"_s));
     QCOMPARE(m_vault->notes()->notebook(), u"Ashfall/Cast"_s);
     QCOMPARE(m_settings->collapsedNotebooks(), QStringList{u"Ashfall/Cast"_s});
     QVERIFY(!column(*m_vault->notebooks(), "path").contains(u"Ashfall/Characters"_s));
@@ -638,7 +640,7 @@ void TestVaultController::movesANoteToAnotherNotebook()
     QVERIFY(QFileInfo::exists(m_root + u"/Inbox/The Ferry.assets/ferry.png"_s));
     // Links to it still reach it, and its picture still shows.
     QCOMPARE(m_vault->index()->resolve(u"The Ferry"_s, {}), u"Inbox/The Ferry.md"_s);
-    QVERIFY(!m_vault->attachmentPath(u"The Ferry.assets/ferry.png"_s, false).isEmpty());
+    QVERIFY(!m_vault->attachmentPath(u"The Ferry.assets/ferry.png"_s).isEmpty());
     QVERIFY(!m_vault->moveNoteTo(u"Inbox/The Ferry.md"_s, u"Inbox"_s));
 }
 
@@ -655,14 +657,17 @@ void TestVaultController::actsOnNotesThatAreNotShown()
     QVERIFY(!groceries.contains(u"task:"_s));
     QVERIFY(groceries.contains(u"due:"_s));
 
-    QCOMPARE(m_vault->linkTo(u"Ashfall/Characters/Soren.md"_s), u"[[Soren]]"_s);
-    // A name another note shares, in any case, needs the path to say which.
-    QFile twin(m_root + u"/Inbox/pancakes.md"_s);
-    QVERIFY(twin.open(QIODevice::WriteOnly));
-    twin.write("Another stack.\n");
-    twin.close();
-    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Inbox/pancakes.md"_s), 3000);
-    QCOMPARE(m_vault->linkTo(u"Recipes/Pancakes.md"_s), u"[[Recipes/Pancakes]]"_s);
+    // Copy link writes a link from the vault's root, which works pasted in any notebook.
+    QCOMPARE(m_vault->linkTo(u"Ashfall/Characters/Soren.md"_s),
+             u"[Soren](/Ashfall/Characters/Soren.md)"_s);
+    QCOMPARE(m_vault->linkTo(u"Ashfall/Characters/Mara Vey.md"_s),
+             u"[Mara Vey](/Ashfall/Characters/Mara%20Vey.md)"_s);
+    // A link written in the note shown goes from its folder.
+    m_vault->setCurrent(u"Ashfall/Pitch.md"_s);
+    QCOMPARE(m_vault->linkTargetTo(u"Ashfall/Characters/Mara Vey.md"_s),
+             u"Characters/Mara%20Vey.md"_s);
+    QCOMPARE(m_vault->linkTargetTo(u"Recipes/Pancakes.md"_s), u"../Recipes/Pancakes.md"_s);
+    m_vault->setCurrent(u"Welcome.md"_s);
     QCOMPARE(m_vault->notebookOf(u"Recipes/Pancakes.md"_s), u"Recipes"_s);
     QCOMPARE(m_vault->notebookOf(u"Welcome.md"_s), QString());
     QVERIFY(m_vault->notebookPaths().contains(u"Ashfall/Places"_s));
@@ -1001,7 +1006,8 @@ void TestVaultController::exportsThroughPandoc()
     // A note with a picture of its own, to export while another is shown.
     QString error;
     QVERIFY(QDir(m_root).mkpath(u"Recipes/Pic.assets"_s));
-    QVERIFY(notefile::write(m_root + u"/Recipes/Pic.md"_s, u"![[photo.png]]\n"_s, &error));
+    QVERIFY(notefile::write(m_root + u"/Recipes/Pic.md"_s,
+                            u"![photo.png](Pic.assets/photo.png)\n"_s, &error));
     QVERIFY(QImage(4, 4, QImage::Format_RGB32).save(m_root + u"/Recipes/Pic.assets/photo.png"_s));
     QVERIFY(m_vault->openPath(m_root));
     QSignalSpy exported(m_vault.get(), &VaultController::exported);
@@ -1360,9 +1366,10 @@ void TestVaultController::renamingRewritesLinksAndKeepsTheTitle()
     QVERIFY(m_vault->renameCurrent(u"The Rope Ferry"_s));
     QCOMPARE(m_vault->current(), u"Ashfall/Places/The Rope Ferry.md"_s);
     QCOMPARE(m_vault->currentTitle(), u"The Rope Ferry"_s);
-    QVERIFY(readFile(m_root + u"/Ashfall/Pitch.md"_s).contains(u"[[The Rope Ferry]]"_s));
-    QVERIFY(
-        readFile(m_root + u"/Ashfall/Characters/Mara Vey.md"_s).contains(u"[[The Rope Ferry]]"_s));
+    QVERIFY(readFile(m_root + u"/Ashfall/Pitch.md"_s)
+                .contains(u"[The Ferry](Places/The%20Rope%20Ferry.md)"_s));
+    QVERIFY(readFile(m_root + u"/Ashfall/Characters/Mara Vey.md"_s)
+                .contains(u"[The Ferry](../Places/The%20Rope%20Ferry.md)"_s));
 
     // A title the file name cannot hold goes into the front matter, and out again.
     QVERIFY(m_vault->renameCurrent(u"Ferry: the rope one"_s));
@@ -1597,16 +1604,23 @@ void TestVaultController::followsLinksAndMakesMissingNotes()
 {
     QVERIFY(m_vault->openPath(m_root));
     m_vault->setCurrent(u"Ashfall/Pitch.md"_s);
-    QVERIFY(m_vault->follow(u"Mara"_s, true));
+    QVERIFY(m_vault->follow(u"Characters/Mara%20Vey.md"_s));
     QCOMPARE(m_vault->current(), u"Ashfall/Characters/Mara Vey.md"_s);
-    QVERIFY(m_vault->follow(u"Soren"_s, true));
+    QVERIFY(m_vault->follow(u"Soren.md"_s));
     QCOMPARE(m_vault->current(), u"Ashfall/Characters/Soren.md"_s);
 
-    QVERIFY(m_vault->follow(u"Harbor Master#Debts"_s, true));
+    // A link to a note not written yet makes it where the link says.
+    QVERIFY(m_vault->follow(u"Harbor%20Master.md#debts"_s));
     QCOMPARE(m_vault->current(), u"Ashfall/Characters/Harbor Master.md"_s);
     QCOMPARE(m_vault->noteCount(), 16);
-    // A Markdown link to nothing makes nothing.
-    QVERIFY(!m_vault->follow(u"Nowhere.md"_s, false));
+    QVERIFY(m_vault->follow(u"/Ideas/Someday.md"_s));
+    QCOMPARE(m_vault->current(), u"Ideas/Someday.md"_s);
+    QCOMPARE(m_vault->noteCount(), 17);
+    // Nothing is made for a link to what is not a note, or out of the vault, or a wikilink.
+    QVERIFY(!m_vault->follow(u"Nowhere.png"_s));
+    QVERIFY(!m_vault->follow(u"../../Outside.md"_s));
+    QVERIFY(!m_vault->follow(u"[[Nowhere]]"_s));
+    QCOMPARE(m_vault->noteCount(), 17);
 }
 
 void TestVaultController::opensAndRenamesDataFiles()
@@ -1622,7 +1636,7 @@ void TestVaultController::opensAndRenamesDataFiles()
     // A link to it opens it in Jot, as a data file.
     m_vault->setCurrent(u"Ashfall/Pitch.md"_s);
     QCOMPARE(m_vault->currentKind(), u"markdown"_s);
-    QVERIFY(m_vault->follow(u"data/cast.json"_s, false));
+    QVERIFY(m_vault->follow(u"data/cast.json"_s));
     QCOMPARE(m_vault->current(), u"Ashfall/data/cast.json"_s);
     QCOMPARE(m_vault->currentKind(), u"json"_s);
     QCOMPARE(m_vault->currentTitle(), u"cast.json"_s);
@@ -1665,7 +1679,7 @@ void TestVaultController::opensAndRenamesDataFiles()
     QVERIFY(notefile::read(m_root + u"/Ashfall/Pitch.md"_s, &error)
                 ->contains(u"(../Inbox/crew.json)"_s));
     // A link to it opens it in Jot rather than as an attachment.
-    QVERIFY(m_vault->attachmentPath(u"../Inbox/crew.json"_s, false).isEmpty());
+    QVERIFY(m_vault->attachmentPath(u"../Inbox/crew.json"_s).isEmpty());
 }
 
 void TestVaultController::keepsLineEndingsAndTheByteOrderMark()
@@ -1756,11 +1770,12 @@ void TestVaultController::attachesDroppedFilesAndPastedImages()
     QCOMPARE(dropped, u"![](Mara%20Vey.assets/map%20of%20the%20river.png)\n"
                       u"[notes.txt](Mara%20Vey.assets/notes.txt)"_s);
     QVERIFY(QFileInfo::exists(m_root + u"/Ashfall/Characters/Mara Vey.assets/notes.txt"_s));
-    QCOMPARE(m_vault->attachmentPath(u"Mara%20Vey.assets/map%20of%20the%20river.png"_s, false),
+    QCOMPARE(m_vault->attachmentPath(u"Mara%20Vey.assets/map%20of%20the%20river.png"_s),
              m_root + u"/Ashfall/Characters/Mara Vey.assets/map of the river.png"_s);
-    QCOMPARE(m_vault->attachmentPath(u"map of the river.png"_s, true),
+    QCOMPARE(m_vault->attachmentPath(
+                 u"/Ashfall/Characters/Mara%20Vey.assets/map%20of%20the%20river.png"_s),
              m_root + u"/Ashfall/Characters/Mara Vey.assets/map of the river.png"_s);
-    QCOMPARE(m_vault->attachmentPath(u"https://example.org/x.png"_s, false), QString());
+    QCOMPARE(m_vault->attachmentPath(u"https://example.org/x.png"_s), QString());
 
     // A file that cannot be read, or is not on this computer, is said so, not skipped.
     QCOMPARE(m_vault->attachFiles({QUrl::fromLocalFile(m_dir->filePath(u"missing.png"_s)),
@@ -1790,24 +1805,24 @@ void TestVaultController::listsBacklinksAndMentions()
     QVERIFY(m_vault->openPath(m_root));
     m_vault->setCurrent(u"Ashfall/Characters/Mara Vey.md"_s);
     BacklinksModel &links = *m_vault->backlinks();
-    QCOMPARE(links.linked(), 3);
-    QCOMPARE(column(links, "path").mid(0, 3),
+    QCOMPARE(links.linked(), 4);
+    QCOMPARE(column(links, "path").mid(0, 4),
              (QStringList{u"Ashfall/Crossings.md"_s, u"Ashfall/Pitch.md"_s,
-                          u"Ashfall/Places/The Ferry.md"_s}));
+                          u"Ashfall/Places/The Ferry.md"_s, u"Welcome.md"_s}));
     // Read as text, not Markdown.
     QCOMPARE(column(links, "excerpt").first(), u"Match the ledger to Mara Vey's voice"_s);
     // Soren's note names her by her alias, without a link, as do the route and the cast list.
     QCOMPARE(links.unlinked(), 3);
-    QCOMPARE(column(links, "path").mid(3),
+    QCOMPARE(column(links, "path").mid(4),
              (QStringList{u"Ashfall/Records/cast.json"_s, u"Ashfall/Characters/Soren.md"_s,
                           u"Ashfall/Route.md"_s}));
 
     // Another note starting to link here shows up once the watcher says so.
     QFile soren(m_root + u"/Ashfall/Characters/Soren.md"_s);
     QVERIFY(soren.open(QIODevice::Append));
-    soren.write("\nAsks [[Mara Vey]] for the ledger.\n");
+    soren.write("\nAsks [Mara Vey](Mara%20Vey.md) for the ledger.\n");
     soren.close();
-    QTRY_COMPARE_WITH_TIMEOUT(links.linked(), 4, 3000);
+    QTRY_COMPARE_WITH_TIMEOUT(links.linked(), 5, 3000);
     QCOMPARE(links.unlinked(), 2);
 
     m_vault->setCurrent(u"Recipes/Sourdough.md"_s);

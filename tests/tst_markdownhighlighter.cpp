@@ -130,12 +130,10 @@ void TestMarkdownHighlighter::emphasisAndCode()
 
 void TestMarkdownHighlighter::linksShowTheirTextOrLabel()
 {
-    setText(u"[[Mara]] [[Cast/Soren|Soren]] [the ferry](Places/Ferry.md) "
-            u"https://callieapp.org.\n"_s);
-    QCOMPARE(formatAt(find(u"Mara"_s)).foreground().color(), m_look.accent);
-    QCOMPARE(formatAt(find(u"[["_s)).foreground().color(), QColor(Qt::transparent));
-    QCOMPARE(formatAt(find(u"Cast/"_s)).foreground().color(), QColor(Qt::transparent));
-    QCOMPARE(formatAt(find(u"Soren]]"_s)).foreground().color(), m_look.accent);
+    setText(u"[[Mara]] [the ferry](Places/Ferry.md) https://callieapp.org.\n"_s);
+    // A wikilink is only words.
+    QVERIFY(!formatAt(find(u"Mara"_s)).fontUnderline());
+    QVERIFY(formatAt(find(u"[["_s)).foreground().color() != QColor(Qt::transparent));
     QVERIFY(formatAt(find(u"the ferry"_s)).fontUnderline());
     QCOMPARE(formatAt(find(u"Places"_s)).foreground().color(), QColor(Qt::transparent));
     QVERIFY(formatAt(find(u"callieapp"_s)).fontUnderline());
@@ -266,11 +264,11 @@ void TestMarkdownHighlighter::sourceModeShowsTheMarkdownAsWritten()
     QVERIFY(!formatAt(find(u"Title"_s)).hasProperty(QTextFormat::FontPixelSize));
     QCOMPARE(formatAt(find(u"Title"_s)).fontFamilies().toStringList(),
              QStringList{u"Mono Sample"_s});
-    setText(u"See [the ferry](Ferry.md) and [[Mara|her]].\n- [x] done\n> said\n"
+    setText(u"See [the ferry](Ferry.md) and [her](Mara.md).\n- [x] done\n> said\n"
             u"```cpp\nreturn 42;\n```\n"_s);
     QCOMPARE(formatAt(find(u"the ferry"_s)).foreground().color(), m_look.accent);
     QCOMPARE(formatAt(find(u"Ferry.md"_s)).foreground().color(), m_look.faint);
-    QCOMPARE(formatAt(find(u"Mara|"_s)).foreground().color(), m_look.faint);
+    QCOMPARE(formatAt(find(u"Mara.md"_s)).foreground().color(), m_look.faint);
     QCOMPARE(formatAt(find(u"her]"_s)).foreground().color(), m_look.accent);
     QCOMPARE(formatAt(find(u"[x]"_s)).foreground().color(), m_look.accent);
     QVERIFY(formatAt(find(u"done"_s)).fontStrikeOut());
@@ -301,14 +299,16 @@ void TestMarkdownHighlighter::sourceModeShowsTheMarkdownAsWritten()
 
 void TestMarkdownHighlighter::saysWhatIsUnderAPosition()
 {
-    setText(u"- [ ] call [[Mara#Voice|her]] about [the ferry](<Places/The Ferry.md>)\n"
-            u"see https://callieapp.org and [site](https://x.y)\n```\n[[NotALink]]\n```\n"_s);
+    setText(
+        u"- [ ] call [her](Mara.md#voice) about [the ferry](<Places/The Ferry.md>)\n"
+        u"see https://callieapp.org and [site](https://x.y) and [[Mara]]\n```\n[x](NotALink.md)\n```\n"_s);
     MarkdownHighlighter::Hit hit = m_highlighter->hitAt(find(u"[ ]"_s) + 1);
     QCOMPARE(hit.kind, MarkdownHighlighter::Hit::TaskBox);
     QCOMPARE(hit.position, find(u"[ ]"_s) + 1);
     hit = m_highlighter->hitAt(find(u"her"_s));
-    QCOMPARE(hit.kind, MarkdownHighlighter::Hit::Wikilink);
-    QCOMPARE(hit.target, u"Mara#Voice"_s);
+    QCOMPARE(hit.kind, MarkdownHighlighter::Hit::Link);
+    QCOMPARE(hit.target, u"Mara.md#voice"_s);
+    QCOMPARE(m_highlighter->hitAt(find(u"[[Mara"_s) + 2).kind, MarkdownHighlighter::Hit::None);
     hit = m_highlighter->hitAt(find(u"the ferry"_s));
     QCOMPARE(hit.kind, MarkdownHighlighter::Hit::Link);
     QCOMPARE(hit.target, u"Places/The Ferry.md"_s);
@@ -322,7 +322,7 @@ void TestMarkdownHighlighter::saysWhatIsUnderAPosition()
 
 void TestMarkdownHighlighter::neverChangesTheText()
 {
-    const QString text = u"---\na: 1\n---\n# T\n**b** [[l]] `c`\n```\nx\n```\n"_s;
+    const QString text = u"---\na: 1\n---\n# T\n**b** [l](l.md) `c`\n```\nx\n```\n"_s;
     setText(text);
     m_highlighter->setCursorPosition(5);
     m_highlighter->setCursorPosition(20);
@@ -338,7 +338,7 @@ void TestMarkdownHighlighter::reservesRoomForImagesOnTheirOwnLines()
     QVERIFY(picture.save(dir.filePath(u"sketch.png"_s)));
     m_look.imageWidth = 300;
     m_highlighter->setLook(m_look);
-    m_highlighter->setResolver([&dir](const QString &target, bool) {
+    m_highlighter->setResolver([&dir](const QString &target) {
         return target == u"sketch.png" ? dir.filePath(u"sketch.png"_s) : QString();
     });
     setText(
@@ -350,7 +350,7 @@ void TestMarkdownHighlighter::reservesRoomForImagesOnTheirOwnLines()
     };
     QVERIFY(image(1));
     QCOMPARE(image(1)->size, QSize(300, 150)); // fitted to the width given
-    QVERIFY(image(2));                         // wikilink embeds too
+    QVERIFY(!image(2));                        // a wikilink embed is words
     QVERIFY(!image(3));                        // not alone on its line
     QVERIFY(!image(4));                        // nothing to show
     const int bang = find(u"![](sketch"_s);

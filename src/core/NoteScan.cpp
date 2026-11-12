@@ -53,12 +53,6 @@ bool isUrl(const QString &target)
     return scheme.match(target).hasMatch();
 }
 
-const QRegularExpression &wikiPattern()
-{
-    static const QRegularExpression wiki(uR"((!?)\[\[([^\[\]|]*?)(?:\|[^\[\]]*)?\]\])"_s);
-    return wiki;
-}
-
 const QRegularExpression &markdownPattern()
 {
     static const QRegularExpression markdown(
@@ -136,13 +130,6 @@ NoteScan scanNote(QStringView body, int firstLine)
         QString rest = text;
         // Each with where it starts, so the line's links keep the order they are written in.
         QList<std::pair<qsizetype, NoteScan::Link>> found;
-        for (const QRegularExpressionMatch &m : wikiPattern().globalMatch(text)) {
-            found.append({m.capturedStart(),
-                          {m.captured(2).trimmed(),
-                           m.captured(1).isEmpty() ? u"wiki"_s : u"embed"_s, number}});
-            // Blanked so the tag search does not read "[[#Heading]]" as a tag.
-            rest.replace(m.capturedStart(), m.capturedLength(), QString(m.capturedLength(), u' '));
-        }
         for (const QRegularExpressionMatch &m : markdownPattern().globalMatch(rest)) {
             QString target = m.captured(2);
             if (target.startsWith(u'<'))
@@ -369,14 +356,11 @@ QString readableDay(const QString &value)
 } // namespace
 
 QString readingMarkdown(QStringView original,
-                        const std::function<QString(const QString &)> &embedUrl,
                         const std::function<QString(const QString &, bool)> &mathUrl)
 {
     const QString accepted =
         criticForReading(mathUrl ? mathForReading(original, mathUrl) : original.toString());
     const QStringView body = accepted;
-    // A wikilink with its label, after a bar, when it has one.
-    static const QRegularExpression wiki(uR"((!?)\[\[([^\[\]|]*?)(?:\|([^\[\]]*))?\]\])"_s);
     const auto encode = [](const QString &target) {
         return QString::fromLatin1(QUrl::toPercentEncoding(target.trimmed(), "/#"));
     };
@@ -413,21 +397,6 @@ QString readingMarkdown(QStringView original,
         // Matched with code spans blanked, so what is in them stays as written.
         const QString prose = withoutCodeSpans(line);
         QString rest = prose;
-        for (const QRegularExpressionMatch &m : wiki.globalMatch(prose)) {
-            const QString target = m.captured(2).trimmed();
-            const QString label = m.captured(3).isEmpty() ? target : m.captured(3).trimmed();
-            QString text = u"[%1](jot-note:%2)"_s.arg(escape(label), encode(target));
-            if (!m.captured(1).isEmpty() && Vault::isAudioFile(target)) {
-                text = u"[%1](jot-wiki-sound:%2)"_s.arg(escape(label), encode(target));
-            } else if (!m.captured(1).isEmpty() && Vault::isVideoFile(target)) {
-                text = u"[%1](jot-wiki-video:%2)"_s.arg(escape(label), encode(target));
-            } else if (!m.captured(1).isEmpty()) {
-                if (const QString url = embedUrl(target); !url.isEmpty())
-                    text = u"![%1](<%2>)"_s.arg(escape(label), url);
-            }
-            changes.append({m.capturedStart(), m.capturedLength(), text});
-            rest.replace(m.capturedStart(), m.capturedLength(), QString(m.capturedLength(), u' '));
-        }
         // Tags, but not the # in a link's target or label, such as a heading's anchor.
         for (const QRegularExpressionMatch &m : markdownPattern().globalMatch(rest)) {
             const QString target = m.captured(2);
@@ -504,9 +473,8 @@ QString readingMarkdown(QStringView original,
     return out;
 }
 
-QString
-rewriteLinks(QStringView body,
-             const std::function<std::optional<QString>(const QString &raw, bool wiki)> &replace)
+QString rewriteLinks(QStringView body,
+                     const std::function<std::optional<QString>(const QString &raw)> &replace)
 {
     struct Edit
     {
@@ -517,21 +485,14 @@ rewriteLinks(QStringView body,
     QList<Edit> edits;
     forEachProseLine(body, 1, [&](int, qsizetype lineStart, const QString &line) {
         const QString text = withoutCodeSpans(line);
-        QString rest = text;
-        for (const QRegularExpressionMatch &m : wikiPattern().globalMatch(text)) {
-            const QString raw = m.captured(2).trimmed();
-            if (const std::optional<QString> with = replace(raw, true))
-                edits.append({lineStart + m.capturedStart(2), m.capturedLength(2), *with});
-            rest.replace(m.capturedStart(), m.capturedLength(), QString(m.capturedLength(), u' '));
-        }
-        for (const QRegularExpressionMatch &m : markdownPattern().globalMatch(rest)) {
+        for (const QRegularExpressionMatch &m : markdownPattern().globalMatch(text)) {
             QString target = m.captured(2);
             const bool bracketed = target.startsWith(u'<');
             if (bracketed)
                 target = target.mid(1, target.size() - 2);
             if (target.isEmpty() || target.startsWith(u'#') || isUrl(target))
                 continue;
-            if (std::optional<QString> with = replace(target, false)) {
+            if (std::optional<QString> with = replace(target)) {
                 // Spaces need the angle brackets, or %20, to stay one target; a parenthesis
                 // would end it, so it takes the brackets.
                 if (bracketed || with->contains(u')') || with->contains(u'('))

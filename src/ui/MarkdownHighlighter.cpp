@@ -35,12 +35,6 @@ int fenceState(const QString &language, const KSyntaxHighlighting::State &parse)
     return int((hash & 0x0fffffff) << 2) | MarkdownHighlighter::InFence;
 }
 
-const QRegularExpression &wikiPattern()
-{
-    static const QRegularExpression wiki(uR"((!?)\[\[([^\[\]|]*?)(?:\|([^\[\]]*))?\]\])"_s);
-    return wiki;
-}
-
 const QRegularExpression &linkPattern()
 {
     static const QRegularExpression link(
@@ -110,21 +104,19 @@ QSize MarkdownHighlighter::imageSize(const QString &path)
 bool MarkdownHighlighter::imageLine(const QString &text)
 {
     static const QRegularExpression line(
-        uR"(^(\s*)!(?:\[[^\]]*\]\(\s*(<[^>]*>|[^\s)]+)(?:\s+"[^"]*")?\s*\)|\[\[([^\]|#]+)(?:\|[^\]]*)?\]\])\s*$)"_s);
+        uR"(^(\s*)!\[[^\]]*\]\(\s*(<[^>]*>|[^\s)]+)(?:\s+"[^"]*")?\s*\)\s*$)"_s);
     const QRegularExpressionMatch m = line.match(text);
     if (!m.hasMatch() || !m_resolver)
         return false;
-    const bool wiki = m.capturedLength(3) > 0;
-    QString target = wiki ? m.captured(3).trimmed() : m.captured(2);
+    QString target = m.captured(2);
     if (target.startsWith(u'<'))
         target = target.mid(1, target.size() - 2);
-    const QString key = (wiki ? u"w:"_s : u"m:"_s) + target;
-    QString path = m_resolved.value(key);
+    QString path = m_resolved.value(target);
     if (path.isEmpty()) {
-        path = m_resolver(target, wiki);
+        path = m_resolver(target);
         // Only what was found is kept, so a file added later is still found.
         if (!path.isEmpty())
-            m_resolved.insert(key, path);
+            m_resolved.insert(target, path);
     }
     // A sound gets a player as wide as an image can be, at most 420.
     if (!path.isEmpty() && Vault::isAudioFile(path)) {
@@ -1038,18 +1030,6 @@ void MarkdownHighlighter::inlineStyles(const QString &text, int from)
     QTextCharFormat link;
     link.setForeground(m_look.accent);
     link.setFontUnderline(true);
-    for (const QRegularExpressionMatch &m : wikiPattern().globalMatch(text, from)) {
-        if (!free(m))
-            continue;
-        // The label when there is one, else the target, between folded brackets.
-        const int shownStart =
-            int(m.capturedLength(3) > 0 ? m.capturedStart(3) : m.capturedStart(2));
-        const int shownEnd = int(m.capturedLength(3) > 0 ? m.capturedEnd(3) : m.capturedEnd(2));
-        mark(int(m.capturedStart()), shownStart - int(m.capturedStart()));
-        merge(shownStart, shownEnd - shownStart, link);
-        mark(shownEnd, int(m.capturedEnd()) - shownEnd);
-        take(m);
-    }
     for (const QRegularExpressionMatch &m : linkPattern().globalMatch(text, from)) {
         if (!free(m))
             continue;
@@ -1148,10 +1128,6 @@ MarkdownHighlighter::Hit MarkdownHighlighter::hitAt(int position) const
         m.hasMatch() && m.capturedLength(4) > 0 && at >= m.capturedStart(4) &&
         at < m.capturedEnd(6))
         return {Hit::TaskBox, {}, block.position() + int(m.capturedStart(5))};
-    for (const QRegularExpressionMatch &m : wikiPattern().globalMatch(text)) {
-        if (contains(m))
-            return {Hit::Wikilink, m.captured(2).trimmed(), -1};
-    }
     for (const QRegularExpressionMatch &m : linkPattern().globalMatch(text)) {
         if (!contains(m))
             continue;

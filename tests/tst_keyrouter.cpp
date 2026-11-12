@@ -186,7 +186,7 @@ void TestKeyRouter::listsShortcutsAsThePlatformWritesThem()
     QCOMPARE(keys.value(u"quit"_s), QStringList{u"Ctrl+Q"_s});
     QCOMPARE(keys.value(u"syncNow"_s), QStringList{u"F5"_s});
     // What is not a shortcut is shown as it is written.
-    QCOMPARE(keys.value(u"wikilink"_s), QStringList{u"[["_s});
+    QCOMPARE(keys.value(u"linkTarget"_s), QStringList{u"]("_s});
     QCOMPARE(keys.value(u"follow"_s), QStringList{u"Ctrl+Click"_s});
     QCOMPARE(keys.value(u"left"_s), QStringList());
 }

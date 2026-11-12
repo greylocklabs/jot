@@ -1,7 +1,7 @@
 ---
 tags: [ashfall]
 ---
-How the ferry crosses, for the chase in act two. Fares are in [[Crossings]], and the cast is in
+How the ferry crosses, for the chase in act two. Fares are in [Crossings](Crossings.md), and the cast is in
 [the cast list](Records/cast.json).
 
 > The rope is older than the boat.

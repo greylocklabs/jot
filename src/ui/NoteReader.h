@@ -10,7 +10,7 @@
 namespace jot {
 
 /// Draws a note for reading in a read-only TextEdit's document: its Markdown rendered by Qt's
-/// md4c importer, in the theme's colors and type, with wikilinks, embeds and tags as links and
+/// md4c importer, in the theme's colors and type, with tags as links and
 /// images from the vault. Set `document` to the TextEdit's textDocument.
 class NoteReader : public QObject
 {

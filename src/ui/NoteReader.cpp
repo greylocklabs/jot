@@ -184,14 +184,8 @@ void NoteReader::render()
         return;
     const NoteParts parts = splitFrontMatter(m_text);
     const ThemeController &theme = *ThemeController::instance();
-    QString markdown = readingMarkdown(
-        parts.body,
-        [](const QString &target) {
-            const VaultController *vault = VaultController::instance();
-            const QString path = vault ? vault->attachmentPath(target, true) : QString();
-            return path.isEmpty() ? QString() : QUrl::fromLocalFile(path).toString();
-        },
-        [this, &theme](const QString &tex, bool display) {
+    QString markdown =
+        readingMarkdown(parts.body, [this, &theme](const QString &tex, bool display) {
             const MathRenderer::Drawn drawn =
                 MathRenderer::instance().draw(tex, display, m_pixelSize, theme.text());
             return drawn.ok() ? QUrl::fromLocalFile(drawn.path).toString() : QString();
@@ -437,7 +431,7 @@ void NoteReader::placeImages()
             const QUrl resolved = doc->baseUrl().resolved(url);
             const QString path = resolved.isLocalFile() && QFileInfo::exists(resolved.toLocalFile())
                                      ? resolved.toLocalFile()
-                                 : vault ? vault->attachmentPath(format.name(), false)
+                                 : vault ? vault->attachmentPath(format.name())
                                          : QString();
             QImageReader reader(path);
             QImage image;
@@ -514,21 +508,17 @@ void NoteReader::placeSounds()
             else
                 alone = false;
         }
-        const bool video =
-            href.startsWith(u"jot-video:"_s) || href.startsWith(u"jot-wiki-video:"_s);
-        const bool wiki =
-            href.startsWith(u"jot-wiki-sound:"_s) || href.startsWith(u"jot-wiki-video:"_s);
+        const bool video = href.startsWith(u"jot-video:"_s);
         // A table cell has no room for a player, so the sound or video stays a link there.
-        if (!alone || !(wiki || video || href.startsWith(u"jot-sound:"_s)) || !vault ||
+        if (!alone || !(video || href.startsWith(u"jot-sound:"_s)) || !vault ||
             QTextCursor(block).currentTable())
             continue;
         const QSize room = video ? videoRoom : soundRoom;
         const QString target = QUrl::fromPercentEncoding(href.section(u':', 1).toUtf8());
         const QUrl beside = doc->baseUrl().resolved(QUrl(target));
-        const QString path =
-            !wiki && beside.isLocalFile() && QFileInfo::exists(beside.toLocalFile())
-                ? beside.toLocalFile()
-                : vault->attachmentPath(target, wiki);
+        const QString path = beside.isLocalFile() && QFileInfo::exists(beside.toLocalFile())
+                                 ? beside.toLocalFile()
+                                 : vault->attachmentPath(target);
         if (path.isEmpty())
             continue;
         // The line keeps the player's room with a clear picture in place of the link.

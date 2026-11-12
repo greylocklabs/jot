@@ -134,7 +134,7 @@ QList<KeyAction> KeyRouter::actions()
         act(u"nest"_s, tr("Nest or unnest list items"), note, {u"Tab"_s, u"Shift+Tab"_s}),
         act(u"cell"_s, tr("Next or previous table cell"), note, {u"Tab"_s, u"Shift+Tab"_s}),
         act(u"tableRow"_s, tr("New table row, or end the table"), note, {u"Return"_s}),
-        act(u"wikilink"_s, tr("Link to a note, chosen as you type"), note, {u"[["_s}),
+        act(u"linkTarget"_s, tr("Link to a note, chosen as you type"), note, {u"]("_s}),
         act(u"follow"_s, tr("Follow a link"), note, {u"Ctrl+Click"_s}),
         act(u"pasteImage"_s, tr("Paste an image"), note, {int(K::Paste)}),
 
@@ -229,7 +229,7 @@ QVariantList KeyRouter::toList(const QList<KeyAction> &actions)
                     keys << sequence.toString(QKeySequence::NativeText);
                 continue;
             }
-            // Text that is not a shortcut, such as "[[" or "Ctrl+Click", is shown as it is.
+            // Text that is not a shortcut, such as "](" or "Ctrl+Click", is shown as it is.
             const QKeySequence sequence(key.toString());
             const QString native = sequence.toString(QKeySequence::NativeText);
             keys << (sequence.count() == 1 && !native.isEmpty() ? native : key.toString());

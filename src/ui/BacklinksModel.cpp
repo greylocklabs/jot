@@ -14,15 +14,9 @@ namespace {
 /// A line as it reads: links by their text, without brackets or targets.
 QString readable(QString line)
 {
-    static const QRegularExpression wiki(uR"(!?\[\[([^\]|]*)(?:\|([^\]]*))?\]\])"_s);
     static const QRegularExpression link(uR"(!?\[([^\]]*)\]\([^)]*\))"_s);
     static const QRegularExpression list(uR"(^\s*(?:[-*+]|\d+[.)])\s+(?:\[[ xX]\]\s+)?)"_s);
     line.replace(list, QString());
-    for (QRegularExpressionMatchIterator it = wiki.globalMatch(line); it.hasNext();) {
-        const QRegularExpressionMatch m = it.next();
-        line.replace(m.captured(),
-                     m.capturedLength(2) > 0 ? m.captured(2) : m.captured(1).section(u'#', 0, 0));
-    }
     line.replace(link, u"\\1"_s);
     return line.trimmed();
 }

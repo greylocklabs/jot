@@ -133,7 +133,6 @@ Rules:
 
 CommonMark with the GitHub extensions (tables, task lists, strikethrough, autolinks), plus:
 
-- `[[wikilinks]]`, `[[Note|label]]`, `[[Note#Heading]]` and `![[embeds]]`
 - inline tags: `#tag` and `#tag/nested`, outside code and links. A tag is letters, digits, `_`,
   `-` and `/`, with at least one that is not a digit, and starts the line or follows a space, `(`
   or `,`. Tags match without regard to case.
@@ -145,28 +144,34 @@ CommonMark with the GitHub extensions (tables, task lists, strikethrough, autoli
   `{==highlighted==}` and `{>>comments<<}`, shown as edits, and comments as notes in the margin.
 
 Jot keeps any other Markdown as written, footnotes among them, and does not draw those yet.
+Wikilinks, such as `[[Note]]`, are words to Jot, as they are to other Markdown tools.
 
 ## Links
 
-Jot reads standard Markdown links and wikilinks, to notes and attachments alike. It writes:
+Links are standard Markdown links, to notes and attachments alike, so other editors follow them
+too. Jot writes:
 
-- a wikilink when it links to a note, as `[[` completion and Copy link do: `[[Soren]]`, or
-  `[[Ashfall/Soren]]` when another note has the same name;
-- a Markdown link, relative to the note, when it adds an attachment: `![](Mara.assets/sketch.png)`.
-  Spaces become `%20`, and a path with `(` or `)` is written `<like this>`.
+- a path from the note's folder, as completion after `](` and the Link shortcut do, and when it
+  adds an attachment: `[Soren](Characters/Soren.md)`, `![](Mara.assets/sketch.png)`;
+- a path from the vault's root, starting with `/`, for Copy link, so the link works pasted into a
+  note in any folder: `[Soren](/Ashfall/Characters/Soren.md)`.
+
+Spaces become `%20`, and a path with `(` or `)` is written `<like this>`. Following a link to a
+`.md` file that is not there yet makes that note.
 
 Jot resolves a link in this order:
 
-1. a path from the linking note's folder, then from the vault root, with or without `.md`;
+1. a path from the linking note's folder, then from the vault root, with or without `.md`; one
+   starting with `/` only from the vault root;
 2. a note by name, ignoring case, where a name with folders must match the end of the path:
    one in the linking note's folder first, then the one with the shortest path;
 3. a note by alias;
-4. for a bare file name such as `![[map.png]]`, an attachment in the linking note's `.assets`
+4. for a bare file name such as `![](map.png)`, an attachment in the linking note's `.assets`
    folder, then beside the note.
 
 When a note is renamed or moved in Jot, every link to it, and every link into its `.assets`
-folder, is rewritten. A Markdown link keeps its style, with or without `.md`. A link whose target
-is missing stays as written.
+folder, is rewritten. A link keeps its style: with or without `.md`, and from the note's folder or the
+vault's root. A link whose target is missing stays as written.
 
 ## Attachments
 

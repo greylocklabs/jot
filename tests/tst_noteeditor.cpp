@@ -99,7 +99,7 @@ private Q_SLOTS:
     void makesTheNoteATaskWithADueDate();
     void continuesAndNestsLists();
     void fillsInTablesWithTheKeys();
-    void completesWikilinksFromTheKeyboard();
+    void completesLinkTargetsFromTheKeyboard();
     void putsInEmojiTypedAfterAColon();
     void togglesSourceMode();
     void writesInTheChosenFont();
@@ -1041,7 +1041,7 @@ void TestNoteEditor::underlinesMisspelledWords()
     QQuickItem *body = find(u"body"_s);
     auto *styler = m_editor->findChild<QObject *>(u"styler"_s);
     const QString text =
-        u"---\nlang: en_US\n---\nRecieve **ferrie** crossed `wrnog` [[Qwzx]] #qwzx\n"_s;
+        u"---\nlang: en_US\n---\nRecieve **ferrie** crossed `wrnog` [boat](Qwzx.md) #qwzx\n"_s;
     body->forceActiveFocus();
     body->setProperty("text", text);
     body->setProperty("cursorPosition", 0);
@@ -1176,9 +1176,10 @@ void TestNoteEditor::playsSoundsWhereTheyAreEmbedded()
 
     // Read, it plays in place too, between the lines around it; a sound only linked to, or
     // sharing its line, stays a link.
-    body->setProperty("text", text +
-                                  u"\nHear [it](Welcome.assets/Take%201.wav) and ![[Take 1.wav]]\n"
-                                  u"\n- ![[Take 1.wav]]\n\n| A |\n|---|\n| ![[Take 1.wav]] |\n"_s);
+    body->setProperty(
+        "text", text + u"\nHear [it](Welcome.assets/Take%201.wav) and "
+                       u"![](Welcome.assets/Take%201.wav)\n\n- ![](Welcome.assets/Take%201.wav)\n"
+                       u"\n| A |\n|---|\n| ![](Welcome.assets/Take%201.wav) |\n"_s);
     m_settings->setReadMode(true);
     QQuickItem *reader = find(u"reader"_s);
     QTRY_VERIFY(reader->isVisible());
@@ -1510,7 +1511,7 @@ void TestNoteEditor::fillsInTablesWithTheKeys()
              u"\n| Name | Role    |\n| ---- | ------- |\n| Mara | Captain |\nAfter"_s);
 }
 
-void TestNoteEditor::completesWikilinksFromTheKeyboard()
+void TestNoteEditor::completesLinkTargetsFromTheKeyboard()
 {
     m_vault->setCurrent(u"Welcome.md"_s);
     QQuickItem *body = find(u"body"_s);
@@ -1522,21 +1523,29 @@ void TestNoteEditor::completesWikilinksFromTheKeyboard()
             QTest::keyClick(m_window.get(), c.toLatin1());
     };
 
-    type(u"See [[sourd"_s);
+    // Notes are offered for a link's target, written from the note's folder.
+    type(u"See [bread](sourd"_s);
     QTest::keyClick(m_window.get(), Qt::Key_Return);
-    type(u" and [[ferry"_s);
+    type(u" and [boat](ferry"_s);
     // Escape puts the notes away, so Return breaks the line instead.
     QTest::keyClick(m_window.get(), Qt::Key_Escape);
     QTest::keyClick(m_window.get(), Qt::Key_Return);
-
     QCOMPARE(body->property("text").toString().mid(before.size()),
-             u"See [[Sourdough]] and [[ferry\n"_s);
+             u"See [bread](Recipes/Sourdough.md) and [boat](ferry\n"_s);
+
+    // Ctrl+K with nothing selected offers notes too, and the one picked names the link.
+    const int at = int(body->property("text").toString().size());
+    body->setProperty("cursorPosition", at);
+    QTest::keyClick(m_window.get(), Qt::Key_K, Qt::ControlModifier);
+    type(u"pancak"_s);
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    QCOMPARE(body->property("text").toString().mid(at), u"[Pancakes](Recipes/Pancakes.md)"_s);
 
     // Moving into a finished link offers nothing, so Return still breaks the line.
     const int inside = int(body->property("text").toString().indexOf(u"Sourd"_s)) + 2;
     body->setProperty("cursorPosition", inside);
     QTest::keyClick(m_window.get(), Qt::Key_Return);
-    QVERIFY(body->property("text").toString().contains(u"[[So\nurdough]]"_s));
+    QVERIFY(body->property("text").toString().contains(u"Recipes/So\nurdough.md"_s));
 }
 
 void TestNoteEditor::putsInEmojiTypedAfterAColon()
@@ -1654,7 +1663,7 @@ void TestNoteEditor::readsTheNoteWithLinksAndBoxesToTick()
     QString error;
     QVERIFY(notefile::write(
         m_root + u"/Reading.md"_s,
-        u"---\ntags: [demo]\n---\n# Today\n\n- [ ] Buy rope\n- [x] Patch the hull\n\nSee [[Mara Vey]] and #ferry.\n\n> A quote.\n\n| Crossing | Fare |\n|---|---|\n| Dawn | 2 |\n\n```\nlet fare = 2\n```\n"_s,
+        u"---\ntags: [demo]\n---\n# Today\n\n- [ ] Buy rope\n- [x] Patch the hull\n\nSee [Mara Vey](Ashfall/Characters/Mara%20Vey.md) and #ferry.\n\n> A quote.\n\n| Crossing | Fare |\n|---|---|\n| Dawn | 2 |\n\n```\nlet fare = 2\n```\n"_s,
         &error));
     QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Reading.md"_s), 3000);
     m_vault->setCurrent(u"Reading.md"_s);
@@ -1667,7 +1676,8 @@ void TestNoteEditor::readsTheNoteWithLinksAndBoxesToTick()
     auto *doc = reader->property("textDocument").value<QQuickTextDocument *>()->textDocument();
     QTRY_VERIFY(doc->toPlainText().contains(u"Buy rope"_s));
     const QString shown = doc->toPlainText();
-    QVERIFY2(!shown.contains(u"tags:"_s) && !shown.contains(u"[["_s) && !shown.contains(u"# "_s),
+    QVERIFY2(!shown.contains(u"tags:"_s) && !shown.contains(u"](Ashfall"_s) &&
+                 !shown.contains(u"# "_s),
              qPrintable(shown));
 
     // A click left of the task's text ticks it in the file. The view lays itself out again as it
@@ -1732,7 +1742,16 @@ void TestNoteEditor::readsTheNoteWithLinksAndBoxesToTick()
     QMetaObject::invokeMethod(reader, "linkActivated", Q_ARG(QString, u"jot-tag:ferry"_s));
     QCOMPARE(m_vault->shownTag(), u"ferry"_s);
     m_vault->setShownTag({});
-    QMetaObject::invokeMethod(reader, "linkActivated", Q_ARG(QString, u"jot-note:Mara%20Vey"_s));
+    // The link as the reader drew it, which is what a click gives.
+    QString href;
+    for (QTextBlock block = doc->begin(); block.isValid() && href.isEmpty(); block = block.next()) {
+        for (auto it = block.begin(); !it.atEnd(); ++it) {
+            if (it.fragment().text().contains(u"Mara Vey"_s))
+                href = it.fragment().charFormat().anchorHref();
+        }
+    }
+    QVERIFY2(href.contains(u"Mara"_s), qPrintable(href));
+    QMetaObject::invokeMethod(reader, "linkActivated", Q_ARG(QString, href));
     QCOMPARE(m_vault->current(), u"Ashfall/Characters/Mara Vey.md"_s);
     // Ctrl+/ there goes back to writing, in Source.
     m_vault->setCurrent(u"Reading.md"_s);
@@ -2731,7 +2750,7 @@ void TestNoteEditor::staysQuickAndStillInALongNote()
     QString text = u"# A long note\n\n"_s;
     for (int i = 1; i <= 150; ++i) {
         text += u"## Section %1\n\n"_s.arg(i);
-        text += u"A paragraph with **bold**, *italic*, `code`, a [[Mara Vey]] link and a "
+        text += u"A paragraph with **bold**, *italic*, `code`, a [Mara Vey](Mara.md) link and a "
                 "[site](https://example.com), long enough to wrap across the editor's width "
                 "at least once.\n\n"_s;
         text += u"- An item\n  - A nested item\n- [ ] A to-do @minutes #calls\n\n"_s;

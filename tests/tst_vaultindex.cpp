@@ -125,7 +125,7 @@ void TestVaultIndex::refreshReadsOnlyWhatChanged()
 
 void TestVaultIndex::dropsNotesThatAreGone()
 {
-    write(u"Gone.md"_s, u"#tag [[Kept]]\n- [ ] task\n"_s);
+    write(u"Gone.md"_s, u"#tag [k](Kept.md)\n- [ ] task\n"_s);
     write(u"Kept.md"_s, u"kept\n"_s);
     open();
     QVERIFY(QFile::remove(m_vault->absolute(u"Gone.md"_s)));
@@ -159,7 +159,7 @@ void TestVaultIndex::searchesWordsAtTheStartOfWords()
 void TestVaultIndex::indexesDataFilesByNameAndWords()
 {
     write(u"data/cast.json"_s, u"[{\"name\": \"Mara\", \"role\": \"ferrywoman\"}]\n"_s);
-    write(u"Ferry.md"_s, u"Links to [the cast](data/cast.json) and [[cast.json]].\n"_s);
+    write(u"Ferry.md"_s, u"Links to [the cast](data/cast.json) and [again](/data/cast.json).\n"_s);
     open();
 
     const std::optional<NoteInfo> info = m_index->note(u"data/cast.json"_s);
@@ -238,6 +238,11 @@ void TestVaultIndex::resolvesLinksTheWayObsidianDoes()
     QCOMPARE(m_index->resolve(u"../Places/The%20Ferry.md"_s, from), u"Places/The Ferry.md"_s);
     QCOMPARE(m_index->resolve(u"The Ferry"_s, from), u"Places/The Ferry.md"_s);
     QCOMPARE(m_index->resolve(u"Mara.assets/sketch.png"_s, from), u"Cast/Mara.assets/sketch.png"_s);
+    // A leading slash is from the vault's root, never the note's folder.
+    QCOMPARE(m_index->resolve(u"/Places/The%20Ferry.md"_s, from), u"Places/The Ferry.md"_s);
+    QCOMPARE(m_index->resolve(u"/Cast/Mara.assets/sketch.png"_s, from),
+             u"Cast/Mara.assets/sketch.png"_s);
+    QCOMPARE(m_index->resolve(u"/Nobody.md"_s, from), QString());
     // A dotted note name is a note, even beside a file of that name.
     write(u"Cast/v1.2 plan.md"_s, u"plan\n"_s);
     write(u"Cast/v1.2 plan"_s, u"stray\n"_s);
@@ -256,7 +261,7 @@ void TestVaultIndex::resolvesLinksTheWayObsidianDoes()
 void TestVaultIndex::backlinksFollowRenames()
 {
     write(u"Mara.md"_s, u"mara\n"_s);
-    write(u"Scene.md"_s, u"line one\n[[Mara]] and ![[Mara]]\n"_s);
+    write(u"Scene.md"_s, u"line one\n[m](Mara.md) and [root](/Mara.md) but not [[Mara]]\n"_s);
     write(u"Other.md"_s, u"[her](Mara.md)\n"_s);
     open();
 
@@ -277,11 +282,11 @@ void TestVaultIndex::backlinksFollowRenames()
 
 void TestVaultIndex::listsUnresolvedLinks()
 {
-    write(u"A.md"_s, u"[[Someday]] and [[A]]\n"_s);
+    write(u"A.md"_s, u"[s](Someday.md) and [a](A.md)\n"_s);
     open();
     const QList<NoteLink> missing = m_index->unresolved();
     QCOMPARE(missing.size(), 1);
-    QCOMPARE(missing.first().raw, u"Someday"_s);
+    QCOMPARE(missing.first().raw, u"Someday.md"_s);
 
     write(u"Someday.md"_s, u"now it exists\n"_s);
     m_index->update({u"Someday.md"_s});

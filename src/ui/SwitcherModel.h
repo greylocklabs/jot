@@ -37,9 +37,7 @@ public:
     [[nodiscard]] QString query() const { return m_query; }
     void setQuery(const QString &query);
     Q_INVOKABLE QString pathAt(int row) const;
-    /// The first `limit` matches as `{text, detail, target}` for a suggestion list, where
-    /// `target` is what a wikilink to the note says: its file name, or its path without `.md`
-    /// when another note has the same file name.
+    /// The first `limit` matches as `{text, detail, path}` for a suggestion list.
     Q_INVOKABLE QVariantList suggestions(int limit) const;
 
     [[nodiscard]] int rowCount(const QModelIndex &parent = {}) const override;

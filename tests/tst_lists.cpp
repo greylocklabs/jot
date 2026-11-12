@@ -734,7 +734,7 @@ void TestLists::backlinkListsFoldUnderTheirHeadings()
         return true;
     };
     // Both open to begin with.
-    QTRY_COMPARE(shown(false), 3);
+    QTRY_COMPARE(shown(false), 4);
     QCOMPARE(shown(true), 3);
     QTRY_VERIFY(laidOut());
 
@@ -749,7 +749,7 @@ void TestLists::backlinkListsFoldUnderTheirHeadings()
     QTRY_COMPARE(shown(true), 0);
     QTRY_VERIFY(laidOut());
     click(heading("linkedHeading"));
-    QTRY_COMPARE(shown(false), 3);
+    QTRY_COMPARE(shown(false), 4);
     QCOMPARE(shown(true), 0);
 }
 

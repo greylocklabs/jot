@@ -127,9 +127,6 @@ public:
 
     /// The title a note's file name gives it.
     [[nodiscard]] static QString titleFromPath(const QString &path);
-    /// What a wikilink to the note at `path` says: its file name, or its path without `.md`
-    /// when another note shares the name, since wikilinks find notes by file name.
-    [[nodiscard]] static QString wikilinkName(const QString &path, bool shared);
     /// The notebook a note is in, by vault path; empty for the top of the vault.
     [[nodiscard]] static QString notebookOf(const QString &path);
     /// `title` as a file name without `.md`: characters some sync targets refuse are

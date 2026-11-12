@@ -27,17 +27,18 @@ Return carries a list on, and Return on an empty item ends it.
 ## Links and embeds
 
 ```text
-[[Another note]]
-[[Another note|what the link says]]
-[[Another note#A heading]]
-![[picture.png]]
-![[recording.ogg]]
-![[clip.mp4]]
+[Another note](Another%20note.md)
+[A heading in it](Another%20note.md#a-heading)
+[From the top of the vault](/Notebook/Another%20note.md)
+![](Note.assets/picture.png)
+![](Note.assets/recording.ogg)
+![](Note.assets/clip.mp4)
 [A website](https://example.org)
 ```
 
-A link to a note that does not exist yet makes it when followed. An embed shows a picture, or plays
-a sound or a video, in place. Typing `[[` offers the notes to link to.
+Links are plain Markdown, so other editors follow them too. A link to a note that does not exist
+yet makes it when followed. An embed shows a picture, or plays a sound or a video, in place.
+Typing `](` after a link's words, or pressing Ctrl+K, offers the notes to link to.
 
 ## Tags
 
