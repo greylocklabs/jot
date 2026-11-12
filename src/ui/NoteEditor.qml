@@ -23,6 +23,24 @@ Rectangle {
         title.selectAll()
     }
 
+    // Leaving Source for a mode that shows a table, by the switch or its keys, reads the text
+    // as it is now.
+    Connections {
+        target: Settings
+        function onSourceModeChanged() {
+            root.readTable()
+        }
+        function onReadModeChanged() {
+            root.readTable()
+        }
+    }
+    function readTable() {
+        if (!dataFile || (Settings.sourceMode && !Settings.readMode))
+            return
+        tableModel.text = body.text
+        keptAsText = !tableModel.table
+    }
+
     /// Puts the cursor at the end of the body.
     function editBody() {
         Settings.readMode = false
@@ -36,7 +54,7 @@ Rectangle {
     function find(replace) {
         Settings.readMode = false
         if (root.tableShown)
-            root.showText = true
+            root.keptAsText = true
         findBar.show(replace && Vault.writable)
     }
 
@@ -108,9 +126,12 @@ Rectangle {
         Theme.name
         return Theme.noteFontFamily("mono")
     }
-    /// A list of records opens as a table; this says to show its text instead.
-    property bool showText: false
-    readonly property bool tableShown: dataFile && !showText && tableModel.table
+    /// A data file shows as a table in Styled and Read, and as its text in Source. Text that is
+    /// not a table when it opens, or when a mode is picked, stays text while it is typed into,
+    /// until a mode that shows a table is picked again.
+    property bool keptAsText: false
+    readonly property bool tableShown: dataFile && (Settings.readMode || !Settings.sourceMode) &&
+                                       !keptAsText && tableModel.table
     /// A data file, such as JSON or CSV, is edited as plain text, without Markdown's styling.
     readonly property bool dataFile: Vault.currentKind !== "markdown"
 
@@ -258,7 +279,7 @@ Rectangle {
         tableModel.text = Vault.currentText
         // What opens as text stays text while it is typed into, until a table is asked for.
         if (another)
-            showText = !tableModel.table
+            keptAsText = !tableModel.table
         loaded = Vault.current
         body.cursorPosition = Math.min(cursor, body.length)
         title.show(Vault.currentTitle)
@@ -554,28 +575,41 @@ Rectangle {
                         text: qsTr("Not saved yet. Ctrl+S saves.")
                     }
                 }
-                // A list of records shows as a table or as its text.
-                WhyDisabled {
+                // A list of records shows as a table to edit or read, or as its text, with the
+                // switch notes have.
+                ModeSwitch {
+                    id: viewSwitch
+
+                    readonly property string notTable: qsTr("This can't be a table: %1.").arg(
+                                                           tableModel.why)
+
+                    objectName: "viewSwitch"
                     y: parent.firstLineMiddle - height / 2
                     visible: root.dataFile
-                    target: viewSwitch
-                    reason: qsTr("This can't be a table: %1.").arg(tableModel.why)
-
-                    StickerButton {
-                        id: viewSwitch
-
-                        objectName: "viewSwitch"
-                        // Only text that reads as a list of records can be a table.
-                        enabled: root.tableShown || tableModel.table
-                        text: root.tableShown ? qsTr("Edit as text") : qsTr("Edit as table")
-                        onClicked: {
-                            if (root.tableShown) {
-                                root.showText = true
-                            } else {
-                                tableModel.text = body.text
-                                root.showText = !tableModel.table
-                            }
+                    options: [
+                        {
+                            "label": qsTr("Styled"),
+                            "tip": tableModel.table ? qsTr("Edit the records as a table (Ctrl+/)") :
+                                                      notTable,
+                            "enabled": tableModel.table
+                        },
+                        {
+                            "label": qsTr("Source"),
+                            "tip": qsTr("Edit the file's text (Ctrl+/)")
+                        },
+                        {
+                            "label": qsTr("Read"),
+                            "tip": tableModel.table ? qsTr(
+                                                          "Read the records as a table, without changing them (Ctrl+Shift+R)") :
+                                                      notTable,
+                            "enabled": tableModel.table
                         }
+                    ]
+                    current: !root.tableShown ? 1 : Settings.readMode ? 2 : 0
+                    onPicked: index => {
+                        Settings.readMode = index === 2
+                        if (index < 2)
+                            Settings.sourceMode = index === 1
                     }
                 }
                 DangerButton {
@@ -752,6 +786,7 @@ Rectangle {
 
                 objectName: "tableView"
                 visible: root.tableShown
+                editable: Vault.writable && !Settings.readMode
                 width: parent.width - 2 * parent.padding
                 // The rest of the window below the title, scrolled inside the table.
                 height: Math.max(240, flick.height - title.height - 2 * page.padding - page.spacing)

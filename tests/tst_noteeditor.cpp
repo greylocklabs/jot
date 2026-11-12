@@ -1868,7 +1868,7 @@ void TestNoteEditor::editsDataFilesAsPlainText()
     m_settings->setReadMode(true);
     m_vault->setCurrent(u"cast.json"_s);
     // A list of records opens as a table; this is about its text.
-    m_editor->setProperty("showText", true);
+    m_editor->setProperty("keptAsText", true);
     // Switching fonts on the way in sends nothing of the last note into this one.
     QCOMPARE(m_vault->currentText(), u"[{\"name\": \"**Mara**\"}]\n"_s);
     QVERIFY(!m_vault->unsaved());
@@ -1895,7 +1895,7 @@ void TestNoteEditor::colorsNumbersAndChecksDataFiles()
     file.write("[\n  {\"name\": \"Mara [the ferrywoman]\"},\n  {\"name\": 3}\n]\n");
     file.close();
     m_vault->setCurrent(u"cast.json"_s);
-    m_editor->setProperty("showText", true);
+    m_editor->setProperty("keptAsText", true);
     QQuickItem *body = find(u"body"_s);
     auto *styler = body->findChild<DataStyler *>();
     QVERIFY(styler);
@@ -2067,10 +2067,27 @@ void TestNoteEditor::editsAListOfRecordsAsATable()
     // Undo puts the file back; the text view shows what the table wrote.
     records->undo();
     QTRY_VERIFY(m_vault->currentText().contains(u"\"age\": 40"_s));
-    find(u"viewSwitch"_s)->setProperty("checked", false);
-    QMetaObject::invokeMethod(find(u"viewSwitch"_s), "clicked");
+    const auto choice = [this](int index) {
+        return find(u"choice%1"_s.arg(index), find(u"viewSwitch"_s));
+    };
+    const auto pick = [this, &choice](int index) {
+        QQuickItem *item = choice(index);
+        QTest::mouseClick(m_window.get(), Qt::LeftButton, {},
+                          item->mapToScene({item->width() / 2, item->height() / 2}).toPoint());
+    };
+    pick(1);
+    QTRY_VERIFY(m_settings->sourceMode());
     QVERIFY(find(u"body"_s)->isVisible());
     QVERIFY(find(u"body"_s)->property("text").toString().contains(u"\"age\": 40"_s));
+
+    // Read shows the table, whose cells cannot be changed then.
+    pick(2);
+    QTRY_VERIFY(find(u"tableView"_s)->isVisible());
+    QVERIFY(m_settings->readMode());
+    QVERIFY(!find(u"tableView"_s)->property("editable").toBool());
+    pick(0);
+    QTRY_VERIFY(find(u"tableView"_s)->property("editable").toBool());
+    QVERIFY(!m_settings->readMode() && !m_settings->sourceMode());
 
     // A YAML list of records opens as a table too.
     QFile yaml(m_root + u"/cast.yaml"_s);
@@ -2083,18 +2100,18 @@ void TestNoteEditor::editsAListOfRecordsAsATable()
     QVERIFY(records->setCell(0, 1, u"32"_s));
     QTRY_COMPARE(m_vault->currentText(), u"# cast\n- name: Mara\n  age: 32\n"_s);
     m_vault->setCurrent(u"cast.json"_s);
-    QMetaObject::invokeMethod(find(u"viewSwitch"_s), "clicked");
+    pick(1);
 
     // Text that is no list of records cannot be asked to be a table, and typing one in
     // leaves the text showing until a table is asked for.
     QQuickItem *body = find(u"body"_s);
     body->setProperty("text", u"{\"not\": \"records\"}"_s);
-    QTRY_VERIFY(!find(u"viewSwitch"_s)->isEnabled());
+    QTRY_VERIFY(choice(0)->property("blocked").toBool());
+    QVERIFY(choice(2)->property("blocked").toBool());
     // Resting on it says why.
-    QQuickItem *viewSwitch = find(u"viewSwitch"_s);
     QTest::mouseMove(
         m_window.get(),
-        viewSwitch->mapToScene({viewSwitch->width() / 2, viewSwitch->height() / 2}).toPoint());
+        choice(0)->mapToScene({choice(0)->width() / 2, choice(0)->height() / 2}).toPoint());
     const auto tipSays = [this] {
         const std::function<QString(QQuickItem *)> walk = [&](QQuickItem *item) -> QString {
             const QString text = item->property("text").toString();
@@ -2111,10 +2128,10 @@ void TestNoteEditor::editsAListOfRecordsAsATable()
     QTRY_COMPARE(tipSays(), u"This can't be a table: not a list of records."_s);
     QTest::mouseMove(m_window.get(), {1, 1});
     body->setProperty("text", u"[{\"name\": \"Mo\"}]"_s);
-    QTRY_VERIFY(find(u"viewSwitch"_s)->isEnabled());
+    QTRY_VERIFY(!choice(0)->property("blocked").toBool());
     QVERIFY(body->isVisible());
-    QMetaObject::invokeMethod(find(u"viewSwitch"_s), "clicked");
-    QVERIFY(find(u"tableView"_s)->isVisible());
+    pick(0);
+    QTRY_VERIFY(find(u"tableView"_s)->isVisible());
 
     // A file that is no table opens as its text, with no table to ask for.
     QFile schema(m_root + u"/cast.schema.json"_s);
@@ -2124,7 +2141,10 @@ void TestNoteEditor::editsAListOfRecordsAsATable()
     QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"cast.schema.json"_s), 3000);
     m_vault->setCurrent(u"cast.schema.json"_s);
     QVERIFY(body->isVisible());
-    QVERIFY(!find(u"viewSwitch"_s)->isEnabled());
+    QVERIFY(choice(0)->property("blocked").toBool());
+    // A blocked mode is not taken.
+    pick(0);
+    QVERIFY(body->isVisible());
 }
 
 void TestNoteEditor::removingARowOrColumnAsksWithATrashCan()
@@ -2284,13 +2304,13 @@ void TestNoteEditor::wrapsTheTableToolsWhenNarrow()
     m_settings->setViMode(true);
     QQuickItem *line = find(u"viStatusLine"_s);
     QTRY_VERIFY(!line->isVisible());
-    QQuickItem *viewSwitch = find(u"viewSwitch"_s);
-    QTest::mouseClick(
-        m_window.get(), Qt::LeftButton, {},
-        viewSwitch->mapToScene({viewSwitch->width() / 2, viewSwitch->height() / 2}).toPoint());
+    QQuickItem *source = find(u"choice1"_s, find(u"viewSwitch"_s));
+    QTest::mouseClick(m_window.get(), Qt::LeftButton, {},
+                      source->mapToScene({source->width() / 2, source->height() / 2}).toPoint());
     QTRY_VERIFY(find(u"body"_s)->isVisible());
     QTRY_VERIFY(line->isVisible());
     m_settings->setViMode(false);
+    m_settings->setSourceMode(false);
 }
 
 void TestNoteEditor::scrollsAWideTableAcross()
