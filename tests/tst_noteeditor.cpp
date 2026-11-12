@@ -678,6 +678,8 @@ void TestNoteEditor::outlinesTheNoteBesideIt()
     QQuickItem *backdrop = find(u"outlineBackdrop"_s);
     QVERIFY(backdrop && backdrop->isVisible());
     QCOMPARE(find(u"scroll"_s)->width(), m_window->width());
+    // The word count under the note keeps its width too.
+    QCOMPARE(find(u"wordCount"_s)->width(), m_window->width());
     // Choosing a heading there puts it away, as does a click on the note beside it.
     QVERIFY(QMetaObject::invokeMethod(outline, "chosen", Q_ARG(int, 0)));
     QTRY_VERIFY(!outline->isVisible());
