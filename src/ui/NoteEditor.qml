@@ -1792,6 +1792,10 @@ Rectangle {
         onVisibleChanged: {
             if (visible && floating)
                 forceActiveFocus()
+            else
+                // However it was put away, the note has the keys again.
+                if (!visible && floating && Vault.current !== "")
+                    body.forceActiveFocus()
         }
         Keys.onEscapePressed: {
             Settings.outlineShown = false

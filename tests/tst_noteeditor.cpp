@@ -682,6 +682,12 @@ void TestNoteEditor::outlinesTheNoteBesideIt()
     QVERIFY(QMetaObject::invokeMethod(outline, "chosen", Q_ARG(int, 0)));
     QTRY_VERIFY(!outline->isVisible());
     QVERIFY(!m_settings->outlineShown());
+    QVERIFY(body->hasActiveFocus());
+    // So does Ctrl+Shift+O putting it away.
+    m_settings->setOutlineShown(true);
+    QTRY_VERIFY(outline->hasActiveFocus());
+    m_settings->setOutlineShown(false);
+    QTRY_VERIFY(body->hasActiveFocus());
     QVERIFY(!backdrop->isVisible());
     m_settings->setOutlineShown(true);
     QTRY_VERIFY(backdrop->isVisible());
@@ -689,6 +695,7 @@ void TestNoteEditor::outlinesTheNoteBesideIt()
         m_window.get(), Qt::LeftButton, {},
         backdrop->mapToScene({backdrop->width() / 2, backdrop->height() / 2}).toPoint());
     QTRY_VERIFY(!outline->isVisible());
+    QVERIFY(body->hasActiveFocus());
 
     // Opened over the note it has the keys, and Escape puts it away, back in the note.
     m_settings->setOutlineShown(true);
