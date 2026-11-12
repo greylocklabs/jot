@@ -1779,12 +1779,6 @@ Rectangle {
             onClicked: Settings.outlineShown = false
         }
     }
-    Shortcut {
-        sequence: "Escape"
-        enabled: outline.visible && outline.floating
-        onActivated: Settings.outlineShown = false
-    }
-
     Outline {
         id: outline
 
@@ -1793,6 +1787,16 @@ Rectangle {
 
         objectName: "outline"
         z: floating ? 3 : 0
+        // Lying over the note it takes the keys, so Escape puts it away without the editor's
+        // own Escape seeing it, and gives them back to the note.
+        onVisibleChanged: {
+            if (visible && floating)
+                forceActiveFocus()
+        }
+        Keys.onEscapePressed: {
+            Settings.outlineShown = false
+            body.forceActiveFocus()
+        }
         anchors {
             right: parent.right
             top: flick.top
