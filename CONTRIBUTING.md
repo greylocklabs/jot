@@ -113,6 +113,17 @@ npm run format:md
 npm run lint:md
 ```
 
+## Wording and translations
+
+Every string Jot shows is written in the code with `qsTr()` in QML or `tr()` in C++, and kept in
+`translations/jot_en.ts`. To reword one without touching the code, fill in its `<translation>`
+there, in Qt Linguist or by hand; an empty one shows the code's words. Another language is another
+`translations/jot_<language>.ts` beside it, added to `TS_FILES` in `CMakeLists.txt`.
+
+After changing strings in the code, run `make translations`. A test fails while the file and the
+code disagree. Write a string with `%1` for what goes into it rather than joining pieces, so a
+translation can put the words in its own order.
+
 ## Tests
 
 Qt Test cases live in `tests/`, one executable per file, registered with ctest.

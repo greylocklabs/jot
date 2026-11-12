@@ -100,6 +100,8 @@ add_library(jotcore STATIC
     Templates.cpp
     jot/TextFind.h
     TextFind.cpp
+    jot/Translations.h
+    Translations.cpp
     jot/WritingStats.h
     WritingStats.cpp
     jot/Vault.h

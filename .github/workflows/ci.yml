@@ -82,7 +82,7 @@ jobs:
           dnf install -y --setopt=install_weak_deps=False
           git gcc-c++ cmake ninja-build make pkgconf golang curl
           qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtquickcontrols2-devel
-          tomlplusplus-devel kf6-syntax-highlighting-devel kf6-sonnet-devel qt6-qtmultimedia-devel tinyxml2-devel qtkeychain-qt6-devel libyaml-devel qt6-qtsvg
+          tomlplusplus-devel kf6-syntax-highlighting-devel kf6-sonnet-devel qt6-qtmultimedia-devel qt6-qttools-devel qt6-linguist tinyxml2-devel qtkeychain-qt6-devel libyaml-devel qt6-qtsvg
 
       - uses: actions/checkout@v7
         with:
@@ -136,7 +136,7 @@ jobs:
           dnf install -y --setopt=install_weak_deps=False
           git gcc-c++ cmake ninja-build make pkgconf
           qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtquickcontrols2-devel
-          tomlplusplus-devel kf6-syntax-highlighting-devel kf6-sonnet-devel qt6-qtmultimedia-devel tinyxml2-devel qtkeychain-qt6-devel libyaml-devel qt6-qtsvg git-lfs
+          tomlplusplus-devel kf6-syntax-highlighting-devel kf6-sonnet-devel qt6-qtmultimedia-devel qt6-qttools-devel qt6-linguist tinyxml2-devel qtkeychain-qt6-devel libyaml-devel qt6-qtsvg git-lfs
 
       - name: Install build dependencies (Debian and Ubuntu)
         if: matrix.name != 'fedora'
@@ -148,7 +148,7 @@ jobs:
             qml6-module-qtquick-controls qml6-module-qtquick-templates \
             qml6-module-qtquick-effects qml6-module-qtquick-dialogs \
             libtomlplusplus-dev libqt6sql6-sqlite libkf6syntaxhighlighting-dev libkf6sonnet-dev \
-            qt6-multimedia-dev qml6-module-qtmultimedia libtinyxml2-dev \
+            qt6-multimedia-dev qml6-module-qtmultimedia qt6-tools-dev qt6-l10n-tools libtinyxml2-dev \
             qtkeychain-qt6-dev libyaml-dev git-lfs qt6-svg-plugins
 
       - uses: actions/checkout@v7

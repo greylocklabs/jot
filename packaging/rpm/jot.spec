@@ -33,6 +33,7 @@ BuildRequires:  cmake(tomlplusplus)
 BuildRequires:  cmake(KF6SyntaxHighlighting)
 BuildRequires:  cmake(KF6Sonnet)
 BuildRequires:  cmake(Qt6Multimedia)
+BuildRequires:  cmake(Qt6LinguistTools)
 BuildRequires:  pkgconfig(tinyxml2)
 BuildRequires:  cmake(Qt6Keychain)
 BuildRequires:  pkgconf-pkg-config
