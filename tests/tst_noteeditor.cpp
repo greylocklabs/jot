@@ -689,6 +689,14 @@ void TestNoteEditor::outlinesTheNoteBesideIt()
         m_window.get(), Qt::LeftButton, {},
         backdrop->mapToScene({backdrop->width() / 2, backdrop->height() / 2}).toPoint());
     QTRY_VERIFY(!outline->isVisible());
+
+    // Opened over the note it has the keys, and Escape puts it away, back in the note.
+    m_settings->setOutlineShown(true);
+    QTRY_VERIFY(outline->hasActiveFocus());
+    QTest::keyClick(m_window.get(), Qt::Key_Escape);
+    QTRY_VERIFY(!outline->isVisible());
+    QVERIFY(!m_settings->outlineShown());
+    QVERIFY(body->hasActiveFocus());
 }
 
 void TestNoteEditor::showsTabsOverTheNote()
