@@ -1784,23 +1784,23 @@ Rectangle {
 
         /// Without room for the note beside it, it lies over the note's edge instead.
         readonly property bool floating: root.width < implicitWidth + Theme.noteRoomWidth
+        /// It took the keys from the note when it opened over it, to give them back.
+        property bool holding: false
 
         objectName: "outline"
         z: floating ? 3 : 0
         // Lying over the note it takes the keys, so Escape puts it away without the editor's
-        // own Escape seeing it, and gives them back to the note.
+        // own Escape seeing it, and however it is put away gives them back to the note.
         onVisibleChanged: {
-            if (visible && floating)
+            if (visible && floating) {
+                holding = true
                 forceActiveFocus()
-            else
-                // However it was put away, the note has the keys again.
-                if (!visible && floating && Vault.current !== "")
-                    body.forceActiveFocus()
+            } else if (!visible && holding) {
+                holding = false
+                body.forceActiveFocus()
+            }
         }
-        Keys.onEscapePressed: {
-            Settings.outlineShown = false
-            body.forceActiveFocus()
-        }
+        Keys.onEscapePressed: Settings.outlineShown = false
         anchors {
             right: parent.right
             top: flick.top
