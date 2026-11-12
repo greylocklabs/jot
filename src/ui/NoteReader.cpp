@@ -314,27 +314,33 @@ void NoteReader::style()
             span.mergeCharFormat(run);
         }
     }
-    // Code blocks on the raised surface. The view paints a frame's background but not a
-    // block's, so each run of code lines goes into a frame of its own, last first.
-    QList<std::pair<int, int>> runs;
+    // Code blocks on the raised surface, which the view draws behind them: in frames of their
+    // own, Qt's partial redraws drew their text again and again, bolder, around a selection.
+    QVariantList runs;
+    const qreal pad = codePadding();
     for (QTextBlock block = doc->begin(); block.isValid(); block = block.next()) {
         if (!isCode(block))
             continue;
-        const int start = block.position();
+        QTextBlock first = block;
         while (block.next().isValid() && isCode(block.next()))
             block = block.next();
-        runs.append({start, block.position() + block.length() - 1});
+        for (QTextBlock each = first;; each = each.next()) {
+            QTextBlockFormat room;
+            room.setLeftMargin(pad);
+            room.setRightMargin(pad);
+            // As far from what is around it as a paragraph, beyond the surface's own room.
+            room.setTopMargin(each == first ? pad + m_pixelSize * 0.7 : 0);
+            room.setBottomMargin(each == block ? pad + m_pixelSize * 0.7 : 0);
+            QTextCursor(each).mergeBlockFormat(room);
+            if (each == block)
+                break;
+        }
+        runs.append(QVariantMap{{u"start"_s, first.position()},
+                                {u"end"_s, block.position() + block.length() - 1}});
     }
-    for (auto run = runs.crbegin(); run != runs.crend(); ++run) {
-        QTextCursor code(doc);
-        code.setPosition(run->first);
-        code.setPosition(run->second, QTextCursor::KeepAnchor);
-        QTextFrameFormat box;
-        box.setBackground(theme.surfaceAlt());
-        box.setPadding(m_pixelSize * 0.6);
-        box.setBorder(0);
-        box.setBottomMargin(m_pixelSize * 0.7);
-        code.insertFrame(box);
+    if (runs != m_codeRuns) {
+        m_codeRuns = runs;
+        Q_EMIT codeRunsChanged();
     }
     // Tables in the theme's borders, close around their cells.
     for (QTextFrame *frame : doc->rootFrame()->childFrames()) {

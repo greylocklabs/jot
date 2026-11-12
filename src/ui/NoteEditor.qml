@@ -804,6 +804,11 @@ Rectangle {
                 HoverHandler {
                     cursorShape: reader.hoveredLink !== "" ? Qt.PointingHandCursor : Qt.IBeamCursor
                 }
+                CodeBackdrops {
+                    view: reader
+                    runs: reading.codeRuns
+                    padding: reading.codePadding
+                }
                 // A sound embedded on a line of its own plays there, as in the editor.
                 Repeater {
                     id: readPlayers
