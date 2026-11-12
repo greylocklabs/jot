@@ -144,6 +144,9 @@ void TestNoteEditor::init()
 {
     // A binding that breaks in the editor or its bars prints a warning naming the QML file.
     QTest::failOnWarning(QRegularExpression(u"\\.qml:"_s));
+    // A position past the end of the note, from one shown before or before an edit.
+    QTest::failOnWarning(
+        QRegularExpression(u"QTextCursor::setPosition: Position .* out of range"_s));
     m_dir = std::make_unique<QTemporaryDir>();
     m_root = m_dir->filePath(u"Notes"_s);
     const QString sample = QStringLiteral(JOT_SAMPLE_VAULT);
