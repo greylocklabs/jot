@@ -116,6 +116,9 @@ public:
     [[nodiscard]] int uncommitted() const { return m_uncommitted; }
     [[nodiscard]] int unpushed() const { return m_unpushed; }
     [[nodiscard]] int syncEvery() const;
+    /// What to say when `failed` files did not sync, syncing every `every` minutes, or only
+    /// when asked for 0; empty for none.
+    [[nodiscard]] static QString failedFiles(int failed, int every);
     [[nodiscard]] bool syncing() const { return m_thread != nullptr && !m_checking; }
     [[nodiscard]] bool checking() const { return m_checking; }
     [[nodiscard]] static bool dropboxAvailable() { return !dropboxAppKey().isEmpty(); }
