@@ -947,11 +947,27 @@ Press Ctrl+N to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Edit as text</source>
+        <source>Styled</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Edit as table</source>
+        <source>Edit the records as a table (Ctrl+/)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Source</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Edit the file&apos;s text (Ctrl+/)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Read</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Read the records as a table, without changing them (Ctrl+Shift+R)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

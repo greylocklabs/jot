@@ -7,7 +7,9 @@ import QtQuick.Controls
 Rectangle {
     id: root
 
-    /// The choices: {label, tip} for each.
+    /// The choices: {label, tip} for each, and `enabled: false` for one that cannot be chosen
+    /// now, whose tip then says why. It still shows the tip on hover, as a disabled control
+    /// would not.
     required property var options
     /// Which is chosen, by index.
     property int current: 0
@@ -73,6 +75,7 @@ Rectangle {
         required property int index
         readonly property bool chosen: root.current === index
         readonly property var option: root.options[index]
+        readonly property bool blocked: option.enabled === false
 
         objectName: "choice" + index
         width: implicitWidth
@@ -83,10 +86,14 @@ Rectangle {
         focusPolicy: Qt.NoFocus
         Accessible.role: Accessible.RadioButton
         Accessible.checked: chosen
-        onClicked: root.picked(index)
+        onClicked: {
+            if (!blocked)
+                root.picked(index)
+        }
 
         HoverHandler {
-            cursorShape: Qt.PointingHandCursor
+            id: hover
+            cursorShape: choice.blocked ? Qt.ArrowCursor : Qt.PointingHandCursor
         }
         TextMetrics {
             id: widest
@@ -101,7 +108,9 @@ Rectangle {
             text: choice.text
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
-            color: choice.chosen ? Theme.accentText : choice.hovered ? Theme.text : Theme.textMuted
+            color: choice.chosen ? Theme.accentText : choice.blocked ? Theme.textFaint : choice.hovered
+                                                                       ? Theme.text :
+                                                                         Theme.textMuted
             font.family: Theme.fontFamily
             font.pixelSize: Theme.textSm
             font.weight: choice.chosen ? Theme.weightHeavy : Theme.weightBold
@@ -116,7 +125,7 @@ Rectangle {
 
         // What the choice does, and its shortcut, after resting on it a moment.
         Loader {
-            active: choice.option.tip !== "" && choice.hovered
+            active: choice.option.tip !== "" && hover.hovered
 
             sourceComponent: Tip {
                 parent: choice

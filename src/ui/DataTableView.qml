@@ -19,6 +19,8 @@ Item {
     }
 
     required property DataTableModel records
+    /// Whether its cells can be changed, as they cannot while reading.
+    property bool editable: Vault.writable
     /// The cell picked, by the row and column shown.
     property int row: 0
     property int column: 0
@@ -150,7 +152,7 @@ Item {
         StickerButton {
             objectName: "addRow"
             text: qsTr("Add row")
-            enabled: Vault.writable
+            enabled: root.editable
             onClicked: {
                 const shown = root.records.addRowAfter(root.records.rowCount() === 0 ? -1 :
                                                                                        root.row)
@@ -163,7 +165,7 @@ Item {
         StickerButton {
             objectName: "addColumn"
             text: qsTr("Add column")
-            enabled: Vault.writable
+            enabled: root.editable
             onClicked: {
                 newColumn.text = ""
                 newColumn.visible = true
@@ -352,13 +354,13 @@ Item {
                 }
                 TapHandler {
                     onTapped: {
-                        if (!Vault.writable)
+                        if (!root.editable)
                             root.records.sortBy(heading.index)
                         else if (tapCount === 1)
                             sortSoon.restart()
                     }
                     onDoubleTapped: {
-                        if (!Vault.writable)
+                        if (!root.editable)
                             return
                         sortSoon.stop()
                         rename.text = heading.display
@@ -374,7 +376,7 @@ Item {
                 objectName: "removeColumn"
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                visible: Vault.writable && headingHover.hovered && !heading.renaming
+                visible: root.editable && headingHover.hovered && !heading.renaming
                 scale: 0.75
                 Accessible.name: armed ? qsTr("Click again to remove the column %1").arg(
                                              heading.display) : qsTr("Remove the column %1").arg(
@@ -410,7 +412,7 @@ Item {
 
             Text {
                 anchors.centerIn: parent
-                visible: !numberHover.hovered || !Vault.writable
+                visible: !numberHover.hovered || !root.editable
                 text: number.display
                 color: Theme.textFaint
                 font.family: Theme.fontFamily
@@ -422,7 +424,7 @@ Item {
             RemoveButton {
                 objectName: "removeRow"
                 anchors.centerIn: parent
-                visible: Vault.writable && numberHover.hovered
+                visible: root.editable && numberHover.hovered
                 scale: 0.75
                 Accessible.name: armed ? qsTr("Click again to remove row %1").arg(number.display) :
                                          qsTr("Remove row %1").arg(number.display)
@@ -484,18 +486,18 @@ Item {
             case Qt.Key_Return:
             case Qt.Key_Enter:
             case Qt.Key_F2:
-                if (Vault.writable)
+                if (root.editable)
                     root.edit()
                 break
             case Qt.Key_Delete:
             case Qt.Key_Backspace:
-                if (Vault.writable)
+                if (root.editable)
                     root.records.clearCell(root.row, root.column)
                 break
             default:
-                if (Vault.writable && event.text.length > 0 && event.text >= " " && !(event.modifiers
-                                                                                      & (Qt.ControlModifier
-                                                                                         | Qt.AltModifier))) {
+                if (root.editable && event.text.length > 0 && event.text >= " " && !(event.modifiers
+                                                                                     & (Qt.ControlModifier
+                                                                                        | Qt.AltModifier))) {
                     root.edit(event.text)
                     break
                 }
@@ -547,7 +549,7 @@ Item {
                 onDoubleTapped: {
                     root.row = cell.row
                     root.column = cell.column
-                    if (Vault.writable)
+                    if (root.editable)
                         root.edit()
                 }
             }
@@ -680,7 +682,7 @@ Item {
                     id: nestedText
 
                     objectName: "nestedText"
-                    readOnly: !Vault.writable
+                    readOnly: !root.editable
                     color: Theme.text
                     font.family: Theme.monoFontFamily
                     font.pixelSize: Theme.textSm
@@ -710,7 +712,7 @@ Item {
                 StickerButton {
                     objectName: "saveNested"
                     accent: true
-                    enabled: Vault.writable
+                    enabled: root.editable
                     text: qsTr("Save")
                     onClicked: {
                         if (nestedText.text === nestedEditor.original)
