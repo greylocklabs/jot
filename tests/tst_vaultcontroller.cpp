@@ -37,6 +37,7 @@ private Q_SLOTS:
     void startsClosed();
     void opensAFolderAndRemembersIt();
     void leavesOutWhatTheVaultIgnores();
+    void showsATagsNotesAndToDosTogether();
     void refusesWhatIsNotAFolder();
     void switchesToAnotherFolder();
     void staysWhenTheNoteShownCannotBeSaved();
@@ -210,6 +211,45 @@ void TestVaultController::leavesOutWhatTheVaultIgnores()
     QVERIFY(!m_vault->respectsGitignore());
     QCOMPARE(m_vault->noteCount(), 16);
     QCOMPARE(Vault(m_root).setting(u"gitignore"_s), u"false"_s);
+}
+
+void TestVaultController::showsATagsNotesAndToDosTogether()
+{
+    QVERIFY(QDir().mkpath(m_root + u"/Crossings"_s));
+    for (const auto &[path, text] :
+         {std::pair{u"/Crossings/Plan.md"_s, "# Plan\n\nThe dawn run. #harbor\n"_ba},
+          std::pair{u"/Chores.md"_s, "- [ ] mend the rope #harbor/rigging\n- [ ] sweep\n"_ba}}) {
+        QFile file(m_root + path);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write(text);
+    }
+    QVERIFY(m_vault->openFolder(QUrl::fromLocalFile(m_root)));
+    m_vault->setShowingTasks(true);
+
+    // A tag shows its notes and its to-dos, nested tags with it, in place of the view before.
+    m_vault->setShownTag(u"harbor"_s);
+    QCOMPARE(m_vault->shownTag(), u"harbor"_s);
+    QVERIFY(!m_vault->showingTasks());
+    QVERIFY(!m_vault->showingTrash());
+    QCOMPARE(column(*m_vault->tagNotes(), "path"),
+             (QStringList{u"Chores.md"_s, u"Crossings/Plan.md"_s}));
+    QCOMPARE(column(*m_vault->tagTasks(), "title"),
+             QStringList{u"mend the rope #harbor/rigging"_s});
+    // Neither Tasks nor the notes list is narrowed by it.
+    QVERIFY(m_vault->tasks()->tag().isEmpty());
+    QVERIFY(m_vault->notes()->tag().isEmpty());
+
+    // Leaving it goes back to Tasks, where it came from.
+    m_vault->setShownTag({});
+    QVERIFY(m_vault->showingTasks());
+    QVERIFY(m_vault->tagNotes()->tag().isEmpty());
+
+    // Another view chosen leaves it without going back.
+    m_vault->setShownTag(u"harbor"_s);
+    m_vault->setShowingTrash(true);
+    QVERIFY(m_vault->shownTag().isEmpty());
+    QVERIFY(m_vault->showingTrash());
+    QVERIFY(!m_vault->showingTasks());
 }
 
 void TestVaultController::refusesWhatIsNotAFolder()

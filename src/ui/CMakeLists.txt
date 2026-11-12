@@ -94,6 +94,7 @@ qt_add_qml_module(jotui
         FormatBar.qml
         FindBar.qml
         CommitDialog.qml
+        TagView.qml
         FormRow.qml
         Glyph.qml
         KeyCap.qml

@@ -268,9 +268,10 @@ Rectangle {
 
                     width: root.width
                     label: name
-                    selected: !Vault.showingTasks && !Vault.showingTrash && Vault.notes.tag === ""
-                              && Vault.notes.notebook === path
+                    selected: !Vault.showingTasks && !Vault.showingTrash && Vault.shownTag === ""
+                              && Vault.notes.tag === "" && Vault.notes.notebook === path
                     onClicked: {
+                        Vault.dropTag()
                         Vault.showingTasks = false
                         Vault.showingTrash = false
                         Vault.notes.notebook = path
@@ -490,16 +491,9 @@ Rectangle {
                     width: root.width
                     label: "#" + tag
                     // In Tasks, a tag narrows the to-dos; elsewhere it lists its notes.
-                    selected: Vault.showingTasks ? Vault.tasks.tag === tag : !Vault.showingTrash
-                                                   && Vault.notes.tag === tag
-                    onClicked: {
-                        if (Vault.showingTasks) {
-                            Vault.tasks.tag = Vault.tasks.tag === tag ? "" : tag
-                        } else {
-                            Vault.showingTrash = false
-                            Vault.notes.tag = tag
-                        }
-                    }
+                    // A tag shows its notes and to-dos together; again, it goes back.
+                    selected: Vault.shownTag === tag
+                    onClicked: Vault.shownTag = Vault.shownTag === tag ? "" : tag
 
                     contentItem: Item {
                         AbstractButton {

@@ -69,6 +69,9 @@ VaultController::VaultController(Settings &settings, QObject *parent)
     connect(&settings, &Settings::noteSortChanged, this,
             [this] { m_notes.setOrder(m_settings.noteSort()); });
     m_tasks.setView(settings.tasksView());
+    // A tag's view lists all its open to-dos, whatever Tasks is set to show.
+    m_tagTasks.setView(u"all"_s);
+    m_tagNotes.setOrder(settings.noteSort());
     connect(&m_tasks, &TaskModel::filterChanged, this,
             [this] { m_settings.setTasksView(m_tasks.view()); });
     connect(&settings, &Settings::tasksViewChanged, this,
@@ -1560,8 +1563,44 @@ QVariantMap VaultController::preview(const QString &target) const
     return {{u"path"_s, path}, {u"title"_s, info->title}, {u"text"_s, body}};
 }
 
+void VaultController::setShownTag(const QString &tag)
+{
+    if (m_shownTag == tag)
+        return;
+    const bool going = !tag.isEmpty() && m_shownTag.isEmpty();
+    const bool leaving = tag.isEmpty();
+    if (going) {
+        m_tasksBeforeTag = m_showingTasks;
+        m_trashBeforeTag = m_showingTrash;
+    }
+    m_shownTag = tag;
+    m_tagNotes.setTag(tag);
+    m_tagTasks.setTag(tag);
+    Q_EMIT shownTagChanged();
+    if (leaving) {
+        setShowingTasks(m_tasksBeforeTag);
+        setShowingTrash(m_trashBeforeTag);
+    } else {
+        setShowingTasks(false);
+        setShowingTrash(false);
+    }
+}
+
+void VaultController::dropTag()
+{
+    if (m_shownTag.isEmpty())
+        return;
+    m_shownTag.clear();
+    m_tagNotes.setTag({});
+    m_tagTasks.setTag({});
+    Q_EMIT shownTagChanged();
+}
+
 void VaultController::setShowingTasks(bool showing)
 {
+    // Another view chosen leaves the tag's, without going back to what was before it.
+    if (showing)
+        dropTag();
     if (m_showingTasks == showing)
         return;
     m_showingTasks = showing;
@@ -1572,6 +1611,8 @@ void VaultController::setShowingTasks(bool showing)
 
 void VaultController::setShowingTrash(bool showing)
 {
+    if (showing)
+        dropTag();
     if (showing)
         reloadTrash();
     if (m_showingTrash == showing)
@@ -2313,6 +2354,8 @@ void VaultController::reloadModels()
         m_switcher.reload(m_index.get());
         m_linkSuggestions.reload(m_index.get());
         m_tasks.reload(m_index.get());
+        m_tagNotes.reload(m_index.get(), m_pinned);
+        m_tagTasks.reload(m_index.get());
     } else {
         m_notebooks.reload(nullptr, {}, 0);
         m_tagTree.reload({});
@@ -2321,6 +2364,8 @@ void VaultController::reloadModels()
         m_linkSuggestions.reload(nullptr);
         m_backlinks.reload(nullptr, nullptr, {});
         m_tasks.reload(nullptr);
+        m_tagNotes.reload(nullptr);
+        m_tagTasks.reload(nullptr);
     }
     refreshTarget();
     Q_EMIT notesChanged();

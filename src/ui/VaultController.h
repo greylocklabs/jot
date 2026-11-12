@@ -83,6 +83,11 @@ class VaultController : public QObject
         QString chosenTrashed READ chosenTrashed WRITE setChosenTrashed NOTIFY chosenTrashedChanged)
     /// The middle column shows the trash rather than notes or tasks.
     Q_PROPERTY(bool showingTrash READ showingTrash WRITE setShowingTrash NOTIFY showingTrashChanged)
+    /// The tag whose notes and to-dos are shown together, or empty while another view is.
+    Q_PROPERTY(QString shownTag READ shownTag WRITE setShownTag NOTIFY shownTagChanged)
+    /// The shown tag's notes, and its open to-dos.
+    Q_PROPERTY(jot::NoteListModel *tagNotes READ tagNotes CONSTANT)
+    Q_PROPERTY(jot::TaskModel *tagTasks READ tagTasks CONSTANT)
     /// What links to, or names, the note shown.
     Q_PROPERTY(jot::BacklinksModel *backlinks READ backlinks CONSTANT)
     /// The note shown, by vault path, and what it says.
@@ -447,6 +452,13 @@ public:
     [[nodiscard]] SyncController *sync() { return &m_sync; }
     [[nodiscard]] bool showingTasks() const { return m_showingTasks; }
     void setShowingTasks(bool showing);
+    [[nodiscard]] QString shownTag() const { return m_shownTag; }
+    /// Shows `tag`'s notes and to-dos, or, given none, goes back to the view shown before.
+    void setShownTag(const QString &tag);
+    [[nodiscard]] NoteListModel *tagNotes() { return &m_tagNotes; }
+    [[nodiscard]] TaskModel *tagTasks() { return &m_tagTasks; }
+    /// Leaves the tag's view for another, without going back to what was shown before it.
+    Q_INVOKABLE void dropTag();
     [[nodiscard]] TrashModel *trash() { return &m_trash; }
     [[nodiscard]] TrashModel *trashHits() { return &m_trashHits; }
     [[nodiscard]] QString chosenTrashed() const { return m_chosenTrashed; }
@@ -495,6 +507,7 @@ Q_SIGNALS:
     void leavingUnsaved();
     void problemChanged();
     void showingTasksChanged();
+    void shownTagChanged();
     void showingTrashChanged();
     void chosenTrashedChanged();
     /// The editor should put the cursor here in the note shown, as the editor counts
@@ -574,6 +587,12 @@ private:
     SwitcherModel m_linkSuggestions;
     BacklinksModel m_backlinks;
     TaskModel m_tasks;
+    NoteListModel m_tagNotes;
+    TaskModel m_tagTasks;
+    QString m_shownTag;
+    /// Whether Tasks or the trash was shown before the tag, to go back to.
+    bool m_tasksBeforeTag = false;
+    bool m_trashBeforeTag = false;
     TrashModel m_trash;
     TrashModel m_trashHits;
     /// Everything in the trash, as last read.
