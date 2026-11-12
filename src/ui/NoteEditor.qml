@@ -610,6 +610,8 @@ Rectangle {
                         Settings.readMode = index === 2
                         if (index < 2)
                             Settings.sourceMode = index === 1
+                        // Text kept as text is read again even when the mode was already set.
+                        root.readTable()
                     }
                 }
                 DangerButton {
