@@ -2426,6 +2426,36 @@ bool VaultController::goForward()
     return travel(1);
 }
 
+bool VaultController::goBy(int steps)
+{
+    return steps != 0 && travel(steps);
+}
+
+QVariantList VaultController::trailBehind() const
+{
+    return trailEntries(-1);
+}
+
+QVariantList VaultController::trailAhead() const
+{
+    return trailEntries(1);
+}
+
+QVariantList VaultController::trailEntries(int direction) const
+{
+    QVariantList entries;
+    if (!m_vault)
+        return entries;
+    const auto exists = [this](const QString &path) {
+        return QFileInfo::exists(m_vault->absolute(path));
+    };
+    const QList<NoteTrail::Visit> visits =
+        direction < 0 ? m_trail.behind(exists) : m_trail.ahead(exists);
+    for (const NoteTrail::Visit &visit : visits.first(std::min<qsizetype>(visits.size(), 15)))
+        entries.append(QVariantMap{{u"path"_s, visit.path}, {u"title"_s, titleOf(visit.path)}});
+    return entries;
+}
+
 bool VaultController::travel(int by)
 {
     if (!m_vault || !readyToLeave([this, by] { travel(by); }))
@@ -2433,8 +2463,7 @@ bool VaultController::travel(int by)
     const auto exists = [this](const QString &path) {
         return QFileInfo::exists(m_vault->absolute(path));
     };
-    const std::optional<NoteTrail::Visit> to =
-        by < 0 ? m_trail.back(m_cursorPosition, exists) : m_trail.forward(m_cursorPosition, exists);
+    const std::optional<NoteTrail::Visit> to = m_trail.go(by, m_cursorPosition, exists);
     Q_EMIT trailChanged();
     if (!to)
         return false;

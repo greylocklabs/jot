@@ -57,6 +57,7 @@ private Q_SLOTS:
     void aTagShowsItsNotesAndToDos();
     void renamesANoteInTheWindow();
     void offersToRemoveATargetOnlyWhenThereIsOne();
+    void holdingBackListsTheNotesBefore();
 
 private:
     QTemporaryDir m_dir;
@@ -470,6 +471,48 @@ void TestDialogs::asksBeforeTrashingSharedAttachments()
     QTRY_VERIFY(!dialog->property("visible").toBool());
     QVERIFY(!QFileInfo::exists(root + u"/Ines.md"_s));
     QVERIFY(QFileInfo::exists(root + u"/Ines.assets/map.png"_s));
+}
+
+void TestDialogs::holdingBackListsTheNotesBefore()
+{
+    for (const QString &name : {u"Trail one"_s, u"Trail two"_s, u"Trail three"_s}) {
+        QFile note(m_dir.filePath(u"Notes/"_s + name + u".md"_s));
+        QVERIFY(note.open(QIODevice::WriteOnly));
+        note.write("Words.\n");
+    }
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Trail three.md"_s), 3000);
+    QQmlEngine engine;
+    QQmlComponent component(&engine);
+    component.loadFromModule("Jot.Ui", "Main");
+    std::unique_ptr<QObject> main(component.create());
+    QVERIFY2(main, qPrintable(component.errorString()));
+    auto *window = qobject_cast<QQuickWindow *>(main.get());
+    QVERIFY(QTest::qWaitForWindowExposed(window));
+    for (const QString &name : {u"Trail one"_s, u"Trail two"_s, u"Trail three"_s})
+        m_vault->setCurrent(name + u".md"_s);
+
+    auto *back = main->findChild<QQuickItem *>(u"goBack"_s);
+    auto *menu = main->findChild<QObject *>(u"trailMenu"_s);
+    QVERIFY(back && menu);
+    QTRY_VERIFY(back->isEnabled());
+    QTest::mouseClick(window, Qt::RightButton, {},
+                      back->mapToScene({back->width() / 2, back->height() / 2}).toPoint());
+    QTRY_VERIFY(menu->property("opened").toBool());
+    const QVariantList entries = menu->property("entries").toList();
+    QVERIFY(entries.size() >= 2);
+    QCOMPARE(entries.at(0).toMap().value(u"title"_s).toString(), u"Trail two"_s);
+    QCOMPARE(entries.at(1).toMap().value(u"title"_s).toString(), u"Trail one"_s);
+
+    // Choosing the second goes straight back two notes.
+    QQuickItem *second = nullptr;
+    QVERIFY(QMetaObject::invokeMethod(menu, "itemAt", Q_RETURN_ARG(QQuickItem *, second),
+                                      Q_ARG(int, 1)));
+    QVERIFY(second);
+    QTRY_VERIFY(second->isVisible() && second->height() > 0);
+    QTest::mouseClick(window, Qt::LeftButton, {},
+                      second->mapToScene({second->width() / 2, second->height() / 2}).toPoint());
+    QTRY_COMPARE(m_vault->current(), u"Trail one.md"_s);
+    QVERIFY(m_vault->canGoForward());
 }
 
 QTEST_MAIN(TestDialogs)

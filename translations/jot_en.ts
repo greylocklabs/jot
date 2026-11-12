@@ -783,15 +783,15 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Back to the note before (Alt+Left)</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Forward</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Forward to the note after (Alt+Right)</source>
+        <source>Back to the note before (Alt+Left); hold for more</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Forward to the note after (Alt+Right); hold for more</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

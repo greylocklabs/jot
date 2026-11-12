@@ -16,6 +16,8 @@ private Q_SLOTS:
     void skipsNotesGoneSince();
     void followsMoves();
     void keepsTheLatest();
+    void jumpsSeveralAtOnce();
+    void listsWhatIsBehindAndAhead();
 };
 
 namespace {
@@ -98,6 +100,45 @@ void TestNoteTrail::keepsTheLatest()
     QCOMPARE(trail.visits().size(), NoteTrail::kLimit);
     QCOMPARE(trail.visits().first().path, u"10.md"_s);
     QVERIFY(trail.canGoBack());
+}
+
+void TestNoteTrail::jumpsSeveralAtOnce()
+{
+    NoteTrail trail;
+    for (const QString &path : {u"a.md"_s, u"b.md"_s, u"c.md"_s, u"d.md"_s})
+        trail.visit(path, 0);
+    QCOMPARE(trail.go(-3, 7, everything), std::optional(NoteTrail::Visit{u"a.md"_s, 0}));
+    QVERIFY(trail.canGoForward());
+    QCOMPARE(trail.go(2, 0, everything)->path, u"c.md"_s);
+    // The note left keeps its cursor for coming back to it.
+    QCOMPARE(trail.go(1, 0, everything), std::optional(NoteTrail::Visit{u"d.md"_s, 7}));
+    QVERIFY(!trail.go(-4, 0, everything));
+    QVERIFY(!trail.go(0, 0, everything));
+}
+
+void TestNoteTrail::listsWhatIsBehindAndAhead()
+{
+    NoteTrail trail;
+    for (const QString &path : {u"a.md"_s, u"b.md"_s, u"c.md"_s, u"a.md"_s, u"d.md"_s, u"e.md"_s})
+        trail.visit(path, 0);
+    QVERIFY(trail.go(-2, 0, everything));
+    QSet<QString> gone{u"b.md"_s};
+    const auto exists = [&gone](const QString &path) { return !gone.contains(path); };
+    const auto paths = [](const QList<NoteTrail::Visit> &visits) {
+        QStringList out;
+        for (const NoteTrail::Visit &visit : visits)
+            out.append(visit.path);
+        return out;
+    };
+    // Nearest first, without notes gone since or the one shown met again.
+    QCOMPARE(paths(trail.behind(exists)), (QStringList{u"c.md"_s}));
+    QCOMPARE(paths(trail.ahead(exists)), (QStringList{u"d.md"_s, u"e.md"_s}));
+    // Each listed note is as many steps away as its place in the list.
+    QCOMPARE(trail.go(2, 0, exists)->path, u"e.md"_s);
+    // A note visited twice is listed at each place, as a browser lists it.
+    QCOMPARE(paths(trail.behind(exists)),
+             (QStringList{u"d.md"_s, u"a.md"_s, u"c.md"_s, u"a.md"_s}));
+    QCOMPARE(trail.go(-3, 0, exists)->path, u"c.md"_s);
 }
 
 QTEST_GUILESS_MAIN(TestNoteTrail)
