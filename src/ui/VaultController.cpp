@@ -66,8 +66,10 @@ VaultController::VaultController(Settings &settings, QObject *parent)
     m_notes.setOrder(settings.noteSort());
     connect(&m_notes, &NoteListModel::orderChanged, this,
             [this] { m_settings.setNoteSort(m_notes.order()); });
-    connect(&settings, &Settings::noteSortChanged, this,
-            [this] { m_notes.setOrder(m_settings.noteSort()); });
+    connect(&settings, &Settings::noteSortChanged, this, [this] {
+        m_notes.setOrder(m_settings.noteSort());
+        m_tagNotes.setOrder(m_settings.noteSort());
+    });
     m_tasks.setView(settings.tasksView());
     // A tag's view lists all its open to-dos, whatever Tasks is set to show.
     m_tagTasks.setView(u"all"_s);

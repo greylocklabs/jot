@@ -76,6 +76,7 @@ private Q_SLOTS:
     void listsHeadingsInPlaceOfAContentsMarker();
     void readingFindsTheHeadingAContentsEntryNames();
     void outlinesTheNoteBesideIt();
+    void aTagLinkOpensTheTagsView();
     void showsTabsOverTheNote();
     void countsTheNotesWords();
     void recordsUnderAMicrophone();
@@ -706,6 +707,15 @@ void TestNoteEditor::outlinesTheNoteBesideIt()
     QTRY_VERIFY(!outline->isVisible());
     QVERIFY(!m_settings->outlineShown());
     QVERIFY(body->hasActiveFocus());
+}
+
+void TestNoteEditor::aTagLinkOpensTheTagsView()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QVERIFY(QMetaObject::invokeMethod(m_editor.get(), "openLink",
+                                      Q_ARG(QVariant, u"jot-tag:cast%2Flead"_s)));
+    QCOMPARE(m_vault->shownTag(), u"cast/lead"_s);
+    m_vault->setShownTag({});
 }
 
 void TestNoteEditor::showsTabsOverTheNote()
@@ -1659,9 +1669,10 @@ void TestNoteEditor::readsTheNoteWithLinksAndBoxesToTick()
              qPrintable(copied));
     QVERIFY(!copied.contains(QChar::ObjectReplacementCharacter));
 
-    // Its links lead to the note, and to the tag's notes.
+    // Its links lead to the note, and to the tag's view.
     QMetaObject::invokeMethod(reader, "linkActivated", Q_ARG(QString, u"jot-tag:ferry"_s));
-    QCOMPARE(m_vault->notes()->tag(), u"ferry"_s);
+    QCOMPARE(m_vault->shownTag(), u"ferry"_s);
+    m_vault->setShownTag({});
     QMetaObject::invokeMethod(reader, "linkActivated", Q_ARG(QString, u"jot-note:Mara%20Vey"_s));
     QCOMPARE(m_vault->current(), u"Ashfall/Characters/Mara Vey.md"_s);
     // Ctrl+/ there goes back to writing, in Source.

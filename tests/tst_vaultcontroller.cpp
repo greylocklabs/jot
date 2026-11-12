@@ -235,6 +235,9 @@ void TestVaultController::showsATagsNotesAndToDosTogether()
              (QStringList{u"Chores.md"_s, u"Crossings/Plan.md"_s}));
     QCOMPARE(column(*m_vault->tagTasks(), "title"),
              QStringList{u"mend the rope #harbor/rigging"_s});
+    // Its notes follow the notes' order.
+    m_settings->setNoteSort(u"title"_s);
+    QCOMPARE(m_vault->tagNotes()->order(), u"title"_s);
     // Neither Tasks nor the notes list is narrowed by it.
     QVERIFY(m_vault->tasks()->tag().isEmpty());
     QVERIFY(m_vault->notes()->tag().isEmpty());
