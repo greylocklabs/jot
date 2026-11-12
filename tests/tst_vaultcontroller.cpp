@@ -2041,6 +2041,10 @@ void TestVaultController::syncsWithAGitRepository()
     QCOMPARE(sync->syncEvery(), 0);
     QVERIFY(m_vault->setVaultSetting(u"syncEvery"_s, QVariant()));
     QCOMPARE(sync->syncEvery(), 5);
+    // A file that did not sync is tried again shortly only where Jot syncs on its own.
+    QVERIFY(SyncController::failedFiles(0, 5).isEmpty());
+    QVERIFY(SyncController::failedFiles(2, 5).contains(u"shortly"_s));
+    QVERIFY(SyncController::failedFiles(2, 0).contains(u"when you sync next"_s));
     QVERIFY(m_vault->setVaultSetting(u"gitMessage"_s, u"  "_s));
     QVERIFY(!readFile(m_root + u"/.jot/vault.yaml"_s).contains(u"gitMessage"_s));
     sync->stop();

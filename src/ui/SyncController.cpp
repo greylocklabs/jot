@@ -268,6 +268,16 @@ void SyncController::connectGit(const QString &url, const QString &branch)
     });
 }
 
+QString SyncController::failedFiles(int failed, int every)
+{
+    if (failed == 0)
+        return {};
+    // Only when it syncs on its own does it try again by itself.
+    return every > 0 ? tr("%n file(s) did not sync; Jot tries again shortly.", nullptr, failed)
+                     : tr("%n file(s) did not sync; Jot tries again when you sync next.", nullptr,
+                          failed);
+}
+
 bool SyncController::manualCommits() const
 {
     return git() && !GitSync::optionsOf(m_root).autoCommit;
@@ -448,10 +458,7 @@ void SyncController::done(const SyncReport &report)
         for (const QString &error : report.errors)
             qCWarning(lcVault) << "could not sync" << error;
         m_lastSynced = QDateTime::currentDateTime();
-        m_problem = report.errors.isEmpty()
-                        ? QString()
-                        : tr("%n file(s) did not sync; Jot tries again shortly.", nullptr,
-                             int(report.errors.size()));
+        m_problem = failedFiles(int(report.errors.size()), syncEvery());
         if (!report.errors.isEmpty() && syncEvery() > 0 && !m_soon.isActive())
             m_soon.start(kAfterChangeMs);
     }
