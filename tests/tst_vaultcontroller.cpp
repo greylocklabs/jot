@@ -667,6 +667,10 @@ void TestVaultController::actsOnNotesThatAreNotShown()
     QCOMPARE(m_vault->linkTargetTo(u"Ashfall/Characters/Mara Vey.md"_s),
              u"Characters/Mara%20Vey.md"_s);
     QCOMPARE(m_vault->linkTargetTo(u"Recipes/Pancakes.md"_s), u"../Recipes/Pancakes.md"_s);
+    // A hash in a name is encoded, so it is not read as a heading.
+    QCOMPARE(m_vault->linkTargetTo(u"Ashfall/Chapter #1.md"_s), u"Chapter%20%231.md"_s);
+    QCOMPARE(m_vault->linkTo(u"Ideas/Chapter #1.md"_s),
+             u"[Chapter #1](/Ideas/Chapter%20%231.md)"_s);
     m_vault->setCurrent(u"Welcome.md"_s);
     QCOMPARE(m_vault->notebookOf(u"Recipes/Pancakes.md"_s), u"Recipes"_s);
     QCOMPARE(m_vault->notebookOf(u"Welcome.md"_s), QString());
