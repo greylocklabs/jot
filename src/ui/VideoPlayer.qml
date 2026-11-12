@@ -41,15 +41,30 @@ Rectangle {
         }
     }
 
-    VideoOutput {
-        id: output
+    // The picture inset from the rounded edge, on a ground of its own, so its square corners
+    // stay inside.
+    Rectangle {
+        id: screen
 
-        objectName: "videoOutput"
         anchors {
             left: parent.left
             right: parent.right
             top: parent.top
             bottom: controls.top
+            margins: Theme.space2
+            bottomMargin: Theme.space1
+        }
+        radius: Theme.radiusMd
+        color: Theme.surfaceAlt
+    }
+
+    VideoOutput {
+        id: output
+
+        objectName: "videoOutput"
+        anchors {
+            fill: screen
+            margins: Theme.space1
         }
         fillMode: VideoOutput.PreserveAspectFit
 
@@ -66,11 +81,11 @@ Rectangle {
             left: parent.left
             right: parent.right
             bottom: parent.bottom
-            leftMargin: Theme.space2
+            leftMargin: Theme.space3
             rightMargin: Theme.space3
-            bottomMargin: Theme.space1
+            bottomMargin: Theme.space2
         }
-        height: playButton.height + Theme.space1
+        height: playButton.height
         spacing: Theme.space2
 
         StickerButton {
@@ -78,10 +93,12 @@ Rectangle {
 
             objectName: "playButton"
             anchors.verticalCenter: parent.verticalCenter
-            text: root.playing ? qsTr("Pause") : qsTr("Play")
+            glyph: root.playing ? "pause" : "play"
+            Accessible.name: root.playing ? qsTr("Pause") : qsTr("Play")
+            tip: Accessible.name
             onClicked: root.playing ? player.pause() : player.play()
         }
-        Slider {
+        SeekBar {
             id: seek
 
             anchors.verticalCenter: parent.verticalCenter
@@ -110,7 +127,9 @@ Rectangle {
 
             objectName: "muteButton"
             anchors.verticalCenter: parent.verticalCenter
-            text: sound.muted ? qsTr("Sound on") : qsTr("Mute")
+            glyph: sound.muted ? "muted" : "sound"
+            Accessible.name: sound.muted ? qsTr("Sound on") : qsTr("Mute")
+            tip: Accessible.name
             onClicked: sound.muted = !sound.muted
         }
     }

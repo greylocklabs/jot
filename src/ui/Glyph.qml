@@ -5,7 +5,8 @@ import QtQuick
 /// A small line icon drawn from rounded bars, so icons need no image files and
 /// take the text color: chevron-left, chevron-right, chevron-down, minimize, maximize,
 /// restore, close, check, plus, refresh, bell, search, settings, menu, video, more,
-/// list-bullet, list-number, task, quote, table, pin, trash, note, braces, clock, mic, stop, sidebar or flag.
+/// list-bullet, list-number, task, quote, table, pin, trash, note, braces, clock, mic, stop, play,
+/// pause, sound, muted, sidebar or flag.
 Item {
     id: root
 
@@ -126,6 +127,10 @@ Item {
                               "clock": clockShape,
                               "mic": micShape,
                               "stop": stopShape,
+                              "play": mediaShape,
+                              "pause": mediaShape,
+                              "sound": mediaShape,
+                              "muted": mediaShape,
                               "flag": flagShape,
                               "maximize": frameShape,
                               "restore": frameShape
@@ -470,6 +475,77 @@ Item {
                 radius: root.stroke
                 color: root.color
             }
+        }
+    }
+
+    // A player's controls: play, pause, and the sound on or off.
+    Component {
+        id: mediaShape
+
+        Canvas {
+            id: media
+
+            antialiasing: true
+            onPaint: {
+                const ctx = getContext("2d")
+                ctx.reset()
+                // On a 24-unit grid inset by half the stroke, as the chevrons are.
+                const size = Math.min(width, height)
+                const unit = (size - root.stroke) / 24
+                const atX = v => (width - size) / 2 + root.stroke / 2 + v * unit
+                const atY = v => (height - size) / 2 + root.stroke / 2 + v * unit
+                ctx.strokeStyle = root.color
+                ctx.fillStyle = root.color
+                ctx.lineWidth = root.stroke
+                ctx.lineCap = "round"
+                ctx.lineJoin = "round"
+                const shape = points => {
+                    ctx.beginPath()
+                    ctx.moveTo(atX(points[0][0]), atY(points[0][1]))
+                    for (const point of points.slice(1))
+                        ctx.lineTo(atX(point[0]), atY(point[1]))
+                    ctx.closePath()
+                    ctx.fill()
+                    ctx.stroke()
+                }
+                const line = (from, to) => {
+                    ctx.beginPath()
+                    ctx.moveTo(atX(from[0]), atY(from[1]))
+                    ctx.lineTo(atX(to[0]), atY(to[1]))
+                    ctx.stroke()
+                }
+                if (root.name === "play") {
+                    shape([[7, 4], [20, 12], [7, 20]])
+                } else if (root.name === "pause") {
+                    shape([[6, 4], [10, 4], [10, 20], [6, 20]])
+                    shape([[14, 4], [18, 4], [18, 20], [14, 20]])
+                } else {
+                    // The speaker, then its waves, or a cross for none.
+                    shape([[3, 9], [7, 9], [12, 4], [12, 20], [7, 15], [3, 15]])
+                    if (root.name === "muted") {
+                        line([16, 9], [22, 15])
+                        line([22, 9], [16, 15])
+                    } else {
+                        ctx.beginPath()
+                        ctx.arc(atX(12), atY(12), 5 * unit, -Math.PI / 4, Math.PI / 4)
+                        ctx.stroke()
+                        ctx.beginPath()
+                        ctx.arc(atX(12), atY(12), 9 * unit, -Math.PI / 4, Math.PI / 4)
+                        ctx.stroke()
+                    }
+                }
+            }
+            Connections {
+                target: root
+                function onNameChanged() {
+                    media.requestPaint()
+                }
+                function onColorChanged() {
+                    media.requestPaint()
+                }
+            }
+            onWidthChanged: requestPaint()
+            onHeightChanged: requestPaint()
         }
     }
 

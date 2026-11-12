@@ -89,9 +89,12 @@ Popup {
             font.pixelSize: Theme.textMd
         }
 
+        // As tall as the button needs, with room around it, its raised edge included.
         Rectangle {
             width: parent.width
-            height: command.implicitHeight + 2 * Theme.space3
+            height: Math.max(command.implicitHeight, copy.height + Theme.stickerEdge) + 2
+                    * Theme.space3
+
             radius: Theme.radiusMd
             color: Theme.surfaceAlt
 
@@ -108,10 +111,13 @@ Popup {
                 font.pixelSize: Theme.textMd
             }
             StickerButton {
+                id: copy
+
                 anchors {
                     right: parent.right
-                    rightMargin: Theme.space2
+                    rightMargin: Theme.space3
                     verticalCenter: parent.verticalCenter
+                    verticalCenterOffset: -Theme.stickerEdge / 2
                 }
                 text: copied.running ? qsTr("Copied") : qsTr("Copy")
                 onClicked: {

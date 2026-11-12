@@ -97,6 +97,7 @@ qt_add_qml_module(jotui
         TagView.qml
         CodeBackdrops.qml
         VideoPlayer.qml
+        SeekBar.qml
         FormRow.qml
         Glyph.qml
         KeyCap.qml
