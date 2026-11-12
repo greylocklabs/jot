@@ -36,6 +36,24 @@
   </categories>
 
   <releases>
+    <release version="0.5.7" date="2026-11-11">
+      <description>
+        <ul>
+          <li>Move through to-dos, the trash and the sidebar with vi keys</li>
+          <li>Lay the outline over the note on a narrow window</li>
+          <li>Show a tag's notes and to-dos together</li>
+          <li>Say when a failed file is tried again when syncing by hand</li>
+          <li>Show an empty date as something to press, not grayed out</li>
+          <li>Let the floating outline take escape, not the whole window</li>
+          <li>Give the note the keys back however the outline goes</li>
+          <li>Hand the keys back only when the outline took them</li>
+          <li>Keep the word count full width under a floating outline</li>
+          <li>Keys, sort order and tag links follow the tag view</li>
+          <li>Leave the tag view from notebook menus and search</li>
+          <li>Draw code's surface behind it, so selecting never thickens it</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.5.6" date="2026-11-11">
       <description>
         <ul>

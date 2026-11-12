@@ -3,6 +3,26 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## 0.5.7 - 2026-11-11
+
+### New
+
+- Move through to-dos, the trash and the sidebar with vi keys
+- Lay the outline over the note on a narrow window
+- Show a tag's notes and to-dos together
+
+### Fixed
+
+- Say when a failed file is tried again when syncing by hand
+- Show an empty date as something to press, not grayed out
+- Let the floating outline take escape, not the whole window
+- Give the note the keys back however the outline goes
+- Hand the keys back only when the outline took them
+- Keep the word count full width under a floating outline
+- Keys, sort order and tag links follow the tag view
+- Leave the tag view from notebook menus and search
+- Draw code's surface behind it, so selecting never thickens it
+
 ## 0.5.6 - 2026-11-11
 
 ### New
