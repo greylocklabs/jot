@@ -54,6 +54,14 @@
         <source>Where in the recording</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Sound on</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mute</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>Backlinks</name>
