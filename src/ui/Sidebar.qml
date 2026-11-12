@@ -631,6 +631,7 @@ Rectangle {
             onTriggered: {
                 Vault.showingTasks = false
                 Vault.showingTrash = false
+                Vault.dropTag()
                 Vault.notes.tag = ""
                 Vault.notes.notebook = notebookMenu.path
                 if (Vault.newNote() !== "")
@@ -652,6 +653,7 @@ Rectangle {
                     onTriggered: {
                         Vault.showingTasks = false
                         Vault.showingTrash = false
+                        Vault.dropTag()
                         Vault.notes.tag = ""
                         Vault.notes.notebook = notebookMenu.path
                         if (Vault.newNoteFromTemplate(modelData.path) !== "")
@@ -675,6 +677,7 @@ Rectangle {
                     onTriggered: {
                         Vault.showingTasks = false
                         Vault.showingTrash = false
+                        Vault.dropTag()
                         Vault.notes.tag = ""
                         Vault.notes.notebook = notebookMenu.path
                         if (Vault.newFile(modelData.kind) !== "")
