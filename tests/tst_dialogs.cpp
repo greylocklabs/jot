@@ -53,6 +53,7 @@ private Q_SLOTS:
     void showsTheSyntaxGuide();
     void filtersToDosByPriority();
     void viKeysMoveThroughTheListShownAndTheSidebar();
+    void aTagShowsItsNotesAndToDos();
     void renamesANoteInTheWindow();
     void offersToRemoveATargetOnlyWhenThereIsOne();
 
@@ -914,6 +915,50 @@ void TestDialogs::viKeysMoveThroughTheListShownAndTheSidebar()
     QTest::keyClick(window, Qt::Key_Return);
     QTRY_VERIFY(m_vault->showingTasks());
     m_vault->setShowingTasks(false);
+}
+
+void TestDialogs::aTagShowsItsNotesAndToDos()
+{
+    QFile note(m_dir.filePath(u"Notes/Harbor.md"_s));
+    QVERIFY(note.open(QIODevice::WriteOnly));
+    note.write("The dawn run. #harbor\n\n- [ ] mend the rope #harbor\n");
+    note.close();
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Harbor.md"_s), 3000);
+    QQmlEngine engine;
+    QQmlComponent component(&engine);
+    component.loadFromModule("Jot.Ui", "Main");
+    std::unique_ptr<QObject> main(component.create());
+    QVERIFY2(main, qPrintable(component.errorString()));
+    auto *window = qobject_cast<QQuickWindow *>(main.get());
+    QVERIFY(QTest::qWaitForWindowExposed(window));
+    window->resize(1200, 700);
+    const std::function<QQuickItem *(QQuickItem *, const QString &, const QString &)> find =
+        [&find](QQuickItem *at, const QString &name, const QString &label) -> QQuickItem * {
+        for (QQuickItem *child : at->childItems()) {
+            if ((!name.isEmpty() && child->objectName() == name) ||
+                (!label.isEmpty() && child->property("isSidebarRow").toBool() &&
+                 child->property("label").toString() == label))
+                return child;
+            if (QQuickItem *found = find(child, name, label))
+                return found;
+        }
+        return nullptr;
+    };
+    QQuickItem *row = nullptr;
+    QTRY_VERIFY((row = find(window->contentItem(), {}, u"#harbor"_s)) && row->isVisible());
+    QMetaObject::invokeMethod(row, "clicked");
+    QCOMPARE(m_vault->shownTag(), u"harbor"_s);
+    QQuickItem *view = find(window->contentItem(), u"tagView"_s, {});
+    QTRY_VERIFY(view && view->isVisible());
+    QVERIFY(!find(window->contentItem(), u"noteList"_s, {})->isVisible());
+    QTRY_VERIFY(find(view, u"tagNote"_s, {}));
+    QTRY_VERIFY(find(view, u"tagTask"_s, {}));
+
+    // Its chip goes back to the notes.
+    QMetaObject::invokeMethod(find(view, u"tagChip"_s, {}), "clicked");
+    QTRY_VERIFY(!view->isVisible());
+    QVERIFY(m_vault->shownTag().isEmpty());
+    QVERIFY(find(window->contentItem(), u"noteList"_s, {})->isVisible());
 }
 
 void TestDialogs::renamesANoteInTheWindow()

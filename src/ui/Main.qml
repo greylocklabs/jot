@@ -516,7 +516,7 @@ ApplicationWindow {
                     }
                 }
                 visible: Vault.isOpen && !Vault.showingTasks && !Vault.showingTrash
-                         && columns.showList
+                         && Vault.shownTag === "" && columns.showList
 
                 anchors {
                     left: sidebar.right
@@ -540,6 +540,18 @@ ApplicationWindow {
                                                                                        - columns.wantedSidebar
                                                                                        - Theme.noteRoomWidth)
                 onReset: Settings.resetNoteListWidth()
+            }
+            TagView {
+                objectName: "tagView"
+                z: columns.flyout ? 3 : 0
+                visible: Vault.isOpen && Vault.shownTag !== "" && columns.showList
+                onPicked: closeAfterPick.restart()
+                anchors {
+                    left: sidebar.right
+                    top: parent.top
+                    bottom: parent.bottom
+                }
+                width: columns.noteListWidth
             }
             TrashList {
                 id: trashList
