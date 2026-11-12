@@ -59,7 +59,7 @@ QString retarget(const QString &raw, const QString &source, const QString &to)
                                             : QDir(u"/"_s + folder).relativeFilePath(u"/"_s + to);
     if (!decoded.endsWith(kNoteSuffix, Qt::CaseInsensitive) && path.endsWith(kNoteSuffix))
         path.chop(kNoteSuffix.size());
-    return path + anchor;
+    return Vault::escapeLinkPath(path) + anchor;
 }
 
 std::optional<QStringList> renameNote(const Vault &vault, VaultIndex &index, const QString &from,

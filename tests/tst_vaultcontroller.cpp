@@ -1620,7 +1620,16 @@ void TestVaultController::followsLinksAndMakesMissingNotes()
     QVERIFY(!m_vault->follow(u"Nowhere.png"_s));
     QVERIFY(!m_vault->follow(u"../../Outside.md"_s));
     QVERIFY(!m_vault->follow(u"[[Nowhere]]"_s));
+    // Nor for a name the note's file could not have, which the link would never find.
+    QVERIFY(!m_vault->follow(u"Shout.MD"_s));
+    QVERIFY(!m_vault->follow(u"What%3F.md"_s));
     QCOMPARE(m_vault->noteCount(), 17);
+    // A name with a hash is made, and found again by the same link.
+    QVERIFY(m_vault->follow(u"Chapter%20%231.md"_s));
+    QCOMPARE(m_vault->current(), u"Ideas/Chapter #1.md"_s);
+    QCOMPARE(m_vault->noteCount(), 18);
+    QVERIFY(m_vault->follow(u"Chapter%20%231.md"_s));
+    QCOMPARE(m_vault->noteCount(), 18);
 }
 
 void TestVaultController::opensAndRenamesDataFiles()

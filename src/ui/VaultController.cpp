@@ -2249,7 +2249,11 @@ bool VaultController::follow(const QString &target)
         return false;
     const QString name = Vault::titleFromPath(wanted);
     const QString folder = wanted.contains(u'/') ? wanted.section(u'/', 0, -2) : QString();
-    if (name.isEmpty())
+    // Only the note the link names, so the link finds it after; a name a file cannot hold, or
+    // one that is there but not a note Jot lists, makes nothing.
+    const QString made =
+        (folder.isEmpty() ? QString() : folder + u'/') + Vault::fileNameFor(name) + u".md"_s;
+    if (name.isEmpty() || made != wanted || QFileInfo::exists(m_vault->absolute(wanted)))
         return false;
     if (!readyToLeave([this, target] { follow(target); }))
         return true;
