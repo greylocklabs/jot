@@ -36,6 +36,18 @@
   </categories>
 
   <releases>
+    <release version="0.5.8" date="2026-11-12">
+      <description>
+        <ul>
+          <li>Play videos where they are embedded</li>
+          <li>Keep the app's words in qt translation files</li>
+          <li>Build the sync choices so qmlformat can lay settings out</li>
+          <li>Embed attached videos so they play in place</li>
+          <li>Icons, room and a themed seek bar for the media players</li>
+          <li>Keep text positions inside the note when placing things</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.5.7" date="2026-11-11">
       <description>
         <ul>

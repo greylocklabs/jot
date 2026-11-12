@@ -3,6 +3,20 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## 0.5.8 - 2026-11-12
+
+### New
+
+- Play videos where they are embedded
+- Keep the app's words in qt translation files
+
+### Fixed
+
+- Build the sync choices so qmlformat can lay settings out
+- Embed attached videos so they play in place
+- Icons, room and a themed seek bar for the media players
+- Keep text positions inside the note when placing things
+
 ## 0.5.7 - 2026-11-11
 
 ### New
