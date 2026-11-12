@@ -40,6 +40,7 @@ jot_add_test(tst_quickadd)
 jot_add_test(tst_vault)
 jot_add_test(tst_vaultignore)
 jot_add_test(tst_textfind)
+jot_add_test(tst_translations)
 jot_add_test(tst_vaultwatcher)
 jot_add_test(tst_vaultindex)
 jot_add_test(tst_rename)
@@ -117,6 +118,15 @@ if(QMLFORMAT)
     add_test(NAME qmlformat_reads
         COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/qmlformat_test.sh ${QMLFORMAT}
             ${PROJECT_SOURCE_DIR}/src/ui)
+endif()
+
+# translations/jot_en.ts holding every string the code shows, and no others.
+if(TARGET Qt6::lupdate)
+    add_test(NAME translations_current
+        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/translations_test.sh $<TARGET_FILE:Qt6::lupdate>
+            ${CMAKE_COMMAND} ${Qt6LinguistTools_DIR}/GenerateLUpdateProject.cmake
+            ${CMAKE_BINARY_DIR}/.lupdate/jot_lupdate_project.cmake
+            ${PROJECT_SOURCE_DIR}/translations/jot_en.ts)
 endif()
 
 # The installer jotwriter.org serves, against stand-in systems and a stand-in

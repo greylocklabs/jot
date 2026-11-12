@@ -31,7 +31,8 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     endif()
 endif()
 
-find_package(Qt6 6.8 REQUIRED COMPONENTS Core DBus Gui Multimedia Network Qml Quick QuickControls2 Sql)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Core DBus Gui LinguistTools Multimedia Network Qml Quick
+             QuickControls2 Sql)
 # Colors fenced code by language; found here, where every target that links the UI sees it.
 # 6.13 is what Debian trixie ships.
 find_package(KF6SyntaxHighlighting 6.13 REQUIRED)
@@ -68,6 +69,18 @@ add_subdirectory(src/ui)
 add_subdirectory(src/gui)
 add_subdirectory(src/cli)
 add_subdirectory(src/gallery)
+
+# Every string the app and the command line show, from qsTr() and tr(), in translations/: the
+# English wording to edit, and any other language beside it. `make translations` reads them out
+# of the code again; jotcore carries them compiled, for both.
+# The command line's completion scripts are not code lupdate can read.
+set_property(TARGET jot PROPERTY QT_EXCLUDE_SOURCES_FROM_TRANSLATION
+    "${PROJECT_SOURCE_DIR}/data/completions/*")
+qt_add_translations(jotcore
+    SOURCE_TARGETS jotcore jotui jotcli jot jot-gui
+    TS_FILES ${CMAKE_CURRENT_SOURCE_DIR}/translations/jot_en.ts
+    RESOURCE_PREFIX /i18n
+    LUPDATE_OPTIONS -locations none -no-obsolete)
 add_subdirectory(data)
 
 # Built-in themes are compiled in; installed copies are a starting point for
