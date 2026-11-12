@@ -1,0 +1,9 @@
+format: 1
+# Files and folders Jot leaves out, read as a .gitignore is (Settings > Files).
+ignore: [Scratch/]
+# With git sync set up (Settings > Sync), how it commits, as on every computer:
+# gitMessage: "notes: {count} from {device}"
+# gitPull: merge
+# gitCommit: manual
+# gitPush: manual
+# syncEvery: 15

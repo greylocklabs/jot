@@ -154,6 +154,9 @@ void TestNoteEditor::init()
         QVERIFY(QDir().mkpath(QFileInfo(to).path()));
         QVERIFY(QFile::copy(from, to));
     }
+    // Its settings too, as the folder has them, but none of the history or stats kept beside.
+    QVERIFY(QDir().mkpath(m_root + u"/.jot"_s));
+    QVERIFY(QFile::copy(sample + u"/.jot/vault.yaml"_s, m_root + u"/.jot/vault.yaml"_s));
     m_settings = std::make_unique<Settings>(m_dir->filePath(u"settings.ini"_s));
     // The editor reads the Settings singleton, which would otherwise be the user's own file.
     SettingsForeign::s_instance = m_settings.get();
