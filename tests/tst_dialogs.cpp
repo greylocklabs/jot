@@ -42,6 +42,7 @@ private Q_SLOTS:
     void everyModalHasAClose_data();
     void everyModalHasAClose();
     void settingsTabsFitWithoutScrolling();
+    void anEmptyDateReadsAsSomethingToPress();
     void gitSyncStartsFromTheVaultsOwnRepository();
     void themeColorsFinishHoweverClosed();
     void showsAndRestoresPastVersions();
@@ -213,6 +214,26 @@ void TestDialogs::settingsTabsFitWithoutScrolling()
                                     .arg(pane->property("contentHeight").toReal())
                                     .arg(pane->height())));
     }
+}
+
+void TestDialogs::anEmptyDateReadsAsSomethingToPress()
+{
+    QQmlEngine engine;
+    QQmlComponent component(&engine);
+    component.setData("import Jot.Ui\nDatePicker { placeholder: \"Pick a day\" }\n",
+                      QUrl(u"qrc:/test.qml"_s));
+    std::unique_ptr<QObject> picker(component.create());
+    QVERIFY2(picker, qPrintable(component.errorString()));
+    auto *caption =
+        qobject_cast<QQuickItem *>(picker.get())->findChild<QQuickItem *>(u"dateCaption"_s);
+    QVERIFY(caption);
+    const ThemeController *theme = ThemeController::instance();
+    QCOMPARE(caption->property("color").value<QColor>(), theme->accent());
+    QVERIFY(caption->property("color").value<QColor>() != theme->textMuted());
+    picker->setProperty("day", QDateTime(QDate(2026, 11, 14), QTime(0, 0)));
+    QCOMPARE(caption->property("color").value<QColor>(), theme->text());
+    picker->setProperty("enabled", false);
+    QCOMPARE(caption->property("color").value<QColor>(), theme->textFaint());
 }
 
 void TestDialogs::gitSyncStartsFromTheVaultsOwnRepository()

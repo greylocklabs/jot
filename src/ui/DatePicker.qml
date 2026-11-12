@@ -35,12 +35,16 @@ AbstractButton {
     }
     contentItem: Text {
         id: caption
+
+        objectName: "dateCaption"
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
         text: isNaN(root.day.getTime()) ? root.placeholder : Qt.formatDate(root.day,
                                                                            "ddd, MMM d, yyyy")
 
-        color: isNaN(root.day.getTime()) ? Theme.textMuted : Theme.text
+        // No day yet reads as something to press, in the accent, not grayed out as if disabled.
+        color: !root.enabled ? Theme.textFaint : isNaN(root.day.getTime()) ? Theme.accent :
+                                                                             Theme.text
         font.family: Theme.fontFamily
         font.pixelSize: Theme.textMd
         font.weight: Theme.weightBold
