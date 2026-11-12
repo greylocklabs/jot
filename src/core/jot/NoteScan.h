@@ -79,7 +79,8 @@ struct Heading
 /// ![[embeds]] images at the URL `embedUrl` gives for their target (links when it gives
 /// none), and #tags links to `jot-tag:` ones. Images from the web become links to them, so
 /// drawing the note fetches nothing. Embedded sounds become links to `jot-sound:` targets, or
-/// `jot-wiki-sound:` for wikilinks, named for their file when they have no words. Targets are
+/// `jot-wiki-sound:` for wikilinks, and videos to `jot-video:` or `jot-wiki-video:` ones, named
+/// for their file when they have no words. Targets are
 /// percent-encoded. A table of contents marker becomes a list of links to `jot-heading:` targets,
 /// each heading's number from 0. CriticMarkup reads as its edits made, with deletions struck
 /// through and comments in italics. Math becomes the picture at the URL `mathUrl` gives for its

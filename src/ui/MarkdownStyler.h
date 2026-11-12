@@ -37,8 +37,9 @@ class MarkdownStyler : public QObject
     /// The width of the text, which images shown inline fit within.
     Q_PROPERTY(int width READ width WRITE setWidth NOTIFY widthChanged)
     /// The images shown in place of their links, as `{position, source, width, height, audio,
-    /// inline}`, where `position` is where the link's line starts, `audio` says it is a sound to
-    /// play, and `inline` that it is math drawn within a line, at `position`.
+    /// video, inline}`, where `position` is where the link's line starts, `audio` and `video` say
+    /// it is a sound or a video to play, and `inline` that it is math drawn within a line, at
+    /// `position`.
     Q_PROPERTY(QVariantList images READ images NOTIFY imagesChanged)
     /// The tables of contents shown in place of `${toc}` lines, as `{position, rowHeight,
     /// headings}`, each heading `{text, level, position}` with where its line starts and its
