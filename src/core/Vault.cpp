@@ -378,10 +378,16 @@ std::optional<QString> Vault::copyAttachment(const QString &notePath, const QStr
     return path;
 }
 
+QString Vault::escapeLinkPath(QString path)
+{
+    return path.replace(u'%', u"%25"_s).replace(u'#', u"%23"_s).replace(u'?', u"%3F"_s);
+}
+
 QString Vault::linkTarget(const QString &from, const QString &to)
 {
     const QString folder = from.contains(u'/') ? from.section(u'/', 0, -2) : QString();
-    QString target = folder.isEmpty() ? to : QDir(u"/"_s + folder).relativeFilePath(u"/"_s + to);
+    QString target =
+        escapeLinkPath(folder.isEmpty() ? to : QDir(u"/"_s + folder).relativeFilePath(u"/"_s + to));
     if (target.contains(u'(') || target.contains(u')'))
         return u'<' + target + u'>';
     return target.replace(u' ', u"%20"_s);

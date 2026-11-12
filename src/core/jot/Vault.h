@@ -112,6 +112,9 @@ public:
     /// A Markdown link target for `to` written in the note at `from`: relative to the note's
     /// folder, with spaces as %20, and in angle brackets when it holds a parenthesis.
     [[nodiscard]] static QString linkTarget(const QString &from, const QString &to);
+    /// `path` with the characters a link's target reads as more than a name, `%`, `#` and `?`,
+    /// percent-encoded, so it names the file itself.
+    [[nodiscard]] static QString escapeLinkPath(QString path);
 
     /// A path for a new note called `title` in `folder` that nothing has yet:
     /// "Pancakes.md", then "Pancakes 2.md".

@@ -490,6 +490,10 @@ void TestVault::writesLinkTargetsOtherToolsRead_data()
     QTest::newRow("from the top") << u"Pitch.md"_s << u"Cast/Mara.md"_s << u"Cast/Mara.md"_s;
     QTest::newRow("up") << u"Acts/One.md"_s << u"Cast/Mara.md"_s << u"../Cast/Mara.md"_s;
     QTest::newRow("parentheses") << u"Pitch.md"_s << u"Plan (draft).md"_s << u"<Plan (draft).md>"_s;
+    // A hash, a question mark or a percent sign is part of the name, not an anchor or a query.
+    QTest::newRow("hash") << u"Pitch.md"_s << u"Chapter #1.md"_s << u"Chapter%20%231.md"_s;
+    QTest::newRow("question") << u"Pitch.md"_s << u"What?.md"_s << u"What%3F.md"_s;
+    QTest::newRow("percent") << u"Pitch.md"_s << u"100%.md"_s << u"100%25.md"_s;
 }
 
 void TestVault::writesLinkTargetsOtherToolsRead()
