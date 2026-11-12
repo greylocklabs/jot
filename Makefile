@@ -21,10 +21,6 @@ DEBIAN_DEPS := build-essential cmake ninja-build qt6-base-dev qt6-declarative-de
 
 include core/tooling/common.mk
 
-translations: ## Read the strings in the code into translations/jot_en.ts again
-	@$(GENTLY) cmake --preset dev >/dev/null
-	@$(GENTLY) cmake --build --preset dev --target update_translations
-
 site-screenshots: ## Render the website's screenshots into www/screenshots from a release build
 	@$(GENTLY) cmake --preset release >/dev/null
 	@$(GENTLY) cmake --build --preset release --target $(GUI_TARGET)

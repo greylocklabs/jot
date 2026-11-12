@@ -13,11 +13,11 @@
 #include "greylock/Notifications.h"
 #include "greylock/SingleInstance.h"
 #include "greylock/StartAtLogin.h"
+#include "greylock/Translations.h"
 #include "greylock/Tray.h"
 #include "greylock/UpdateCheck.h"
 #include "jot/LogFile.h"
 #include "jot/Settings.h"
-#include "jot/Translations.h"
 
 #include <QCommandLineParser>
 #include <QDBusConnection>
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
 {
     greylock::desktop::useDesktopFileDialogs();
     QGuiApplication app(argc, argv);
-    jot::installTranslations(app);
+    greylock::installTranslations(app);
     // The identity's folder name keeps Qt's own config and data folders apart for a
     // development build, and matches the CLI's.
     app.setApplicationName(greylock::identity::dirName());

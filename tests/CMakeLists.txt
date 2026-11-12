@@ -120,15 +120,6 @@ if(QMLFORMAT)
             ${PROJECT_SOURCE_DIR}/src/ui)
 endif()
 
-# translations/jot_en.ts holding every string the code shows, and no others.
-if(TARGET Qt6::lupdate)
-    add_test(NAME translations_current
-        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/translations_test.sh $<TARGET_FILE:Qt6::lupdate>
-            ${CMAKE_COMMAND} ${Qt6LinguistTools_DIR}/GenerateLUpdateProject.cmake
-            ${CMAKE_BINARY_DIR}/.lupdate/jot_lupdate_project.cmake
-            ${PROJECT_SOURCE_DIR}/translations/jot_en.ts)
-endif()
-
 # The installer jotwriter.org serves, against stand-in systems and a stand-in
 # GitHub release. Release tarballs leave out the site, and the installer only
 # runs on x86_64.
