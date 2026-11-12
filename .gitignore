@@ -9,3 +9,4 @@ node_modules/
 google-oauth-credentials.json
 tests/data/**/.jot/*
 !tests/data/sample-vault/.jot/layout.yaml
+!tests/data/sample-vault/.jot/vault.yaml

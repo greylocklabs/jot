@@ -142,6 +142,9 @@ void TestVaultController::init()
         QVERIFY(QDir().mkpath(QFileInfo(to).path()));
         QVERIFY(QFile::copy(from, to));
     }
+    // Its settings too, as the folder has them, but none of the history or stats kept beside.
+    QVERIFY(QDir().mkpath(m_root + u"/.jot"_s));
+    QVERIFY(QFile::copy(sample + u"/.jot/vault.yaml"_s, m_root + u"/.jot/vault.yaml"_s));
     m_settings = std::make_unique<Settings>(m_dir->filePath(u"settings.ini"_s));
     m_vault = std::make_unique<VaultController>(*m_settings);
     m_vault->setIndexPath(m_dir->filePath(u"index.sqlite"_s));
@@ -198,18 +201,22 @@ void TestVaultController::leavesOutWhatTheVaultIgnores()
     QCOMPARE(m_vault->noteCount(), 16);
     QVERIFY(m_vault->respectsGitignore());
 
-    QVERIFY(m_vault->setIgnore({u"node_modules/"_s, u" "_s}, true));
+    // The sample already leaves its Scratch folder out.
+    QCOMPARE(m_vault->ignorePatterns(), QStringList{u"Scratch/"_s});
+    QVERIFY(m_vault->setIgnore({u"Scratch/"_s, u"node_modules/"_s, u" "_s}, true));
     QCOMPARE(m_vault->noteCount(), 15);
-    QCOMPARE(m_vault->ignorePatterns(), QStringList{u"node_modules/"_s});
+    QCOMPARE(m_vault->ignorePatterns(), (QStringList{u"Scratch/"_s, u"node_modules/"_s}));
 
     const QString notebook = u"Recipes"_s;
     QVERIFY(m_vault->ignoreNotebook(notebook));
-    QCOMPARE(m_vault->ignorePatterns(), (QStringList{u"node_modules/"_s, u'/' + notebook + u'/'}));
+    QCOMPARE(m_vault->ignorePatterns(),
+             (QStringList{u"Scratch/"_s, u"node_modules/"_s, u'/' + notebook + u'/'}));
     QVERIFY(!column(*m_vault->notebooks(), "path").contains(notebook));
 
+    // With nothing ignored, the scratch note and the package's README are notes too.
     QVERIFY(m_vault->setIgnore({}, false));
     QVERIFY(!m_vault->respectsGitignore());
-    QCOMPARE(m_vault->noteCount(), 16);
+    QCOMPARE(m_vault->noteCount(), 17);
     QCOMPARE(Vault(m_root).setting(u"gitignore"_s), u"false"_s);
 }
 
@@ -338,8 +345,8 @@ void TestVaultController::listsTagsThatFold()
 {
     QVERIFY(m_vault->openPath(m_root));
     TagModel &tags = *m_vault->tagTree();
-    QCOMPARE(column(tags, "tag"), (QStringList{u"ashfall"_s, u"baking"_s, u"cast"_s, u"cast/lead"_s,
-                                               u"ferry"_s, u"food"_s}));
+    QCOMPARE(column(tags, "tag"), (QStringList{u"ashfall"_s, u"ashfall/act-two"_s, u"baking"_s,
+                                               u"cast"_s, u"cast/lead"_s, u"ferry"_s, u"food"_s}));
     const int cast = int(column(tags, "tag").indexOf(u"cast"_s));
     QCOMPARE(column(tags, "hasChildren").at(cast), u"true"_s);
     QCOMPARE(column(tags, "name").at(cast + 1), u"lead"_s);
@@ -1826,7 +1833,8 @@ void TestVaultController::listsAndTicksWhatIsLeftToDo()
     // Those due before today stay in Today; the rest have no day.
     QCOMPARE(tasks.view(), u"today"_s);
     QCOMPARE(column(tasks, "title"),
-             (QStringList{u"Groceries"_s, u"Fares for act two"_s, u"Feed the starter"_s}));
+             (QStringList{u"Groceries"_s, u"Fares for act two #ashfall/act-two"_s,
+                          u"Feed the starter"_s}));
     QCOMPARE(column(tasks, "group"), (QStringList{u"Overdue"_s, u"Overdue"_s, u"Overdue"_s}));
     QCOMPARE(tasks.todayCount(), 3);
     tasks.setView(u"all"_s);
@@ -1836,7 +1844,7 @@ void TestVaultController::listsAndTicksWhatIsLeftToDo()
                                                  u"task"_s, u"task"_s, u"task"_s, u"task"_s}));
     QCOMPARE(
         column(tasks, "title"),
-        (QStringList{u"Groceries"_s, u"Fares for act two"_s, u"Feed the starter"_s,
+        (QStringList{u"Groceries"_s, u"Fares for act two #ashfall/act-two"_s, u"Feed the starter"_s,
                      u"decide what he wants by act two"_s, u"Ask playtesters about the stranger"_s,
                      u"watercolor paper"_s, u"oat milk"_s, u"Restock the maple syrup"_s}));
     QCOMPARE(column(tasks, "note").mid(1),
@@ -2089,7 +2097,9 @@ void TestVaultController::syncsWithAGitRepository()
     QVERIFY(SyncController::failedFiles(2, 5).contains(u"shortly"_s));
     QVERIFY(SyncController::failedFiles(2, 0).contains(u"when you sync next"_s));
     QVERIFY(m_vault->setVaultSetting(u"gitMessage"_s, u"  "_s));
-    QVERIFY(!readFile(m_root + u"/.jot/vault.yaml"_s).contains(u"gitMessage"_s));
+    QVERIFY(
+        !readFile(m_root + u"/.jot/vault.yaml"_s)
+             .contains(QRegularExpression(u"^gitMessage:"_s, QRegularExpression::MultilineOption)));
     sync->stop();
     QVERIFY(!sync->git());
 }

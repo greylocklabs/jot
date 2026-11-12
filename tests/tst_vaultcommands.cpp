@@ -63,6 +63,9 @@ void TestVaultCommands::init()
         QVERIFY(QDir().mkpath(QFileInfo(to).path()));
         QVERIFY(QFile::copy(from, to));
     }
+    // Its settings too, as the folder has them, but none of the history or stats kept beside.
+    QVERIFY(QDir().mkpath(root + u"/.jot"_s));
+    QVERIFY(QFile::copy(sample + u"/.jot/vault.yaml"_s, root + u"/.jot/vault.yaml"_s));
     m_vault = std::make_unique<Vault>(root);
     m_index = std::make_unique<VaultIndex>(*m_vault, m_dir->filePath(u"index.sqlite"_s));
     QString error;
