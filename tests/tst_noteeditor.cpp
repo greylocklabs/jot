@@ -2698,10 +2698,40 @@ void TestNoteEditor::completesFrontMatter()
     QTest::keyClick(m_window.get(), Qt::Key_Return);
     QCOMPARE(text(), u"---\ntags: [food\n---\nBody\n"_s);
 
-    // A switch offers off and on; Escape puts them away.
+    // created offers today and now, and a month to pick another day from.
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    type(u"created: "_s);
+    QTRY_VERIFY(items().contains(u"Pick a date..."_s));
+    for (int down = 0; down < items().indexOf(u"Pick a date..."_s); ++down)
+        QTest::keyClick(m_window.get(), Qt::Key_Down);
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    auto *picker = m_editor->findChild<QObject *>(u"createdPicker"_s);
+    auto *calendar = picker->findChild<QObject *>(u"calendar"_s);
+    QTRY_VERIFY(calendar->property("opened").toBool());
+    QVERIFY(calendar->property("opacity").toReal() > 0.9);
+    QVERIFY(QMetaObject::invokeMethod(picker, "picked",
+                                      Q_ARG(QDateTime, QDateTime(QDate(2026, 3, 14), QTime()))));
+    QVERIFY(text().contains(u"created: 2026-03-14\n"_s));
+    // Remove the line, so what follows starts where it did.
+    {
+        QString without = text();
+        without.remove(u"\ncreated: 2026-03-14"_s);
+        body->setProperty("text", without);
+        body->setProperty("cursorPosition", int(u"---\ntags: [food"_s.size()));
+    }
+
+    // A switch offers off and on, the one a note without it has marked so; Escape puts them
+    // away.
     QTest::keyClick(m_window.get(), Qt::Key_Return);
     type(u"tasks: "_s);
     QTRY_COMPARE(items(), (QStringList{u"off"_s, u"on"_s}));
+    QVERIFY(popup->property("items")
+                .toList()
+                .at(1)
+                .toMap()
+                .value(u"detail"_s)
+                .toString()
+                .contains(u"(default)"_s));
     QTest::keyClick(m_window.get(), Qt::Key_Escape);
     QTRY_VERIFY(items().isEmpty());
 
