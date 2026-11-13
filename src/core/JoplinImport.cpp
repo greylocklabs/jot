@@ -335,6 +335,10 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
         const JoplinExport::Note *note;
         QString title;
         QString path;
+        /// Where it is in the result's notes.
+        qsizetype line;
+        /// What the file held when planned, for one updated; empty for a new one.
+        QString sha;
     };
     QList<Planned> writes;
     QHash<QString, QString> notePath;
@@ -374,7 +378,10 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
         notePath.insert(note.id, line.path);
         if (line.outcome == JoplinImport::Outcome::Created ||
             line.outcome == JoplinImport::Outcome::Updated)
-            writes.append({&note, title, line.path});
+            writes.append({&note, title, line.path, result.notes.size(),
+                           line.outcome == JoplinImport::Outcome::Updated
+                               ? ledger.notes[note.id].sha
+                               : QString()});
         result.notes.append(line);
     }
     for (auto it = ledger.notes.cbegin(); it != ledger.notes.cend(); ++it) {
@@ -513,7 +520,17 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
         const QString text = fileText(note, write.title, write.path, note.body, true);
 
         if (!dryRun) {
+            // Edited in Jot since it was planned, as the window stays open while importing: the
+            // edit stays, as one made before the import would.
             QString why;
+            if (!write.sha.isEmpty() &&
+                sha(notefile::read(vault.absolute(write.path), &why).value_or(QString())) !=
+                    write.sha) {
+                result.notes[write.line].outcome = JoplinImport::Outcome::ChangedInJot;
+                if (progress)
+                    progress(++written, int(writes.size()));
+                continue;
+            }
             if (!notefile::write(vault.absolute(write.path), text, &why))
                 return fail(QObject::tr("could not write %1: %2").arg(write.path, why));
             if (note.updated.isValid()) {
