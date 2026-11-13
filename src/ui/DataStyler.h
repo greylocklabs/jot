@@ -40,6 +40,8 @@ public:
     /// The lines of `document` that start between `top` and `bottom` in its layout, each as its
     /// number from 1, where it starts, and the height of its first line.
     Q_INVOKABLE static QVariantList lineTops(QQuickTextDocument *document, qreal top, qreal bottom);
+    /// The line of `document`, from 1, that `position` is on.
+    Q_INVOKABLE static int lineNumberAt(QQuickTextDocument *document, int position);
     /// Where the bracket at or just before `position` and its partner are, outside strings;
     /// empty when there is none there or it has no partner.
     Q_INVOKABLE QVariantList brackets(int position) const;

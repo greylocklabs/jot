@@ -247,11 +247,29 @@ void TestNoteEditor::numbersANotesLinesWhenAsked()
     QMetaObject::invokeMethod(toggle, "toggled");
     QVERIFY(m_settings->lineNumbers());
     QTRY_VERIFY(gutter->isVisible());
-    QVERIFY(body->property("leftPadding").toReal() > gutter->width());
+    // In the margin, leaving the text where it was, and never cut off on the left.
+    QCOMPARE(body->property("leftPadding").toReal(), 0.0);
+    QVERIFY(gutter->x() + gutter->width() < 0);
+    QVERIFY(gutter->mapToScene(QPointF()).x() >= 0);
     auto *document = body->property("textDocument").value<QQuickTextDocument *>();
     const QVariantList lines = DataStyler::lineTops(document, 0, 100000);
     QCOMPARE(lines.size(), document->textDocument()->blockCount());
     QTRY_VERIFY(!gutter->childItems().isEmpty());
+    // The cursor's line stands out from the rest, in a smaller monospace font than the note's.
+    body->setProperty("cursorPosition", 0);
+    QTRY_COMPARE(gutter->property("cursorLine").toInt(), 1);
+    const auto number = [gutter](const QString &text) -> QQuickItem * {
+        for (QQuickItem *each : gutter->childItems()) {
+            if (each->property("text").toString() == text)
+                return each;
+        }
+        return nullptr;
+    };
+    QTRY_VERIFY(number(u"1"_s) && number(u"2"_s));
+    QVERIFY(number(u"1"_s)->property("color") != number(u"2"_s)->property("color"));
+    const QFont small = number(u"2"_s)->property("font").value<QFont>();
+    QVERIFY(small.pixelSize() < body->property("font").value<QFont>().pixelSize());
+    QVERIFY(small.family() != body->property("font").value<QFont>().family());
 
     // Beside drawn diagrams, the lines folded away under them have no numbers to pile up.
     m_vault->setCurrent(u"Ashfall/Route.md"_s);

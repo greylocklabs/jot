@@ -501,6 +501,9 @@ Rectangle {
                                                           Theme.editorWidth + 2 * Theme.space7)
             x: Math.max(0, Math.min((flick.width - width) / 2, flick.width - width - marginRoom))
             padding: Theme.space7
+            // Line numbers sit in the margin on the left, which is never too narrow for them.
+            leftPadding: gutter.visible ? Math.max(Theme.space7, gutter.width + Theme.space5) :
+                                          Theme.space7
             // Room under the last line for typewriter scrolling to bring it to the middle.
             bottomPadding: Settings.typewriter && !root.dataFile ? Math.max(Theme.space7,
                                                                             flick.height / 2) :
@@ -847,8 +850,7 @@ Rectangle {
                 selectedTextColor: Theme.text
                 font.family: root.dataFile ? root.monoFamily : root.noteFamily
                 font.pixelSize: root.dataFile ? Theme.textBase : Theme.textLg
-                // Room for line numbers.
-                leftPadding: gutter.visible ? gutter.width + Theme.space3 : 0
+
                 selectByMouse: true
                 persistentSelection: true
                 tabStopDistance: 4 * Theme.space5
@@ -1228,19 +1230,34 @@ Rectangle {
                     kind: root.dataFile ? Vault.currentKind : ""
                 }
 
-                // Line numbers, for the lines in view: always for a data file, and for a note when
-                // asked for. A wrapped line has one number.
+                // Line numbers in the margin left of the text, for the lines in view: always for a
+                // data file, and for a note when asked for. A wrapped line has one number, and the
+                // cursor's is in the accent color.
                 Item {
                     id: gutter
+
+                    /// The cursor's line, from 1.
+                    readonly property int cursorLine: {
+                        body.layoutTick
+                        return gutter.visible && body.textDocument ? dataStyler.lineNumberAt(
+                                                                         body.textDocument,
+                                                                         body.cursorPosition) : 0
+                    }
 
                     objectName: "gutter"
                     z: -1
                     visible: root.dataFile || Settings.lineNumbers
+                    x: -width - Theme.space4
                     width: digits.advanceWidth(String(Math.max(body.lineCount, 99)))
                     height: body.height
 
                     FontMetrics {
                         id: digits
+                        font.family: Theme.monoFontFamily
+                        font.pixelSize: Theme.textSm
+                    }
+                    FontMetrics {
+                        id: lineMetrics
                         font: body.font
                     }
                     Repeater {
@@ -1257,15 +1274,19 @@ Rectangle {
 
                             // None for a line folded away under a drawn diagram or math, and
                             // at the top of one as tall as a drawing.
-                            visible: modelData.height >= digits.height / 2
+                            visible: modelData.height >= lineMetrics.height / 2
                             width: gutter.width
-                            height: Math.min(modelData.height, 2 * digits.height)
+                            height: Math.min(modelData.height, 2 * lineMetrics.height)
                             y: body.topPadding + modelData.y
                             horizontalAlignment: Text.AlignRight
                             verticalAlignment: Text.AlignVCenter
                             text: modelData.number
-                            color: Theme.textFaint
-                            font: body.font
+                            color: modelData.number === gutter.cursorLine ? Theme.accent :
+                                                                            Theme.textFaint
+                            font.family: Theme.monoFontFamily
+                            font.pixelSize: Theme.textSm
+                            font.weight: modelData.number === gutter.cursorLine ? Theme.weightBold :
+                                                                                  Font.Normal
                         }
                     }
                 }
