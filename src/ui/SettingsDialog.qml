@@ -782,7 +782,7 @@ Popup {
                         StickerButton {
                             objectName: "connectGit"
                             accent: true
-                            enabled: !Vault.sync.checking && gitUrl.text.trim() !== ""
+                            enabled: !root.syncBusy && gitUrl.text.trim() !== ""
                             text: Vault.sync.checking ? qsTr("Checking...") : qsTr("Connect")
                             onClicked: {
                                 bucketForm.connecting = true
@@ -828,7 +828,7 @@ Popup {
                         StickerButton {
                             objectName: "connectDropbox"
                             accent: true
-                            enabled: !Vault.sync.checking && dropboxCode.text.trim() !== ""
+                            enabled: !root.syncBusy && dropboxCode.text.trim() !== ""
                             text: Vault.sync.checking ? qsTr("Checking...") : qsTr("Connect")
                             onClicked: {
                                 bucketForm.connecting = true
@@ -864,7 +864,7 @@ Popup {
                         StickerButton {
                             objectName: "connectDrive"
                             accent: true
-                            enabled: !Vault.sync.checking
+                            enabled: !root.syncBusy
                             text: Vault.sync.checking ? qsTr("Waiting for Google...") : qsTr(
                                                             "Sign in to Google...")
                             onClicked: {
@@ -943,7 +943,7 @@ Popup {
                         StickerButton {
                             objectName: "connectBucket"
                             accent: true
-                            enabled: !Vault.sync.checking && bucketEndpoint.text !== ""
+                            enabled: !root.syncBusy && bucketEndpoint.text !== ""
                                      && bucketRegion.text !== "" && bucketName.text !== ""
                                      && bucketKey.text !== "" && bucketSecret.text !== ""
                             text: Vault.sync.checking ? qsTr("Checking...") : qsTr("Connect")
