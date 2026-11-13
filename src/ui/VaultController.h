@@ -9,6 +9,7 @@
 #include "TaskModel.h"
 #include "TrashModel.h"
 
+#include "jot/JoplinImport.h"
 #include "jot/Layout.h"
 #include "jot/NoteTrail.h"
 #include "jot/Vault.h"
@@ -17,8 +18,10 @@
 
 #include <QFile>
 #include <QObject>
+#include <QPointer>
 #include <QQmlEngine>
 #include <QStandardPaths>
+#include <QThread>
 #include <QTimer>
 #include <QUrl>
 #include <QVariantMap>
@@ -132,6 +135,11 @@ class VaultController : public QObject
     /// What went wrong with the note shown, such as a save that failed and is being
     /// retried; empty when all is well.
     Q_PROPERTY(QString problem READ problem NOTIFY problemChanged)
+    /// A Joplin import, or a look at what one would do, is under way in the background.
+    Q_PROPERTY(bool importingJoplin READ importingJoplin NOTIFY joplinImportChanged)
+    /// Of the notes the import under way writes, how many are written so far.
+    Q_PROPERTY(int joplinImportDone READ joplinImportDone NOTIFY joplinImportChanged)
+    Q_PROPERTY(int joplinImportTotal READ joplinImportTotal NOTIFY joplinImportChanged)
 
 public:
     explicit VaultController(Settings &settings, QObject *parent = nullptr);
@@ -382,7 +390,13 @@ public:
     /// came from, the counts `created`, `updated`, `unchanged`, `notebooks`, `attachments` and
     /// `versions`, and the lists `keptEdits` (notes left as edited in Jot), `notBroughtBack` and
     /// `skipped`.
-    Q_INVOKABLE QVariantMap importJoplin(const QUrl &file, const QString &folder, bool dryRun);
+    QVariantMap importJoplin(const QUrl &file, const QString &folder, bool dryRun);
+    /// importJoplin() in the background, ending with joplinImportFinished(). Nothing while
+    /// another is under way.
+    Q_INVOKABLE void startJoplinImport(const QUrl &file, const QString &folder, bool dryRun);
+    [[nodiscard]] bool importingJoplin() const { return m_joplinThread != nullptr; }
+    [[nodiscard]] int joplinImportDone() const { return m_joplinDone; }
+    [[nodiscard]] int joplinImportTotal() const { return m_joplinTotal; }
     /// The past versions of the note at `path`, newest first, each a map with `path` (the
     /// version's own vault path), `written`, and `label`, when it was written in words.
     Q_INVOKABLE QVariantList historyOf(const QString &path) const;
@@ -510,8 +524,17 @@ Q_SIGNALS:
     /// The editor should put the cursor here in the note shown, as the editor counts
     /// characters: line breaks as one, without a byte order mark.
     void revealPosition(int position);
+    void joplinImportChanged();
+    /// A startJoplinImport() finished, with the map importJoplin() gives.
+    void joplinImportFinished(const QVariantMap &summary);
 
 private:
+    /// Why a Joplin import cannot start now, as a failed summary, or nothing.
+    std::optional<QVariantMap> joplinCannotStart(bool dryRun);
+    /// Shows what an import into this vault wrote, unless another vault is open now, and says
+    /// what it did.
+    QVariantMap joplinFinished(const QString &file, bool dryRun, bool sameVault,
+                               const std::optional<jot::JoplinImport> &done, const QString &error);
     void close();
     void notesChangedOnDisk(const QStringList &paths);
     void reloadModels();
@@ -578,6 +601,9 @@ private:
     std::unique_ptr<Vault> m_vault;
     std::unique_ptr<VaultIndex> m_index;
     std::unique_ptr<VaultWatcher> m_watcher;
+    QPointer<QThread> m_joplinThread;
+    int m_joplinDone = 0;
+    int m_joplinTotal = 0;
     NotebookModel m_notebooks;
     TagModel m_tagTree;
     NoteListModel m_notes;

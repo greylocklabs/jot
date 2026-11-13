@@ -458,11 +458,26 @@ void TestDialogs::importsFromTheJoplinOnThisComputer()
     QMetaObject::invokeMethod(dialog.get(), "start", Q_ARG(QVariant, QString()));
     QTRY_VERIFY(dialog->property("opened").toBool());
     auto *content = dialog->property("contentItem").value<QQuickItem *>();
+    auto *counts = content->findChild<QQuickItem *>(u"importCounts"_s);
+    QTRY_COMPARE(counts->property("text").toString(), u"1 new note"_s);
     QCOMPARE(content->findChild<QQuickItem *>(u"importSource"_s)->property("text").toString(),
              u"From the Joplin app on this computer"_s);
-    QCOMPARE(content->findChild<QQuickItem *>(u"importCounts"_s)->property("text").toString(),
-             u"1 new note"_s);
     QVERIFY(content->findChild<QQuickItem *>(u"chooseExport"_s)->isVisible());
+
+    // Importing runs in the background: Import waits, and says so, until it is done.
+    auto *confirm = content->findChild<QQuickItem *>(u"confirmImport"_s);
+    QMetaObject::invokeMethod(confirm, "clicked");
+    QVERIFY(m_vault->importingJoplin());
+    QVERIFY(!confirm->isEnabled());
+    QVERIFY(confirm->property("text").toString().startsWith(u"Importing"_s));
+    QVERIFY(!content->findChild<QQuickItem *>(u"chooseExport"_s)->isVisible());
+    // Closing leaves it running, and the summary comes back when it finishes.
+    QMetaObject::invokeMethod(dialog.get(), "close");
+    QTRY_VERIFY(!m_vault->importingJoplin());
+    QTRY_VERIFY(dialog->property("opened").toBool());
+    QVERIFY(dialog->property("imported").toBool());
+    QCOMPARE(counts->property("text").toString(), u"1 new note"_s);
+    QVERIFY(!confirm->isVisible());
 }
 
 void TestDialogs::asksBeforeTrashingSharedAttachments()

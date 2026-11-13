@@ -651,6 +651,18 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Importing...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Importing %1 of %2...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Looking at what to import...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>1 note unchanged since the last import</source>
         <translation type="unfinished"></translation>
     </message>
@@ -680,6 +692,10 @@
     </message>
     <message>
         <source>Done</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Close</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

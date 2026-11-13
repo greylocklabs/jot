@@ -105,6 +105,7 @@ private Q_SLOTS:
     void keepsAnUndoStepThatCouldNotBeWritten();
     void addsToDosToTheInbox();
     void importsFromJoplinAfterSayingWhatItWouldDo();
+    void importsFromJoplinInTheBackground();
     void anImportShowsWhatItWroteToTheNoteOpen();
     void anImportThatFailsPartwayStillShowsWhatItWrote();
     void nothingIsImportedOverTypingThatCannotBeSaved();
@@ -2427,6 +2428,45 @@ void TestVaultController::importsFromJoplinAfterSayingWhatItWouldDo()
         m_vault->importJoplin(QUrl::fromLocalFile(m_dir->filePath(u"missing.jex"_s)), {}, true);
     QVERIFY(!bad.value(u"ok"_s).toBool());
     QVERIFY(!bad.value(u"error"_s).toString().isEmpty());
+}
+
+void TestVaultController::importsFromJoplinInTheBackground()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    const int before = m_vault->noteCount();
+    const QString jex = m_dir->filePath(u"export.jex"_s);
+    QFile file(jex);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write(tar({{u"n1.md"_s, item(u"First"_s, u"One."_s,
+                                      u"id: 00000000000000000000000000000001\n"
+                                      u"encryption_applied: 0\ntype_: 1"_s)},
+                    {u"n2.md"_s, item(u"Second"_s, u"Two."_s,
+                                      u"id: 00000000000000000000000000000002\n"
+                                      u"encryption_applied: 0\ntype_: 1"_s)}}));
+    file.close();
+
+    QSignalSpy finished(m_vault.get(), &VaultController::joplinImportFinished);
+    QSignalSpy progress(m_vault.get(), &VaultController::joplinImportChanged);
+    m_vault->startJoplinImport(QUrl::fromLocalFile(jex), u"Inbox"_s, false);
+    QVERIFY(m_vault->importingJoplin());
+    // A second one waits for the first.
+    m_vault->startJoplinImport(QUrl::fromLocalFile(jex), u"Inbox"_s, false);
+    QVERIFY(finished.wait(10000));
+    QCOMPARE(finished.count(), 1);
+    QVERIFY(!m_vault->importingJoplin());
+    const QVariantMap done = finished.first().first().toMap();
+    QVERIFY(done.value(u"ok"_s).toBool());
+    QCOMPARE(done.value(u"created"_s).toInt(), 2);
+    QCOMPARE(m_vault->joplinImportDone(), 2);
+    QCOMPARE(m_vault->joplinImportTotal(), 2);
+    QVERIFY(progress.count() >= 3);
+    QCOMPARE(m_vault->noteCount(), before + 2);
+
+    // One that cannot be read says so the same way.
+    finished.clear();
+    m_vault->startJoplinImport(QUrl::fromLocalFile(m_dir->filePath(u"missing.jex"_s)), {}, true);
+    QVERIFY(finished.count() == 1 || finished.wait(10000));
+    QVERIFY(!finished.first().first().toMap().value(u"ok"_s).toBool());
 }
 
 void TestVaultController::anImportShowsWhatItWroteToTheNoteOpen()
