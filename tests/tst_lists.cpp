@@ -407,7 +407,10 @@ void TestLists::leavesRoomUnderTheTitleBar()
     QVERIFY(tasks);
     // With an emoji of its own, as Trash has.
     QVERIFY(findItem(
-        [](QQuickItem *item) { return item->property("text").toString() == u"\u2705  Tasks"_s; },
+        [](QQuickItem *item) {
+            return item->property("emoji").toString() == u"\u2705"_s &&
+                   item->property("text").toString() == u"Tasks"_s;
+        },
         tasks));
     QVERIFY(tasks->mapToScene({0, 0}).y() >= ThemeController::instance()->space3());
 }
@@ -422,7 +425,8 @@ void TestLists::renamesANotebookByDoubleClick()
     const std::function<QQuickItem *(QQuickItem *)> named =
         [&named](QQuickItem *at) -> QQuickItem * {
         for (QQuickItem *child : at->childItems()) {
-            if (child->property("text").toString() == u"\U0001F3AD  Places"_s && child->isVisible())
+            if (child->property("emoji").toString() == u"\U0001F3AD"_s &&
+                child->property("text").toString() == u"Places"_s && child->isVisible())
                 return child;
             if (QQuickItem *found = named(child))
                 return found;
@@ -438,9 +442,7 @@ void TestLists::renamesANotebookByDoubleClick()
     QQuickItem *label = nullptr;
     QTRY_VERIFY((places = entry(u"Places"_s)) && (label = named(places)) &&
                 places->property("selected").toBool());
-    const qreal nameX =
-        label->mapToScene({0, 0}).x() +
-        QFontMetricsF(label->property("font").value<QFont>()).horizontalAdvance(u"\U0001F3AD  "_s);
+    const qreal nameX = label->mapToScene({label->property("nameX").toReal(), 0}).x();
     const auto renaming = [this] {
         return m_sidebar->property("renamingPath").toString() == u"Ashfall/Places"_s;
     };
@@ -752,16 +754,16 @@ void TestLists::trashSitsAtTheFootWithItsOwnHighlight()
 
     // Its emoji changes and goes as a notebook's does.
     const auto shown = [&] {
-        QQuickItem *text = findItem(
-            [](QQuickItem *item) { return item->property("text").toString().endsWith(u"Trash"_s); },
+        QQuickItem *label = findItem(
+            [](QQuickItem *item) { return item->property("text").toString() == u"Trash"_s; },
             trash);
-        return text ? text->property("text").toString() : QString();
+        return label ? label->property("emoji").toString() : u"none"_s;
     };
-    QCOMPARE(shown(), Layout::defaultEmoji(u"trash"_s) + u"  Trash"_s);
+    QCOMPARE(shown(), Layout::defaultEmoji(u"trash"_s));
     QVERIFY(m_vault->setViewEmoji(u"trash"_s, u"\U0001F9FA"_s));
-    QTRY_COMPARE(shown(), u"\U0001F9FA  Trash"_s);
+    QTRY_COMPARE(shown(), u"\U0001F9FA"_s);
     QVERIFY(m_vault->setViewEmoji(u"trash"_s, {}));
-    QTRY_COMPARE(shown(), u"Trash"_s);
+    QTRY_COMPARE(shown(), QString());
 
     // A trashed note's two lines sit in the middle of its row.
     QVERIFY(m_vault->trashNote(u"Recipes/Sourdough.md"_s, false));
