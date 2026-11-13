@@ -120,6 +120,7 @@ private Q_SLOTS:
     void viStatusLineGivesWayAsItNarrows();
     void completesFrontMatter();
     void hidesCountsButNotTargets();
+    void rightClickOffersEditing();
     void savesByHandFromTheBar();
     void showsTheClosingFenceWithRoomBelow();
     void suggestsOnlyWhileTypingInVi();
@@ -2964,6 +2965,44 @@ void TestNoteEditor::viStatusLineGivesWayAsItNarrows()
     QTRY_VERIFY(clear());
     QVERIFY(name);
     editor->setWidth(1000);
+}
+
+void TestNoteEditor::rightClickOffersEditing()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    body->forceActiveFocus();
+    body->setProperty("text", u"Plain words here.\n"_s);
+    auto *menu = m_editor->findChild<QObject *>(u"editMenu"_s);
+    const auto entry = [this](const QString &name) { return m_editor->findChild<QObject *>(name); };
+    const auto rightClick = [&](int position) {
+        QRectF at;
+        QMetaObject::invokeMethod(body, "positionToRectangle", Q_RETURN_ARG(QRectF, at),
+                                  Q_ARG(int, position));
+        QTest::mouseClick(m_window.get(), Qt::RightButton, {},
+                          body->mapToScene(at.center()).toPoint());
+        QTRY_VERIFY(menu->property("opened").toBool());
+    };
+    // With nothing picked, nothing to cut or copy, or format; the cursor goes where clicked.
+    rightClick(6);
+    QCOMPARE(body->property("cursorPosition").toInt(), 6);
+    QVERIFY(!entry(u"editCut"_s)->property("enabled").toBool());
+    QVERIFY(!entry(u"editCopy"_s)->property("enabled").toBool());
+    QVERIFY(!entry(u"editFormat"_s)->property("enabled").toBool());
+    QMetaObject::invokeMethod(menu, "close");
+    // Picked, they are, and a right click inside keeps it picked.
+    body->setProperty("selectionStart", 0);
+    QMetaObject::invokeMethod(body, "select", Q_ARG(int, 0), Q_ARG(int, 5));
+    rightClick(2);
+    QCOMPARE(body->property("selectedText").toString(), u"Plain"_s);
+    QVERIFY(entry(u"editCopy"_s)->property("enabled").toBool());
+    QVERIFY(entry(u"editFormat"_s)->property("enabled").toBool());
+    QMetaObject::invokeMethod(
+        entry(u"editFormat"_s)->findChildren<QObject *>().isEmpty() ? menu : menu, "close");
+    // Select all picks the whole note.
+    rightClick(3);
+    QMetaObject::invokeMethod(entry(u"editSelectAll"_s), "triggered");
+    QCOMPARE(body->property("selectedText").toString(), u"Plain words here.\n"_s);
 }
 
 void TestNoteEditor::keepsOneCursorAcrossViModes()
