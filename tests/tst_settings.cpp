@@ -457,6 +457,16 @@ void TestSettings::keepsChosenShortcutsWithThePreferences()
     settings.reset();
     QVERIFY(settings.keys().isEmpty());
     QVERIFY(Settings(path).keys().isEmpty());
+
+    // Written by hand, a comma in a key stays part of it, quoted or not; two keys are quoted,
+    // since a semicolon starts a comment.
+    QVERIFY(file.open(QIODevice::Append | QIODevice::Text));
+    file.write("\n[keys]\nsettings=\"Ctrl+,; F12\"\nnewNote=Ctrl+,\nbold=Ctrl+J\n");
+    file.close();
+    const Settings edited(path);
+    QCOMPARE(edited.keys().value(u"settings"_s).toString(), u"Ctrl+,; F12"_s);
+    QCOMPARE(edited.keys().value(u"newNote"_s).toString(), u"Ctrl+,"_s);
+    QCOMPARE(edited.keys().value(u"bold"_s).toString(), u"Ctrl+J"_s);
 }
 
 QTEST_GUILESS_MAIN(TestSettings)
