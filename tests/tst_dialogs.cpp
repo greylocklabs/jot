@@ -46,6 +46,7 @@ private Q_SLOTS:
     void anEmptyDateReadsAsSomethingToPress();
     void gitSyncStartsFromTheVaultsOwnRepository();
     void stopSyncingSitsApartFromTheSyncButtons();
+    void syncButtonsWaitWhileBusy();
     void themeColorsFinishHoweverClosed();
     void showsAndRestoresPastVersions();
     void importsFromTheJoplinOnThisComputer();
@@ -315,6 +316,43 @@ void TestDialogs::stopSyncingSitsApartFromTheSyncButtons()
 
     sync->stop();
     QVERIFY(!sync->configured());
+}
+
+void TestDialogs::syncButtonsWaitWhileBusy()
+{
+    QQuickWindow window;
+    window.resize(900, 700);
+    window.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&window));
+    QQmlEngine engine;
+    QQmlComponent component(&engine);
+    component.setData("import Jot.Ui\nSettingsDialog {}\n", QUrl(u"qrc:/test.qml"_s));
+    std::unique_ptr<QObject> settings(component.create());
+    QVERIFY2(settings, qPrintable(component.errorString()));
+    settings->setProperty("parent", QVariant::fromValue(window.contentItem()));
+    settings->setProperty("tab", u"sync"_s);
+    QMetaObject::invokeMethod(settings.get(), "open");
+    QTRY_VERIFY(settings->property("opened").toBool());
+    auto *content = settings->property("contentItem").value<QQuickItem *>();
+    const QStringList starts{u"syncWithGit"_s, u"syncWithBucket"_s, u"syncWithDrive"_s,
+                             u"syncWithDropbox"_s};
+    const auto enabled = [&](const QString &name) {
+        QQuickItem *button = content->findChild<QQuickItem *>(name);
+        return button && button->isEnabled();
+    };
+    QVERIFY(enabled(u"syncWithGit"_s));
+    // While a bucket is checked, nothing else starts.
+    SyncController *sync = m_vault->sync();
+    sync->syncWithBucket(u"http://127.0.0.1:9"_s, u"us-east-1"_s, u"notes"_s, {}, u"id"_s,
+                         u"secret"_s);
+    QVERIFY(sync->checking());
+    for (const QString &name : starts) {
+        if (QQuickItem *button = content->findChild<QQuickItem *>(name);
+            button && button->isVisible())
+            QVERIFY2(!button->isEnabled(), qPrintable(name));
+    }
+    QTRY_VERIFY_WITH_TIMEOUT(!sync->checking(), 15000);
+    QTRY_VERIFY(enabled(u"syncWithGit"_s));
 }
 
 void TestDialogs::themeColorsFinishHoweverClosed()

@@ -122,7 +122,8 @@ Popup {
             StickerButton {
                 objectName: "commitNow"
                 accent: true
-                enabled: root.files.length > 0 && message.text.trim() !== ""
+                // Not while a sync runs, which the commit would have to wait behind.
+                enabled: root.files.length > 0 && message.text.trim() !== "" && !Vault.sync.syncing
                 text: Vault.sync.manualPushes ? qsTr("Commit") : qsTr("Commit and push")
                 onClicked: root.commit()
             }

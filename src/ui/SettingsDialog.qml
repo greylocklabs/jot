@@ -26,6 +26,8 @@ Popup {
     /// Which group of settings shows: "general", "writing", "tasks", "sync", "appearance",
     /// "keyboard" or "developer".
     property string tab: "general"
+    /// A sync, or a check of where to sync, is under way: what would start or stop one waits.
+    readonly property bool syncBusy: Vault.sync.syncing || Vault.sync.checking
     /// The tab list's width: its longest label's.
     readonly property real tabsWidth: {
         let widest = 0
@@ -650,7 +652,7 @@ Popup {
                             onClicked: Vault.sync.push()
                         }
                         StickerButton {
-                            enabled: Vault.isOpen && Vault.writable
+                            enabled: Vault.isOpen && Vault.writable && !root.syncBusy
                             text: Vault.sync.configured ? qsTr("Sync with a folder instead...") :
                                                           qsTr("Sync with a folder...")
                             onClicked: syncFolderDialog.open()
@@ -658,7 +660,7 @@ Popup {
                         StickerButton {
                             objectName: "syncWithDropbox"
                             visible: Vault.sync.dropboxAvailable
-                            enabled: Vault.isOpen && Vault.writable
+                            enabled: Vault.isOpen && Vault.writable && !root.syncBusy
                             text: qsTr("Sync with Dropbox...")
                             onClicked: {
                                 dropboxForm.visible = !dropboxForm.visible
@@ -670,7 +672,7 @@ Popup {
                         StickerButton {
                             objectName: "syncWithDrive"
                             visible: Vault.sync.driveAvailable
-                            enabled: Vault.isOpen && Vault.writable && !Vault.sync.checking
+                            enabled: Vault.isOpen && Vault.writable && !root.syncBusy
                             text: qsTr("Sync with Google Drive...")
                             onClicked: {
                                 driveForm.visible = !driveForm.visible
@@ -682,7 +684,7 @@ Popup {
                         StickerButton {
                             objectName: "syncWithGit"
                             visible: Vault.sync.gitAvailable
-                            enabled: Vault.isOpen && Vault.writable
+                            enabled: Vault.isOpen && Vault.writable && !root.syncBusy
                             text: qsTr("Sync with git...")
                             onClicked: {
                                 gitForm.visible = !gitForm.visible
@@ -695,7 +697,7 @@ Popup {
                         }
                         StickerButton {
                             objectName: "syncWithBucket"
-                            enabled: Vault.isOpen && Vault.writable
+                            enabled: Vault.isOpen && Vault.writable && !root.syncBusy
                             text: qsTr("Sync with S3...")
                             onClicked: {
                                 bucketForm.visible = !bucketForm.visible
@@ -707,6 +709,7 @@ Popup {
                     }
                     StickerButton {
                         objectName: "stopSyncing"
+                        enabled: !root.syncBusy
                         visible: Vault.sync.configured
                         text: qsTr("Stop syncing")
                         onClicked: Vault.sync.stop()
