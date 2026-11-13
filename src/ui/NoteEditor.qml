@@ -1376,7 +1376,9 @@ Rectangle {
                         opacity: 0
                         width: 1
                         height: parent.height
-                        // Only the month it opens is seen or reached.
+                        // Only the month it opens is seen or reached; the button itself takes no
+                        // click, which the editor's text under it should have.
+                        enabled: false
                         activeFocusOnTab: false
                         focusPolicy: Qt.NoFocus
                         Accessible.ignored: true
