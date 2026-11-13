@@ -2649,6 +2649,19 @@ void TestNoteEditor::completesFrontMatter()
     QTest::keyClick(m_window.get(), Qt::Key_Escape);
     QTRY_VERIFY(items().isEmpty());
 
+    // In a list under the key, the item being typed, and only it, is replaced.
+    body->setProperty("text", u"---\ntags:\n  - fo\n---\nBody\n"_s);
+    body->setProperty("cursorPosition", int(u"---\ntags:\n  - fo"_s.size()));
+    type(u"o"_s);
+    QTRY_COMPARE(items(), QStringList{u"food"_s});
+    QTest::keyClick(m_window.get(), Qt::Key_Tab);
+    QCOMPARE(text(), u"---\ntags:\n  - food\n---\nBody\n"_s);
+    // After a space, picking adds rather than replacing what was typed.
+    type(u" "_s);
+    QTRY_VERIFY(!items().isEmpty());
+    QTest::keyClick(m_window.get(), Qt::Key_Escape);
+    QVERIFY(text().startsWith(u"---\ntags:\n  - food \n"_s));
+
     // Nothing is offered in the body.
     body->setProperty("cursorPosition", int(text().size()));
     type(u"ta"_s);

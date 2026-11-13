@@ -189,6 +189,7 @@ bool VaultController::openPath(const QString &path)
 void VaultController::close()
 {
     saveNow();
+    m_frontMatterKeys.reset();
     m_sync.setVault({}, {});
     // Clears the editor and any problem with the note, which belonged to this vault.
     m_current.clear();
@@ -2608,7 +2609,6 @@ void VaultController::reloadModels()
     m_sync.localChanged();
     Q_EMIT currentConflictsChanged();
     m_notebookEmoji.clear();
-    m_frontMatterKeys.reset();
     m_favorites.clear();
     m_hidden.clear();
     if (m_vault) {
