@@ -41,6 +41,7 @@ const QString kOutlineShown = u"editor/outline"_s;
 const QString kColumnsHidden = u"layout/columnsHidden"_s;
 const QString kFocusMode = u"editor/focusMode"_s;
 const QString kTypewriter = u"editor/typewriter"_s;
+const QString kLineNumbers = u"editor/lineNumbers"_s;
 const QString kNoteFont = u"editor/font"_s;
 const QString kSidebarWidth = u"layout/sidebarWidth"_s;
 const QString kNoteListWidth = u"layout/noteListWidth"_s;
@@ -120,6 +121,7 @@ Settings::Settings(const QString &path, QObject *parent)
     m_columnsHidden = get(kColumnsHidden, false).toBool();
     m_focusMode = get(kFocusMode, false).toBool();
     m_typewriter = get(kTypewriter, false).toBool();
+    m_lineNumbers = get(kLineNumbers, false).toBool();
     m_noteFont = get(kNoteFont).toString();
     m_sidebarWidth = bounded(get(kSidebarWidth, 0).toInt(), kMinSidebarWidth, kMaxSidebarWidth);
     m_noteListWidth = bounded(get(kNoteListWidth, 0).toInt(), kMinNoteListWidth, kMaxNoteListWidth);
@@ -451,6 +453,15 @@ void Settings::setTypewriter(bool on)
     Q_EMIT focusChanged();
 }
 
+void Settings::setLineNumbers(bool on)
+{
+    if (m_lineNumbers == on)
+        return;
+    m_lineNumbers = on;
+    put(kLineNumbers, on);
+    Q_EMIT lineNumbersChanged();
+}
+
 void Settings::setReadMode(bool read)
 {
     if (m_readMode == read)
@@ -605,6 +616,7 @@ void Settings::reset()
     setColumnsHidden(false);
     setFocusMode(false);
     setTypewriter(false);
+    setLineNumbers(false);
     setTasksView(u"today"_s);
     setTasksSort(u"due"_s);
     setTasksSortDescending(false);

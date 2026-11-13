@@ -854,8 +854,8 @@ Rectangle {
                 selectedTextColor: Theme.text
                 font.family: root.dataFile ? root.monoFamily : root.noteFamily
                 font.pixelSize: root.dataFile ? Theme.textBase : Theme.textLg
-                // Room for line numbers beside a data file.
-                leftPadding: root.dataFile ? gutter.width + Theme.space3 : 0
+                // Room for line numbers.
+                leftPadding: gutter.visible ? gutter.width + Theme.space3 : 0
                 selectByMouse: true
                 persistentSelection: true
                 tabStopDistance: 4 * Theme.space5
@@ -1145,13 +1145,14 @@ Rectangle {
                     kind: root.dataFile ? Vault.currentKind : ""
                 }
 
-                // A data file's line numbers, for the lines in view.
+                // Line numbers, for the lines in view: always for a data file, and for a note when
+                // asked for. A wrapped line has one number.
                 Item {
                     id: gutter
 
                     objectName: "gutter"
                     z: -1
-                    visible: root.dataFile
+                    visible: root.dataFile || Settings.lineNumbers
                     width: digits.advanceWidth(String(Math.max(body.lineCount, 99)))
                     height: body.height
 
@@ -1162,18 +1163,20 @@ Rectangle {
                     Repeater {
                         model: {
                             body.layoutTick
-                            if (!root.dataFile || !dataStyler.document)
+                            if (!gutter.visible || !body.textDocument)
                                 return []
                             const top = flick.contentY - page.y - body.y
-                            return dataStyler.lineTops(top, top + flick.height)
+                            return dataStyler.lineTops(body.textDocument, top, top + flick.height)
                         }
 
                         Text {
                             required property var modelData
 
                             width: gutter.width
+                            height: modelData.height
                             y: body.topPadding + modelData.y
                             horizontalAlignment: Text.AlignRight
+                            verticalAlignment: Text.AlignVCenter
                             text: modelData.number
                             color: Theme.textFaint
                             font: body.font

@@ -483,6 +483,13 @@ Popup {
                         checked: Settings.typewriter
                         onToggled: Settings.typewriter = checked
                     }
+                    Toggle {
+                        objectName: "lineNumbers"
+                        width: parent.width
+                        text: qsTr("Show line numbers beside notes")
+                        checked: Settings.lineNumbers
+                        onToggled: Settings.lineNumbers = checked
+                    }
                 }
 
                 Section {

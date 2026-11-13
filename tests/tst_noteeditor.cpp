@@ -61,6 +61,7 @@ private Q_SLOTS:
     void cleanup();
 
     void drawsTheNoteAndKeepsDrawingItAcrossSwitches();
+    void numbersANotesLinesWhenAsked();
     void opensALongNoteAtTheTop();
     void theTitleFollowsAnEditedTitleKey();
     void aTickFromTheTaskViewKeepsTheEditorsUndo();
@@ -193,6 +194,35 @@ void TestNoteEditor::cleanup()
     VaultController::setInstance(nullptr);
     m_vault.reset();
     SettingsForeign::s_instance = nullptr;
+}
+
+void TestNoteEditor::numbersANotesLinesWhenAsked()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    QQuickItem *gutter = find(u"gutter"_s);
+    QVERIFY(!gutter->isVisible());
+    QCOMPARE(body->property("leftPadding").toReal(), 0.0);
+
+    // The toggle in the bar turns them on, one number for each line however it wraps.
+    QQuickItem *toggle = find(u"linesToggle"_s);
+    QVERIFY(toggle->isVisible());
+    QMetaObject::invokeMethod(toggle, "toggle");
+    QMetaObject::invokeMethod(toggle, "toggled");
+    QVERIFY(m_settings->lineNumbers());
+    QTRY_VERIFY(gutter->isVisible());
+    QVERIFY(body->property("leftPadding").toReal() > gutter->width());
+    auto *document = body->property("textDocument").value<QQuickTextDocument *>();
+    const QVariantList lines = DataStyler::lineTops(document, 0, 100000);
+    QCOMPARE(lines.size(), document->textDocument()->blockCount());
+    QTRY_VERIFY(!gutter->childItems().isEmpty());
+
+    // Read shows the note without them, and without the toggle.
+    m_settings->setReadMode(true);
+    QTRY_VERIFY(!toggle->isVisible());
+    m_settings->setReadMode(false);
+    m_settings->setLineNumbers(false);
+    QTRY_VERIFY(!gutter->isVisible());
 }
 
 int TestNoteEditor::inkBelowTitle()
@@ -1894,7 +1924,7 @@ void TestNoteEditor::colorsNumbersAndChecksDataFiles()
     }));
 
     // A number for each line in view, and none for lines that are not there.
-    QCOMPARE(styler->lineTops(0, 100000).size(), 5);
+    QCOMPARE(DataStyler::lineTops(styler->document(), 0, 100000).size(), 5);
     QVERIFY(find(u"gutter"_s)->isVisible());
 
     // The brackets around a record pair up, while one inside a string is passed over.

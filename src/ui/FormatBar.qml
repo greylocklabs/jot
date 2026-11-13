@@ -342,6 +342,19 @@ Rectangle {
                                                      "outline")
                 onToggled: Settings.outlineShown = checked
             }
+            Toggle {
+                id: linesToggle
+
+                objectName: "linesToggle"
+                anchors.verticalCenter: parent.verticalCenter
+                visible: !root.dataFile && !Settings.readMode
+                text: qsTr("Lines")
+                checked: Settings.lineNumbers
+                focusPolicy: Qt.NoFocus
+                Accessible.description: root.withKey(qsTr("Show line numbers beside the note"),
+                                                     "lineNumbers")
+                onToggled: Settings.lineNumbers = checked
+            }
         }
 
         DangerButton {

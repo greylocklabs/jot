@@ -57,6 +57,8 @@ class Settings : public QObject
     Q_PROPERTY(bool focusMode READ focusMode WRITE setFocusMode NOTIFY focusChanged)
     /// The line being written kept in the middle of the window.
     Q_PROPERTY(bool typewriter READ typewriter WRITE setTypewriter NOTIFY focusChanged)
+    /// Line numbers beside a note while it is edited; data files always have them.
+    Q_PROPERTY(bool lineNumbers READ lineNumbers WRITE setLineNumbers NOTIFY lineNumbersChanged)
     /// Shows what is behind a note for debugging: its file's path in the vault, to copy.
     Q_PROPERTY(bool developerMode READ developerMode WRITE setDeveloperMode NOTIFY developerChanged)
     /// Writes Jot's debug lines to the log, as QT_LOGGING_RULES would.
@@ -147,6 +149,8 @@ public:
     void setFocusMode(bool on);
     [[nodiscard]] bool typewriter() const { return m_typewriter; }
     void setTypewriter(bool on);
+    [[nodiscard]] bool lineNumbers() const { return m_lineNumbers; }
+    void setLineNumbers(bool on);
     [[nodiscard]] bool developerMode() const { return m_developerMode; }
     void setDeveloperMode(bool on);
     [[nodiscard]] bool verboseLogging() const { return m_verboseLogging; }
@@ -223,6 +227,7 @@ Q_SIGNALS:
     void sourceModeChanged();
     void readModeChanged();
     void outlineShownChanged();
+    void lineNumbersChanged();
     void columnsHiddenChanged();
     void focusChanged();
     void keyboardChanged();
@@ -258,6 +263,7 @@ private:
     bool m_sourceMode = false;
     bool m_readMode = false;
     bool m_outlineShown = false;
+    bool m_lineNumbers = false;
     bool m_columnsHidden = false;
     bool m_focusMode = false;
     bool m_typewriter = false;
