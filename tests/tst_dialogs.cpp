@@ -52,6 +52,7 @@ private Q_SLOTS:
     void importsFromTheJoplinOnThisComputer();
     void asksBeforeTrashingSharedAttachments();
     void narrowWindowOverlapsNothing();
+    void viHelpOpensAtTheViKeys();
     void columnsGiveWayToTheNote();
     void showsTheSyntaxGuide();
     void filtersToDosByPriority();
@@ -696,6 +697,22 @@ void TestDialogs::aChosenShortcutWorksInTheWindow()
 
 QTEST_MAIN(TestDialogs)
 #include "tst_dialogs.moc"
+
+void TestDialogs::viHelpOpensAtTheViKeys()
+{
+    QQmlEngine engine;
+    QQmlComponent component(&engine);
+    component.loadFromModule("Jot.Ui", "Main");
+    std::unique_ptr<QObject> main(component.create());
+    QVERIFY2(main, qPrintable(component.errorString()));
+    auto *window = qobject_cast<QQuickWindow *>(main.get());
+    QVERIFY(QTest::qWaitForWindowExposed(window));
+    QVERIFY(QMetaObject::invokeMethod(window, "run", Q_ARG(QVariant, u"viHelp"_s)));
+    QObject *help = nullptr;
+    QTRY_VERIFY(help = main->findChild<QObject *>(u"keyHelp"_s));
+    QTRY_VERIFY(help->property("opened").toBool());
+    QCOMPARE(help->property("tab").toString(), u"vi"_s);
+}
 
 void TestDialogs::narrowWindowOverlapsNothing()
 {

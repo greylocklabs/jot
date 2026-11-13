@@ -1142,6 +1142,12 @@ ApplicationWindow {
         case "help":
             keyHelp.open()
             break
+            // vi's :help, at the vi keys.
+        case "viHelp":
+            keyHelp.active = true
+            keyHelp.popup.tab = "vi"
+            keyHelp.open()
+            break
         case "nextNote":
         case "previousNote":
         case "firstNote":

@@ -626,6 +626,10 @@ QString ViEditor::runCommand(const QString &command)
         trigger(u"closeTab"_s);
         return {};
     }
+    if (typed == u"h" || typed == u"help") {
+        trigger(u"viHelp"_s);
+        return {};
+    }
     if (typed == u"noh" || typed == u"nohlsearch") {
         endSteps();
         Q_EMIT highlightsCleared();

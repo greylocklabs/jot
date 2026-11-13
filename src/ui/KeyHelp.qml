@@ -9,6 +9,7 @@ import QtQuick.Controls
 Popup {
     id: root
 
+    objectName: "keyHelp"
     /// KeyRouter's actions: {id, label, scope, keys, vi, leader, editable, custom} for each.
     required property var actions
     /// "general", "editor" or "vi".
@@ -236,27 +237,6 @@ Popup {
                     font.pixelSize: Theme.textSm
                 }
                 Table {
-                    visible: root.tab === "vi"
-                    title: qsTr("Out of the note")
-                    rows: root.rows("window", "vi")
-                }
-                Table {
-                    visible: root.tab === "vi"
-                    title: qsTr("In the note, normal mode")
-                    rows: root.rows("note", "vi")
-                }
-                Table {
-                    visible: root.tab === "vi"
-                    title: qsTr("In the note, visual mode")
-                    rows: root.rows("visual", "vi").concat([
-                                                               {
-                                                                   "keys": ["h", "j", "k", "l"],
-                                                                   "label": qsTr(
-                                                                                "Select, by normal mode's moves")
-                                                               }
-                                                           ])
-                }
-                Table {
                     objectName: "viCommands"
                     visible: root.tab === "vi"
                     title: Settings.leaderKey === ":" ? qsTr("Commands, after Space") : qsTr(
@@ -291,6 +271,27 @@ Popup {
                             "label": qsTr("Clear the find highlights")
                         }
                     ]
+                }
+                Table {
+                    visible: root.tab === "vi"
+                    title: qsTr("Out of the note")
+                    rows: root.rows("window", "vi")
+                }
+                Table {
+                    visible: root.tab === "vi"
+                    title: qsTr("In the note, normal mode")
+                    rows: root.rows("note", "vi")
+                }
+                Table {
+                    visible: root.tab === "vi"
+                    title: qsTr("In the note, visual mode")
+                    rows: root.rows("visual", "vi").concat([
+                                                               {
+                                                                   "keys": ["h", "j", "k", "l"],
+                                                                   "label": qsTr(
+                                                                                "Select, by normal mode's moves")
+                                                               }
+                                                           ])
                 }
                 Table {
                     visible: root.tab === "vi"

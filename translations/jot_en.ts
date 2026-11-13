@@ -3802,6 +3802,38 @@ Press %1 to make one.</source>
 <context>
     <name>ViStatusLine</name>
     <message>
+        <source>Save</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Close the tab</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Save and close the tab</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Replace on the line: s/old/new/</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Replace in the whole note: %s/old/new/g</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Clear the find highlights</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Go to the last line</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Vi&apos;s keys and commands</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Command</source>
         <translation type="unfinished"></translation>
     </message>
