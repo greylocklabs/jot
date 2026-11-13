@@ -1703,28 +1703,34 @@ Rectangle {
                     }
                 }
 
-                // A misspelled word's right click offers what it may have meant.
+                // A right click offers what editing the note takes: a misspelled word's
+                // corrections first, then undo, the clipboard, and formatting for a selection.
                 TapHandler {
                     acceptedButtons: Qt.RightButton
                     onTapped: point => {
                         const at = body.positionAt(point.position.x, point.position.y)
-                        const word = styler.misspelledAt(at)
-                        if (word.word === undefined)
-                            return
-                        spellMenu.word = word
-                        spellMenu.popup(body, point.position.x, point.position.y)
+                        // Clicked outside what is selected, the cursor goes there, as a left
+                        // click puts it.
+                        if (at < body.selectionStart || at > body.selectionEnd
+                                || body.selectionStart === body.selectionEnd)
+                            body.cursorPosition = at
+                        editMenu.word = styler.misspelledAt(at)
+                        editMenu.popup(body, point.position.x, point.position.y)
                     }
                 }
                 MenuCard {
-                    id: spellMenu
+                    id: editMenu
 
+                    /// The misspelled word clicked on, or nothing.
                     property var word: ({})
+                    readonly property bool misspelled: word.word !== undefined
+                    readonly property bool picked: body.selectionStart !== body.selectionEnd
 
-                    objectName: "spellMenu"
-                    minimumWidth: 180
+                    objectName: "editMenu"
+                    minimumWidth: 200
 
                     Repeater {
-                        model: spellMenu.word.suggestions || []
+                        model: editMenu.misspelled ? (editMenu.word.suggestions || []) : []
 
                         MenuEntry {
                             required property string modelData
@@ -1732,24 +1738,102 @@ Rectangle {
                             // A note Jot only reads stays as it is.
                             enabled: !body.readOnly
                             onTriggered: {
-                                styler.replace(spellMenu.word.start, spellMenu.word.end, modelData)
-                                body.cursorPosition = spellMenu.word.start + modelData.length
+                                styler.replace(editMenu.word.start, editMenu.word.end, modelData)
+                                body.cursorPosition = editMenu.word.start + modelData.length
                             }
                         }
                     }
                     MenuEntry {
-                        visible: (spellMenu.word.suggestions || []).length === 0
+                        visible: editMenu.misspelled && (editMenu.word.suggestions || []).length
+                                 === 0
                         height: visible ? implicitHeight : 0
                         enabled: false
                         text: qsTr("No suggestions")
                     }
                     MenuEntry {
-                        text: qsTr("Add \"%1\" to the dictionary").arg(spellMenu.word.word)
-                        onTriggered: styler.acceptWord(spellMenu.word.word, false)
+                        visible: editMenu.misspelled
+                        height: visible ? implicitHeight : 0
+                        text: qsTr("Add \"%1\" to the dictionary").arg(editMenu.word.word)
+                        onTriggered: styler.acceptWord(editMenu.word.word, false)
                     }
                     MenuEntry {
+                        visible: editMenu.misspelled
+                        height: visible ? implicitHeight : 0
                         text: qsTr("Ignore it until Jot closes")
-                        onTriggered: styler.acceptWord(spellMenu.word.word, true)
+                        onTriggered: styler.acceptWord(editMenu.word.word, true)
+                    }
+                    MenuSeparator {
+                        visible: editMenu.misspelled
+                        height: visible ? implicitHeight : 0
+                        contentItem: Rectangle {
+                            implicitHeight: 1
+                            color: Theme.border
+                        }
+                    }
+                    MenuEntry {
+                        objectName: "editUndo"
+                        text: qsTr("Undo")
+                        enabled: body.canUndo
+                        onTriggered: body.undo()
+                    }
+                    MenuEntry {
+                        objectName: "editRedo"
+                        text: qsTr("Redo")
+                        enabled: body.canRedo
+                        onTriggered: body.redo()
+                    }
+                    MenuSeparator {
+                        contentItem: Rectangle {
+                            implicitHeight: 1
+                            color: Theme.border
+                        }
+                    }
+                    MenuEntry {
+                        objectName: "editCut"
+                        text: qsTr("Cut")
+                        enabled: editMenu.picked && !body.readOnly
+                        onTriggered: body.cut()
+                    }
+                    MenuEntry {
+                        objectName: "editCopy"
+                        text: qsTr("Copy")
+                        enabled: editMenu.picked
+                        onTriggered: body.copy()
+                    }
+                    MenuEntry {
+                        objectName: "editPaste"
+                        text: qsTr("Paste")
+                        enabled: body.canPaste && !body.readOnly
+                        onTriggered: body.paste()
+                    }
+                    MenuEntry {
+                        objectName: "editSelectAll"
+                        text: qsTr("Select all")
+                        onTriggered: body.selectAll()
+                    }
+                    MenuCard {
+                        id: formatMenu
+
+                        objectName: "editFormat"
+                        title: qsTr("Format")
+                        enabled: editMenu.picked && !body.readOnly && !root.dataFile
+
+                        MenuEntry {
+                            text: qsTr("Bold")
+                            onTriggered: root.format("bold", "")
+                        }
+                        MenuEntry {
+                            text: qsTr("Italic")
+                            onTriggered: root.format("italic", "")
+                        }
+                        MenuEntry {
+                            text: qsTr("Link")
+                            onTriggered: root.format("link", "")
+                        }
+                        MenuEntry {
+                            text: qsTr("Code")
+                            onTriggered: root.format("code", "")
+                        }
                     }
                 }
                 TapHandler {
