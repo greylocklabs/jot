@@ -562,6 +562,35 @@ bool ViEditor::writable() const
     return m_target && !m_target->property("readOnly").toBool();
 }
 
+namespace {
+
+// `after` with \1 to \9 as `match` captured them, and \\ as one backslash, as
+// QString::replace() reads a replacement.
+QString expanded(const QString &after, const QRegularExpressionMatch &match)
+{
+    QString out;
+    for (qsizetype i = 0; i < after.size(); ++i) {
+        const QChar c = after.at(i);
+        if (c == u'\\' && i + 1 < after.size()) {
+            const QChar next = after.at(i + 1);
+            if (next.isDigit()) {
+                out += match.captured(next.digitValue());
+                ++i;
+                continue;
+            }
+            if (next == u'\\') {
+                out += next;
+                ++i;
+                continue;
+            }
+        }
+        out += c;
+    }
+    return out;
+}
+
+} // namespace
+
 QString ViEditor::runCommand(const QString &command)
 {
     const QString typed = command.trimmed();
@@ -645,9 +674,7 @@ QString ViEditor::runCommand(const QString &command)
         if (all) {
             now.replace(pattern, after);
         } else if (const QRegularExpressionMatch m = pattern.match(was); m.hasMatch()) {
-            QString one = was.mid(m.capturedStart(), m.capturedLength());
-            one.replace(pattern, after);
-            now = was.left(m.capturedStart()) + one + was.mid(m.capturedEnd());
+            now = was.left(m.capturedStart()) + expanded(after, m) + was.mid(m.capturedEnd());
         }
         if (now != was) {
             edit.setPosition(block.position());
