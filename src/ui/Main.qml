@@ -1061,9 +1061,12 @@ ApplicationWindow {
             if (Vault.newNote() !== "")
                 editor.editTitle()
             break
-            // Its name is typed in the sidebar, brought back for it if put away.
+            // Its name is typed in the sidebar, brought back for it if put away, out of
+            // distraction-free and over the note on a narrow window.
         case "newNotebook":
-            Settings.columnsHidden = false
+            if (window.distractionFree)
+                window.setDistractionFree(false)
+            columns.revealList()
             sidebar.newNotebook()
             break
         case "newFromTemplate":

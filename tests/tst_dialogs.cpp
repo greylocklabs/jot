@@ -734,7 +734,12 @@ void TestDialogs::makesANotebookFromTheKeyboard()
     QVERIFY(QTest::qWaitForWindowExposed(window));
     // Ctrl+Shift+N, as the + beside Notebooks says when hovered.
     QVERIFY(KeyRouter::conflict(u"newNotebook"_s, u"Ctrl+Shift+N"_s).isEmpty());
+    // From a narrow window, with the columns away, they come back for it.
+    window->resize(500, 600);
+    m_settings->setColumnsHidden(true);
     QVERIFY(QMetaObject::invokeMethod(window, "run", Q_ARG(QVariant, u"newNotebook"_s)));
+    QTRY_VERIFY(main->findChild<QQuickItem *>(u"sidebar"_s)->isVisible());
+    QTRY_VERIFY(main->findChild<QQuickItem *>(u"sidebar"_s)->width() > 0);
     QTRY_VERIFY(QFileInfo(folder + u"/New notebook"_s).isDir());
     QObject *sidebar = main->findChild<QObject *>(u"sidebar"_s);
     QVERIFY(sidebar);
