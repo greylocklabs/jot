@@ -497,8 +497,10 @@ void TestVaultController::hidesNotesAndNotebooksFromView()
     QCOMPARE(m_vault->preview(u"Recipes/Pancakes.md"_s).value(u"title"_s).toString(),
              u"Pancakes"_s);
 
-    // Undone, it is back.
+    // Undone, it is back, with nothing to say about the trash.
+    QVERIFY(m_vault->undoTrashes().isEmpty());
     QVERIFY(m_vault->undo());
+    QVERIFY(m_vault->redoTrashes().isEmpty());
     QCOMPARE(m_vault->hiddenPaths(), QStringList{u"Recipes"_s});
     QVERIFY(column(*m_vault->notes(), "path").contains(u"Inbox/Groceries.md"_s));
     QVERIFY(m_vault->setHidden(u"Recipes"_s, false));
