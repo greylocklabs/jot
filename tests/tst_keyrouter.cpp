@@ -27,6 +27,7 @@ private Q_SLOTS:
     void listsShortcutsAsThePlatformWritesThem();
     void paletteFindsCommandsByName();
     void builtInShortcutsDoNotClash();
+    void viControlKeysAreTheirOwn();
     void chosenShortcutsTakeTheirPlace();
     void matchesTheNotesFormattingKeys();
     void recordsAKeyAsSettingsKeepIt();
@@ -238,6 +239,35 @@ void TestKeyRouter::builtInShortcutsDoNotClash()
             QVERIFY2(taken.isEmpty(), qPrintable(action.id + u' ' + key.toString() + u' ' + taken));
         }
     }
+}
+
+void TestKeyRouter::viControlKeysAreTheirOwn()
+{
+    // Every key a window action has, the platform's standard ones included.
+    QHash<QString, QString> window;
+    for (const KeyAction &action : KeyRouter::actions()) {
+        if (action.scope != u"window")
+            continue;
+        for (const QVariant &key : action.standard) {
+            QList<QKeySequence> sequences;
+            if (key.typeId() == QMetaType::Int)
+                sequences = QKeySequence::keyBindings(QKeySequence::StandardKey(key.toInt()));
+            else
+                sequences = QKeySequence::listFromString(key.toString());
+            for (const QKeySequence &sequence : sequences)
+                window.insert(sequence.toString(QKeySequence::PortableText), action.id);
+        }
+    }
+    // A vi key held with Ctrl does only its own thing in normal mode.
+    for (const KeyAction &action : KeyRouter::actions()) {
+        if (!action.vi.startsWith(u"Ctrl+"))
+            continue;
+        const QString other = window.value(action.vi);
+        QVERIFY2(other.isEmpty() || other == action.id,
+                 qPrintable(action.id + u' ' + action.vi + u' ' + other));
+    }
+    // Find and replace is not on Ctrl+R, which some desktops give it.
+    QVERIFY(window.value(u"Ctrl+R"_s).isEmpty());
 }
 
 void TestKeyRouter::chosenShortcutsTakeTheirPlace()

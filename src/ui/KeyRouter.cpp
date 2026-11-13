@@ -99,7 +99,8 @@ QList<KeyAction> KeyRouter::actions()
         act(u"commands"_s, tr("Commands"), window, {u"Ctrl+Shift+P"_s}, {}, u"c"_s),
         act(u"search"_s, tr("Search notes"), window, {u"Ctrl+Shift+F"_s}, u"/"_s),
         act(u"find"_s, tr("Find in the note"), window, {int(K::Find)}),
-        act(u"replace"_s, tr("Find and replace in the note"), window, {int(K::Replace)}),
+        // Not the platform's Replace, which some desktops put on Ctrl+R, vi's redo.
+        act(u"replace"_s, tr("Find and replace in the note"), window, {u"Ctrl+H"_s}),
         act(u"save"_s, tr("Save now"), window, {int(K::Save)}),
         // Text fields keep these keys for their own undo, so these work everywhere else.
         act(u"undoChange"_s, tr("Undo ticking, trashing or restoring"), window, {int(K::Undo)}),
