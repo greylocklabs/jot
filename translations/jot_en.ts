@@ -1150,6 +1150,10 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Use the default</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Pinned</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4582,6 +4586,10 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>Could not change the notebook&apos;s emoji: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not keep the notebook&apos;s sort: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

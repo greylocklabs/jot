@@ -64,10 +64,9 @@ VaultController::VaultController(Settings &settings, QObject *parent)
     m_reloadTimer.setInterval(800);
     connect(&m_reloadTimer, &QTimer::timeout, this, &VaultController::reloadModels);
     m_notes.setOrder(settings.noteSort());
-    connect(&m_notes, &NoteListModel::orderChanged, this,
-            [this] { m_settings.setNoteSort(m_notes.order()); });
+    connect(&m_notes, &NoteListModel::scopeChanged, this, &VaultController::applyNoteSort);
     connect(&settings, &Settings::noteSortChanged, this, [this] {
-        m_notes.setOrder(m_settings.noteSort());
+        applyNoteSort();
         m_tagNotes.setOrder(m_settings.noteSort());
     });
     m_tasks.setView(settings.tasksView());
@@ -1122,6 +1121,44 @@ bool VaultController::setNotebookEmoji(const QString &path, const QString &emoji
     }
     reloadModels();
     return true;
+}
+
+QString VaultController::notebookSort() const
+{
+    return m_notes.notebook().isEmpty() ? QString() : m_notebookSorts.value(m_notes.notebook());
+}
+
+void VaultController::applyNoteSort()
+{
+    const QString own = notebookSort();
+    m_notes.setOrder(own.isEmpty() ? m_settings.noteSort() : own);
+    Q_EMIT noteSortChanged();
+}
+
+void VaultController::chooseSort(const QString &sort)
+{
+    const QString notebook = m_notes.notebook();
+    if (notebook.isEmpty() || !m_vault || !m_vault->writable()) {
+        if (!sort.isEmpty())
+            m_settings.setNoteSort(sort);
+        return;
+    }
+    if (!sort.isEmpty() && !Settings::noteSorts().contains(sort))
+        return;
+    QString error;
+    std::optional<Layout> layout = Layout::read(*m_vault, &error);
+    if (layout)
+        layout->setSort(notebook, sort);
+    if (!layout || !layout->write(*m_vault, &error)) {
+        qCWarning(lcVault) << "could not set the sort of" << notebook << error;
+        setProblem(tr("Could not keep the notebook's sort: %1").arg(error));
+        return;
+    }
+    if (sort.isEmpty())
+        m_notebookSorts.remove(notebook);
+    else
+        m_notebookSorts.insert(notebook, sort);
+    applyNoteSort();
 }
 
 QVariantMap VaultController::notebookTarget(const QString &path) const
@@ -2390,9 +2427,13 @@ void VaultController::reloadModels()
         for (auto it = emojis.cbegin(); it != emojis.cend(); ++it)
             m_notebookEmoji.insert(it.key(), it.value());
         m_pinned = layout ? layout->pinned() : QStringList();
+        m_notebookSorts = layout ? layout->sorts() : QHash<QString, QString>();
         for (const QString &view : Layout::kViews)
             m_viewEmoji.insert(view, layout ? layout->viewEmoji(view) : Layout::defaultEmoji(view));
+    } else {
+        m_notebookSorts.clear();
     }
+    applyNoteSort();
     if (m_index) {
         m_notebooks.reload(m_vault.get(), m_index->noteCounts(), m_index->noteCount());
         m_tagTree.reload(m_index->tagCounts());

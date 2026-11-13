@@ -404,27 +404,46 @@ void TestVaultController::ordersNotesAsAsked()
 {
     QVERIFY(m_vault->openPath(m_root));
     NoteListModel &notes = *m_vault->notes();
-    notes.setNotebook(u"Recipes"_s);
-    notes.setOrder(u"title"_s);
-    QCOMPARE(column(notes, "title"), (QStringList{u"Pancakes"_s, u"Sourdough"_s}));
+    // In All notes, a sort is the default.
+    m_vault->chooseSort(u"title"_s);
     QCOMPARE(m_settings->noteSort(), u"title"_s);
+    notes.setNotebook(u"Recipes"_s);
+    QCOMPARE(notes.order(), u"title"_s);
+    QCOMPARE(column(notes, "title"), (QStringList{u"Pancakes"_s, u"Sourdough"_s}));
 
+    // In a notebook, the notebook keeps it, in the layout file, and the default stays.
+    m_vault->chooseSort(u"updated"_s);
+    QCOMPARE(m_settings->noteSort(), u"title"_s);
+    QCOMPARE(m_vault->notebookSort(), u"updated"_s);
+    QVERIFY(readFile(m_root + u"/.jot/layout.yaml"_s).contains(u"sort: updated"_s));
     // Recently changed first.
     QTest::qWait(20);
     QFile touched(m_root + u"/Recipes/Pancakes.md"_s);
     QVERIFY(touched.open(QIODevice::Append));
     touched.write("more\n");
     touched.close();
-    notes.setOrder(u"updated"_s);
     QSignalSpy changed(m_vault.get(), &VaultController::notesChanged);
     QVERIFY(changed.wait(3000));
+    QCOMPARE(notes.order(), u"updated"_s);
     QCOMPARE(column(notes, "title").first(), u"Pancakes"_s);
+
+    // Another notebook, its own inside it included, uses the default.
+    notes.setNotebook(u"Ashfall"_s);
+    QCOMPARE(notes.order(), u"title"_s);
+    QVERIFY(m_vault->notebookSort().isEmpty());
+    notes.setNotebook(u"Recipes"_s);
+    QCOMPARE(notes.order(), u"updated"_s);
+
+    // Back on the default.
+    m_vault->chooseSort({});
+    QCOMPARE(notes.order(), u"title"_s);
+    QVERIFY(!readFile(m_root + u"/.jot/layout.yaml"_s).contains(u"sort:"_s));
 }
 
 void TestVaultController::followsTheOrderInSettings()
 {
     QVERIFY(m_vault->openPath(m_root));
-    m_vault->notes()->setOrder(u"title"_s);
+    m_vault->chooseSort(u"title"_s);
     QCOMPARE(m_settings->noteSort(), u"title"_s);
     m_settings->reset();
     QCOMPARE(m_vault->notes()->order(), u"updated"_s);
@@ -435,7 +454,7 @@ void TestVaultController::pinsNotesToTheTop()
     QVERIFY(m_vault->openPath(m_root));
     NoteListModel &notes = *m_vault->notes();
     notes.setNotebook(u"Recipes"_s);
-    notes.setOrder(u"title"_s);
+    m_settings->setNoteSort(u"title"_s);
     QVERIFY(m_vault->setPinned(u"Recipes/Sourdough.md"_s, true));
     QVERIFY(m_vault->isPinned(u"Recipes/Sourdough.md"_s));
     QCOMPARE(column(notes, "title"), (QStringList{u"Sourdough"_s, u"Pancakes"_s}));
@@ -447,9 +466,9 @@ void TestVaultController::pinsNotesToTheTop()
     QVERIFY(m_vault->setPinned(u"Ashfall/Sourdough.md"_s, false));
     QVERIFY(!m_vault->isPinned(u"Ashfall/Sourdough.md"_s));
 
-    notes.setOrder(u"created"_s);
-    QCOMPARE(m_settings->noteSort(), u"created"_s);
-    notes.setOrder(u"oldest"_s);
+    m_vault->chooseSort(u"created"_s);
+    QCOMPARE(m_vault->notebookSort(), u"created"_s);
+    m_vault->chooseSort(u"oldest"_s);
     QCOMPARE(notes.order(), u"created"_s);
 }
 

@@ -326,6 +326,34 @@ void Layout::setEmoji(const QString &folder, const QString &emoji)
     m_folders[folder][u"emoji"_s] = emoji.trimmed();
 }
 
+QString Layout::sort(const QString &folder) const
+{
+    return m_folders.value(folder).value(u"sort"_s);
+}
+
+void Layout::setSort(const QString &folder, const QString &sort)
+{
+    if (sort.trimmed().isEmpty()) {
+        if (m_folders.contains(folder)) {
+            m_folders[folder].remove(u"sort"_s);
+            if (m_folders[folder].isEmpty())
+                m_folders.remove(folder);
+        }
+        return;
+    }
+    m_folders[folder][u"sort"_s] = sort.trimmed();
+}
+
+QHash<QString, QString> Layout::sorts() const
+{
+    QHash<QString, QString> all;
+    for (auto it = m_folders.cbegin(); it != m_folders.cend(); ++it) {
+        if (const QString sort = it->value(u"sort"_s); !sort.isEmpty())
+            all.insert(it.key(), sort);
+    }
+    return all;
+}
+
 Layout::Target Layout::target(const QString &folder) const
 {
     const QMap<QString, QString> keys = m_folders.value(folder);

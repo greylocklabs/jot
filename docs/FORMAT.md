@@ -12,7 +12,7 @@ Status: final, format 1, as of Jot 0.1. Changes follow [Versioning](#versioning)
 My Notes/                    the vault: any folder
   .jot/                      Jot's files for the vault, synced with the notes
     vault.yaml               vault settings and the format number
-    layout.yaml              notebook emoji, word targets and pinned notes
+    layout.yaml              notebook emoji, sorts, word targets and pinned notes
     history/                 past versions of notes
     joplin.yaml              what imports from Joplin brought, once there has been one
     trash/                   what was deleted, in Jot and by sync
@@ -245,9 +245,9 @@ Todoist does, and writes the repeat, the date and the priority in that order:
 
 ## Notebook appearance and pins
 
-How the note list is ordered (by when notes changed, when they were made, or by title) is each
-computer's own setting, not part of the vault. The notebook tree sorts in natural number order
-(`Ch 2` before `Ch 10`).
+How the note list is ordered by default (by when notes changed, when they were made, or by
+title) is each computer's own setting; a notebook can keep a sort of its own in the vault. The
+notebook tree sorts in natural number order (`Ch 2` before `Ch 10`).
 
 `.jot/layout.yaml` keeps what belongs to the vault, so it never changes a note file:
 
@@ -255,6 +255,7 @@ computer's own setting, not part of the vault. The notebook tree sorts in natura
 folders:
   Ashfall:
     emoji: 📚
+    sort: title
     target: 90000
     deadline: 2027-01-30
 pinned:
@@ -265,6 +266,8 @@ trash:
 
 - Paths are relative to the vault root and use `/`.
 - `emoji` is shown before the notebook's name.
+- `sort` is how the notebook's notes are listed: `updated`, `created` or `title`. Without it,
+  the computer's default applies. Notebooks inside it have their own.
 - `target` is the words the notebook's notes, and those of the notebooks inside it, are to come
   to, and `deadline` the day, YYYY-MM-DD, to reach it by. A deadline without a target means
   nothing.
