@@ -513,12 +513,12 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
     };
 
     int written = 0;
+    // New notes whose names were taken while importing, by Joplin id.
+    QSet<QString> clashed;
     if (progress)
         progress(0, int(writes.size()));
     for (const Planned &write : writes) {
         const auto &note = *write.note;
-        const QString text = fileText(note, write.title, write.path, note.body, true);
-
         if (!dryRun) {
             // Edited in Jot since it was planned, as the window stays open while importing: the
             // edit stays, as one made before the import would.
@@ -531,6 +531,19 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
                     progress(++written, int(writes.size()));
                 continue;
             }
+            // A note made in Jot meanwhile took its name; it comes with the next import, as
+            // what links to it here already points at that name. Checked before its text is
+            // made, which copies its attachments in.
+            if (write.sha.isEmpty() && QFileInfo::exists(vault.absolute(write.path))) {
+                clashed.insert(note.id);
+                if (progress)
+                    progress(++written, int(writes.size()));
+                continue;
+            }
+        }
+        const QString text = fileText(note, write.title, write.path, note.body, true);
+        if (!dryRun) {
+            QString why;
             if (!notefile::write(vault.absolute(write.path), text, &why))
                 return fail(QObject::tr("could not write %1: %2").arg(write.path, why));
             if (note.updated.isValid()) {
@@ -549,6 +562,16 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
                 return fail(QObject::tr("could not write %1: %2").arg(kLedger, why));
         }
     }
+
+    result.notes.removeIf(
+        [&clashed](const JoplinImport::Note &line) { return clashed.contains(line.joplinId); });
+    if (!clashed.isEmpty())
+        result.skipped.append(
+            clashed.size() == 1
+                ? QObject::tr("1 note whose name was taken while importing; import again for it")
+                : QObject::tr("%1 notes whose names were taken while importing; import again "
+                              "for them")
+                      .arg(clashed.size()));
 
     // Joplin's revisions become past versions of the notes they were of, wherever those are now,
     // under the times Joplin kept them. One with no text, or the text of the one before it or of
