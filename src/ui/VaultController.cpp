@@ -59,6 +59,7 @@ VaultController::VaultController(Settings &settings, QObject *parent)
     connect(this, &VaultController::currentChanged, this, &VaultController::currentTitleChanged);
     connect(this, &VaultController::currentChanged, this, &VaultController::followCurrentInTabs);
     connect(this, &VaultController::currentChanged, this, &VaultController::refreshTarget);
+    connect(&m_sync, &SyncController::finished, this, &VaultController::updateSyncPending);
     // Saving changes the list's order and titles; a burst of saves reloads it once.
     m_reloadTimer.setSingleShot(true);
     m_reloadTimer.setInterval(800);
@@ -2602,11 +2603,28 @@ QVariantMap VaultController::joplinFinished(const QString &file, bool dryRun, bo
             {u"skipped"_s, done->skipped}};
 }
 
+void VaultController::updateSyncPending()
+{
+    const QDateTime since = m_sync.syncedFrom();
+    if (!m_index || !since.isValid()) {
+        m_sync.setPending(false);
+        return;
+    }
+    // Changed after the last sync began, other than by it, so the next sends it.
+    const qint64 after = since.toMSecsSinceEpoch() * 1000000;
+    const QStringList written = m_sync.written();
+    const QList<NoteInfo> notes = m_index->notesIn({});
+    m_sync.setPending(std::ranges::any_of(notes, [&](const NoteInfo &note) {
+        return note.modified > after && !written.contains(note.path);
+    }));
+}
+
 void VaultController::reloadModels()
 {
     // Whatever changed the lists may have changed the files, so a sync follows, and a conflict
     // copy may have come or gone.
     m_sync.localChanged();
+    updateSyncPending();
     Q_EMIT currentConflictsChanged();
     m_notebookEmoji.clear();
     m_favorites.clear();

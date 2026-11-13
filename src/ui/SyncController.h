@@ -59,7 +59,7 @@ class SyncController : public QObject
     Q_PROPERTY(QString stamp READ stamp NOTIFY changed)
     /// What the last sync did, and what went wrong since, in lines to hover over.
     Q_PROPERTY(QString details READ details NOTIFY changed)
-    /// Notes changed here since the last sync, which the next one sends.
+    /// Notes changed here since the last sync, which the next one sends, as setPending() says.
     Q_PROPERTY(bool pending READ pending NOTIFY changed)
 
 public:
@@ -137,6 +137,12 @@ public:
     [[nodiscard]] QString stamp() const;
     [[nodiscard]] QString details() const;
     [[nodiscard]] bool pending() const { return m_pending; }
+    void setPending(bool pending);
+    /// When the last sync that worked began; notes changed since, apart from those it wrote,
+    /// wait for the next.
+    [[nodiscard]] QDateTime syncedFrom() const { return m_syncedFrom; }
+    /// The notes the last sync that worked wrote here.
+    [[nodiscard]] QStringList written() const;
     [[nodiscard]] QString summary() const;
 
     /// How long after a change here a sync follows, and how often one runs regardless unless
@@ -179,6 +185,8 @@ private:
     QString m_problem;
     /// When the problem came, and what the last sync that worked did.
     QDateTime m_failedAt;
+    QDateTime m_startedAt;
+    QDateTime m_syncedFrom;
     SyncReport m_lastReport;
     bool m_pending = false;
     /// A commit or push asked for, to go with the next sync.

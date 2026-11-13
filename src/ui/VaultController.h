@@ -572,6 +572,8 @@ private:
     void close();
     void notesChangedOnDisk(const QStringList &paths);
     void reloadModels();
+    /// Says whether notes wait for the next sync: changed since the last began, not by it.
+    void updateSyncPending();
     /// Reads the whole vault again after what it ignores changed.
     void readIgnoreAgain();
     /// Works out currentTarget() again.

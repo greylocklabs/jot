@@ -61,6 +61,7 @@ void SyncController::setVault(const QString &root, std::function<void()> save)
     m_failedAt = {};
     m_lastReport = {};
     m_pending = false;
+    m_syncedFrom = {};
     m_soon.stop();
     applyInterval();
     if (configured()) {
@@ -101,12 +102,21 @@ void SyncController::reloadOptions()
     Q_EMIT changed();
 }
 
+void SyncController::setPending(bool pending)
+{
+    if (m_pending == pending)
+        return;
+    m_pending = pending;
+    Q_EMIT changed();
+}
+
+QStringList SyncController::written() const
+{
+    return m_lastReport.pulled + m_lastReport.merged + m_lastReport.conflicts;
+}
+
 void SyncController::localChanged()
 {
-    if (configured() && !m_pending) {
-        m_pending = true;
-        Q_EMIT changed();
-    }
     // Syncing only when asked, an edit does not start one either.
     if (configured() && syncEvery() > 0 && !m_soon.isActive())
         m_soon.start(kAfterChangeMs);
@@ -438,6 +448,7 @@ void SyncController::start()
     const QString state = syncStateDir(root, remote);
     const QString device = QSysInfo::machineHostName();
     const SyncRequest request = std::exchange(m_request, {});
+    m_startedAt = QDateTime::currentDateTime();
     m_thread = QThread::create([this, root, remote, secret, state, device, request] {
         const SyncReport report = syncVault(root, remote, secret, state, device, request);
         QMetaObject::invokeMethod(this, [this, report] { done(report); }, Qt::QueuedConnection);
@@ -461,7 +472,7 @@ void SyncController::done(const SyncReport &report)
         m_failedAt = QDateTime::currentDateTime();
     } else {
         m_lastReport = report;
-        m_pending = false;
+        m_syncedFrom = m_startedAt;
         m_failedAt = {};
         qCInfo(lcVault) << "synced: pulled" << report.pulled.size() << "pushed"
                         << report.pushed.size() << "merged" << report.merged.size() << "conflicts"
