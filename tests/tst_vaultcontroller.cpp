@@ -438,6 +438,22 @@ void TestVaultController::ordersNotesAsAsked()
     m_vault->chooseSort({});
     QCOMPARE(notes.order(), u"title"_s);
     QVERIFY(!readFile(m_root + u"/.jot/layout.yaml"_s).contains(u"sort:"_s));
+
+    // A sort Jot does not know is the default, not the last notebook's.
+    m_vault->chooseSort(u"updated"_s);
+    QString layout = readFile(m_root + u"/.jot/layout.yaml"_s);
+    layout.replace(u"sort: updated"_s, u"sort: shuffled"_s);
+    QFile file(m_root + u"/.jot/layout.yaml"_s);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write(layout.toUtf8());
+    file.close();
+    notes.setNotebook(u"Ashfall"_s);
+    m_settings->setNoteSort(u"created"_s);
+    // Anything that reads the layout again, as pinning does.
+    QVERIFY(m_vault->setPinned(u"Recipes/Pancakes.md"_s, true));
+    notes.setNotebook(u"Recipes"_s);
+    QCOMPARE(notes.order(), u"created"_s);
+    QVERIFY(m_vault->notebookSort().isEmpty());
 }
 
 void TestVaultController::followsTheOrderInSettings()

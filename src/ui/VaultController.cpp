@@ -1125,7 +1125,9 @@ bool VaultController::setNotebookEmoji(const QString &path, const QString &emoji
 
 QString VaultController::notebookSort() const
 {
-    return m_notes.notebook().isEmpty() ? QString() : m_notebookSorts.value(m_notes.notebook());
+    // One Jot does not know, as from a newer Jot or a typo, is no sort of its own.
+    const QString own = m_notebookSorts.value(m_notes.notebook());
+    return m_notes.notebook().isEmpty() || !Settings::noteSorts().contains(own) ? QString() : own;
 }
 
 void VaultController::applyNoteSort()
