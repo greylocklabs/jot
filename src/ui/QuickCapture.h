@@ -44,8 +44,8 @@ public:
 
 Q_SIGNALS:
     void changed();
-    /// The key was pressed.
-    void activated();
+    /// The key was pressed; `token`, when the desktop gave one, lets Jot come to the front.
+    void activated(const QString &token);
 
 private Q_SLOTS:
     void sessionCreated(uint response, const QVariantMap &results);
