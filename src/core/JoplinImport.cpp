@@ -517,32 +517,40 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
     QSet<QString> clashed;
     if (progress)
         progress(0, int(writes.size()));
+    // Whether `write` must be left out, as the window stays open while importing: a note edited
+    // in Jot since it was planned keeps the edit, as one made before the import would, and a
+    // note made in Jot with the name planned for a new one stays, the new one coming with the
+    // next import, as what links to it here already points at that name.
+    const auto takenMeanwhile = [&](const Planned &write) {
+        if (!write.sha.isEmpty()) {
+            QString ignored;
+            if (sha(notefile::read(vault.absolute(write.path), &ignored).value_or(QString())) ==
+                write.sha)
+                return false;
+            result.notes[write.line].outcome = JoplinImport::Outcome::ChangedInJot;
+            return true;
+        }
+        if (!QFileInfo::exists(vault.absolute(write.path)))
+            return false;
+        clashed.insert(write.note->id);
+        return true;
+    };
     for (const Planned &write : writes) {
         const auto &note = *write.note;
-        if (!dryRun) {
-            // Edited in Jot since it was planned, as the window stays open while importing: the
-            // edit stays, as one made before the import would.
-            QString why;
-            if (!write.sha.isEmpty() &&
-                sha(notefile::read(vault.absolute(write.path), &why).value_or(QString())) !=
-                    write.sha) {
-                result.notes[write.line].outcome = JoplinImport::Outcome::ChangedInJot;
-                if (progress)
-                    progress(++written, int(writes.size()));
-                continue;
-            }
-            // A note made in Jot meanwhile took its name; it comes with the next import, as
-            // what links to it here already points at that name. Checked before its text is
-            // made, which copies its attachments in.
-            if (write.sha.isEmpty() && QFileInfo::exists(vault.absolute(write.path))) {
-                clashed.insert(note.id);
-                if (progress)
-                    progress(++written, int(writes.size()));
-                continue;
-            }
+        // Checked before the text is made, which copies the note's attachments in, and again
+        // just before writing, as the copying can take a while.
+        if (!dryRun && takenMeanwhile(write)) {
+            if (progress)
+                progress(++written, int(writes.size()));
+            continue;
         }
         const QString text = fileText(note, write.title, write.path, note.body, true);
         if (!dryRun) {
+            if (takenMeanwhile(write)) {
+                if (progress)
+                    progress(++written, int(writes.size()));
+                continue;
+            }
             QString why;
             if (!notefile::write(vault.absolute(write.path), text, &why))
                 return fail(QObject::tr("could not write %1: %2").arg(write.path, why));
