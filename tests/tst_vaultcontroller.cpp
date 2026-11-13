@@ -2151,6 +2151,16 @@ void TestVaultController::syncsWithAFolder()
     QVERIFY(sync->problem().isEmpty());
     QCOMPARE(sync->summary(), u"Synced just now"_s);
     QCOMPARE(readFile(nas + u"/Inbox/Groceries.md"_s), readFile(m_root + u"/Inbox/Groceries.md"_s));
+    // The title bar's stamp says when, and its details what was sent.
+    QVERIFY(sync->stamp().startsWith(u"Updated "_s));
+    QVERIFY2(sync->details().contains(u"sent"_s), qPrintable(sync->details()));
+    QVERIFY(!sync->pending());
+    // A change here waits for the next sync, which sends it.
+    m_vault->setCurrent(u"Welcome.md"_s);
+    m_vault->edit(m_vault->currentText() + u"More.\n"_s);
+    m_vault->saveNow();
+    QTRY_VERIFY(sync->pending());
+    QVERIFY(sync->details().contains(u"wait"_s));
 
     // A note written there comes here, and into the lists.
     QFile there(nas + u"/From the NAS.md"_s);
@@ -2160,6 +2170,8 @@ void TestVaultController::syncsWithAFolder()
     sync->syncNow();
     QVERIFY(finished.wait(10000));
     QCOMPARE(readFile(m_root + u"/From the NAS.md"_s), u"written elsewhere\n"_s);
+    QVERIFY(!sync->pending());
+    QVERIFY2(sync->details().contains(u"1 received"_s), qPrintable(sync->details()));
     QTRY_VERIFY(m_vault->index()->note(u"From the NAS.md"_s));
 
     // A bucket needs its address, region, name and key before it is even checked.

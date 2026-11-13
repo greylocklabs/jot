@@ -58,6 +58,9 @@ void SyncController::setVault(const QString &root, std::function<void()> save)
     m_secret.clear();
     m_problem.clear();
     m_lastSynced = {};
+    m_failedAt = {};
+    m_lastReport = {};
+    m_pending = false;
     m_soon.stop();
     applyInterval();
     if (configured()) {
@@ -100,6 +103,10 @@ void SyncController::reloadOptions()
 
 void SyncController::localChanged()
 {
+    if (configured() && !m_pending) {
+        m_pending = true;
+        Q_EMIT changed();
+    }
     // Syncing only when asked, an edit does not start one either.
     if (configured() && syncEvery() > 0 && !m_soon.isActive())
         m_soon.start(kAfterChangeMs);
@@ -451,7 +458,11 @@ void SyncController::done(const SyncReport &report)
     if (!report.failure.isEmpty()) {
         qCWarning(lcVault) << "sync failed:" << report.failure;
         m_problem = report.failure;
+        m_failedAt = QDateTime::currentDateTime();
     } else {
+        m_lastReport = report;
+        m_pending = false;
+        m_failedAt = {};
         qCInfo(lcVault) << "synced: pulled" << report.pulled.size() << "pushed"
                         << report.pushed.size() << "merged" << report.merged.size() << "conflicts"
                         << report.conflicts;
@@ -468,6 +479,45 @@ void SyncController::done(const SyncReport &report)
         m_again = false;
         start();
     }
+}
+
+QString SyncController::stamp() const
+{
+    if (!configured() || !m_lastSynced.isValid())
+        return {};
+    return tr("Updated %1").arg(QLocale().toString(m_lastSynced.time(), QLocale::ShortFormat));
+}
+
+QString SyncController::details() const
+{
+    if (!configured())
+        return {};
+    QStringList lines;
+    if (!m_problem.isEmpty()) {
+        lines << tr("Could not sync: %1").arg(m_problem);
+        if (m_failedAt.isValid())
+            lines << tr("Tried %1").arg(QLocale().toString(m_failedAt, QLocale::LongFormat));
+        if (m_lastSynced.isValid())
+            lines
+                << tr("Last worked %1").arg(QLocale().toString(m_lastSynced, QLocale::LongFormat));
+        return lines.join(u'\n');
+    }
+    if (!m_lastSynced.isValid())
+        return tr("Not synced yet");
+    lines << tr("Synced %1").arg(QLocale().toString(m_lastSynced, QLocale::LongFormat));
+    const SyncReport &last = m_lastReport;
+    if (!last.lastCommit.isEmpty()) {
+        lines << tr("Last commit: %1").arg(last.lastCommit)
+              << tr("%n note(s) changed, ", nullptr, last.commitFiles) +
+                     tr("%n line(s) added, ", nullptr, last.commitAdded) +
+                     tr("%n removed", nullptr, last.commitRemoved);
+    } else {
+        lines << tr("%n note(s) sent, ", nullptr, int(last.pushed.size())) +
+                     tr("%n received", nullptr, int(last.pulled.size() + last.merged.size()));
+    }
+    if (m_pending)
+        lines << tr("Changes here wait for the next sync");
+    return lines.join(u'\n');
 }
 
 QString SyncController::summary() const

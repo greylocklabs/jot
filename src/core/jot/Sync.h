@@ -75,6 +75,12 @@ struct SyncReport
     int uncommitted = 0;
     /// Commits made here and not pushed yet, for a remote that pushes by hand.
     int unpushed = 0;
+    /// For git, the latest commit: its title, the files it changed, and the lines it added
+    /// and removed.
+    QString lastCommit;
+    int commitFiles = 0;
+    int commitAdded = 0;
+    int commitRemoved = 0;
 
     [[nodiscard]] bool changedHere() const
     {
