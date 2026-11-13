@@ -217,9 +217,22 @@ void TestNoteEditor::numbersANotesLinesWhenAsked()
     QCOMPARE(lines.size(), document->textDocument()->blockCount());
     QTRY_VERIFY(!gutter->childItems().isEmpty());
 
+    // Beside drawn diagrams, the lines folded away under them have no numbers to pile up.
+    m_vault->setCurrent(u"Ashfall/Route.md"_s);
+    QTRY_VERIFY(!gutter->childItems().isEmpty());
+    QList<QQuickItem *> shown;
+    for (QQuickItem *number : gutter->childItems()) {
+        if (number->isVisible() && !number->property("text").toString().isEmpty())
+            shown.append(number);
+    }
+    std::ranges::sort(shown, {}, &QQuickItem::y);
+    for (qsizetype i = 1; i < shown.size(); ++i)
+        QVERIFY(shown.at(i)->y() >= shown.at(i - 1)->y() + shown.at(i - 1)->height() - 1);
+
     // Read shows the note without them, and without the toggle.
     m_settings->setReadMode(true);
     QTRY_VERIFY(!toggle->isVisible());
+    QTRY_VERIFY(!gutter->isVisible() || !body->isVisible());
     m_settings->setReadMode(false);
     m_settings->setLineNumbers(false);
     QTRY_VERIFY(!gutter->isVisible());

@@ -1172,8 +1172,11 @@ Rectangle {
                         Text {
                             required property var modelData
 
+                            // None for a line folded away under a drawn diagram or math, and
+                            // at the top of one as tall as a drawing.
+                            visible: modelData.height >= digits.height / 2
                             width: gutter.width
-                            height: modelData.height
+                            height: Math.min(modelData.height, 2 * digits.height)
                             y: body.topPadding + modelData.y
                             horizontalAlignment: Text.AlignRight
                             verticalAlignment: Text.AlignVCenter
@@ -1264,7 +1267,7 @@ Rectangle {
                     fontFamily: root.noteFamily
                     cursorPosition: body.activeFocus ? body.cursorPosition : -1
                     pixelSize: body.font.pixelSize
-                    width: body.width
+                    width: body.width - body.leftPadding
                 }
 
                 Repeater {
@@ -1281,7 +1284,7 @@ Rectangle {
                         }
 
                         // Math within a line sits where its room is, in the middle of the line.
-                        x: modelData.inline ? line.x : 0
+                        x: modelData.inline ? line.x : body.leftPadding
                         y: modelData.inline ? line.y + (line.height - height) / 2 : line.y
                         width: modelData.width
                         height: modelData.height
@@ -1315,6 +1318,7 @@ Rectangle {
                         }
 
                         objectName: "audioPlayer"
+                        x: body.leftPadding
                         y: line.y
                         width: sound.width ?? 0
                         height: sound.height ?? 0
@@ -1341,6 +1345,7 @@ Rectangle {
                         }
 
                         objectName: "videoPlayer"
+                        x: body.leftPadding
                         y: line.y
                         width: video.width ?? 0
                         height: video.height ?? 0
@@ -1456,8 +1461,9 @@ Rectangle {
                         }
 
                         objectName: "contents"
+                        x: body.leftPadding
                         y: line.y
-                        width: body.width
+                        width: body.width - body.leftPadding
 
                         Text {
                             visible: contents.modelData.headings.length === 0
