@@ -268,8 +268,9 @@ QString KeyRouter::conflict(const QString &id, const QString &sequence)
     const QKeySequence wanted(sequence, QKeySequence::PortableText);
     if (wanted.isEmpty())
         return {};
+    // Every action's keys count, those that cannot change too, such as the headings' or Paste.
     for (const KeyAction &action : chosenActions()) {
-        if (action.id == id || !action.editable)
+        if (action.id == id)
             continue;
         for (const QVariant &standard : action.standard) {
             for (const QKeySequence &each : sequencesOf(standard)) {

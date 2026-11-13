@@ -137,8 +137,10 @@ Settings::Settings(const QString &path, QObject *parent)
     m_spellcheck = get(kSpellcheck, true).toBool();
     m_dailyWordGoal = std::max(0, get(kDailyWordGoal, 0).toInt());
     m_store.beginGroup(kKeysGroup);
+    // A value written by hand with a comma in it, as "Ctrl+,", reads as a list; joined, it is
+    // the text as written.
     for (const QString &id : m_store.childKeys())
-        m_keys.insert(id, m_store.value(id).toString());
+        m_keys.insert(id, m_store.value(id).toStringList().join(u","_s));
     m_store.endGroup();
 }
 

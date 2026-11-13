@@ -69,8 +69,8 @@ Sign-ins stay in the system keyring, and a vault's own settings in its `.jot/vau
 
 Shortcuts can be changed in Keyboard shortcuts, in the help menu: click one and press the new keys.
 They are kept in `settings.ini` under `[keys]`, one line for each that differs from Jot's own, such
-as `bold=Ctrl+J`, `settings=Ctrl+,; F12` for two, or `syncNow=` for none, so they can be edited
-there too.
+as `bold=Ctrl+J`, `syncNow=` for none, or `settings="Ctrl+,; F12"` for two, in quotes since a `;`
+otherwise starts a comment, so they can be edited there too.
 
 ## Development
 

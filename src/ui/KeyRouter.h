@@ -61,7 +61,8 @@ public:
     /// The editable action in the note whose shortcut is `key` with `modifiers`, or empty. A
     /// punctuation key matches with Shift or without, for layouts that need Shift to type it.
     Q_INVOKABLE static QString noteAction(int key, int modifiers);
-    /// The label of another editable action whose shortcuts include `sequence`, or empty.
+    /// The label of another action whose shortcuts include `sequence`, or empty. Those that
+    /// cannot change count too, so their keys are never given away.
     Q_INVOKABLE static QString conflict(const QString &id, const QString &sequence);
     /// `key` with `modifiers` as Settings keeps a shortcut, or empty for a modifier alone.
     Q_INVOKABLE static QString sequenceFrom(int key, int modifiers);

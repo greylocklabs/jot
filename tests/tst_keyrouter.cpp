@@ -299,6 +299,11 @@ void TestKeyRouter::matchesTheNotesFormattingKeys()
     QCOMPARE(KeyRouter::conflict(u"bold"_s, u"Ctrl+J"_s), QString());
     QCOMPARE(KeyRouter::conflict(u"bold"_s, u"Ctrl+P"_s), u"Go to a note"_s);
     QCOMPARE(KeyRouter::conflict(u"goTo"_s, u"Ctrl+Shift+Q"_s), QString());
+    // Keys that cannot change are taken too.
+    QCOMPARE(KeyRouter::conflict(u"bold"_s, u"Ctrl+1"_s), u"Headings"_s);
+    QVERIFY(!KeyRouter::conflict(
+                 u"goTo"_s, QKeySequence(QKeySequence::Paste).toString(QKeySequence::PortableText))
+                 .isEmpty());
     SettingsForeign::s_instance = nullptr;
 }
 
