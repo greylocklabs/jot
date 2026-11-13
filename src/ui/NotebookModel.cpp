@@ -10,12 +10,15 @@ NotebookModel::NotebookModel(Settings &settings, QObject *parent)
     : QAbstractListModel(parent), m_settings(settings)
 {}
 
-void NotebookModel::reload(const Vault *vault, const QHash<QString, int> &counts, int total)
+void NotebookModel::reload(const Vault *vault, const QHash<QString, int> &counts, int total,
+                           const std::function<bool(const QString &)> &hidden)
 {
     m_all.clear();
     if (vault) {
         m_all.append({QString(), tr("All notes"), 0, false, total});
-        const QList<VaultEntry> entries = vault->entries();
+        QList<VaultEntry> entries = vault->entries();
+        if (hidden)
+            entries.removeIf([&hidden](const VaultEntry &entry) { return hidden(entry.path); });
         for (qsizetype i = 0; i < entries.size(); ++i) {
             const VaultEntry &entry = entries.at(i);
             if (!entry.folder)

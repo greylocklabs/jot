@@ -7,6 +7,8 @@
 #include <QQmlEngine>
 #include <QSet>
 
+#include <functional>
+
 namespace jot {
 
 class Settings;
@@ -32,7 +34,9 @@ public:
     explicit NotebookModel(Settings &settings, QObject *parent = nullptr);
 
     /// Reads the folders again, keeping what is folded.
-    void reload(const Vault *vault, const QHash<QString, int> &counts, int total);
+    /// Lists `vault`'s notebooks, apart from those `hidden` says are kept out of view.
+    void reload(const Vault *vault, const QHash<QString, int> &counts, int total,
+                const std::function<bool(const QString &)> &hidden = {});
 
     /// Folds a notebook shut, or opens it.
     Q_INVOKABLE void toggle(const QString &path);

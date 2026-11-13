@@ -52,12 +52,18 @@ bool insideVault(const QString &notebook)
 VaultCommands::VaultCommands(const Vault &vault, VaultIndex &index, QTextStream &out,
                              QTextStream &err)
     : m_vault(vault), m_index(index), m_out(out), m_err(err)
-{}
+{
+    // What the vault hides stays out of what these list, as it does in the app.
+    if (const std::optional<Layout> layout = Layout::read(vault))
+        m_index.setHidden(layout->hidden());
+}
 
 int VaultCommands::status(const QString &indexPath, bool json)
 {
     const QList<NoteInfo> notes = m_index.notesIn({});
-    const int notebooks = int(std::ranges::count_if(m_vault.entries(), &VaultEntry::folder));
+    const int notebooks = int(std::ranges::count_if(m_vault.entries(), [this](const VaultEntry &e) {
+        return e.folder && !m_index.isHidden(e.path);
+    }));
     const int tasks = int(m_index.openTasks().size());
     if (json) {
         print(m_out, QJsonObject{{u"vault"_s, m_vault.root()},

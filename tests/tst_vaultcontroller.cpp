@@ -47,6 +47,7 @@ private Q_SLOTS:
     void ordersNotesAsAsked();
     void followsTheOrderInSettings();
     void listsFavoritesInTheirOrder();
+    void hidesNotesAndNotebooksFromView();
     void switcherFindsByTitleAliasAndPath();
     void makesRenamesAndMovesNotebooks();
     void givesNotebooksAnEmoji();
@@ -463,6 +464,46 @@ void TestVaultController::followsTheOrderInSettings()
     QCOMPARE(m_settings->noteSort(), u"title"_s);
     m_settings->reset();
     QCOMPARE(m_vault->notes()->order(), u"updated"_s);
+}
+
+void TestVaultController::hidesNotesAndNotebooksFromView()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    const int before = m_vault->noteCount();
+    QVERIFY(m_vault->setHidden(u"Recipes"_s, true));
+    QVERIFY(m_vault->setHidden(u"Inbox/Groceries.md"_s, true));
+    QCOMPARE(m_vault->hiddenPaths(), (QStringList{u"Recipes"_s, u"Inbox/Groceries.md"_s}));
+    QVERIFY(readFile(m_root + u"/.jot/layout.yaml"_s).contains(u"hidden:"_s));
+
+    // Out of the lists, the notebooks, quick open, search, tags and to-dos.
+    QCOMPARE(m_vault->noteCount(), before - 3);
+    const QStringList paths = column(*m_vault->notes(), "path");
+    QVERIFY(!paths.contains(u"Recipes/Pancakes.md"_s));
+    QVERIFY(!paths.contains(u"Inbox/Groceries.md"_s));
+    QVERIFY(!column(*m_vault->notebooks(), "path").contains(u"Recipes"_s));
+    m_vault->switcher()->setQuery(u"pancakes"_s);
+    QCOMPARE(m_vault->switcher()->rowCount(), 0);
+    m_vault->notes()->setQuery(u"starter"_s);
+    QCOMPARE(m_vault->notes()->rowCount(), 0);
+    m_vault->notes()->setQuery({});
+    QVERIFY(!column(*m_vault->tagTree(), "tag").contains(u"food"_s));
+    m_vault->tasks()->setView(u"all"_s);
+    const QStringList todos = column(*m_vault->tasks(), "note");
+    QVERIFY(!todos.contains(u"Pancakes"_s) && !todos.contains(u"Groceries"_s));
+    QVERIFY(!todos.isEmpty());
+
+    // Links to it still lead there.
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QCOMPARE(m_vault->preview(u"Recipes/Pancakes.md"_s).value(u"title"_s).toString(),
+             u"Pancakes"_s);
+
+    // Undone, it is back.
+    QVERIFY(m_vault->undo());
+    QCOMPARE(m_vault->hiddenPaths(), QStringList{u"Recipes"_s});
+    QVERIFY(column(*m_vault->notes(), "path").contains(u"Inbox/Groceries.md"_s));
+    QVERIFY(m_vault->setHidden(u"Recipes"_s, false));
+    QCOMPARE(m_vault->noteCount(), before);
+    QVERIFY(column(*m_vault->notebooks(), "path").contains(u"Recipes"_s));
 }
 
 void TestVaultController::listsFavoritesInTheirOrder()

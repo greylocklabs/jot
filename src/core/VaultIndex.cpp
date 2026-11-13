@@ -544,6 +544,13 @@ std::optional<NoteInfo> VaultIndex::note(const QString &path) const
     return infoFrom(query);
 }
 
+bool VaultIndex::isHidden(const QString &path) const
+{
+    return std::ranges::any_of(m_hidden, [&path](const QString &hidden) {
+        return path == hidden || (path.startsWith(hidden) && path.at(hidden.size()) == u'/');
+    });
+}
+
 QList<NoteInfo> VaultIndex::notesIn(const QString &folder) const
 {
     QSqlQuery query(QSqlDatabase::database(m_connection));
@@ -571,6 +578,8 @@ QList<NoteInfo> VaultIndex::notesIn(const QString &folder) const
         while (query.next()) {
             NoteInfo info;
             info.path = query.value(0).toString();
+            if (isHidden(info.path))
+                continue;
             info.title = query.value(1).toString();
             info.created = query.value(2).toString();
             info.type = query.value(3).toString();
@@ -588,7 +597,10 @@ QHash<QString, int> VaultIndex::noteCounts() const
     QSqlQuery query(u"SELECT path FROM notes"_s, QSqlDatabase::database(m_connection));
     QHash<QString, int> counts;
     while (query.next()) {
-        QString folder = folderOf(query.value(0).toString());
+        const QString path = query.value(0).toString();
+        if (isHidden(path))
+            continue;
+        QString folder = folderOf(path);
         while (!folder.isEmpty()) {
             ++counts[folder];
             folder = folderOf(folder);
@@ -599,6 +611,13 @@ QHash<QString, int> VaultIndex::noteCounts() const
 
 int VaultIndex::noteCount() const
 {
+    if (!m_hidden.isEmpty()) {
+        QSqlQuery query(u"SELECT path FROM notes"_s, QSqlDatabase::database(m_connection));
+        int count = 0;
+        while (query.next())
+            count += isHidden(query.value(0).toString()) ? 0 : 1;
+        return count;
+    }
     QSqlQuery query(u"SELECT count(*) FROM notes"_s, QSqlDatabase::database(m_connection));
     return query.next() ? query.value(0).toInt() : 0;
 }
@@ -653,13 +672,17 @@ QList<SearchHit> VaultIndex::search(const QString &query, int limit) const
     select.prepare(sql);
     for (const QVariant &value : std::as_const(values))
         select.addBindValue(value);
-    select.addBindValue(limit);
+    // Room for the hidden ones it leaves out.
+    select.addBindValue(m_hidden.isEmpty() ? limit : -1);
     QList<SearchHit> hits;
     if (!exec(select, "search"))
         return hits;
-    while (select.next())
-        hits.append({select.value(0).toString(), select.value(1).toString(),
-                     select.value(2).toString(), select.value(3).toLongLong()});
+    while (select.next() && hits.size() < limit) {
+        const QString path = select.value(0).toString();
+        if (!isHidden(path))
+            hits.append({path, select.value(1).toString(), select.value(2).toString(),
+                         select.value(3).toLongLong()});
+    }
     return hits;
 }
 
@@ -724,11 +747,14 @@ QList<NoteLink> VaultIndex::unresolved() const
 
 QStringList VaultIndex::tags() const
 {
-    QSqlQuery query(u"SELECT DISTINCT tag FROM tags ORDER BY tag COLLATE NOCASE"_s,
+    QSqlQuery query(u"SELECT path, tag FROM tags ORDER BY tag COLLATE NOCASE"_s,
                     QSqlDatabase::database(m_connection));
     QStringList tags;
-    while (query.next())
-        tags.append(query.value(0).toString());
+    while (query.next()) {
+        if (!isHidden(query.value(0).toString()))
+            tags.append(query.value(1).toString());
+    }
+    tags.removeDuplicates();
     return tags;
 }
 
@@ -742,6 +768,8 @@ QList<TagCount> VaultIndex::tagCounts() const
     while (query.next()) {
         const QString path = query.value(0).toString();
         const QString tag = query.value(1).toString();
+        if (isHidden(path))
+            continue;
         for (qsizetype slash = 0; slash >= 0;) {
             slash = tag.indexOf(u'/', slash + 1);
             const QString prefix = slash < 0 ? tag : tag.first(slash);
@@ -775,8 +803,10 @@ QStringList VaultIndex::tagged(const QString &tag) const
     query.addBindValue(likeEscaped(tag) + u"/%"_s);
     QStringList paths;
     if (exec(query, "tagged")) {
-        while (query.next())
-            paths.append(query.value(0).toString());
+        while (query.next()) {
+            if (const QString path = query.value(0).toString(); !isHidden(path))
+                paths.append(path);
+        }
     }
     return paths;
 }
@@ -788,6 +818,8 @@ QList<NoteTask> VaultIndex::openTasks() const
         QSqlDatabase::database(m_connection));
     QList<NoteTask> tasks;
     while (query.next()) {
+        if (isHidden(query.value(0).toString()))
+            continue;
         const QString text = query.value(3).toString();
         tasks.append({query.value(0).toString(), query.value(1).toInt(), query.value(2).toBool(),
                       text, readTaskLine(text)});
@@ -802,6 +834,8 @@ QList<NoteTask> VaultIndex::doneTasks() const
         QSqlDatabase::database(m_connection));
     QList<NoteTask> tasks;
     while (query.next()) {
+        if (isHidden(query.value(0).toString()))
+            continue;
         const QString text = query.value(3).toString();
         tasks.append({query.value(0).toString(), query.value(1).toInt(), query.value(2).toBool(),
                       text, readTaskLine(text)});

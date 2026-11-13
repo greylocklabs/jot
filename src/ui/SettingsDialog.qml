@@ -258,6 +258,51 @@ Popup {
                     }
                 }
 
+                // Hidden notes and notebooks, each with a way back.
+                Section {
+                    objectName: "hiddenSection"
+                    title: qsTr("Hidden")
+                    visible: root.tab === "files" && Vault.isOpen
+
+                    Text {
+                        width: parent.width
+                        wrapMode: Text.Wrap
+                        text: Vault.hiddenPaths.length === 0 ? qsTr(
+                                                                   "Nothing is hidden. Hide a note or notebook from its menu to keep it out of the lists, search and Tasks; links to it still work.") :
+                                                               qsTr("Kept out of the lists, search and Tasks; links to them still work.")
+                        color: Theme.textMuted
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.textSm
+                    }
+                    Repeater {
+                        model: Vault.hiddenPaths
+
+                        Row {
+                            id: hiddenRow
+
+                            required property string modelData
+
+                            spacing: Theme.space3
+
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: hiddenRow.modelData
+                                textFormat: Text.PlainText
+                                color: Theme.text
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.textMd
+                            }
+                            StickerButton {
+                                objectName: "unhide"
+                                anchors.verticalCenter: parent.verticalCenter
+                                enabled: Vault.writable
+                                text: qsTr("Unhide")
+                                onClicked: Vault.setHidden(hiddenRow.modelData, false)
+                            }
+                        }
+                    }
+                }
+
                 Section {
                     id: ignoreSection
 

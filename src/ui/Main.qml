@@ -914,6 +914,7 @@ ApplicationWindow {
             return note
         case "rename":
         case "toggleFavorite":
+        case "hideNote":
             return note && Vault.writable
         case "trash":
             // Not while the tasks or the trash are shown, which hide the note it would ask about.
@@ -1104,6 +1105,9 @@ ApplicationWindow {
             break
         case "toggleFavorite":
             Vault.setFavorite(Vault.current, !Vault.isFavorite(Vault.current))
+            break
+        case "hideNote":
+            Vault.setHidden(Vault.current, true)
             break
         case "importJoplin":
             joplinImport.start("")
