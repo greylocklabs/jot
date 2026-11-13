@@ -340,6 +340,22 @@ void TestMarkdownHighlighter::saysWhatIsUnderAPosition()
     QCOMPARE(m_highlighter->hitAt(find(u"nobody"_s)).kind, MarkdownHighlighter::Hit::None);
     QCOMPARE(formatAt(find(u"her"_s)).foreground().color(), m_look.accent);
     QCOMPARE(formatAt(find(u"Cast/"_s)).foreground().color(), m_look.faint);
+    // Brackets with no definition are words, and a footnote's definition is no link's.
+    QVERIFY(formatAt(find(u"nobody"_s)).foreground().color() != m_look.accent);
+    setText(u"See [it][^1].\n\n[^1]: Mara.md\n"_s);
+    QVERIFY(formatAt(find(u"it]"_s)).foreground().color() != m_look.accent);
+    QVERIFY(formatAt(find(u"Mara.md"_s)).foreground().color() != m_look.faint);
+    QCOMPARE(m_highlighter->hitAt(find(u"it]"_s)).kind, MarkdownHighlighter::Hit::None);
+    // A definition added below a use makes it a link.
+    setText(u"Ask [her][m].\n"_s);
+    QVERIFY(formatAt(find(u"her"_s)).foreground().color() != m_look.accent);
+    QTextCursor end(m_document.get());
+    end.movePosition(QTextCursor::End);
+    end.insertText(u"\n[m]: Mara.md\n"_s);
+    QTRY_COMPARE(formatAt(find(u"her"_s)).foreground().color(), m_look.accent);
+    // Another text in the same document forgets the last one's definitions.
+    setText(u"Ask [her][m].\n"_s);
+    QVERIFY(formatAt(find(u"her"_s)).foreground().color() != m_look.accent);
 }
 
 void TestMarkdownHighlighter::neverChangesTheText()

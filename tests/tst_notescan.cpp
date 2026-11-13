@@ -53,7 +53,7 @@ void TestNoteScan::findsReferenceLinksByTheirDefinitions()
 {
     const QString body = u"See [Mara][1] and [the ferry][].\n\n[1]: Mara.md\n"
                          u"  [The Ferry]: <Places/The Ferry.md#dock> \"title\"\n"
-                         u"[site]: https://callieapp.org\n[up]: #top\n"_s;
+                         u"[site]: https://callieapp.org\n[up]: #top\n[^1]: Mara.md\n"_s;
     const QList<NoteScan::Link> expected{
         {u"Mara.md"_s, u"link"_s, 3},
         {u"Places/The Ferry.md#dock"_s, u"link"_s, 4},

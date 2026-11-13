@@ -6,6 +6,7 @@
 
 #include <QColor>
 #include <QHash>
+#include <QSet>
 #include <QSize>
 #include <QSyntaxHighlighter>
 #include <QTextBlock>
@@ -167,6 +168,8 @@ private:
     void merge(int start, int length, const QTextCharFormat &format);
     void mark(int start, int length);
     void inlineStyles(const QString &text, int from);
+    /// The reference link labels the document defines; when they change, every block restyles.
+    const QSet<QString> &definedLabels();
     /// Colors an open to-do's markers, such as `@weekly` and `@due 2026-11-02`, each kind its own
     /// way, keeping them as written.
     void taskMarkerStyles(const QString &text);
@@ -206,6 +209,9 @@ private:
     int m_cursorBlock = -1;
     bool m_cursorHere = false;
     bool m_source = false;
+    /// The labels the document defines, as labelKey() writes them, read again after a change.
+    QSet<QString> m_labels;
+    bool m_labelsStale = true;
     bool m_focus = false;
     bool m_foldComments = false;
     /// The text painted after a yank, its ends kept as cursors so they move with edits; null
