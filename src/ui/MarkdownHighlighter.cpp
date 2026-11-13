@@ -562,10 +562,17 @@ void MarkdownHighlighter::styleBlock(const QString &text)
         return;
     }
     if (state == InFrontMatter) {
+        const bool closing = trimmed == u"---" || trimmed == u"...";
+        // Its closing line, away from the cursor, is room between the front matter and the
+        // note, as written once the cursor is on it.
+        if (closing && !m_cursorHere) {
+            reserve(text, int(text.indexOf(trimmed)), m_look.pixelSize * 3 / 2);
+            return;
+        }
         QTextCharFormat yaml = faint;
         yaml.setProperty(QTextFormat::FontPixelSize, std::max(m_look.pixelSize - 2, 8));
         setFormat(0, int(text.size()), yaml);
-        if (trimmed != u"---" && trimmed != u"...")
+        if (!closing)
             setCurrentBlockState(InFrontMatter);
         return;
     }
