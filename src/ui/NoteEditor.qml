@@ -427,7 +427,10 @@ Rectangle {
         tableReady: tableModel.table
         whyNotTable: tableModel.why
         frontMatterProblems: styler.frontMatterProblems
+        // In Read, the note is shown to edit first, as there is no cursor to move there.
         onProblemPicked: line => {
+            if (Settings.readMode)
+                Settings.readMode = false
             body.cursorPosition = styler.lineStart(line - 1)
             body.forceActiveFocus()
         }
