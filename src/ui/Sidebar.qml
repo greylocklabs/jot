@@ -170,6 +170,9 @@ Rectangle {
             }
         }
 
+        HoverHandler {
+            cursorShape: Qt.PointingHandCursor
+        }
         background: Rectangle {
             anchors.fill: parent
             anchors.leftMargin: Theme.space3
