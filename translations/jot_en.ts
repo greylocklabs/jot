@@ -4470,41 +4470,6 @@ Press %1 to make one.</source>
         <source>Last commit: %1</source>
         <translation type="unfinished"></translation>
     </message>
-    <message numerus="yes">
-        <source>%n note(s) changed, </source>
-        <translation type="unfinished">
-            <numerusform></numerusform>
-            <numerusform></numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>%n line(s) added, </source>
-        <translation type="unfinished">
-            <numerusform></numerusform>
-            <numerusform></numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>%n removed</source>
-        <translation type="unfinished">
-            <numerusform></numerusform>
-            <numerusform></numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>%n note(s) sent, </source>
-        <translation type="unfinished">
-            <numerusform></numerusform>
-            <numerusform></numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>%n received</source>
-        <translation type="unfinished">
-            <numerusform></numerusform>
-            <numerusform></numerusform>
-        </translation>
-    </message>
     <message>
         <source>Changes here wait for the next sync</source>
         <translation type="unfinished"></translation>
@@ -4527,6 +4492,14 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>Not synced yet</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Notes changed: %1, lines added: %2, removed: %3</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Notes sent: %1, received: %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message numerus="yes">
