@@ -36,6 +36,26 @@ Rectangle {
 
     /// Moves to the next, previous, first or last to-do and opens its note there, by
     /// KeyRouter's action id.
+    /// Shows the note `path` in its notebook, as if picked there, with the cursor on `line`.
+    function goToNote(path, line) {
+        Vault.dropTag()
+        Vault.showingTasks = false
+        Vault.showingTrash = false
+        Vault.notes.tag = ""
+        Vault.notes.notebook = Vault.notebookOf(path)
+        Vault.openAt(path, line)
+    }
+
+    function showMenu(row, x, y) {
+        taskMenu.path = row.path
+        taskMenu.line = row.line
+        taskMenu.wording = row.wording
+        taskMenu.words = row.title
+        taskMenu.done = row.done
+        taskMenu.priority = row.priority
+        taskMenu.popup(row, x, y)
+    }
+
     function step(id) {
         if (list.count === 0)
             return
@@ -290,10 +310,14 @@ Rectangle {
             onDoubleClicked: {
                 if (!Vault.writable || done)
                     return
-                scheduler.path = path
-                scheduler.line = line
-                scheduler.written = wording
-                scheduler.openFor(wording)
+                root.schedule(path, line, wording)
+            }
+
+            TapHandler {
+                acceptedButtons: Qt.RightButton
+                // At the click, which Wayland does not share as a cursor position.
+                onTapped: eventPoint => root.showMenu(item, eventPoint.position.x,
+                                                      eventPoint.position.y)
             }
 
             background: Rectangle {
@@ -425,6 +449,82 @@ Rectangle {
         }
         width: 1
         color: Theme.hairline
+    }
+
+    function schedule(path, line, wording) {
+        scheduler.path = path
+        scheduler.line = line
+        scheduler.written = wording
+        scheduler.openFor(wording)
+    }
+
+    MenuCard {
+        id: taskMenu
+
+        objectName: "taskMenu"
+        /// The to-do it is for.
+        property string path
+        property int line
+        property string wording
+        /// Its words, without the markers.
+        property string words
+        property bool done
+        property int priority
+
+        MenuEntry {
+            objectName: "taskGoToNote"
+            text: qsTr("Go to the note")
+            onTriggered: root.goToNote(taskMenu.path, taskMenu.line)
+        }
+        MenuEntry {
+            objectName: "taskTick"
+            text: taskMenu.done ? qsTr("Untick") : qsTr("Tick")
+            enabled: Vault.writable
+            onTriggered: Vault.setTaskDone(taskMenu.path, taskMenu.line, !taskMenu.done,
+                                           taskMenu.wording)
+        }
+        MenuEntry {
+            text: qsTr("Set date and repeat...")
+            enabled: Vault.writable && !taskMenu.done
+            onTriggered: root.schedule(taskMenu.path, taskMenu.line, taskMenu.wording)
+        }
+        MenuCard {
+            id: priorityMenu
+
+            title: qsTr("Priority")
+            enabled: Vault.writable
+
+            Instantiator {
+                model: [1, 2, 3, 4, 0]
+
+                MenuEntry {
+                    required property int modelData
+                    objectName: "taskPriority" + modelData
+                    text: Vault.priorityName(modelData)
+                    enabled: modelData !== taskMenu.priority
+                    onTriggered: Vault.setTaskPriority(taskMenu.path, taskMenu.line,
+                                                       taskMenu.wording, modelData)
+                }
+                onObjectAdded: (index, object) => priorityMenu.insertItem(index, object)
+                onObjectRemoved: (index, object) => priorityMenu.removeItem(object)
+            }
+        }
+        MenuEntry {
+            text: qsTr("Copy text")
+            onTriggered: Support.copyText(taskMenu.words)
+        }
+        MenuSeparator {
+            contentItem: Rectangle {
+                implicitHeight: 1
+                color: Theme.border
+            }
+        }
+        MenuEntry {
+            objectName: "taskDelete"
+            text: qsTr("Delete the to-do")
+            enabled: Vault.writable
+            onTriggered: Vault.deleteTask(taskMenu.path, taskMenu.line, taskMenu.wording)
+        }
     }
 
     // The day popup for a to-do double-clicked in the list, which writes to its note.

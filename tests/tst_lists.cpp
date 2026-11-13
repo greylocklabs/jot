@@ -65,6 +65,7 @@ private Q_SLOTS:
     void taskViewsFitANarrowColumn();
     void untickingInDoneOpensItAgain();
     void schedulesAToDoByDoubleClick();
+    void toDoMenuActsOnItsToDo();
 
 private:
     /// The visible menu entry reading `text`, anywhere in the window.
@@ -284,6 +285,65 @@ void TestLists::schedulesAToDoByDoubleClick()
     set(u"2030-01-03"_s);
     QTRY_VERIFY(notefile::read(m_root + u"/Inbox/Groceries.md"_s, &error)
                     ->startsWith(u"- [ ] Groceries @due 2030-01-03 @p3"_s));
+}
+
+void TestLists::toDoMenuActsOnItsToDo()
+{
+    m_vault->tasks()->setView(u"all"_s);
+    QQmlComponent component(m_engine.get());
+    component.loadFromModule("Jot.Ui", "TaskList");
+    std::unique_ptr<QObject> tasks(component.create());
+    QVERIFY2(tasks, qPrintable(component.errorString()));
+    auto *item = qobject_cast<QQuickItem *>(tasks.get());
+    item->setParentItem(m_window->contentItem());
+    item->setSize({480, 700});
+    const QString soren = u"Ashfall/Characters/Soren.md"_s;
+    const auto rowFor = [&](const QString &path) {
+        return findItem(
+            [&path](QQuickItem *each) {
+                return each->isVisible() && each->property("path").toString() == path &&
+                       each->property("wording").isValid();
+            },
+            item);
+    };
+    const auto choose = [&](const QString &path, const QString &entry) {
+        QQuickItem *row = nullptr;
+        QTRY_VERIFY(row = rowFor(path));
+        QTest::mouseClick(m_window.get(), Qt::RightButton, {},
+                          row->mapToScene({row->width() / 2, row->height() / 2}).toPoint());
+        QObject *menu = tasks->findChild<QObject *>(u"taskMenu"_s);
+        QTRY_VERIFY(menu->property("opened").toBool());
+        QCOMPARE(menu->property("path").toString(), path);
+        QObject *chosen = nullptr;
+        QTRY_VERIFY(chosen = tasks->findChild<QObject *>(entry));
+        QVERIFY(QMetaObject::invokeMethod(chosen, "triggered"));
+        QMetaObject::invokeMethod(menu, "close");
+    };
+    const auto text = [this](const QString &path) {
+        QString error;
+        return notefile::read(m_root + u'/' + path, &error).value_or(QString());
+    };
+
+    choose(soren, u"taskPriority1"_s);
+    QTRY_VERIFY(text(soren).contains(u"- [ ] decide what he wants by act two @p1"_s));
+    choose(soren, u"taskTick"_s);
+    QTRY_VERIFY(text(soren).contains(u"- [x] decide what he wants by act two"_s));
+
+    // Deleted, its line goes, and comes back with undo.
+    const QString before = text(soren);
+    m_vault->tasks()->setView(u"all"_s);
+    choose(u"Inbox/Groceries.md"_s, u"taskDelete"_s);
+    QTRY_VERIFY(!text(u"Inbox/Groceries.md"_s).contains(u"Groceries @due"_s));
+    QVERIFY(m_vault->undo());
+    QVERIFY(text(u"Inbox/Groceries.md"_s).startsWith(u"- [ ] Groceries @due"_s));
+    QCOMPARE(text(soren), before);
+
+    // Going to the note leaves Tasks for its notebook, at the to-do's line.
+    m_vault->setShowingTasks(true);
+    choose(u"Inbox/Groceries.md"_s, u"taskGoToNote"_s);
+    QVERIFY(!m_vault->showingTasks());
+    QCOMPARE(m_vault->notes()->notebook(), u"Inbox"_s);
+    QCOMPARE(m_vault->current(), u"Inbox/Groceries.md"_s);
 }
 
 void TestLists::cleanup()

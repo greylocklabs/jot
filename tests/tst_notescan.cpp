@@ -156,6 +156,19 @@ void TestNoteScan::rewritesAToDosWords()
     QCOMPARE(setTaskText(u"new\n"_s + note, 2, u"water @weekly"_s, u"water"_s),
              std::optional(u"new\n# Chores\n- [ ] water\n- [x] sweep\n"_s));
     QCOMPARE(setTaskText(note, 2, u"weed"_s, u"water"_s), std::nullopt);
+
+    // A priority in place of any it had, or none.
+    QCOMPARE(setTaskPriority(note, 2, u"water @weekly"_s, 1),
+             std::optional(u"# Chores\n- [ ] water @weekly @p1\n- [x] sweep\n"_s));
+    QCOMPARE(setTaskPriority(u"- [ ] water @p3 @weekly\n"_s, 1, {}, 2),
+             std::optional(u"- [ ] water @weekly @p2\n"_s));
+    QCOMPARE(setTaskPriority(u"- [ ] water @p3\n"_s, 1, {}, 0), std::optional(u"- [ ] water\n"_s));
+
+    // Taken out with its line, on the last line too.
+    QCOMPARE(removeTask(note, 2, u"water @weekly"_s), std::optional(u"# Chores\n- [x] sweep\n"_s));
+    QCOMPARE(removeTask(u"a\n- [ ] b"_s, 2, {}), std::optional(u"a"_s));
+    QCOMPARE(removeTask(u"- [ ] b"_s, 1, {}), std::optional(QString()));
+    QCOMPARE(removeTask(note, 1, {}), std::nullopt);
 }
 
 void TestNoteScan::findsAToDosWords()

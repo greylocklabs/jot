@@ -1840,6 +1840,24 @@ bool VaultController::setTaskText(const QString &path, int line, const QString &
         true);
 }
 
+bool VaultController::setTaskPriority(const QString &path, int line, const QString &text,
+                                      int priority)
+{
+    return rewriteNote(
+        path,
+        [line, text, priority](const QString &note) {
+            return jot::setTaskPriority(note, line, text, priority);
+        },
+        true);
+}
+
+bool VaultController::deleteTask(const QString &path, int line, const QString &text)
+{
+    return rewriteNote(
+        path, [line, text](const QString &note) { return jot::removeTask(note, line, text); },
+        true);
+}
+
 bool VaultController::undo()
 {
     if (m_undo.isEmpty())

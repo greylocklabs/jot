@@ -360,6 +360,13 @@ public:
     /// say `text`, as the day popup does for a to-do in Tasks.
     Q_INVOKABLE bool setTaskText(const QString &path, int line, const QString &text,
                                  const QString &now);
+    /// Gives the to-do on `line` of the note at `path`, which says `text`, `priority`, 1 to 4,
+    /// or none for 0. Undoable.
+    Q_INVOKABLE bool setTaskPriority(const QString &path, int line, const QString &text,
+                                     int priority);
+    /// Takes the line of the to-do on `line` of the note at `path`, which says `text`, out of
+    /// the note. Undoable.
+    Q_INVOKABLE bool deleteTask(const QString &path, int line, const QString &text);
     /// Takes back the last change, or does again the last one taken back. Refused, and
     /// forgotten, when the note has changed or gone since.
     Q_INVOKABLE bool undo();

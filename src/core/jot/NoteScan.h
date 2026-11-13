@@ -99,6 +99,14 @@ rewriteLinks(QStringView body,
 [[nodiscard]] std::optional<QString> setTaskText(const QString &note, int line, const QString &text,
                                                  const QString &now);
 
+/// `note` with the task on `line`, found as setTaskText() finds it, given `priority`, 1 to 4, or
+/// none for 0, in place of any it had.
+[[nodiscard]] std::optional<QString> setTaskPriority(const QString &note, int line,
+                                                     const QString &text, int priority);
+
+/// `note` without the line of the task on `line`, found as setTaskText() finds it.
+[[nodiscard]] std::optional<QString> removeTask(const QString &note, int line, const QString &text);
+
 /// `note` with the task on `line` (counted from 1, in the whole file) ticked or unticked,
 /// and nothing else changed. Given `text`, the task must say that: when lines have moved
 /// since `line` was read, the one task that does is changed instead. Ticking one writes
