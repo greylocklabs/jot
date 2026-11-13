@@ -9,6 +9,17 @@ import QtQuick.Controls
 Rectangle {
     id: root
 
+    /// `words`, and the shortcut for `id` after them when it has one, as chosen in Settings.
+    function withKey(words, id) {
+        shortcuts.actions
+        const key = shortcuts.keyText(id)
+        return key === "" ? words : qsTr("%1 (%2)").arg(words).arg(key)
+    }
+
+    KeyRouter {
+        id: shortcuts
+    }
+
     /// Where the leader key goes from the note in vi mode.
     property KeyRouter router: null
     /// Only the note shows, without its format row or tabs.
@@ -349,37 +360,20 @@ Rectangle {
         return ""
     }
 
-    /// The formatting a key press asks for, or "". Letters and digits match by key, so they
-    /// are the same on every layout; the slash matches by the character typed, with Shift
-    /// or without, so layouts that need Shift for it (Shift+7 in German) work too.
+    /// The formatting a key press asks for, or "", by the shortcuts chosen in Settings. Keys
+    /// match by key, so they are the same on every layout, and punctuation with Shift or without,
+    /// so layouts that need Shift for the slash (Shift+7 in German) work too.
     function formatKey(event) {
-        const ctrl = (event.modifiers & Qt.ControlModifier) !== 0
-        const shift = (event.modifiers & Qt.ShiftModifier) !== 0
-        if (!ctrl || (event.modifiers & Qt.AltModifier) !== 0)
-            return ""
-        if (event.key === Qt.Key_Slash)
-            return "source"
-        if (shift)
-            return event.key === Qt.Key_X ? "strike" : event.key === Qt.Key_D ? "schedule" : ""
-        switch (event.key) {
-        case Qt.Key_B:
-            return "bold"
-        case Qt.Key_I:
-            return "italic"
-        case Qt.Key_E:
-            return "code"
-        case Qt.Key_K:
-            return "link"
-        case Qt.Key_1:
-            return "h1"
-        case Qt.Key_2:
-            return "h2"
-        case Qt.Key_3:
-            return "h3"
-        case Qt.Key_Return:
-        case Qt.Key_Enter:
-            return "task"
-        }
+        const action = shortcuts.noteAction(event.key, event.modifiers)
+        if (action !== "")
+            return ({
+                        "sourceMode": "source",
+                        "checkbox": "task"
+                    })[action] || action
+        // The headings keep their keys, one for each level.
+        if (event.modifiers === Qt.ControlModifier && event.key >= Qt.Key_1 && event.key
+                <= Qt.Key_3)
+            return "h" + (event.key - Qt.Key_0)
         return ""
     }
 
@@ -387,9 +381,17 @@ Rectangle {
         anchors.centerIn: parent
         visible: Vault.current === ""
         horizontalAlignment: Text.AlignHCenter
-        text: Vault.noteCount === 0 ? qsTr(
-                                          "This vault has no notes yet.\nPress Ctrl+N to make one.") :
-                                      qsTr("Choose a note, or press Ctrl+P to find one.")
+        text: {
+            shortcuts.actions
+            const make = shortcuts.keyText("newNote")
+            const find = shortcuts.keyText("goTo")
+            if (Vault.noteCount === 0)
+                return make === "" ? qsTr("This vault has no notes yet.") : qsTr(
+                                         "This vault has no notes yet.\nPress %1 to make one.").arg(
+                                         make)
+            return find === "" ? qsTr("Choose a note.") : qsTr(
+                                     "Choose a note, or press %1 to find one.").arg(find)
+        }
         color: Theme.textFaint
         font.family: Theme.fontFamily
         font.pixelSize: Theme.textBase
@@ -589,19 +591,20 @@ Rectangle {
                     options: [
                         {
                             "label": qsTr("Styled"),
-                            "tip": tableModel.table ? qsTr("Edit the records as a table (Ctrl+/)") :
-                                                      notTable,
+                            "tip": tableModel.table ? root.withKey(qsTr(
+                                                                       "Edit the records as a table"),
+                                                                   "sourceMode") : notTable,
                             "enabled": tableModel.table
                         },
                         {
                             "label": qsTr("Source"),
-                            "tip": qsTr("Edit the file's text (Ctrl+/)")
+                            "tip": root.withKey(qsTr("Edit the file's text"), "sourceMode")
                         },
                         {
                             "label": qsTr("Read"),
-                            "tip": tableModel.table ? qsTr(
-                                                          "Read the records as a table, without changing them (Ctrl+Shift+R)") :
-                                                      notTable,
+                            "tip": tableModel.table ? root.withKey(qsTr(
+                                                                       "Read the records as a table, without changing them"),
+                                                                   "readMode") : notTable,
                             "enabled": tableModel.table
                         }
                     ]

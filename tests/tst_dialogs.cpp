@@ -58,6 +58,8 @@ private Q_SLOTS:
     void renamesANoteInTheWindow();
     void offersToRemoveATargetOnlyWhenThereIsOne();
     void holdingBackListsTheNotesBefore();
+    void changesAShortcutByPressingIt();
+    void aChosenShortcutWorksInTheWindow();
 
 private:
     QTemporaryDir m_dir;
@@ -513,6 +515,94 @@ void TestDialogs::holdingBackListsTheNotesBefore()
                       second->mapToScene({second->width() / 2, second->height() / 2}).toPoint());
     QTRY_COMPARE(m_vault->current(), u"Trail one.md"_s);
     QVERIFY(m_vault->canGoForward());
+}
+
+void TestDialogs::changesAShortcutByPressingIt()
+{
+    QQuickWindow window;
+    window.resize(900, 760);
+    window.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&window));
+    QQmlEngine engine;
+    QQmlComponent component(&engine);
+    component.setData("import Jot.Ui\nKeyHelp { KeyRouter { id: keys } actions: keys.actions }\n",
+                      QUrl(u"qrc:/test.qml"_s));
+    std::unique_ptr<QObject> help(component.create());
+    QVERIFY2(help, qPrintable(component.errorString()));
+    help->setProperty("parent", QVariant::fromValue(window.contentItem()));
+    QMetaObject::invokeMethod(help.get(), "open");
+    QTRY_VERIFY(help->property("opened").toBool());
+    auto *content = help->property("contentItem").value<QQuickItem *>();
+    const std::function<QQuickItem *(QQuickItem *, const QString &)> find =
+        [&find](QQuickItem *at, const QString &name) -> QQuickItem * {
+        for (QQuickItem *child : at->childItems()) {
+            if (child->objectName() == name && child->isVisible())
+                return child;
+            if (QQuickItem *found = find(child, name))
+                return found;
+        }
+        return nullptr;
+    };
+    const auto click = [&](const QString &name) {
+        QQuickItem *item = nullptr;
+        QTRY_VERIFY(item = find(content, name));
+        QTest::mouseClick(&window, Qt::LeftButton, {},
+                          item->mapToScene({item->width() / 2, item->height() / 2}).toPoint());
+    };
+    const auto message = [&] {
+        return find(content, u"keyMessage"_s)->property("text").toString();
+    };
+
+    // Clicked, a shortcut waits for the new keys, which the window's shortcuts do not take.
+    click(u"keys_goTo"_s);
+    QTRY_COMPARE(help->property("recording").toString(), u"goTo"_s);
+    QTest::keyClick(&window, Qt::Key_G, Qt::ControlModifier | Qt::ShiftModifier);
+    QTRY_COMPARE(m_settings->keys().value(u"goTo"_s).toString(), u"Ctrl+Shift+G"_s);
+    QCOMPARE(help->property("recording").toString(), QString());
+
+    // A key another action has, or one that would only type, is said and not taken.
+    click(u"keys_newNote"_s);
+    QTRY_COMPARE(help->property("recording").toString(), u"newNote"_s);
+    QTest::keyClick(&window, Qt::Key_G, Qt::ControlModifier | Qt::ShiftModifier);
+    QTRY_VERIFY2(message().contains(u"already Go to a note"_s), qPrintable(message()));
+    QTest::keyClick(&window, Qt::Key_Q);
+    QTRY_VERIFY2(message().contains(u"Ctrl or Alt"_s), qPrintable(message()));
+    QVERIFY(!m_settings->keys().contains(u"newNote"_s));
+    // Escape keeps the old shortcut and the popup open; Backspace leaves none.
+    QTest::keyClick(&window, Qt::Key_Escape);
+    QTRY_COMPARE(help->property("recording").toString(), QString());
+    QVERIFY(help->property("opened").toBool());
+    click(u"keys_newNote"_s);
+    QTest::keyClick(&window, Qt::Key_Backspace);
+    QTRY_VERIFY(m_settings->keys().contains(u"newNote"_s));
+    QVERIFY(m_settings->keys().value(u"newNote"_s).toString().isEmpty());
+
+    // Reset puts the built-in one back.
+    click(u"reset_goTo"_s);
+    QTRY_VERIFY(!m_settings->keys().contains(u"goTo"_s));
+    m_settings->resetKeys(u"newNote"_s);
+}
+
+void TestDialogs::aChosenShortcutWorksInTheWindow()
+{
+    m_settings->setKeys(u"goTo"_s, u"Ctrl+Shift+G"_s);
+    QQmlEngine engine;
+    QQmlComponent component(&engine);
+    component.loadFromModule("Jot.Ui", "Main");
+    std::unique_ptr<QObject> main(component.create());
+    QVERIFY2(main, qPrintable(component.errorString()));
+    auto *window = qobject_cast<QQuickWindow *>(main.get());
+    QVERIFY(QTest::qWaitForWindowExposed(window));
+    QObject *switcher = main->findChild<QObject *>(u"switcher"_s);
+    QVERIFY(switcher);
+
+    // The built-in key no longer opens it; the one chosen does.
+    QTest::keyClick(window, Qt::Key_P, Qt::ControlModifier);
+    QTest::qWait(200);
+    QVERIFY(!switcher->property("opened").toBool());
+    QTest::keyClick(window, Qt::Key_G, Qt::ControlModifier | Qt::ShiftModifier);
+    QTRY_VERIFY(switcher->property("opened").toBool());
+    m_settings->resetKeys(u"goTo"_s);
 }
 
 QTEST_MAIN(TestDialogs)

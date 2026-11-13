@@ -8,6 +8,17 @@ import QtQuick.Controls
 Rectangle {
     id: root
 
+    /// `words`, and the shortcut for `id` after them when it has one, as chosen in Settings.
+    function withKey(words, id) {
+        shortcuts.actions
+        const key = shortcuts.keyText(id)
+        return key === "" ? words : qsTr("%1 (%2)").arg(words).arg(key)
+    }
+
+    KeyRouter {
+        id: shortcuts
+    }
+
     /// The note's front matter, from the styler.
     property var frontMatter: ({})
     /// Whether there is a microphone, and whether it is recording.
@@ -134,31 +145,31 @@ Rectangle {
             label: "B"
             bold: true
             format: "bold"
-            tip: qsTr("Bold (Ctrl+B)")
+            tip: root.withKey(qsTr("Bold"), "bold")
         }
         FormatButton {
             label: "I"
             italic: true
             format: "italic"
-            tip: qsTr("Italic (Ctrl+I)")
+            tip: root.withKey(qsTr("Italic"), "italic")
         }
         FormatButton {
             label: "S"
             strike: true
             format: "strike"
-            tip: qsTr("Strikethrough (Ctrl+Shift+X)")
+            tip: root.withKey(qsTr("Strikethrough"), "strike")
         }
         FormatButton {
             label: "<>"
             mono: true
             format: "code"
-            tip: qsTr("Code (Ctrl+E)")
+            tip: root.withKey(qsTr("Code"), "code")
         }
         FormatButton {
             label: qsTr("Link")
             underline: true
             format: "link"
-            tip: qsTr("Link (Ctrl+K)")
+            tip: root.withKey(qsTr("Link"), "link")
         }
         Divider {}
         FormatButton {
@@ -174,7 +185,7 @@ Rectangle {
         FormatButton {
             glyph: "task"
             format: "task"
-            tip: qsTr("Checkbox (Ctrl+Enter)")
+            tip: root.withKey(qsTr("Checkbox"), "checkbox")
         }
         FormatButton {
             glyph: "quote"
@@ -266,16 +277,16 @@ Rectangle {
                 options: [
                     {
                         "label": qsTr("Styled"),
-                        "tip": qsTr("Style the Markdown as you type (Ctrl+/)")
+                        "tip": root.withKey(qsTr("Style the Markdown as you type"), "sourceMode")
                     },
                     {
                         "label": qsTr("Source"),
-                        "tip": qsTr("Show the Markdown as written (Ctrl+/)")
+                        "tip": root.withKey(qsTr("Show the Markdown as written"), "sourceMode")
                     },
                     {
                         "label": qsTr("Read"),
-                        "tip": qsTr(
-                                   "Read the note as it looks, with links to follow (Ctrl+Shift+R)")
+                        "tip": root.withKey(qsTr("Read the note as it looks, with links to follow"),
+                                            "readMode")
                     }
                 ]
                 current: Settings.readMode ? 2 : Settings.sourceMode ? 1 : 0
@@ -295,7 +306,8 @@ Rectangle {
             text: qsTr("Outline")
             checked: Settings.outlineShown
             focusPolicy: Qt.NoFocus
-            Accessible.description: qsTr("Show the note's headings beside it (Ctrl+Shift+O)")
+            Accessible.description: root.withKey(qsTr("Show the note's headings beside it"),
+                                                 "outline")
             onToggled: Settings.outlineShown = checked
         }
 

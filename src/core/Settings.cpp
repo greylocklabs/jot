@@ -55,6 +55,8 @@ const QString kAutosave = u"editor/autosave"_s;
 const QString kSpellcheck = u"editor/spellcheck"_s;
 const QString kDailyWordGoal = u"writing/dailyGoal"_s;
 const QString kComputerId = u"app/computerId"_s;
+// Each action's own shortcuts, as keys/<action>.
+const QString kKeysGroup = u"keys"_s;
 
 // What names this computer's folders, sizes its window, or records what it last did goes in
 // local.ini, so settings.ini can be copied to another computer as it is. Each vault's sync
@@ -134,6 +136,10 @@ Settings::Settings(const QString &path, QObject *parent)
     m_autosave = get(kAutosave, true).toBool();
     m_spellcheck = get(kSpellcheck, true).toBool();
     m_dailyWordGoal = std::max(0, get(kDailyWordGoal, 0).toInt());
+    m_store.beginGroup(kKeysGroup);
+    for (const QString &id : m_store.childKeys())
+        m_keys.insert(id, m_store.value(id).toString());
+    m_store.endGroup();
 }
 
 QSettings &Settings::storeFor(const QString &key)
@@ -564,8 +570,30 @@ void Settings::setDailyWordGoal(int words)
     Q_EMIT writingChanged();
 }
 
+void Settings::setKeys(const QString &id, const QString &sequences)
+{
+    if (id.isEmpty() || (m_keys.contains(id) && m_keys.value(id).toString() == sequences))
+        return;
+    m_keys.insert(id, sequences);
+    m_store.setValue(kKeysGroup + u'/' + id, sequences);
+    Q_EMIT keysChanged();
+}
+
+void Settings::resetKeys(const QString &id)
+{
+    if (!m_keys.remove(id))
+        return;
+    m_store.remove(kKeysGroup + u'/' + id);
+    Q_EMIT keysChanged();
+}
+
 void Settings::reset()
 {
+    if (!m_keys.isEmpty()) {
+        m_keys.clear();
+        m_store.remove(kKeysGroup);
+        Q_EMIT keysChanged();
+    }
     setTheme({});
     setNoteSort(noteSorts().first());
     setCheckForUpdates(true);

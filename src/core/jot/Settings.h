@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QSettings>
 #include <QStringList>
+#include <QVariantMap>
 
 namespace jot {
 
@@ -86,6 +87,9 @@ class Settings : public QObject
     Q_PROPERTY(bool spellcheck READ spellcheck WRITE setSpellcheck NOTIFY spellcheckChanged)
     /// Words to write each day, for a streak; 0 for no goal.
     Q_PROPERTY(int dailyWordGoal READ dailyWordGoal WRITE setDailyWordGoal NOTIFY writingChanged)
+    /// The shortcuts chosen in place of the built-in ones, by action id, each as Qt writes key
+    /// sequences portably: "Ctrl+J", several apart with "; ", or "" for none.
+    Q_PROPERTY(QVariantMap keys READ keys NOTIFY keysChanged)
     /// The version that ran last, so a new one can say what changed.
     Q_PROPERTY(QString lastSeenVersion READ lastSeenVersion WRITE setLastSeenVersion NOTIFY
                    lastSeenVersionChanged)
@@ -192,12 +196,19 @@ public:
     [[nodiscard]] QDateTime lastReminderCheck() const { return m_lastReminderCheck; }
     void setLastReminderCheck(const QDateTime &at);
 
-    /// Puts every choice back to its default. The vault stays open, and which
+    [[nodiscard]] QVariantMap keys() const { return m_keys; }
+    /// Gives the action `id` the shortcuts in `sequences`, as keys() writes them.
+    Q_INVOKABLE void setKeys(const QString &id, const QString &sequences);
+    /// Gives the action `id` its built-in shortcuts again.
+    Q_INVOKABLE void resetKeys(const QString &id);
+
+    /// Puts every choice back to its default, shortcuts included. The vault stays open, and which
     /// notebooks are folded is kept, since neither is a preference.
     Q_INVOKABLE void reset();
 
 Q_SIGNALS:
     void vaultPathChanged();
+    void keysChanged();
     void themeChanged();
     void developerChanged();
     void noteSortChanged();
@@ -260,6 +271,7 @@ private:
     bool m_autosave = true;
     bool m_spellcheck = true;
     int m_dailyWordGoal = 0;
+    QVariantMap m_keys;
     QString m_lastSeenVersion;
     bool m_keepRunning = true;
     bool m_remindersOn = true;

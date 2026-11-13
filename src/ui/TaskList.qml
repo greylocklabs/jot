@@ -9,6 +9,17 @@ import QtQuick.Controls
 Rectangle {
     id: root
 
+    /// `words`, and the shortcut for `id` after them when it has one, as chosen in Settings.
+    function withKey(words, id) {
+        shortcuts.actions
+        const key = shortcuts.keyText(id)
+        return key === "" ? words : qsTr("%1 (%2)").arg(words).arg(key)
+    }
+
+    KeyRouter {
+        id: shortcuts
+    }
+
     /// The + was pressed, to add a to-do.
     signal addRequested
     /// A to-do was chosen with a click, opening its note.
@@ -141,7 +152,7 @@ Rectangle {
                 visible: Vault.writable
                 glyph: "plus"
                 Accessible.name: qsTr("Add a to-do")
-                tip: qsTr("Add a to-do (Ctrl+Shift+A)")
+                tip: root.withKey(qsTr("Add a to-do"), "quickAdd")
                 onClicked: root.addRequested()
             }
         }

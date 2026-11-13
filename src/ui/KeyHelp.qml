@@ -4,24 +4,84 @@ import QtQuick
 import QtQuick.Controls
 
 /// Every keyboard shortcut, from the table the window's shortcuts are made from, in tabs:
-/// those that work anywhere, those for writing, and vi mode's.
+/// those that work anywhere, those for writing, and vi mode's. A shortcut that can change is
+/// changed here, kept in Settings.
 Popup {
     id: root
 
-    /// KeyRouter's actions: {label, scope, keys, vi, leader} for each.
+    /// KeyRouter's actions: {id, label, scope, keys, vi, leader, editable, custom} for each.
     required property var actions
     /// "general", "editor" or "vi".
     property string tab: "general"
+    /// The action whose new shortcut is being pressed, or "".
+    property string recording: ""
+    /// Why the keys pressed were not taken, or "".
+    property string message: ""
+
+    /// What a row's key caps say: its keys, "Press keys" while recording, or "None".
+    function capsFor(row) {
+        if (recording === row.id)
+            return [qsTr("Press keys")]
+        if (row.keys.length === 0 && row.editable === true)
+            return [qsTr("None")]
+        return row.keys
+    }
+
+    /// Starts listening for the new shortcut of `id`.
+    function record(id) {
+        message = ""
+        recording = id
+        recorder.forceActiveFocus()
+    }
+
+    /// Takes a key press as the shortcut being recorded, when it can be one.
+    function take(event) {
+        event.accepted = true
+        if (event.key === Qt.Key_Escape) {
+            recording = ""
+            message = ""
+            return
+        }
+        if (event.key === Qt.Key_Backspace || event.key === Qt.Key_Delete) {
+            Settings.setKeys(recording, "")
+            recording = ""
+            message = ""
+            return
+        }
+        const sequence = router.sequenceFrom(event.key, event.modifiers)
+        if (sequence === "")
+            return
+        const held = Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier
+        const functionKey = event.key >= Qt.Key_F1 && event.key <= Qt.Key_F35
+        if ((event.modifiers & held) === 0 && !functionKey) {
+            message = qsTr("Add Ctrl or Alt to %1, so the key still types.").arg(sequence)
+            return
+        }
+        const taken = router.conflict(recording, sequence)
+        if (taken !== "") {
+            message = qsTr("%1 is already %2.").arg(sequence).arg(taken)
+            return
+        }
+        Settings.setKeys(recording, sequence)
+        recording = ""
+        message = ""
+    }
 
     /// The actions of `scope` that have keys of `kind` ("keys", "vi" or "leader"), as
-    /// {keys, label} rows.
+    /// {id, keys, label, editable, custom, defaultKeys} rows. With `kind` "keys", those that
+    /// can be given keys are listed too.
     function rows(scope, kind) {
         const found = []
         for (const action of actions) {
-            if ((scope === "" || action.scope === scope) && action[kind].length > 0)
+            const editable = kind === "keys" && action.editable
+            if ((scope === "" || action.scope === scope) && (action[kind].length > 0 || editable))
                 found.push({
+                               "id": action.id,
                                "keys": kind === "keys" ? action.keys : [action[kind]],
-                               "label": action.label
+                               "label": action.label,
+                               "editable": editable,
+                               "custom": editable && action.custom,
+                               "defaultKeys": action.defaultKeys
                            })
         }
         return found
@@ -35,7 +95,13 @@ Popup {
     padding: Theme.space6
     modal: true
     focus: true
-    closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+    // Escape stops a recording rather than closing.
+    closePolicy: recording !== "" ? Popup.CloseOnPressOutside : Popup.CloseOnEscape
+                                    | Popup.CloseOnPressOutside
+    onClosed: {
+        recording = ""
+        message = ""
+    }
 
     Overlay.modal: Scrim {}
 
@@ -50,8 +116,26 @@ Popup {
         }
     }
 
+    KeyRouter {
+        id: router
+    }
+
     contentItem: Column {
         spacing: Theme.space4
+
+        // Takes the keys while a shortcut is recorded, before the window's shortcuts do.
+        Item {
+            id: recorder
+
+            objectName: "keyRecorder"
+            width: 0
+            height: 0
+            Keys.onShortcutOverride: event => event.accepted = root.recording !== ""
+            Keys.onPressed: event => {
+                if (root.recording !== "")
+                    root.take(event)
+            }
+        }
 
         Item {
             width: parent.width
@@ -116,6 +200,18 @@ Popup {
                 width: parent.width
                 spacing: Theme.space4
 
+                Text {
+                    objectName: "keyMessage"
+                    visible: root.tab !== "vi"
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    text: root.message !== "" ? root.message : root.recording !== "" ? qsTr(
+                                                                                           "Press the new shortcut: Backspace for none, Esc to keep it.") :
+                                                                                       qsTr("Click a shortcut to change it.")
+                    color: root.message !== "" ? Theme.danger : Theme.textMuted
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.textSm
+                }
                 Table {
                     visible: root.tab === "general"
                     title: qsTr("Anywhere")
@@ -207,22 +303,53 @@ Popup {
                         spacing: Theme.space1
 
                         Repeater {
-                            model: row.modelData.keys
+                            model: root.capsFor(row.modelData)
 
                             KeyCap {
                                 required property string modelData
                                 keys: modelData
+                                opacity: row.modelData.editable === true
+                                         && row.modelData.keys.length === 0 && root.recording
+                                         !== row.modelData.id ? 0.6 : 1
                             }
                         }
+
+                        // A shortcut that can change is changed by clicking it.
+                        TapHandler {
+                            enabled: row.modelData.editable === true
+                            onTapped: root.record(row.modelData.id)
+                        }
+                        HoverHandler {
+                            enabled: row.modelData.editable === true
+                            cursorShape: Qt.PointingHandCursor
+                        }
+                        objectName: row.modelData.editable === true ? "keys_" + row.modelData.id :
+                                                                      ""
+
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        width: row.width - caps.width - row.spacing
+                        width: row.width - caps.width - row.spacing - (reset.visible ? reset.width
+                                                                                       + row.spacing :
+                                                                                       0)
                         elide: Text.ElideRight
                         text: row.modelData.label
                         color: Theme.text
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.textSm
+                    }
+                    PillButton {
+                        id: reset
+
+                        objectName: "reset_" + row.modelData.id
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: row.modelData.custom === true
+                        label: qsTr("Reset")
+                        tip: (row.modelData.defaultKeys || []).length > 0 ? qsTr("Back to %1").arg(
+                                                                                row.modelData.defaultKeys.join(
+                                                                                    ", ")) : qsTr(
+                                                                                "Back to no shortcut")
+                        onClicked: Settings.resetKeys(row.modelData.id)
                     }
                 }
             }
