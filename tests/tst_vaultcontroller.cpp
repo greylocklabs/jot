@@ -2174,6 +2174,16 @@ void TestVaultController::syncsWithAFolder()
     QTRY_VERIFY(m_vault->index()->note(u"From the NAS.md"_s));
     QVERIFY(!sync->pending());
     QVERIFY2(sync->details().contains(u"received: 1"_s), qPrintable(sync->details()));
+    // One the sync brought, edited here after, waits to be sent.
+    QTest::qWait(20);
+    m_vault->setCurrent(u"From the NAS.md"_s);
+    m_vault->edit(m_vault->currentText() + u"And here.\n"_s);
+    m_vault->saveNow();
+    QTRY_VERIFY(sync->pending());
+    sync->syncNow();
+    QVERIFY(finished.wait(10000));
+    QTRY_VERIFY(!sync->pending());
+
     // A note moved here waits to be sent too, though its file did not change.
     QVERIFY(m_vault->moveNoteTo(u"Recipes/Pancakes.md"_s, u"Inbox"_s));
     QTRY_VERIFY(sync->pending());

@@ -171,7 +171,10 @@ void TestGitSync::mergesEditsGitCanMerge()
     write(laptop, u"Mara.md"_s, "# Mara\n\nFIRST\n\nmiddle\n\nlast\n");
     write(desk, u"Mara.md"_s, "# Mara\n\nfirst\n\nmiddle\n\nLAST\n");
     QVERIFY(sync(laptop).failure.isEmpty());
-    QVERIFY(sync(desk).failure.isEmpty());
+    const SyncReport merged = sync(desk);
+    QVERIFY(merged.failure.isEmpty());
+    // Ending on a merge, what it brought counts, not nothing.
+    QVERIFY2(merged.commitFiles >= 1, qPrintable(merged.lastCommit));
     sync(laptop);
     QCOMPARE(read(laptop, u"Mara.md"_s), QByteArray("# Mara\n\nFIRST\n\nmiddle\n\nLAST\n"));
     QCOMPARE(notes(laptop), notes(desk));

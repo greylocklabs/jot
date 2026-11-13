@@ -2637,8 +2637,10 @@ void VaultController::updateSyncPending()
     QSet<QString> now;
     for (const NoteInfo &note : notes)
         now.insert(note.path);
+    // One the sync wrote counts once changed after it ended.
+    const qint64 ended = m_sync.lastSynced().toMSecsSinceEpoch() * 1000000;
     m_sync.setPending(now != expected || std::ranges::any_of(notes, [&](const NoteInfo &note) {
-                          return note.modified > after && !written.contains(note.path);
+                          return note.modified > (written.contains(note.path) ? ended : after);
                       }));
 }
 
