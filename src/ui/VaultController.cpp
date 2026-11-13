@@ -59,7 +59,12 @@ VaultController::VaultController(Settings &settings, QObject *parent)
     connect(this, &VaultController::currentChanged, this, &VaultController::currentTitleChanged);
     connect(this, &VaultController::currentChanged, this, &VaultController::followCurrentInTabs);
     connect(this, &VaultController::currentChanged, this, &VaultController::refreshTarget);
-    connect(&m_sync, &SyncController::finished, this, [this] {
+    connect(&m_sync, &SyncController::finished, this, [this](const SyncReport &report) {
+        // A sync that failed sent nothing, so what waited still waits.
+        if (!report.failure.isEmpty()) {
+            updateSyncPending();
+            return;
+        }
         m_syncedPaths.clear();
         for (const NoteInfo &note : m_index ? m_index->notesIn({}) : QList<NoteInfo>())
             m_syncedPaths.insert(note.path);
