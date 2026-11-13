@@ -2662,6 +2662,15 @@ void TestNoteEditor::completesFrontMatter()
     QTest::keyClick(m_window.get(), Qt::Key_Escape);
     QVERIFY(text().startsWith(u"---\ntags:\n  - food \n"_s));
 
+    // A note that opens with a rule, and no closing fence, gets nothing, and Return is a new line.
+    body->setProperty("text", u"---\n"_s);
+    body->setProperty("cursorPosition", 4);
+    type(u"ta"_s);
+    QTest::qWait(50);
+    QVERIFY(items().isEmpty());
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    QCOMPARE(text(), u"---\nta\n"_s);
+
     // Nothing is offered in the body.
     body->setProperty("cursorPosition", int(text().size()));
     type(u"ta"_s);
