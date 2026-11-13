@@ -75,6 +75,7 @@ private Q_SLOTS:
     void aDryRunWritesNothingAndPlansTheSame();
     void importingAgainSkipsUpdatesAndKeepsJotEdits();
     void keepsAnEditMadeWhileImporting();
+    void keepsANoteMadeWhileImporting();
     void findsANoteMovedInJot();
     void aSubNotebookAloneMovesUnderItsParentLater();
     void mergesWithFoldersAndNumbersClashingNames();
@@ -212,6 +213,31 @@ void TestJoplinImport::keepsAnEditMadeWhileImporting()
     QVERIFY(later);
     QCOMPARE(later->count(JoplinImport::Outcome::ChangedInJot), 1);
     QCOMPARE(read(u"Stories/Mara.md"_s), edited);
+}
+
+void TestJoplinImport::keepsANoteMadeWhileImporting()
+{
+    // Jot makes a note with the name the import planned for Mara, before Mara is written.
+    QString error;
+    const QString mine = u"Made in Jot meanwhile.\n"_s;
+    const auto progress = [&](int done, int) {
+        if (done == 0)
+            QVERIFY(notefile::write(m_vault->absolute(u"Stories/Mara.md"_s), mine, &error));
+    };
+    const auto done = importJoplin(*m_vault, stories(), {}, false, &error, progress);
+    QVERIFY2(done, qPrintable(error));
+    QCOMPARE(done->count(JoplinImport::Outcome::Created), 1);
+    QCOMPARE(done->notes.size(), 1);
+    QCOMPARE(done->skipped.size(), 1);
+    QCOMPARE(read(u"Stories/Mara.md"_s), mine);
+
+    // The next import brings Mara under another name.
+    const auto again = importJoplin(*m_vault, stories(), {}, false, &error);
+    QVERIFY(again);
+    QCOMPARE(again->count(JoplinImport::Outcome::Created), 1);
+    QCOMPARE(again->count(JoplinImport::Outcome::Unchanged), 1);
+    QCOMPARE(read(u"Stories/Mara.md"_s), mine);
+    QCOMPARE(m_vault->notes().size(), 3);
 }
 
 void TestJoplinImport::findsANoteMovedInJot()

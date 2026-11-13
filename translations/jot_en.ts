@@ -1621,6 +1621,14 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>1 note whose name was taken while importing; import again for it</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 notes whose names were taken while importing; import again for them</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>could not keep a version of %1: %2</source>
         <translation type="unfinished"></translation>
     </message>
