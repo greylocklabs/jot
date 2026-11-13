@@ -117,6 +117,7 @@ private Q_SLOTS:
     void editsInViModes();
     void showsWhereViIsAlongTheFoot();
     void keepsOneCursorAcrossViModes();
+    void formatsWithTheShortcutsChosen();
     void jumpsToACharacterInVi();
     void flashesWhatViYanks();
     void takesTextInputOnlyInInsertMode();
@@ -2865,6 +2866,33 @@ void TestNoteEditor::composesWithAnInputMethod()
     QTRY_VERIFY_WITH_TIMEOUT(!m_vault->unsaved(), 2000);
     QString error;
     QVERIFY(notefile::read(m_root + u"/Welcome.md"_s, &error)->contains(u"- 日本한글"_s));
+}
+
+void TestNoteEditor::formatsWithTheShortcutsChosen()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    body->forceActiveFocus();
+    body->setProperty("text", u"ferry\n"_s);
+    QMetaObject::invokeMethod(body, "select", Q_ARG(int, 0), Q_ARG(int, 5));
+
+    m_settings->setKeys(u"bold"_s, u"Ctrl+J"_s);
+    // The built-in key no longer formats; the one chosen does.
+    QTest::keyClick(m_window.get(), Qt::Key_B, Qt::ControlModifier);
+    QCOMPARE(body->property("text").toString(), u"ferry\n"_s);
+    QTest::keyClick(m_window.get(), Qt::Key_J, Qt::ControlModifier);
+    QTRY_COMPARE(body->property("text").toString(), u"**ferry**\n"_s);
+    // The format bar's tip says the key chosen.
+    QQuickItem *bar = find(u"formatBar"_s);
+    QVERIFY(bar);
+    QVariant tip;
+    QVERIFY(QMetaObject::invokeMethod(bar, "withKey", Q_RETURN_ARG(QVariant, tip),
+                                      Q_ARG(QVariant, u"Bold"_s), Q_ARG(QVariant, u"bold"_s)));
+    QCOMPARE(tip.toString(), u"Bold (Ctrl+J)"_s);
+    m_settings->resetKeys(u"bold"_s);
+    QMetaObject::invokeMethod(bar, "withKey", Q_RETURN_ARG(QVariant, tip),
+                              Q_ARG(QVariant, u"Bold"_s), Q_ARG(QVariant, u"bold"_s));
+    QCOMPARE(tip.toString(), u"Bold (Ctrl+B)"_s);
 }
 
 QTEST_MAIN(TestNoteEditor)

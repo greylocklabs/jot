@@ -409,27 +409,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Bold (Ctrl+B)</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Italic (Ctrl+I)</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Strikethrough (Ctrl+Shift+X)</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Code (Ctrl+E)</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Link</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Link (Ctrl+K)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -441,7 +421,27 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Checkbox (Ctrl+Enter)</source>
+        <source>%1 (%2)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Bold</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Italic</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Strikethrough</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Code</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Checkbox</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -477,7 +477,19 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Style the Markdown as you type (Ctrl+/)</source>
+        <source>Style the Markdown as you type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show the Markdown as written</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Read the note as it looks, with links to follow</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show the note&apos;s headings beside it</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -485,23 +497,11 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Show the Markdown as written (Ctrl+/)</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Read</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Read the note as it looks, with links to follow (Ctrl+Shift+R)</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Outline</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Show the note&apos;s headings beside it (Ctrl+Shift+O)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -701,6 +701,22 @@
 <context>
     <name>KeyHelp</name>
     <message>
+        <source>Press keys</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>None</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Add Ctrl or Alt to %1, so the key still types.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 is already %2.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Keyboard shortcuts</source>
         <translation type="unfinished"></translation>
     </message>
@@ -714,6 +730,14 @@
     </message>
     <message>
         <source>Vi mode</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Press the new shortcut: Backspace for none, Esc to keep it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Click a shortcut to change it.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -756,6 +780,18 @@
         <source>Space</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Reset</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Back to %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Back to no shortcut</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>LinkPreview</name>
@@ -787,14 +823,6 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Back to the note before (Alt+Left); hold for more</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Forward to the note after (Alt+Right); hold for more</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Sync now</source>
         <translation type="unfinished"></translation>
     </message>
@@ -807,15 +835,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>New note (Ctrl+N)</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Go to a note</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Go to a note (Ctrl+P)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -823,7 +843,19 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Settings (Ctrl+,)</source>
+        <source>%1 (%2)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1; hold for more</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Back to the note before</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Forward to the note after</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -922,15 +954,6 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>This vault has no notes yet.
-Press Ctrl+N to make one.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Choose a note, or press Ctrl+P to find one.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Title</source>
         <translation type="unfinished"></translation>
     </message>
@@ -951,15 +974,7 @@ Press Ctrl+N to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Edit the records as a table (Ctrl+/)</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Source</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Edit the file&apos;s text (Ctrl+/)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -967,7 +982,36 @@ Press Ctrl+N to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Read the records as a table, without changing them (Ctrl+Shift+R)</source>
+        <source>%1 (%2)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This vault has no notes yet.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This vault has no notes yet.
+Press %1 to make one.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Choose a note.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Choose a note, or press %1 to find one.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Edit the records as a table</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Edit the file&apos;s text</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Read the records as a table, without changing them</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -3028,6 +3072,10 @@ Press Ctrl+N to make one.</source>
 <context>
     <name>TaskList</name>
     <message>
+        <source>%1 (%2)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Today</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3077,10 +3125,6 @@ Press Ctrl+N to make one.</source>
     </message>
     <message>
         <source>Add a to-do</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Add a to-do (Ctrl+Shift+A)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

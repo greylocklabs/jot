@@ -9,6 +9,13 @@ import QtQuick.Effects
 ApplicationWindow {
     id: window
 
+    /// `words`, and the shortcut for `id` after them when it has one, as chosen in Settings.
+    function withKey(words, id) {
+        keys.actions
+        const key = keys.keyText(id)
+        return key === "" ? words : qsTr("%1 (%2)").arg(words).arg(key)
+    }
+
     width: 1280
     height: 840
     minimumWidth: 600
@@ -174,7 +181,9 @@ ApplicationWindow {
                         enabled: Vault.canGoBack
                         glyph: "chevron-left"
                         Accessible.name: qsTr("Back")
-                        tip: qsTr("Back to the note before (Alt+Left); hold for more")
+                        tip: qsTr("%1; hold for more").arg(window.withKey(qsTr(
+                                                                              "Back to the note before"),
+                                                                          "goBack"))
                         onClicked: Vault.goBack()
                         onPressAndHold: trailMenu.show(backButton, false)
 
@@ -190,7 +199,9 @@ ApplicationWindow {
                         enabled: Vault.canGoForward
                         glyph: "chevron-right"
                         Accessible.name: qsTr("Forward")
-                        tip: qsTr("Forward to the note after (Alt+Right); hold for more")
+                        tip: qsTr("%1; hold for more").arg(window.withKey(qsTr(
+                                                                              "Forward to the note after"),
+                                                                          "goForward"))
                         onClicked: Vault.goForward()
                         onPressAndHold: trailMenu.show(forwardButton, true)
 
@@ -287,7 +298,7 @@ ApplicationWindow {
                         objectName: "newButton"
                         glyph: "plus"
                         Accessible.name: qsTr("New note")
-                        tip: qsTr("New note (Ctrl+N)")
+                        tip: window.withKey(qsTr("New note"), "newNote")
                         onClicked: window.run("newNote")
                     }
                 }
@@ -299,7 +310,7 @@ ApplicationWindow {
                     visible: Vault.isOpen
                     glyph: "search"
                     Accessible.name: qsTr("Go to a note")
-                    tip: qsTr("Go to a note (Ctrl+P)")
+                    tip: window.withKey(qsTr("Go to a note"), "goTo")
                     onClicked: switcher.open()
                 }
 
@@ -310,7 +321,7 @@ ApplicationWindow {
                     glyph: "settings"
                     glyphStroke: Theme.fineGlyphStroke
                     Accessible.name: qsTr("Settings")
-                    tip: qsTr("Settings (Ctrl+,)")
+                    tip: window.withKey(qsTr("Settings"), "settings")
                     onClicked: settingsDialog.open()
                 }
 
@@ -677,6 +688,7 @@ ApplicationWindow {
 
     QuickSwitcher {
         id: switcher
+        objectName: "switcher"
     }
 
     QuickAdd {

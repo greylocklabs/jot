@@ -25,6 +25,9 @@ struct KeyAction
     QString vi;
     /// The key after the leader in vi mode.
     QString leader;
+    /// Whether its standard shortcuts can be changed in Settings. Vi's keys, the leader's, and
+    /// what a key does by its nature, such as Return in a list, cannot.
+    bool editable = false;
 };
 
 /// Turns vi mode's keys into actions from one table, so the shortcuts and their help cannot
@@ -41,15 +44,29 @@ class KeyRouter : public QObject
     /// "leader", or the start of a longer vi key such as "g", while waiting for the key
     /// that finishes a command; else empty.
     Q_PROPERTY(QString pending READ pending NOTIFY pendingChanged)
-    Q_PROPERTY(QVariantList actions READ actionList CONSTANT)
+    /// actionList(), again whenever the shortcuts chosen change.
+    Q_PROPERTY(QVariantList actions READ actionList NOTIFY actionsChanged)
 
 public:
     explicit KeyRouter(QObject *parent = nullptr);
 
+    /// Every action with its built-in shortcuts.
     [[nodiscard]] static QList<KeyAction> actions();
-    /// actions() for QML: maps with the fields of KeyAction, plus `keys`, the standard
-    /// shortcuts as the platform writes them.
+    /// actions() with the shortcuts chosen in Settings in place of the built-in ones.
+    [[nodiscard]] static QList<KeyAction> chosenActions();
+    /// chosenActions() for QML: maps with the fields of KeyAction, plus `keys`, the standard
+    /// shortcuts as the platform writes them, `defaultKeys` the built-in ones the same way,
+    /// `portable` the chosen ones as Settings keeps them, and `custom`, whether they differ.
     [[nodiscard]] static QVariantList actionList();
+    /// The editable action in the note whose shortcut is `key` with `modifiers`, or empty. A
+    /// punctuation key matches with Shift or without, for layouts that need Shift to type it.
+    Q_INVOKABLE static QString noteAction(int key, int modifiers);
+    /// The label of another editable action whose shortcuts include `sequence`, or empty.
+    Q_INVOKABLE static QString conflict(const QString &id, const QString &sequence);
+    /// `key` with `modifiers` as Settings keeps a shortcut, or empty for a modifier alone.
+    Q_INVOKABLE static QString sequenceFrom(int key, int modifiers);
+    /// The first shortcut of `id` as the platform writes it, or empty when it has none.
+    Q_INVOKABLE static QString keyText(const QString &id);
     /// The window's actions for the command palette, as actionList() gives them, best match
     /// for `query` first, leaving out those in `unavailable` and the palette itself.
     Q_INVOKABLE static QVariantList commands(const QString &query, const QStringList &unavailable);
@@ -73,6 +90,7 @@ public:
 
 Q_SIGNALS:
     void triggered(const QString &id);
+    void actionsChanged();
     void windowChanged();
     void settingsChanged();
     void pendingChanged();

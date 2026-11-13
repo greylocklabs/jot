@@ -1,5 +1,7 @@
 #include "KeyRouter.h"
 
+#include "SettingsForeign.h"
+
 #include "jot/Fuzzy.h"
 
 #include <QKeyEvent>
@@ -29,7 +31,42 @@ bool keysTaken(const QQuickWindow *window)
 KeyAction act(const QString &id, const QString &label, const QString &scope,
               const QVariantList &standard, const QString &vi = {}, const QString &leader = {})
 {
-    return {id, label, scope, standard, vi, leader};
+    // The window's actions are shortcuts throughout; in the note, only the formatting ones are,
+    // the rest being what a key does there by its nature.
+    static const QStringList kNoteShortcuts{u"sourceMode"_s, u"bold"_s,    u"italic"_s,
+                                            u"strike"_s,     u"code"_s,    u"link"_s,
+                                            u"checkbox"_s,   u"schedule"_s};
+    const bool editable = scope == u"window" || (scope == u"note" && kNoteShortcuts.contains(id));
+    return {id, label, scope, standard, vi, leader, editable};
+}
+
+QVariantMap chosenKeys()
+{
+    return SettingsForeign::s_instance ? SettingsForeign::s_instance->keys() : QVariantMap();
+}
+
+/// A standard shortcut as a key sequence: a StandardKey's own, or the text's.
+QList<QKeySequence> sequencesOf(const QVariant &key)
+{
+    if (key.typeId() == QMetaType::Int)
+        return QKeySequence::keyBindings(QKeySequence::StandardKey(key.toInt()));
+    return {QKeySequence(key.toString())};
+}
+
+/// The same shortcut, Enter for Return and Shift aside for punctuation.
+bool sameKey(QKeyCombination a, QKeyCombination b)
+{
+    const auto normal = [](QKeyCombination c) {
+        Qt::Key key = c.key() == Qt::Key_Enter ? Qt::Key_Return : c.key();
+        Qt::KeyboardModifiers modifiers = c.keyboardModifiers() & ~Qt::KeypadModifier;
+        const bool punctuation = key >= Qt::Key_Exclam && key <= Qt::Key_AsciiTilde &&
+                                 !(key >= Qt::Key_0 && key <= Qt::Key_9) &&
+                                 !(key >= Qt::Key_A && key <= Qt::Key_Z);
+        if (punctuation)
+            modifiers &= ~Qt::ShiftModifier;
+        return QKeyCombination(modifiers, key);
+    };
+    return normal(a) == normal(b);
 }
 
 } // namespace
@@ -42,6 +79,8 @@ KeyRouter::KeyRouter(QObject *parent) : QObject(parent)
         if (!m_viMode)
             cancel();
     });
+    if (Settings *settings = SettingsForeign::s_instance)
+        connect(settings, &Settings::keysChanged, this, &KeyRouter::actionsChanged);
 }
 
 QList<KeyAction> KeyRouter::actions()
@@ -185,9 +224,92 @@ QList<KeyAction> KeyRouter::actions()
     };
 }
 
+QList<KeyAction> KeyRouter::chosenActions()
+{
+    QList<KeyAction> all = actions();
+    const QVariantMap chosen = chosenKeys();
+    if (chosen.isEmpty())
+        return all;
+    for (KeyAction &action : all) {
+        if (!action.editable || !chosen.contains(action.id))
+            continue;
+        action.standard.clear();
+        for (const QKeySequence &sequence :
+             QKeySequence::listFromString(chosen.value(action.id).toString()))
+            if (!sequence.isEmpty())
+                action.standard << sequence.toString(QKeySequence::PortableText);
+    }
+    return all;
+}
+
 QVariantList KeyRouter::actionList()
 {
-    return toList(actions());
+    return toList(chosenActions());
+}
+
+QString KeyRouter::noteAction(int key, int modifiers)
+{
+    const QKeyCombination pressed{Qt::KeyboardModifiers(modifiers), Qt::Key(key)};
+    for (const KeyAction &action : chosenActions()) {
+        if (action.scope != u"note" || !action.editable)
+            continue;
+        for (const QVariant &standard : action.standard) {
+            for (const QKeySequence &sequence : sequencesOf(standard)) {
+                if (sequence.count() == 1 && sameKey(sequence[0], pressed))
+                    return action.id;
+            }
+        }
+    }
+    return {};
+}
+
+QString KeyRouter::conflict(const QString &id, const QString &sequence)
+{
+    const QKeySequence wanted(sequence, QKeySequence::PortableText);
+    if (wanted.isEmpty())
+        return {};
+    for (const KeyAction &action : chosenActions()) {
+        if (action.id == id || !action.editable)
+            continue;
+        for (const QVariant &standard : action.standard) {
+            for (const QKeySequence &each : sequencesOf(standard)) {
+                if (each.count() == wanted.count() && each.count() == 1 &&
+                    sameKey(each[0], wanted[0]))
+                    return action.label;
+                if (each == wanted)
+                    return action.label;
+            }
+        }
+    }
+    return {};
+}
+
+QString KeyRouter::sequenceFrom(int key, int modifiers)
+{
+    switch (key) {
+    case Qt::Key_Control:
+    case Qt::Key_Shift:
+    case Qt::Key_Alt:
+    case Qt::Key_Meta:
+    case Qt::Key_AltGr:
+    case Qt::Key_unknown: return {};
+    default: break;
+    }
+    const QKeyCombination combination(Qt::KeyboardModifiers(modifiers) & ~Qt::KeypadModifier,
+                                      Qt::Key(key));
+    return QKeySequence(combination).toString(QKeySequence::PortableText);
+}
+
+QString KeyRouter::keyText(const QString &id)
+{
+    for (const QVariant &action : actionList()) {
+        const QVariantMap map = action.toMap();
+        if (map.value(u"id"_s).toString() == id) {
+            const QStringList keys = map.value(u"keys"_s).toStringList();
+            return keys.isEmpty() ? QString() : keys.first();
+        }
+    }
+    return {};
 }
 
 QVariantList KeyRouter::commands(const QString &query, const QStringList &unavailable)
@@ -199,7 +321,7 @@ QVariantList KeyRouter::commands(const QString &query, const QStringList &unavai
     };
     QList<Scored> scored;
     const QString pattern = query.simplified().remove(u' ');
-    for (const KeyAction &action : actions()) {
+    for (const KeyAction &action : chosenActions()) {
         if (action.scope != u"window" || action.id == u"commands" ||
             unavailable.contains(action.id))
             continue;
@@ -219,10 +341,9 @@ QVariantList KeyRouter::commands(const QString &query, const QStringList &unavai
 
 QVariantList KeyRouter::toList(const QList<KeyAction> &actions)
 {
-    QVariantList list;
-    for (const KeyAction &action : actions) {
+    const auto shown = [](const QVariantList &standard) {
         QStringList keys;
-        for (const QVariant &key : action.standard) {
+        for (const QVariant &key : standard) {
             if (key.typeId() == QMetaType::Int) {
                 const QKeySequence sequence(QKeySequence::StandardKey(key.toInt()));
                 if (!sequence.isEmpty())
@@ -234,9 +355,29 @@ QVariantList KeyRouter::toList(const QList<KeyAction> &actions)
             const QString native = sequence.toString(QKeySequence::NativeText);
             keys << (sequence.count() == 1 && !native.isEmpty() ? native : key.toString());
         }
-        list << QVariantMap{{u"id"_s, action.id},        {u"label"_s, action.label},
-                            {u"scope"_s, action.scope},  {u"standard"_s, action.standard},
-                            {u"keys"_s, keys},           {u"vi"_s, action.vi},
+        return keys;
+    };
+    const QVariantMap chosen = chosenKeys();
+    QHash<QString, QVariantList> builtIn;
+    for (const KeyAction &action : KeyRouter::actions())
+        builtIn.insert(action.id, action.standard);
+    QVariantList list;
+    for (const KeyAction &action : actions) {
+        QStringList portable;
+        for (const QVariant &key : action.standard) {
+            for (const QKeySequence &sequence : sequencesOf(key))
+                portable << sequence.toString(QKeySequence::PortableText);
+        }
+        list << QVariantMap{{u"id"_s, action.id},
+                            {u"label"_s, action.label},
+                            {u"scope"_s, action.scope},
+                            {u"standard"_s, action.standard},
+                            {u"keys"_s, shown(action.standard)},
+                            {u"defaultKeys"_s, shown(builtIn.value(action.id))},
+                            {u"portable"_s, portable.join(u"; "_s)},
+                            {u"editable"_s, action.editable},
+                            {u"custom"_s, action.editable && chosen.contains(action.id)},
+                            {u"vi"_s, action.vi},
                             {u"leader"_s, action.leader}};
     }
     return list;

@@ -1,9 +1,11 @@
 #include "KeyRouter.h"
+#include "SettingsForeign.h"
 
 #include "jot/Settings.h"
 
 #include <QSet>
 #include <QSignalSpy>
+#include <QTemporaryDir>
 #include <QTest>
 
 using namespace jot;
@@ -24,6 +26,10 @@ private Q_SLOTS:
     void everyKeyMeansOneThing();
     void listsShortcutsAsThePlatformWritesThem();
     void paletteFindsCommandsByName();
+    void builtInShortcutsDoNotClash();
+    void chosenShortcutsTakeTheirPlace();
+    void matchesTheNotesFormattingKeys();
+    void recordsAKeyAsSettingsKeepIt();
 
 private:
     std::unique_ptr<KeyRouter> m_router;
@@ -218,5 +224,93 @@ void TestKeyRouter::paletteFindsCommandsByName()
 }
 
 // Standard shortcuts are the platform theme's, so this needs a GUI application.
+void TestKeyRouter::builtInShortcutsDoNotClash()
+{
+    // Those Jot writes out; the platform's standard keys may share one, as Back and the
+    // previous tab do in some desktops.
+    for (const KeyAction &action : KeyRouter::actions()) {
+        if (!action.editable)
+            continue;
+        for (const QVariant &key : action.standard) {
+            if (key.typeId() == QMetaType::Int)
+                continue;
+            const QString taken = KeyRouter::conflict(action.id, key.toString());
+            QVERIFY2(taken.isEmpty(), qPrintable(action.id + u' ' + key.toString() + u' ' + taken));
+        }
+    }
+}
+
+void TestKeyRouter::chosenShortcutsTakeTheirPlace()
+{
+    QTemporaryDir dir;
+    Settings settings(dir.filePath(u"settings.ini"_s));
+    SettingsForeign::s_instance = &settings;
+    KeyRouter router;
+    QSignalSpy changed(&router, &KeyRouter::actionsChanged);
+    settings.setKeys(u"goTo"_s, u"Ctrl+Shift+G"_s);
+    settings.setKeys(u"syncNow"_s, QString());
+    // What a key does by its nature is not a shortcut to change.
+    settings.setKeys(u"listItem"_s, u"Ctrl+L"_s);
+    QCOMPARE(changed.count(), 3);
+
+    const auto find = [](const QString &id) {
+        for (const QVariant &each : KeyRouter::actionList()) {
+            if (each.toMap().value(u"id"_s) == id)
+                return each.toMap();
+        }
+        return QVariantMap();
+    };
+    QCOMPARE(find(u"goTo"_s).value(u"standard"_s).toList(), QVariantList{u"Ctrl+Shift+G"_s});
+    QVERIFY(find(u"goTo"_s).value(u"custom"_s).toBool());
+    QCOMPARE(find(u"goTo"_s).value(u"defaultKeys"_s).toStringList(), QStringList{u"Ctrl+P"_s});
+    QVERIFY(find(u"syncNow"_s).value(u"standard"_s).toList().isEmpty());
+    QCOMPARE(KeyRouter::keyText(u"syncNow"_s), QString());
+    QCOMPARE(find(u"listItem"_s).value(u"keys"_s).toStringList(), QStringList{u"Return"_s});
+    QVERIFY(!find(u"listItem"_s).value(u"custom"_s).toBool());
+    // The palette shows the keys chosen.
+    const QVariantList goTo = KeyRouter::commands(u"go to a note"_s, {});
+    QCOMPARE(goTo.first().toMap().value(u"keys"_s).toStringList(), QStringList{u"Ctrl+Shift+G"_s});
+
+    settings.resetKeys(u"goTo"_s);
+    QCOMPARE(KeyRouter::keyText(u"goTo"_s), u"Ctrl+P"_s);
+    SettingsForeign::s_instance = nullptr;
+}
+
+void TestKeyRouter::matchesTheNotesFormattingKeys()
+{
+    QCOMPARE(KeyRouter::noteAction(Qt::Key_B, Qt::ControlModifier), u"bold"_s);
+    QCOMPARE(KeyRouter::noteAction(Qt::Key_X, Qt::ControlModifier | Qt::ShiftModifier),
+             u"strike"_s);
+    QCOMPARE(KeyRouter::noteAction(Qt::Key_Enter, Qt::ControlModifier), u"checkbox"_s);
+    // The slash with Shift, as layouts that need Shift to type it send it.
+    QCOMPARE(KeyRouter::noteAction(Qt::Key_Slash, Qt::ControlModifier | Qt::ShiftModifier),
+             u"sourceMode"_s);
+    QCOMPARE(KeyRouter::noteAction(Qt::Key_B, Qt::NoModifier), QString());
+    QCOMPARE(KeyRouter::noteAction(Qt::Key_B, Qt::ControlModifier | Qt::AltModifier), QString());
+
+    QTemporaryDir dir;
+    Settings settings(dir.filePath(u"settings.ini"_s));
+    SettingsForeign::s_instance = &settings;
+    settings.setKeys(u"bold"_s, u"Ctrl+J"_s);
+    QCOMPARE(KeyRouter::noteAction(Qt::Key_J, Qt::ControlModifier), u"bold"_s);
+    QCOMPARE(KeyRouter::noteAction(Qt::Key_B, Qt::ControlModifier), QString());
+    // A key another action has is said, wherever it works.
+    QCOMPARE(KeyRouter::conflict(u"italic"_s, u"Ctrl+J"_s), u"Bold"_s);
+    QCOMPARE(KeyRouter::conflict(u"bold"_s, u"Ctrl+J"_s), QString());
+    QCOMPARE(KeyRouter::conflict(u"bold"_s, u"Ctrl+P"_s), u"Go to a note"_s);
+    QCOMPARE(KeyRouter::conflict(u"goTo"_s, u"Ctrl+Shift+Q"_s), QString());
+    SettingsForeign::s_instance = nullptr;
+}
+
+void TestKeyRouter::recordsAKeyAsSettingsKeepIt()
+{
+    QCOMPARE(KeyRouter::sequenceFrom(Qt::Key_K, Qt::ControlModifier | Qt::ShiftModifier),
+             u"Ctrl+Shift+K"_s);
+    QCOMPARE(KeyRouter::sequenceFrom(Qt::Key_F7, Qt::NoModifier), u"F7"_s);
+    QCOMPARE(KeyRouter::sequenceFrom(Qt::Key_Comma, Qt::ControlModifier), u"Ctrl+,"_s);
+    QCOMPARE(KeyRouter::sequenceFrom(Qt::Key_Control, Qt::ControlModifier), QString());
+    QCOMPARE(KeyRouter::sequenceFrom(Qt::Key_Shift, Qt::ShiftModifier), QString());
+}
+
 QTEST_MAIN(TestKeyRouter)
 #include "tst_keyrouter.moc"

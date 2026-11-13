@@ -36,6 +36,7 @@ private Q_SLOTS:
     void countsTheVaultsOnARemote();
     void machineSettingsStayOutOfSettingsIni();
     void themesInTheFolderTravelWithIt();
+    void keepsChosenShortcutsWithThePreferences();
 };
 
 void TestSettings::startsWithDefaults()
@@ -421,6 +422,41 @@ void TestSettings::themesInTheFolderTravelWithIt()
     // A theme elsewhere keeps its whole path.
     Settings(path).setTheme(u"/somewhere/else.toml"_s);
     QCOMPARE(Settings(path).theme(), u"/somewhere/else.toml"_s);
+}
+
+void TestSettings::keepsChosenShortcutsWithThePreferences()
+{
+    QTemporaryDir dir;
+    const QString path = dir.filePath(u"settings.ini"_s);
+    {
+        Settings settings(path);
+        QSignalSpy changed(&settings, &Settings::keysChanged);
+        settings.setKeys(u"goTo"_s, u"Ctrl+Shift+G"_s);
+        settings.setKeys(u"goTo"_s, u"Ctrl+Shift+G"_s);
+        settings.setKeys(u"settings"_s, u"Ctrl+,; F12"_s);
+        settings.setKeys(u"syncNow"_s, QString());
+        QCOMPARE(changed.count(), 3);
+    }
+    // In settings.ini, to go to another computer with the rest, and readable by hand.
+    QFile file(path);
+    QVERIFY(file.open(QIODevice::ReadOnly));
+    const QByteArray written = file.readAll();
+    QVERIFY2(written.contains("[keys]") && written.contains("goTo=Ctrl+Shift+G"),
+             written.constData());
+    file.close();
+
+    Settings settings(path);
+    QCOMPARE(settings.keys().value(u"goTo"_s).toString(), u"Ctrl+Shift+G"_s);
+    QCOMPARE(settings.keys().value(u"settings"_s).toString(), u"Ctrl+,; F12"_s);
+    // None at all is kept as none, not as the built-in keys.
+    QVERIFY(settings.keys().contains(u"syncNow"_s));
+    QVERIFY(settings.keys().value(u"syncNow"_s).toString().isEmpty());
+    settings.resetKeys(u"goTo"_s);
+    QVERIFY(!settings.keys().contains(u"goTo"_s));
+    QVERIFY(!Settings(path).keys().contains(u"goTo"_s));
+    settings.reset();
+    QVERIFY(settings.keys().isEmpty());
+    QVERIFY(Settings(path).keys().isEmpty());
 }
 
 QTEST_GUILESS_MAIN(TestSettings)
