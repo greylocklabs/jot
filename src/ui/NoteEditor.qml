@@ -419,10 +419,23 @@ Rectangle {
             right: parent.right
             top: noteTabs.bottom
         }
-        visible: Vault.current !== "" && Vault.writable && !root.dataFile && !root.distractionFree
+        visible: Vault.current !== "" && !root.distractionFree
         canRecord: recorder.available
         recording: recorder.recording
+        dataFile: root.dataFile
+        tableShown: root.tableShown
+        tableReady: tableModel.table
+        whyNotTable: tableModel.why
         onFormatRequested: action => root.format(action, "")
+        // Text kept as text is read again even when the mode was already set.
+        onModePicked: root.readTable()
+        // Other notes' links to its attachments are worth a question first.
+        onTrashRequested: {
+            if (Vault.notesUsingAttachments(Vault.current).length > 0)
+                trashConfirm.askForNote(Vault.current)
+            else
+                Vault.trashCurrent()
+        }
     }
 
     Flickable {
@@ -502,14 +515,12 @@ Rectangle {
                     id: titleMetrics
                     font: title.font
                 }
-                // The title at its full size, and how wide its widest unbreakable stretch is in it,
-                // for what gives way when the note is narrow.
+                // The title at its full size, which a long word makes smaller.
                 readonly property font titleFont: Qt.font({
                                                               "family": Theme.displayFontFamily,
                                                               "pixelSize": Theme.text2xl,
                                                               "weight": Theme.weightBold
                                                           })
-                readonly property real widestWord: Theme.widestUnbreakable(title.text, titleFont)
                 readonly property real firstLineMiddle: {
                     const letters = titleMetrics.tightBoundingRect("H")
                     return title.y + titleMetrics.ascent + letters.y + letters.height / 2
@@ -527,10 +538,8 @@ Rectangle {
                         shown = value
                     }
 
-                    width: parent.width - trash.width - parent.spacing - (viewSwitch.visible
-                                                                          ? viewSwitch.width
-                                                                            + parent.spacing : 0) - (
-                               unsavedMark.visible ? unsavedMark.width + parent.spacing : 0)
+                    width: parent.width - (unsavedMark.visible ? unsavedMark.width + parent.spacing :
+                                                                 0)
                     readOnly: !Vault.writable
                     wrapMode: TextInput.Wrap
                     color: Theme.text
@@ -574,83 +583,6 @@ Rectangle {
                     Tip {
                         visible: unsavedHover.hovered
                         text: qsTr("Not saved yet. Ctrl+S saves.")
-                    }
-                }
-                // A list of records shows as a table to edit or read, or as its text, with the
-                // switch notes have.
-                ModeSwitch {
-                    id: viewSwitch
-
-                    readonly property string notTable: qsTr("This can't be a table: %1.").arg(
-                                                           tableModel.why)
-
-                    objectName: "viewSwitch"
-                    y: parent.firstLineMiddle - height / 2
-                    visible: root.dataFile
-                    options: [
-                        {
-                            "label": qsTr("Styled"),
-                            "tip": tableModel.table ? root.withKey(qsTr(
-                                                                       "Edit the records as a table"),
-                                                                   "sourceMode") : notTable,
-                            "enabled": tableModel.table
-                        },
-                        {
-                            "label": qsTr("Source"),
-                            "tip": root.withKey(qsTr("Edit the file's text"), "sourceMode")
-                        },
-                        {
-                            "label": qsTr("Read"),
-                            "tip": tableModel.table ? root.withKey(qsTr(
-                                                                       "Read the records as a table, without changing them"),
-                                                                   "readMode") : notTable,
-                            "enabled": tableModel.table
-                        }
-                    ]
-                    current: !root.tableShown ? 1 : Settings.readMode ? 2 : 0
-                    onPicked: index => {
-                        Settings.readMode = index === 2
-                        if (index < 2)
-                            Settings.sourceMode = index === 1
-                        // Text kept as text is read again even when the mode was already set.
-                        root.readTable()
-                    }
-                }
-                DangerButton {
-                    id: trash
-
-                    /// Too little room beside it for the title's longest word: a trash can
-                    /// alone, so the title keeps its words whole.
-                    readonly property bool compact: {
-                        return parent.width - parent.spacing - wideTrash.width - (
-                                    viewSwitch.visible ? viewSwitch.width + parent.spacing : 0) - (
-                                    unsavedMark.visible ? unsavedMark.width + parent.spacing : 0)
-                                < parent.widestWord
-                    }
-
-                    objectName: "trash"
-                    y: parent.firstLineMiddle - height / 2
-                    visible: Vault.writable
-                    label: compact ? "" : qsTr("Delete")
-                    armedLabel: compact ? "" : qsTr("Move to trash?")
-                    glyph: compact ? "trash" : ""
-                    tip: compact ? (armed ? qsTr("Click again to move to trash") : qsTr("Delete")) :
-                                   ""
-                    Accessible.name: armed ? qsTr("Move to trash?") : qsTr("Delete")
-
-                    // How wide the button is with its words, to tell whether they fit.
-                    StickerButton {
-                        id: wideTrash
-
-                        visible: false
-                        text: qsTr("Move to trash?")
-                    }
-                    // Other notes' links to its attachments are worth a question first.
-                    onConfirmed: {
-                        if (Vault.notesUsingAttachments(Vault.current).length > 0)
-                            trashConfirm.askForNote(Vault.current)
-                        else
-                            Vault.trashCurrent()
                     }
                 }
             }
