@@ -571,6 +571,12 @@ Rectangle {
             onTriggered: Vault.setFavorite(noteMenu.path, !noteMenu.favorite)
         }
         MenuEntry {
+            objectName: "hideNote"
+            text: qsTr("Hide")
+            enabled: Vault.writable
+            onTriggered: Vault.setHidden(noteMenu.path, true)
+        }
+        MenuEntry {
             text: qsTr("Copy link")
             onTriggered: Support.copyText(Vault.linkTo(noteMenu.path))
         }

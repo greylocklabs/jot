@@ -1128,6 +1128,37 @@ bool VaultController::setFavorite(const QString &path, bool favorite)
     return true;
 }
 
+bool VaultController::writeHidden(const QString &path, bool hidden)
+{
+    if (!m_vault || !m_vault->writable() || path.isEmpty())
+        return false;
+    QString error;
+    std::optional<Layout> layout = Layout::read(*m_vault, &error);
+    if (layout)
+        layout->setHidden(path, hidden);
+    if (!layout || !layout->write(*m_vault, &error)) {
+        qCWarning(lcVault) << "could not hide" << path << error;
+        setProblem(tr("Could not hide it: %1").arg(error));
+        return false;
+    }
+    reloadModels();
+    return true;
+}
+
+bool VaultController::setHidden(const QString &path, bool hidden)
+{
+    if (m_hidden.contains(path) == hidden)
+        return false;
+    if (!writeHidden(path, hidden))
+        return false;
+    Change change;
+    change.kind = Change::Kind::Hide;
+    change.path = path;
+    change.trashed = hidden;
+    remember(change);
+    return true;
+}
+
 bool VaultController::moveFavorite(const QString &path, int at)
 {
     if (!isFavorite(path) || m_favorites.indexOf(path) == at)
@@ -2000,6 +2031,16 @@ bool VaultController::apply(Change &change, bool back, bool *stale)
         *stale = !m_vault || !QFileInfo(m_vault->absolute(change.path)).isFile();
         return !*stale && writeFavorite(change.path, change.trashed != back, change.place);
     }
+    if (change.kind == Change::Kind::Hide) {
+        // Moved or gone since, it is not this change's to hide or show.
+        *stale = !m_vault || !QFileInfo::exists(m_vault->absolute(change.path));
+        if (*stale) {
+            setProblem(tr("%1 has moved or gone since, so it was left as it is.")
+                           .arg(Vault::titleFromPath(change.path)));
+            return false;
+        }
+        return writeHidden(change.path, change.trashed != back);
+    }
     if (change.kind == Change::Kind::Notebook) {
         if (trashes(change.trashed, back)) {
             *stale = !m_vault || !QFileInfo(m_vault->absolute(change.path)).isDir();
@@ -2460,6 +2501,7 @@ void VaultController::reloadModels()
     Q_EMIT currentConflictsChanged();
     m_notebookEmoji.clear();
     m_favorites.clear();
+    m_hidden.clear();
     if (m_vault) {
         QString error;
         const std::optional<Layout> layout = Layout::read(*m_vault, &error);
@@ -2474,6 +2516,7 @@ void VaultController::reloadModels()
         m_favorites.removeIf(
             [this](const QString &path) { return !QFileInfo(m_vault->absolute(path)).isFile(); });
         m_notebookSorts = layout ? layout->sorts() : QHash<QString, QString>();
+        m_hidden = layout ? layout->hidden() : QStringList();
         for (const QString &view : Layout::kViews)
             m_viewEmoji.insert(view, layout ? layout->viewEmoji(view) : Layout::defaultEmoji(view));
     } else {
@@ -2481,7 +2524,9 @@ void VaultController::reloadModels()
     }
     applyNoteSort();
     if (m_index) {
-        m_notebooks.reload(m_vault.get(), m_index->noteCounts(), m_index->noteCount());
+        m_index->setHidden(m_hidden);
+        m_notebooks.reload(m_vault.get(), m_index->noteCounts(), m_index->noteCount(),
+                           [this](const QString &path) { return m_index->isHidden(path); });
         m_tagTree.reload(m_index->tagCounts());
         m_notes.reload(m_index.get(), m_favorites);
         m_switcher.reload(m_index.get());

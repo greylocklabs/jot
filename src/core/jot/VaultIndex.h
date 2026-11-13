@@ -105,6 +105,11 @@ public:
     /// Reads these notes again, or drops those that are gone, as the watcher reports them.
     void update(const QStringList &paths);
 
+    /// Keeps the notes and notebooks at `paths` out of the lists, counts, search, tags and
+    /// to-dos the index gives. note(), resolve() and the links still find them.
+    void setHidden(const QStringList &paths) { m_hidden = paths; }
+    /// Whether the note or notebook at `path`, or a notebook it is in, is hidden.
+    [[nodiscard]] bool isHidden(const QString &path) const;
     [[nodiscard]] std::optional<NoteInfo> note(const QString &path) const;
     [[nodiscard]] int noteCount() const;
     /// The notes in `folder` and the folders inside it; every note for an empty folder.
@@ -141,6 +146,7 @@ public:
     [[nodiscard]] QList<NoteTask> doneTasks() const;
 
 private:
+    QStringList m_hidden;
     bool createSchema(QString *error);
     void read(const QString &path);
     void drop(const QString &path);

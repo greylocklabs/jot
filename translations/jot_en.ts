@@ -1258,6 +1258,10 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Hide</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Copy link</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2404,6 +2408,22 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Hidden</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Nothing is hidden. Hide a note or notebook from its menu to keep it out of the lists, search and Tasks; links to it still work.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Kept out of the lists, search and Tasks; links to them still work.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unhide</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Ignored files</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3086,6 +3106,10 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>Show in Files</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Hide this notebook</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -4061,6 +4085,10 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Hide the note, keeping it out of the lists</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Import from Joplin...</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4658,6 +4686,10 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>Could not change the favorites: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not hide it: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

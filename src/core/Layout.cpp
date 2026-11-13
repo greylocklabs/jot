@@ -139,7 +139,8 @@ std::optional<Layout> Layout::read(const Vault &vault, QString *error)
                 view.lines.append(QString(std::max<qsizetype>(0, at - view.indent), u' ') + line);
             continue;
         }
-        if (section != u"order"_s && section != u"folders"_s && !kViews.contains(section)) {
+        if (section != u"order"_s && section != u"folders"_s && section != u"hidden"_s &&
+            !kViews.contains(section)) {
             layout.m_other.append(raw);
             continue;
         }
@@ -156,6 +157,8 @@ std::optional<Layout> Layout::read(const Vault &vault, QString *error)
             const QString item = readYamlScalar(QStringView(line).sliced(1));
             if (section == u"order"_s && !entry.isEmpty())
                 layout.m_order[entry].append(item);
+            else if (section == u"hidden"_s && !layout.m_hidden.contains(item))
+                layout.m_hidden.append(item);
             continue;
         }
         const auto key = splitKey(line);
@@ -221,6 +224,11 @@ QString Layout::text() const
                 out += u"    "_s + line + u'\n';
         }
     }
+    if (!m_hidden.isEmpty()) {
+        out += u"hidden:\n"_s;
+        for (const QString &path : m_hidden)
+            out += u"  - %1\n"_s.arg(yamlScalar(path));
+    }
     for (const QString &name : kViews) {
         const View view = m_views.value(name);
         if (view.verbatim) {
@@ -279,6 +287,10 @@ bool Layout::write(const Vault &vault, QString *error) const
         if (QFileInfo(vault.absolute(note)).isFile())
             kept.m_favorites.append(note);
     }
+    for (const QString &path : m_hidden) {
+        if (QFileInfo::exists(vault.absolute(path)))
+            kept.m_hidden.append(path);
+    }
 
     const QString path = vault.absolute(kPath);
     QString ignored;
@@ -325,6 +337,18 @@ void Layout::move(const QString &from, const QString &to)
         if (under(note, from))
             note = moved(note);
     }
+    for (QString &path : m_hidden) {
+        if (under(path, from))
+            path = moved(path);
+    }
+}
+
+void Layout::setHidden(const QString &path, bool hidden)
+{
+    if (!hidden)
+        m_hidden.removeAll(path);
+    else if (!m_hidden.contains(path))
+        m_hidden.append(path);
 }
 
 void Layout::setFavorite(const QString &path, bool favorite, int at)

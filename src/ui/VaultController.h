@@ -137,6 +137,8 @@ class VaultController : public QObject
     /// What went wrong with the note shown, such as a save that failed and is being
     /// retried; empty when all is well.
     Q_PROPERTY(QString problem READ problem NOTIFY problemChanged)
+    /// The notes and notebooks kept out of view, by vault path.
+    Q_PROPERTY(QStringList hiddenPaths READ hiddenPaths NOTIFY notesChanged)
     /// A Joplin import, or a look at what one would do, is under way in the background.
     Q_PROPERTY(bool importingJoplin READ importingJoplin NOTIFY joplinImportChanged)
     /// The sort of the notebook shown, when it has one of its own; empty when it uses the
@@ -284,6 +286,11 @@ public:
     Q_INVOKABLE bool moveFavorite(const QString &path, int at);
     /// The favorite notes, in their order.
     [[nodiscard]] QStringList favorites() const { return m_favorites; }
+    /// Keeps the note or notebook at `path` out of the lists, quick open, search, Tasks and
+    /// tags, or shows it again; links to it still work. Undoable.
+    Q_INVOKABLE bool setHidden(const QString &path, bool hidden);
+    /// The notes and notebooks kept out of view, by vault path.
+    [[nodiscard]] QStringList hiddenPaths() const { return m_hidden; }
     /// Shows `emoji` before the notebook's name, or no emoji when it is empty.
     Q_INVOKABLE bool setNotebookEmoji(const QString &path, const QString &emoji);
     /// Shows `emoji` before `view`, "tasks" or "trash", or none when it is empty.
@@ -627,6 +634,9 @@ private:
     QHash<QString, QString> m_notebookSorts;
     /// Sorts the note list as the notebook shown says, or else as the default.
     void applyNoteSort();
+    QStringList m_hidden;
+    /// setHidden() without remembering it for undo.
+    bool writeHidden(const QString &path, bool hidden);
     int m_joplinDone = 0;
     int m_joplinTotal = 0;
     NotebookModel m_notebooks;
@@ -682,7 +692,7 @@ private:
     /// brought back from it.
     struct Change
     {
-        enum class Kind { Text, Trash, Notebook, Favorite };
+        enum class Kind { Text, Trash, Notebook, Favorite, Hide };
         Kind kind = Kind::Text;
         QString path;
         /// Text: what the note said before and after.
@@ -692,7 +702,8 @@ private:
         QString location;
         bool keepAttachments = false;
         /// Trash: the change moved the note to the trash, rather than bringing it back.
-        /// Favorite: the change made it a favorite, rather than taking that away.
+        /// Favorite: the change made it a favorite, rather than taking that away. Hide: the
+        /// change hid it, rather than showing it.
         bool trashed = true;
         /// Favorite: where it is, or was, in Favorites' order.
         int place = -1;

@@ -24,6 +24,7 @@ private Q_SLOTS:
     void keepsWhatItDoesNotUse();
     void leavesAnUnreadableFileAlone();
     void keepsFavorites();
+    void keepsHiddenNotesAndNotebooks();
     void keepsTheViewsEmojis();
     void keepsNotebookTargets();
 
@@ -224,6 +225,22 @@ void TestLayout::leavesAnUnreadableFileAlone()
     QVERIFY(!Layout::follow(*m_vault, u"Inbox"_s, u"Later"_s, &error));
     QVERIFY(file.open(QIODevice::ReadOnly));
     QCOMPARE(file.readAll(), bytes);
+}
+
+void TestLayout::keepsHiddenNotesAndNotebooks()
+{
+    Layout layout;
+    layout.setHidden(u"Ashfall/Chapters"_s, true);
+    layout.setHidden(u"Inbox"_s, true);
+    layout.setHidden(u"Gone.md"_s, true);
+    layout.setHidden(u"Inbox"_s, false);
+    QString error;
+    QVERIFY(layout.write(*m_vault, &error));
+    QCOMPARE(read(Layout::kPath), u"hidden:\n  - Ashfall/Chapters\n"_s);
+    // It goes with a notebook moved around it.
+    QVERIFY(m_vault->moveFolder(u"Ashfall"_s, u"Saga"_s, &error));
+    QVERIFY(Layout::follow(*m_vault, u"Ashfall"_s, u"Saga"_s, &error));
+    QCOMPARE(Layout::read(*m_vault).value().hidden(), QStringList{u"Saga/Chapters"_s});
 }
 
 void TestLayout::keepsFavorites()

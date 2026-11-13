@@ -73,6 +73,10 @@ public:
     [[nodiscard]] QStringList favorites() const { return m_favorites; }
     /// Makes the note at `path` a favorite, at `at` in their order or else at the end, or not.
     void setFavorite(const QString &path, bool favorite, int at = -1);
+    /// The notes and notebooks kept out of view, by vault path, in the order hidden.
+    [[nodiscard]] QStringList hidden() const { return m_hidden; }
+    /// Hides the note or notebook at `path`, or shows it again.
+    void setHidden(const QString &path, bool hidden);
 
     /// The same move as follow(), on this layout alone.
     void move(const QString &from, const QString &to);
@@ -80,6 +84,7 @@ public:
     [[nodiscard]] QString text() const;
 
 private:
+    QStringList m_hidden;
     /// Each folder's notes and folders in the order given, by name.
     QMap<QString, QStringList> m_order;
     /// Each folder's appearance: emoji, icon, color, and any other key, by folder path.

@@ -12,7 +12,7 @@ Status: final, format 1, as of Jot 0.1. Changes follow [Versioning](#versioning)
 My Notes/                    the vault: any folder
   .jot/                      Jot's files for the vault, synced with the notes
     vault.yaml               vault settings and the format number
-    layout.yaml              notebook emoji, sorts, word targets and favorite notes
+    layout.yaml              notebook emoji, sorts, word targets, favorite and hidden notes
     history/                 past versions of notes
     joplin.yaml              what imports from Joplin brought, once there has been one
     trash/                   what was deleted, in Jot and by sync
@@ -264,6 +264,8 @@ favorites:
   emoji: ⭐
   notes:
     - Recipes/Pancakes.md
+hidden:
+  - Archive
 trash:
   emoji: ""
 ```
@@ -278,6 +280,9 @@ trash:
 - `favorites` lists the favorite notes under `notes`, in the order Favorites in the sidebar
   shows them, and its `emoji`, ⭐ when unset. It replaced the `pinned` list of earlier versions,
   which Jot no longer reads.
+- `hidden` notes and notebooks, and everything in a hidden notebook, stay out of the note list,
+  quick open, search, Tasks and tags, in Jot and in `jot`. Links to them still work. Unlike
+  ignored files, Jot still reads them.
 - `tasks` and `trash` hold the `emoji` of Tasks and Trash in the sidebar, shown as ✅ and 🗑️ when
   unset; `""` shows none, for them and for `favorites`.
 - Renaming or moving a note or notebook in Jot takes its entries with it.
