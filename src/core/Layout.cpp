@@ -93,6 +93,19 @@ std::optional<Layout> Layout::read(const Vault &vault, QString *error)
                 const QString value =
                     splitKey(line).value_or(std::pair{QString(), QString()}).second;
                 view.verbatim = !value.isEmpty() && !value.startsWith(u'#');
+                // Favorites written on one line, as `favorites: [a.md]`, are read as a list, so
+                // they are written out as Jot writes them.
+                if (section == u"favorites"_s && view.verbatim) {
+                    view.verbatim = false;
+                    const QString inner = value.trimmed();
+                    if (inner.startsWith(u'[') && inner.endsWith(u']')) {
+                        for (const QString &item : inner.mid(1, inner.size() - 2).split(u',')) {
+                            const QString path = readYamlScalar(item);
+                            if (!path.isEmpty() && !layout.m_favorites.contains(path))
+                                layout.m_favorites.append(path);
+                        }
+                    }
+                }
             }
             if (view.verbatim) {
                 view.raw.append(raw);

@@ -1958,11 +1958,18 @@ bool trashes(bool trashed, bool back)
     return trashed != back;
 }
 
+// Whether a change of `kind` moves a note or notebook to and from the trash.
+template<typename Kind>
+bool movesToTrash(Kind kind)
+{
+    return kind == Kind::Trash || kind == Kind::Notebook;
+}
+
 } // namespace
 
 QString VaultController::undoTrashes() const
 {
-    if (m_undo.isEmpty() || m_undo.last().kind == Change::Kind::Text ||
+    if (m_undo.isEmpty() || !movesToTrash(m_undo.last().kind) ||
         !trashes(m_undo.last().trashed, true))
         return {};
     return Vault::titleFromPath(m_undo.last().path);
@@ -1970,7 +1977,7 @@ QString VaultController::undoTrashes() const
 
 QString VaultController::redoTrashes() const
 {
-    if (m_redo.isEmpty() || m_redo.last().kind == Change::Kind::Text ||
+    if (m_redo.isEmpty() || !movesToTrash(m_redo.last().kind) ||
         !trashes(m_redo.last().trashed, false))
         return {};
     return Vault::titleFromPath(m_redo.last().path);
@@ -2457,6 +2464,9 @@ void VaultController::reloadModels()
         for (auto it = emojis.cbegin(); it != emojis.cend(); ++it)
             m_notebookEmoji.insert(it.key(), it.value());
         m_favorites = layout ? layout->favorites() : QStringList();
+        // Those gone since are no favorites, though the file names them until it is written.
+        m_favorites.removeIf(
+            [this](const QString &path) { return !QFileInfo(m_vault->absolute(path)).isFile(); });
         m_notebookSorts = layout ? layout->sorts() : QHash<QString, QString>();
         for (const QString &view : Layout::kViews)
             m_viewEmoji.insert(view, layout ? layout->viewEmoji(view) : Layout::defaultEmoji(view));
