@@ -34,8 +34,6 @@ Rectangle {
             list.currentIndex = 0
     }
 
-    /// Moves to the next, previous, first or last to-do and opens its note there, by
-    /// KeyRouter's action id.
     /// Shows the note `path` in its notebook, as if picked there, with the cursor on `line`.
     function goToNote(path, line) {
         Vault.dropTag()
@@ -56,6 +54,8 @@ Rectangle {
         taskMenu.popup(row, x, y)
     }
 
+    /// Moves to the next, previous, first or last to-do and opens its note there, by
+    /// KeyRouter's action id.
     function step(id) {
         if (list.count === 0)
             return
