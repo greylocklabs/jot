@@ -11,6 +11,7 @@
 #include "greylock/UpdateCheck.h"
 #include "jot/Diagnostics.h"
 #include "jot/JsonSchema.h"
+#include "jot/Layout.h"
 #include "jot/LogFile.h"
 #include "jot/Settings.h"
 
@@ -240,6 +241,8 @@ std::optional<OpenVault> openVault(const QString &given, Quiet quiet = Quiet::No
     // Completion trusts the index, but a vault never read yet has to be read once.
     if (quiet == Quiet::No || open.index->noteCount() == 0)
         open.index->refresh();
+    if (const std::optional<Layout> layout = Layout::read(*open.vault))
+        open.index->setHidden(layout->hidden());
     return open;
 }
 
@@ -373,7 +376,7 @@ int main(int argc, char *argv[])
             QList<cli::Candidate> found;
             if (OpenVault *open = opened()) {
                 for (const VaultEntry &entry : open->vault->entries()) {
-                    if (entry.folder)
+                    if (entry.folder && !open->index->isHidden(entry.path))
                         found.append({entry.path, {}});
                 }
             }
@@ -382,7 +385,7 @@ int main(int argc, char *argv[])
         const auto titles = [&opened] {
             QList<cli::Candidate> found;
             if (OpenVault *open = opened()) {
-                for (const NoteInfo &note : open->index->notesIn({}))
+                for (const NoteInfo &note : open->index->shownIn({}))
                     found.append({note.title, note.path});
             }
             return found;
