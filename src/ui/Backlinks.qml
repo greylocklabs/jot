@@ -76,6 +76,9 @@ Column {
         Accessible.name: title
         onClicked: Vault.current = path
 
+        HoverHandler {
+            cursorShape: Qt.PointingHandCursor
+        }
         background: Rectangle {
             radius: Theme.radiusMd
             color: entry.hovered ? Theme.surfaceAlt : Theme.surface

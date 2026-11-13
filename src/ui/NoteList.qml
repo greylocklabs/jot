@@ -224,6 +224,9 @@ Rectangle {
             hoverEnabled: true
             Accessible.name: title
 
+            HoverHandler {
+                cursorShape: Qt.PointingHandCursor
+            }
             TapHandler {
                 acceptedButtons: Qt.RightButton
                 onTapped: eventPoint => root.showMenu(note.path, note, eventPoint.position.x,

@@ -313,6 +313,9 @@ Rectangle {
                 root.schedule(path, line, wording)
             }
 
+            HoverHandler {
+                cursorShape: Qt.PointingHandCursor
+            }
             TapHandler {
                 acceptedButtons: Qt.RightButton
                 // At the click, which Wayland does not share as a cursor position.

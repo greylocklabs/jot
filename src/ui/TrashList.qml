@@ -157,6 +157,9 @@ Rectangle {
                     Vault.chosenTrashed = location
             }
 
+            HoverHandler {
+                cursorShape: Qt.PointingHandCursor
+            }
             TapHandler {
                 acceptedButtons: Qt.RightButton
                 onTapped: eventPoint => {

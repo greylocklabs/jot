@@ -55,6 +55,7 @@ private Q_SLOTS:
     void trashAsksFirst();
     void trashShowsWhatWasDeletedAndBringsItBack();
     void trashSitsAtTheFootWithItsOwnHighlight();
+    void rowsShowAPointer();
     void backlinkListsFoldUnderTheirHeadings();
     void trashDeletesForGoodOnlyOnceAsked();
     void confirmDialogOffersAThirdChoice();
@@ -735,6 +736,30 @@ void TestLists::trashShowsWhatWasDeletedAndBringsItBack()
     QCOMPARE(m_vault->current(), u"Recipes/Sourdough.md"_s);
     // What it showed is gone, so the list chooses nothing.
     QTRY_COMPARE(list->property("chosen").toString(), QString());
+}
+
+void TestLists::rowsShowAPointer()
+{
+    // What opens on a click shows the hand, as links do.
+    const auto pointing = [](QQuickItem *row) {
+        const QList<QObject *> handlers = row->findChildren<QObject *>(Qt::FindDirectChildrenOnly);
+        return std::ranges::any_of(handlers, [](QObject *handler) {
+            return handler->inherits("QQuickHoverHandler") &&
+                   handler->property("cursorShape").toInt() == Qt::PointingHandCursor;
+        });
+    };
+    for (const QString &label : {u"Tasks"_s, u"Places"_s, u"Trash"_s}) {
+        QQuickItem *row = entry(label);
+        QVERIFY2(row && pointing(row), qPrintable(label));
+    }
+    QQuickItem *note = nullptr;
+    QTRY_VERIFY((note = findItem(
+                     [](QQuickItem *item) {
+                         return item->inherits("QQuickAbstractButton") &&
+                                !item->property("title").toString().isEmpty();
+                     },
+                     qobject_cast<QQuickItem *>(m_noteList.get()))));
+    QVERIFY(pointing(note));
 }
 
 void TestLists::trashSitsAtTheFootWithItsOwnHighlight()

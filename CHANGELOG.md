@@ -16,6 +16,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 - Vi insert mode no longer offers suggestions before anything is typed.
 - A link in Styled mode leaves no gap before the text after it.
 - Sidebar emoji keep their edges at fractional display scales, such as 125%.
+- Notebooks, notes, to-dos, trashed notes and the links and mentions under a note show the
+  pointer when hovered, as things that open on a click.
 
 ## 0.6.0 - 2026-11-13
 
