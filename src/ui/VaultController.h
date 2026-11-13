@@ -64,6 +64,8 @@ class VaultController : public QObject
     Q_PROPERTY(QVariantMap notebookEmoji READ notebookEmoji NOTIFY notesChanged)
     /// The emoji before Tasks and Trash in the sidebar, by view, each empty for none.
     Q_PROPERTY(QVariantMap viewEmoji READ viewEmoji NOTIFY notesChanged)
+    /// The favorite notes, in their order.
+    Q_PROPERTY(QStringList favorites READ favorites NOTIFY notesChanged)
     Q_PROPERTY(jot::NotebookModel *notebooks READ notebooks CONSTANT)
     /// The tags, nested ones as a tree that folds.
     Q_PROPERTY(jot::TagModel *tagTree READ tagTree CONSTANT)
@@ -275,9 +277,13 @@ public:
     Q_INVOKABLE QString titleOf(const QString &path) const;
     /// The notebook the note at `path` is in; empty for the top of the vault.
     Q_INVOKABLE QString notebookOf(const QString &path) const { return Vault::notebookOf(path); }
-    /// Keeps the note at `path` at the top of the note list, or lets it go back in order.
-    Q_INVOKABLE bool setPinned(const QString &path, bool pinned);
-    Q_INVOKABLE bool isPinned(const QString &path) const { return m_pinned.contains(path); }
+    /// Makes the note at `path` a favorite, last in Favorites, or not. Undoable.
+    Q_INVOKABLE bool setFavorite(const QString &path, bool favorite);
+    Q_INVOKABLE bool isFavorite(const QString &path) const { return m_favorites.contains(path); }
+    /// Moves the favorite at `path` to `at` in Favorites' order, as dragging it does.
+    Q_INVOKABLE bool moveFavorite(const QString &path, int at);
+    /// The favorite notes, in their order.
+    [[nodiscard]] QStringList favorites() const { return m_favorites; }
     /// Shows `emoji` before the notebook's name, or no emoji when it is empty.
     Q_INVOKABLE bool setNotebookEmoji(const QString &path, const QString &emoji);
     /// Shows `emoji` before `view`, "tasks" or "trash", or none when it is empty.
@@ -653,7 +659,9 @@ private:
     /// notebook's count reads only what changed since.
     QHash<QString, std::pair<QDateTime, int>> m_noteWords;
     QVariantMap m_viewEmoji;
-    QStringList m_pinned;
+    QStringList m_favorites;
+    /// Makes the note at `path` a favorite at `at`, or not, without remembering it for undo.
+    bool writeFavorite(const QString &path, bool favorite, int at);
     QString m_indexPath;
     QString m_error;
     QString m_current;
@@ -674,7 +682,7 @@ private:
     /// brought back from it.
     struct Change
     {
-        enum class Kind { Text, Trash, Notebook };
+        enum class Kind { Text, Trash, Notebook, Favorite };
         Kind kind = Kind::Text;
         QString path;
         /// Text: what the note said before and after.
@@ -684,7 +692,10 @@ private:
         QString location;
         bool keepAttachments = false;
         /// Trash: the change moved the note to the trash, rather than bringing it back.
+        /// Favorite: the change made it a favorite, rather than taking that away.
         bool trashed = true;
+        /// Favorite: where it is, or was, in Favorites' order.
+        int place = -1;
     };
     /// Does `change`, or takes it back, keeping where the note went. `stale` says whether it
     /// cannot be done any more, as when the note has changed or gone since.

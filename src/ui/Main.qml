@@ -913,7 +913,7 @@ ApplicationWindow {
         case "history":
             return note
         case "rename":
-        case "togglePin":
+        case "toggleFavorite":
             return note && Vault.writable
         case "trash":
             // Not while the tasks or the trash are shown, which hide the note it would ask about.
@@ -1102,8 +1102,8 @@ ApplicationWindow {
         case "history":
             history.open()
             break
-        case "togglePin":
-            Vault.setPinned(Vault.current, !Vault.isPinned(Vault.current))
+        case "toggleFavorite":
+            Vault.setFavorite(Vault.current, !Vault.isFavorite(Vault.current))
             break
         case "importJoplin":
             joplinImport.start("")

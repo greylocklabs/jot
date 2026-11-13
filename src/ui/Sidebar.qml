@@ -19,7 +19,8 @@ Rectangle {
     /// A notebook, tag, Tasks or Trash opened from the keyboard, so its list takes the keys.
     signal entered
 
-    /// The rows the keyboard moves through, top to bottom: Tasks, notebooks, tags and Trash.
+    /// The rows the keyboard moves through, top to bottom: Tasks, Favorites, notebooks, tags and
+    /// Trash.
     function rows() {
         const found = []
         const walk = item => {
@@ -197,6 +198,84 @@ Rectangle {
                 }
             }
 
+            // The favorite notes, listed like a notebook's in the order given.
+            Entry {
+                id: favorites
+
+                objectName: "favorites"
+                width: root.width
+                label: qsTr("Favorites")
+                selected: !Vault.showingTasks && !Vault.showingTrash && Vault.shownTag === ""
+                          && Vault.notes.favorites
+                onClicked: {
+                    Vault.dropTag()
+                    Vault.showingTasks = false
+                    Vault.showingTrash = false
+                    Vault.notes.favorites = true
+                }
+
+                TapHandler {
+                    acceptedButtons: Qt.RightButton
+                    onTapped: eventPoint => {
+                        viewMenu.view = "favorites"
+                        viewMenu.popup(favorites, eventPoint.position.x, eventPoint.position.y)
+                    }
+                }
+                // A note dropped here becomes a favorite.
+                DropArea {
+                    id: dropFavorite
+                    anchors.fill: parent
+                    keys: ["application/x-jot-note"]
+                    enabled: Vault.writable
+                    onDropped: drop => {
+                        Vault.setFavorite(drop.getDataAsString("application/x-jot-note"), true)
+                        drop.accept(Qt.CopyAction)
+                    }
+                }
+
+                contentItem: Item {
+                    Rectangle {
+                        anchors {
+                            fill: parent
+                            leftMargin: Theme.space3
+                            rightMargin: Theme.space3
+                        }
+                        visible: dropFavorite.containsDrag
+                        radius: Theme.radiusSm
+                        color: "transparent"
+                        border.color: Theme.accent
+                        border.width: 2
+                    }
+                    Text {
+                        anchors {
+                            left: parent.left
+                            leftMargin: Theme.space4 + Theme.smallGlyphSize + Theme.space3
+                            verticalCenter: parent.verticalCenter
+                        }
+                        text: (Vault.viewEmoji.favorites ?? "") !== "" ? Vault.viewEmoji.favorites
+                                                                         + "  " + favorites.label :
+                                                                         favorites.label
+                        color: favorites.selected ? Theme.text : Theme.textMuted
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.textMd
+                        font.weight: favorites.selected ? Theme.weightBold : Theme.weightStrong
+                    }
+                    Text {
+                        anchors {
+                            right: parent.right
+                            rightMargin: Theme.space5
+                            verticalCenter: parent.verticalCenter
+                        }
+                        visible: Vault.favorites.length > 0
+                        text: Vault.favorites.length
+                        color: Theme.textFaint
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.textXs
+                        font.weight: Theme.weightBold
+                    }
+                }
+            }
+
             Item {
                 width: root.width
                 height: notebooksHeading.height
@@ -269,7 +348,8 @@ Rectangle {
                     width: root.width
                     label: name
                     selected: !Vault.showingTasks && !Vault.showingTrash && Vault.shownTag === ""
-                              && Vault.notes.tag === "" && Vault.notes.notebook === path
+                              && Vault.notes.tag === "" && !Vault.notes.favorites
+                              && Vault.notes.notebook === path
                     onClicked: {
                         Vault.dropTag()
                         Vault.showingTasks = false

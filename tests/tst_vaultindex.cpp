@@ -36,7 +36,7 @@ private Q_SLOTS:
     void countsTagsWithTheParentsOfNestedOnes();
     void listsOpenTasksAndTaskNotes();
     void rebuildsAnIndexFromAnotherSchema();
-    void sortsNotesWithThePinnedFirst();
+    void sortsNotes();
     void readsToDoDatesAndLabels();
 
 private:
@@ -357,7 +357,7 @@ void TestVaultIndex::rebuildsAnIndexFromAnotherSchema()
     QCOMPARE(m_index->noteCount(), 1);
 }
 
-void TestVaultIndex::sortsNotesWithThePinnedFirst()
+void TestVaultIndex::sortsNotes()
 {
     const qint64 day = 24LL * 3600 * 1000 * 1000000;
     const qint64 oct1 = 1790812800000LL * 1000000; // 2026-10-01
@@ -388,8 +388,6 @@ void TestVaultIndex::sortsNotesWithThePinnedFirst()
     QCOMPARE(paths(), (QStringList{u"a.md"_s, u"c.md"_s, u"b.md"_s}));
     sortNotes(notes, u"title"_s);
     QCOMPARE(paths(), (QStringList{u"c.md"_s, u"a.md"_s, u"b.md"_s}));
-    sortNotes(notes, u"title"_s, {u"b.md"_s, u"a.md"_s});
-    QCOMPARE(paths(), (QStringList{u"a.md"_s, u"b.md"_s, u"c.md"_s}));
 }
 
 void TestVaultIndex::readsToDoDatesAndLabels()

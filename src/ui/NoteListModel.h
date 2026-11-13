@@ -19,6 +19,8 @@ class NoteListModel : public QAbstractListModel
     Q_PROPERTY(QString notebook READ notebook WRITE setNotebook NOTIFY scopeChanged)
     /// The tag shown, instead of a notebook; empty for none.
     Q_PROPERTY(QString tag READ tag WRITE setTag NOTIFY scopeChanged)
+    /// The favorite notes shown, in their order, instead of a notebook or tag.
+    Q_PROPERTY(bool favorites READ favorites WRITE setFavorites NOTIFY scopeChanged)
     Q_PROPERTY(QString query READ query WRITE setQuery NOTIFY queryChanged)
     /// "updated", "created" or "title".
     Q_PROPERTY(QString order READ order WRITE setOrder NOTIFY orderChanged)
@@ -31,19 +33,20 @@ public:
         NotebookRole,
         ModifiedRole,
         SnippetRole,
-        PinnedRole,
     };
 
     explicit NoteListModel(QObject *parent = nullptr);
 
-    /// Reads the notes again from `index`, or empties the list without one. Those in
-    /// `pinned` come first.
-    void reload(const VaultIndex *index, const QStringList &pinned = {});
+    /// Reads the notes again from `index`, or empties the list without one. `favorites` are the
+    /// favorite notes, in their order.
+    void reload(const VaultIndex *index, const QStringList &favorites = {});
 
     [[nodiscard]] QString notebook() const { return m_notebook; }
     void setNotebook(const QString &notebook);
     [[nodiscard]] QString tag() const { return m_tag; }
     void setTag(const QString &tag);
+    [[nodiscard]] bool favorites() const { return m_showFavorites; }
+    void setFavorites(bool shown);
     [[nodiscard]] QString query() const { return m_query; }
     void setQuery(const QString &query);
     [[nodiscard]] QString order() const { return m_order; }
@@ -71,7 +74,6 @@ private:
         QString title;
         qint64 modified = 0;
         QString snippet;
-        bool pinned = false;
     };
     void refill();
 
@@ -79,7 +81,8 @@ private:
     QString m_notebook;
     QString m_tag;
     QString m_query;
-    QStringList m_pinned;
+    QStringList m_favorites;
+    bool m_showFavorites = false;
     QString m_order = QStringLiteral("updated");
     QList<Row> m_rows;
 };

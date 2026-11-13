@@ -35,19 +35,20 @@ QString scopedQuery(const QString &query, const QString &notebook, const QString
 
 NoteListModel::NoteListModel(QObject *parent) : QAbstractListModel(parent) {}
 
-void NoteListModel::reload(const VaultIndex *index, const QStringList &pinned)
+void NoteListModel::reload(const VaultIndex *index, const QStringList &favorites)
 {
     m_index = index;
-    m_pinned = pinned;
+    m_favorites = favorites;
     refill();
 }
 
 void NoteListModel::setNotebook(const QString &notebook)
 {
-    if (m_notebook == notebook && m_tag.isEmpty())
+    if (m_notebook == notebook && m_tag.isEmpty() && !m_showFavorites)
         return;
     m_notebook = notebook;
     m_tag.clear();
+    m_showFavorites = false;
     Q_EMIT scopeChanged();
     refill();
 }
@@ -57,8 +58,23 @@ void NoteListModel::setTag(const QString &tag)
     if (m_tag == tag)
         return;
     m_tag = tag;
-    if (!tag.isEmpty())
+    if (!tag.isEmpty()) {
         m_notebook.clear();
+        m_showFavorites = false;
+    }
+    Q_EMIT scopeChanged();
+    refill();
+}
+
+void NoteListModel::setFavorites(bool shown)
+{
+    if (m_showFavorites == shown)
+        return;
+    m_showFavorites = shown;
+    if (shown) {
+        m_notebook.clear();
+        m_tag.clear();
+    }
     Q_EMIT scopeChanged();
     refill();
 }
@@ -88,9 +104,16 @@ void NoteListModel::refill()
     m_rows.clear();
     if (m_index) {
         if (!m_query.trimmed().isEmpty()) {
-            for (const SearchHit &hit : m_index->search(scopedQuery(m_query, m_notebook, m_tag)))
-                m_rows.append(
-                    {hit.path, hit.title, hit.modified, hit.snippet, m_pinned.contains(hit.path)});
+            for (const SearchHit &hit : m_index->search(scopedQuery(m_query, m_notebook, m_tag))) {
+                if (!m_showFavorites || m_favorites.contains(hit.path))
+                    m_rows.append({hit.path, hit.title, hit.modified, hit.snippet});
+            }
+        } else if (m_showFavorites) {
+            // In the order given, of those still there.
+            for (const QString &path : std::as_const(m_favorites)) {
+                if (const std::optional<NoteInfo> note = m_index->note(path))
+                    m_rows.append({note->path, note->title, note->modified, {}});
+            }
         } else {
             QList<NoteInfo> notes;
             if (!m_tag.isEmpty()) {
@@ -103,10 +126,9 @@ void NoteListModel::refill()
             } else {
                 notes = m_index->notesIn(m_notebook);
             }
-            sortNotes(notes, m_order, m_pinned);
+            sortNotes(notes, m_order);
             for (const NoteInfo &note : std::as_const(notes))
-                m_rows.append(
-                    {note.path, note.title, note.modified, {}, m_pinned.contains(note.path)});
+                m_rows.append({note.path, note.title, note.modified, {}});
         }
     }
     endResetModel();
@@ -144,15 +166,17 @@ QVariant NoteListModel::data(const QModelIndex &index, int role) const
     case NotebookRole: return notebookOf(row.path);
     case ModifiedRole: return QDateTime::fromMSecsSinceEpoch(row.modified / 1000000);
     case SnippetRole: return row.snippet;
-    case PinnedRole: return row.pinned;
     }
     return {};
 }
 
 QHash<int, QByteArray> NoteListModel::roleNames() const
 {
-    return {{PathRole, "path"},         {TitleRole, "title"},     {NotebookRole, "notebook"},
-            {ModifiedRole, "modified"}, {SnippetRole, "snippet"}, {PinnedRole, "pinned"}};
+    return {{PathRole, "path"},
+            {TitleRole, "title"},
+            {NotebookRole, "notebook"},
+            {ModifiedRole, "modified"},
+            {SnippetRole, "snippet"}};
 }
 
 } // namespace jot

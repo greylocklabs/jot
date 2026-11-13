@@ -14,7 +14,7 @@ namespace jot {
 
 /// How the vault's notes and notebooks are shown, as `.jot/layout.yaml` keeps it beside them,
 /// so it syncs with the notes: each folder's manual order, each notebook's emoji, icon, color
-/// and word target, and the notes pinned to the top of the list. docs/FORMAT.md describes the file.
+/// and word target, and the favorite notes. docs/FORMAT.md describes the file.
 class Layout
 {
 public:
@@ -60,18 +60,19 @@ public:
     /// Sets the notebook's word target, or takes it away, deadline and all, at 0 words.
     void setTarget(const QString &folder, const Target &target);
 
-    /// The sidebar's own entries, Tasks and Trash, by the section that keeps each one.
-    static inline const QStringList kViews = {QStringLiteral("tasks"), QStringLiteral("trash")};
+    /// The sidebar's own entries, Tasks, Favorites and Trash, by the section that keeps each one.
+    static inline const QStringList kViews = {QStringLiteral("tasks"), QStringLiteral("favorites"),
+                                              QStringLiteral("trash")};
     /// What `view` shows when the file names nothing for it.
     [[nodiscard]] static QString defaultEmoji(const QString &view);
     /// The emoji shown before `view`, its default unless changed; empty when taken away.
     [[nodiscard]] QString viewEmoji(const QString &view) const;
     void setViewEmoji(const QString &view, const QString &emoji);
 
-    /// The notes pinned to the top of the note list, by vault path, in the order pinned.
-    [[nodiscard]] QStringList pinned() const { return m_pinned; }
-    /// Pins the note at `path` to the top of the note list, or unpins it.
-    void setPinned(const QString &path, bool pinned);
+    /// The favorite notes, by vault path, in the order given.
+    [[nodiscard]] QStringList favorites() const { return m_favorites; }
+    /// Makes the note at `path` a favorite, at `at` in their order or else at the end, or not.
+    void setFavorite(const QString &path, bool favorite, int at = -1);
 
     /// The same move as follow(), on this layout alone.
     void move(const QString &from, const QString &to);
@@ -90,7 +91,7 @@ private:
     QStringList m_header;
     /// Sections Jot does not know, kept as written.
     QStringList m_other;
-    QStringList m_pinned;
+    QStringList m_favorites;
     struct View
     {
         /// As the file gives it, even empty; nothing when it says nothing.

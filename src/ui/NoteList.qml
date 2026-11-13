@@ -32,7 +32,7 @@ Rectangle {
         noteMenu.path = path
         noteMenu.folder = Vault.notebookOf(path)
         noteMenu.notebooks = [""].concat(Vault.notebookPaths())
-        noteMenu.pinned = Vault.isPinned(path)
+        noteMenu.favorite = Vault.isFavorite(path)
         noteMenu.popup(item, x, y)
     }
 
@@ -101,11 +101,13 @@ Rectangle {
             id: search
 
             width: parent.width
-            placeholderText: Vault.notes.tag !== "" ? qsTr("Search #%1").arg(Vault.notes.tag) :
-                                                      Vault.notes.notebook !== "" ? qsTr(
-                                                                                        "Search %1").arg(
-                                                                                        Vault.notes.notebook) :
-                                                                                    qsTr("Search notes")
+            placeholderText: Vault.notes.favorites ? qsTr("Search favorites") : Vault.notes.tag
+                                                     !== "" ? qsTr("Search #%1").arg(
+                                                                  Vault.notes.tag) :
+                                                              Vault.notes.notebook !== "" ? qsTr(
+                                                                                                "Search %1").arg(
+                                                                                                Vault.notes.notebook) :
+                                                                                            qsTr("Search notes")
             text: Vault.notes.query
             onTextEdited: Vault.notes.query = text
             Keys.onDownPressed: list.forceActiveFocus()
@@ -138,7 +140,8 @@ Rectangle {
                 id: order
 
                 anchors.right: parent.right
-                visible: Vault.notes.query === ""
+                // Favorites keep the order given, so there is no sort to choose.
+                visible: Vault.notes.query === "" && !Vault.notes.favorites
                 minimumWidth: 140
                 model: [
                     {
@@ -213,7 +216,6 @@ Rectangle {
             required property string notebook
             required property date modified
             required property string snippet
-            required property bool pinned
             readonly property bool selected: Vault.current === path
             readonly property bool renaming: root.renamingPath !== "" && root.renamingPath === path
 
@@ -260,6 +262,24 @@ Rectangle {
                     })
                 }
             }
+            // In Favorites, a favorite dropped on another takes its place in their order.
+            DropArea {
+                id: reorder
+                anchors.fill: parent
+                keys: ["application/x-jot-note"]
+                enabled: Vault.writable && Vault.notes.favorites && Vault.notes.query === ""
+                onDropped: drop => {
+                    Vault.moveFavorite(drop.getDataAsString("application/x-jot-note"), note.index)
+                    drop.accept(Qt.MoveAction)
+                }
+            }
+            Rectangle {
+                width: parent.width - 2 * Theme.space3
+                x: Theme.space3
+                height: 2
+                visible: reorder.containsDrag
+                color: Theme.accent
+            }
             Drag.dragType: Drag.Automatic
             Drag.supportedActions: Qt.MoveAction
             Drag.mimeData: ({
@@ -296,23 +316,10 @@ Rectangle {
                 Row {
                     spacing: Theme.space2
 
-                    Glyph {
-                        anchors.verticalCenter: parent.verticalCenter
-                        visible: note.pinned
-                        width: Theme.smallGlyphSize
-                        height: Theme.smallGlyphSize
-                        name: "pin"
-                        color: Theme.accent
-                        stroke: Theme.smallGlyphStroke
-                        Accessible.name: qsTr("Pinned")
-                    }
                     Text {
                         id: noteTitle
 
-                        width: note.width - card.leftPadding - card.rightPadding - (note.pinned
-                                                                                    ? Theme.smallGlyphSize
-                                                                                      + parent.spacing :
-                                                                                      0)
+                        width: note.width - card.leftPadding - card.rightPadding
                         text: note.title
                         elide: Text.ElideRight
                         // Hidden under the name being typed, which takes its place.
@@ -521,7 +528,7 @@ Rectangle {
 
         property string path
         property var notebooks: []
-        property bool pinned: false
+        property bool favorite: false
         property string folder
 
         MenuEntry {
@@ -558,9 +565,10 @@ Rectangle {
             }
         }
         MenuEntry {
-            text: noteMenu.pinned ? qsTr("Unpin") : qsTr("Pin to the top")
+            objectName: "favoriteNote"
+            text: noteMenu.favorite ? qsTr("Remove from favorites") : qsTr("Add to favorites")
             enabled: Vault.writable
-            onTriggered: Vault.setPinned(noteMenu.path, !noteMenu.pinned)
+            onTriggered: Vault.setFavorite(noteMenu.path, !noteMenu.favorite)
         }
         MenuEntry {
             text: qsTr("Copy link")

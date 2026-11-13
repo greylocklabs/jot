@@ -5,6 +5,7 @@
 #include <QDir>
 #include <QFileInfo>
 
+#include <algorithm>
 #include <optional>
 
 using namespace Qt::StringLiterals;
@@ -65,6 +66,8 @@ std::optional<Layout> Layout::read(const Vault &vault, QString *error)
     // The indent of a folder's keys, and of a value nested under one, kept as written.
     qsizetype keyIndent = -1;
     qsizetype nestedIndent = -1;
+    // Under favorites' `notes:` key, where each `- ` line is a favorite.
+    bool favoriteNotes = false;
     for (const QString &raw : text->split(u'\n')) {
         const QString line = raw.trimmed();
         // The line starts where its text does, after the spaces that indent it.
@@ -75,6 +78,7 @@ std::optional<Layout> Layout::read(const Vault &vault, QString *error)
             section = splitKey(line).value_or(std::pair{u"?"_s, QString()}).first;
             entry.clear();
             entryIndent = keyIndent = nestedIndent = -1;
+            favoriteNotes = false;
         }
         if (section.isEmpty() && !topLevel) {
             if (line.startsWith(u'#'))
@@ -104,14 +108,25 @@ std::optional<Layout> Layout::read(const Vault &vault, QString *error)
             if (view.indent < 0)
                 view.indent = at;
             const auto key = splitKey(line);
+            if (section == u"favorites"_s) {
+                if (key && at == view.indent)
+                    favoriteNotes = key->first == u"notes"_s;
+                if (favoriteNotes) {
+                    if (line == u"-"_s || line.startsWith(u"- "_s)) {
+                        const QString item = readYamlScalar(QStringView(line).sliced(1));
+                        if (!layout.m_favorites.contains(item))
+                            layout.m_favorites.append(item);
+                    }
+                    continue;
+                }
+            }
             if (key && key->first == u"emoji"_s && at == view.indent)
                 view.emoji = readYamlScalar(key->second);
             else
                 view.lines.append(QString(std::max<qsizetype>(0, at - view.indent), u' ') + line);
             continue;
         }
-        if (section != u"order"_s && section != u"folders"_s && section != u"pinned"_s &&
-            !kViews.contains(section)) {
+        if (section != u"order"_s && section != u"folders"_s && !kViews.contains(section)) {
             layout.m_other.append(raw);
             continue;
         }
@@ -128,8 +143,6 @@ std::optional<Layout> Layout::read(const Vault &vault, QString *error)
             const QString item = readYamlScalar(QStringView(line).sliced(1));
             if (section == u"order"_s && !entry.isEmpty())
                 layout.m_order[entry].append(item);
-            else if (section == u"pinned"_s && !layout.m_pinned.contains(item))
-                layout.m_pinned.append(item);
             continue;
         }
         const auto key = splitKey(line);
@@ -195,11 +208,6 @@ QString Layout::text() const
                 out += u"    "_s + line + u'\n';
         }
     }
-    if (!m_pinned.isEmpty()) {
-        out += u"pinned:\n"_s;
-        for (const QString &path : m_pinned)
-            out += u"  - %1\n"_s.arg(yamlScalar(path));
-    }
     for (const QString &name : kViews) {
         const View view = m_views.value(name);
         if (view.verbatim) {
@@ -207,11 +215,17 @@ QString Layout::text() const
                 out += line + u'\n';
             continue;
         }
-        if (!view.emoji && view.lines.isEmpty())
+        const bool favorites = name == u"favorites"_s && !m_favorites.isEmpty();
+        if (!view.emoji && view.lines.isEmpty() && !favorites)
             continue;
         out += name + u":\n"_s;
         if (view.emoji)
             out += u"  emoji: %1\n"_s.arg(yamlScalar(*view.emoji));
+        if (favorites) {
+            out += u"  notes:\n"_s;
+            for (const QString &path : m_favorites)
+                out += u"    - %1\n"_s.arg(yamlScalar(path));
+        }
         for (const QString &line : view.lines)
             out += u"  "_s + line + u'\n';
     }
@@ -248,9 +262,9 @@ bool Layout::write(const Vault &vault, QString *error) const
     kept.m_header = m_header;
     kept.m_other = m_other;
     kept.m_views = m_views;
-    for (const QString &note : m_pinned) {
+    for (const QString &note : m_favorites) {
         if (QFileInfo(vault.absolute(note)).isFile())
-            kept.m_pinned.append(note);
+            kept.m_favorites.append(note);
     }
 
     const QString path = vault.absolute(kPath);
@@ -294,18 +308,18 @@ void Layout::move(const QString &from, const QString &to)
         if (under(key, from))
             m_folderLines.insert(moved(key), m_folderLines.take(key));
     }
-    for (QString &note : m_pinned) {
+    for (QString &note : m_favorites) {
         if (under(note, from))
             note = moved(note);
     }
 }
 
-void Layout::setPinned(const QString &path, bool pinned)
+void Layout::setFavorite(const QString &path, bool favorite, int at)
 {
-    if (!pinned)
-        m_pinned.removeAll(path);
-    else if (!m_pinned.contains(path))
-        m_pinned.append(path);
+    m_favorites.removeAll(path);
+    if (favorite)
+        m_favorites.insert(
+            at < 0 ? m_favorites.size() : std::min<qsizetype>(at, m_favorites.size()), path);
 }
 
 QString Layout::emoji(const QString &folder) const
@@ -387,6 +401,8 @@ QString Layout::defaultEmoji(const QString &view)
 {
     if (view == u"tasks"_s)
         return u"\u2705"_s;
+    if (view == u"favorites"_s)
+        return u"\u2B50"_s;
     if (view == u"trash"_s)
         return u"\U0001F5D1\uFE0F"_s;
     return {};

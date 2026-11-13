@@ -105,7 +105,7 @@ bool isOverdue(const QString &due, const QDate &today)
     return date.isValid() && date < today;
 }
 
-void sortNotes(QList<NoteInfo> &notes, const QString &order, const QStringList &pinned)
+void sortNotes(QList<NoteInfo> &notes, const QString &order)
 {
     // When the note was made, in milliseconds, or when it last changed for want of that.
     const auto made = [](const NoteInfo &note) {
@@ -117,16 +117,12 @@ void sortNotes(QList<NoteInfo> &notes, const QString &order, const QStringList &
         }
         return when.isValid() ? when.toMSecsSinceEpoch() : note.modified / 1000000;
     };
-    const QSet<QString> pins(pinned.cbegin(), pinned.cend());
     QHash<QString, qint64> created;
     if (order == u"created") {
         for (const NoteInfo &note : std::as_const(notes))
             created.insert(note.path, made(note));
     }
     std::ranges::stable_sort(notes, [&](const NoteInfo &a, const NoteInfo &b) {
-        const bool aPinned = pins.contains(a.path);
-        if (aPinned != pins.contains(b.path))
-            return aPinned;
         if (order == u"title")
             return naturalCompare(a.title, b.title) < 0;
         if (order == u"created" && created[a.path] != created[b.path])

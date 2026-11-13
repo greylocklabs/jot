@@ -1089,21 +1089,44 @@ QString VaultController::newNotebook(const QString &parent)
     return *path;
 }
 
-bool VaultController::setPinned(const QString &path, bool pinned)
+bool VaultController::writeFavorite(const QString &path, bool favorite, int at)
 {
     if (!m_vault || !m_vault->writable() || path.isEmpty())
         return false;
     QString error;
     std::optional<Layout> layout = Layout::read(*m_vault, &error);
     if (layout)
-        layout->setPinned(path, pinned);
+        layout->setFavorite(path, favorite, at);
     if (!layout || !layout->write(*m_vault, &error)) {
-        qCWarning(lcVault) << "could not pin" << path << error;
-        setProblem(tr("Could not pin the note: %1").arg(error));
+        qCWarning(lcVault) << "could not change the favorites" << path << error;
+        setProblem(tr("Could not change the favorites: %1").arg(error));
         return false;
     }
     reloadModels();
     return true;
+}
+
+bool VaultController::setFavorite(const QString &path, bool favorite)
+{
+    if (isFavorite(path) == favorite)
+        return false;
+    const int place = favorite ? int(m_favorites.size()) : int(m_favorites.indexOf(path));
+    if (!writeFavorite(path, favorite, place))
+        return false;
+    Change change;
+    change.kind = Change::Kind::Favorite;
+    change.path = path;
+    change.trashed = favorite;
+    change.place = place;
+    remember(change);
+    return true;
+}
+
+bool VaultController::moveFavorite(const QString &path, int at)
+{
+    if (!isFavorite(path) || m_favorites.indexOf(path) == at)
+        return false;
+    return writeFavorite(path, true, at);
 }
 
 bool VaultController::setNotebookEmoji(const QString &path, const QString &emoji)
@@ -1959,6 +1982,11 @@ bool VaultController::apply(Change &change, bool back, bool *stale)
         return back ? replaceTaskText(change.path, change.after, change.before, stale)
                     : replaceTaskText(change.path, change.before, change.after, stale);
     }
+    if (change.kind == Change::Kind::Favorite) {
+        // Gone since, it is no favorite to change.
+        *stale = !m_vault || !QFileInfo(m_vault->absolute(change.path)).isFile();
+        return !*stale && writeFavorite(change.path, change.trashed != back, change.place);
+    }
     if (change.kind == Change::Kind::Notebook) {
         if (trashes(change.trashed, back)) {
             *stale = !m_vault || !QFileInfo(m_vault->absolute(change.path)).isDir();
@@ -2418,7 +2446,7 @@ void VaultController::reloadModels()
     m_sync.localChanged();
     Q_EMIT currentConflictsChanged();
     m_notebookEmoji.clear();
-    m_pinned.clear();
+    m_favorites.clear();
     if (m_vault) {
         QString error;
         const std::optional<Layout> layout = Layout::read(*m_vault, &error);
@@ -2428,7 +2456,7 @@ void VaultController::reloadModels()
             layout ? layout->emojis() : QHash<QString, QString>();
         for (auto it = emojis.cbegin(); it != emojis.cend(); ++it)
             m_notebookEmoji.insert(it.key(), it.value());
-        m_pinned = layout ? layout->pinned() : QStringList();
+        m_favorites = layout ? layout->favorites() : QStringList();
         m_notebookSorts = layout ? layout->sorts() : QHash<QString, QString>();
         for (const QString &view : Layout::kViews)
             m_viewEmoji.insert(view, layout ? layout->viewEmoji(view) : Layout::defaultEmoji(view));
@@ -2439,11 +2467,11 @@ void VaultController::reloadModels()
     if (m_index) {
         m_notebooks.reload(m_vault.get(), m_index->noteCounts(), m_index->noteCount());
         m_tagTree.reload(m_index->tagCounts());
-        m_notes.reload(m_index.get(), m_pinned);
+        m_notes.reload(m_index.get(), m_favorites);
         m_switcher.reload(m_index.get());
         m_linkSuggestions.reload(m_index.get());
         m_tasks.reload(m_index.get());
-        m_tagNotes.reload(m_index.get(), m_pinned);
+        m_tagNotes.reload(m_index.get());
         m_tagTasks.reload(m_index.get());
     } else {
         m_notebooks.reload(nullptr, {}, 0);

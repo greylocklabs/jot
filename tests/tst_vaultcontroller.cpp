@@ -46,7 +46,7 @@ private Q_SLOTS:
     void listsNotesByNotebookTagAndSearch();
     void ordersNotesAsAsked();
     void followsTheOrderInSettings();
-    void pinsNotesToTheTop();
+    void listsFavoritesInTheirOrder();
     void switcherFindsByTitleAliasAndPath();
     void makesRenamesAndMovesNotebooks();
     void givesNotebooksAnEmoji();
@@ -465,22 +465,41 @@ void TestVaultController::followsTheOrderInSettings()
     QCOMPARE(m_vault->notes()->order(), u"updated"_s);
 }
 
-void TestVaultController::pinsNotesToTheTop()
+void TestVaultController::listsFavoritesInTheirOrder()
 {
     QVERIFY(m_vault->openPath(m_root));
     NoteListModel &notes = *m_vault->notes();
     notes.setNotebook(u"Recipes"_s);
     m_settings->setNoteSort(u"title"_s);
-    QVERIFY(m_vault->setPinned(u"Recipes/Sourdough.md"_s, true));
-    QVERIFY(m_vault->isPinned(u"Recipes/Sourdough.md"_s));
-    QCOMPARE(column(notes, "title"), (QStringList{u"Sourdough"_s, u"Pancakes"_s}));
-    QCOMPARE(column(notes, "pinned"), (QStringList{u"true"_s, u"false"_s}));
+    QVERIFY(m_vault->setFavorite(u"Recipes/Sourdough.md"_s, true));
+    QVERIFY(m_vault->setFavorite(u"Welcome.md"_s, true));
+    QVERIFY(m_vault->isFavorite(u"Recipes/Sourdough.md"_s));
+    // A notebook's list keeps its order.
+    QCOMPARE(column(notes, "title"), (QStringList{u"Pancakes"_s, u"Sourdough"_s}));
+    QVERIFY(readFile(m_root + u"/.jot/layout.yaml"_s).contains(u"favorites:"_s));
 
-    // Moved, it stays pinned; unpinned, it goes back in order.
+    // Favorites lists them in the order given, and a notebook chosen leaves it.
+    notes.setFavorites(true);
+    QCOMPARE(column(notes, "title"), (QStringList{u"Sourdough"_s, u"Welcome"_s}));
+    QVERIFY(m_vault->moveFavorite(u"Welcome.md"_s, 0));
+    QCOMPARE(column(notes, "title"), (QStringList{u"Welcome"_s, u"Sourdough"_s}));
+    notes.setQuery(u"starter"_s);
+    QCOMPARE(column(notes, "title"), QStringList{u"Sourdough"_s});
+    notes.setQuery({});
+
+    // Undone and done again, in its place.
+    QVERIFY(m_vault->setFavorite(u"Welcome.md"_s, false));
+    QCOMPARE(column(notes, "title"), QStringList{u"Sourdough"_s});
+    QVERIFY(m_vault->undo());
+    QCOMPARE(column(notes, "title"), (QStringList{u"Welcome"_s, u"Sourdough"_s}));
+    QVERIFY(m_vault->redo());
+    QCOMPARE(column(notes, "title"), QStringList{u"Sourdough"_s});
+
+    // Moved, it stays a favorite.
     QVERIFY(m_vault->moveNoteTo(u"Recipes/Sourdough.md"_s, u"Ashfall"_s));
-    QVERIFY(m_vault->isPinned(u"Ashfall/Sourdough.md"_s));
-    QVERIFY(m_vault->setPinned(u"Ashfall/Sourdough.md"_s, false));
-    QVERIFY(!m_vault->isPinned(u"Ashfall/Sourdough.md"_s));
+    QVERIFY(m_vault->isFavorite(u"Ashfall/Sourdough.md"_s));
+    notes.setNotebook(u"Recipes"_s);
+    QVERIFY(!notes.favorites());
 
     m_vault->chooseSort(u"created"_s);
     QCOMPARE(m_vault->notebookSort(), u"created"_s);

@@ -12,3 +12,7 @@ folders:
     emoji: 📥
   Recipes:
     emoji: 🍳
+favorites:
+  notes:
+    - Welcome.md
+    - Recipes/Sourdough.md
