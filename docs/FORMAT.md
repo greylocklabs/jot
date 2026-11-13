@@ -12,7 +12,7 @@ Status: final, format 1, as of Jot 0.1. Changes follow [Versioning](#versioning)
 My Notes/                    the vault: any folder
   .jot/                      Jot's files for the vault, synced with the notes
     vault.yaml               vault settings and the format number
-    layout.yaml              notebook emoji, sorts, word targets and pinned notes
+    layout.yaml              notebook emoji, sorts, word targets and favorite notes
     history/                 past versions of notes
     joplin.yaml              what imports from Joplin brought, once there has been one
     trash/                   what was deleted, in Jot and by sync
@@ -243,7 +243,7 @@ Todoist does, and writes the repeat, the date and the priority in that order:
 - [ ] Call Soren #calls @weekly @due 2026-10-29 14:00 @p1
 ```
 
-## Notebook appearance and pins
+## Notebook appearance and favorites
 
 How the note list is ordered by default (by when notes changed, when they were made, or by
 title) is each computer's own setting; a notebook can keep a sort of its own in the vault. The
@@ -258,8 +258,10 @@ folders:
     sort: title
     target: 90000
     deadline: 2027-01-30
-pinned:
-  - Recipes/Pancakes.md
+favorites:
+  emoji: ⭐
+  notes:
+    - Recipes/Pancakes.md
 trash:
   emoji: ""
 ```
@@ -271,9 +273,11 @@ trash:
 - `target` is the words the notebook's notes, and those of the notebooks inside it, are to come
   to, and `deadline` the day, YYYY-MM-DD, to reach it by. A deadline without a target means
   nothing.
-- `pinned` notes stay at the top of the note list, in whatever order it is in.
+- `favorites` lists the favorite notes under `notes`, in the order Favorites in the sidebar
+  shows them, and its `emoji`, ⭐ when unset. It replaced the `pinned` list of earlier versions,
+  which Jot no longer reads.
 - `tasks` and `trash` hold the `emoji` of Tasks and Trash in the sidebar, shown as ✅ and 🗑️ when
-  unset; `""` shows none.
+  unset; `""` shows none, for them and for `favorites`.
 - Renaming or moving a note or notebook in Jot takes its entries with it.
 - Entries that no longer exist are ignored and pruned on the next write.
 - Jot keeps what it does not use as written: other sections, and values nested under a

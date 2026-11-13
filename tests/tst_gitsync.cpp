@@ -368,13 +368,13 @@ void TestGitSync::joinsTwoVaultsThatStartedApart()
 void TestGitSync::leavesHiddenFilesAndTheTrashHere()
 {
     const Computer laptop = computer(u"laptop"_s);
-    write(laptop, u".jot/layout.yaml"_s, "pinned: []\n");
+    write(laptop, u".jot/layout.yaml"_s, "favorites: []\n");
     write(laptop, u".jot/trash/2026-11-03 093000/Old.md"_s, "old\n");
     write(laptop, u".obsidian/app.json"_s, "{}\n");
     write(laptop, u"Ashfall/.DS_Store"_s, "x");
     write(laptop, u"Mara.md"_s, "# Mara\n");
     QVERIFY(sync(laptop).failure.isEmpty());
-    QCOMPARE(inRemote(u".jot/layout.yaml"_s), QByteArray("pinned: []\n"));
+    QCOMPARE(inRemote(u".jot/layout.yaml"_s), QByteArray("favorites: []\n"));
     QVERIFY(inRemote(u".jot/trash/2026-11-03 093000/Old.md"_s).isEmpty());
     QVERIFY(inRemote(u".obsidian/app.json"_s).isEmpty());
     QVERIFY(inRemote(u"Ashfall/.DS_Store"_s).isEmpty());

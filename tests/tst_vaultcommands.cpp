@@ -25,7 +25,7 @@ private Q_SLOTS:
 
     void statusSaysWhatTheVaultHolds();
     void listsNotesNewestOrByTitle();
-    void listsPinnedNotesFirst();
+    void listsWhichNotesAreFavorites();
     void searchesWithFilters();
     void makesNotesWithAPipedBody();
     void showsANoteByTitleAliasOrPath();
@@ -123,17 +123,18 @@ void TestVaultCommands::listsNotesNewestOrByTitle()
     QCOMPARE(run([](auto &c) { return c.list(u"../.."_s, {}, false); }), 2);
 }
 
-void TestVaultCommands::listsPinnedNotesFirst()
+void TestVaultCommands::listsWhichNotesAreFavorites()
 {
     Layout layout;
-    layout.setPinned(u"Recipes/Sourdough.md"_s, true);
+    layout.setFavorite(u"Recipes/Sourdough.md"_s, true);
     QString error;
     QVERIFY(layout.write(*m_vault, &error));
     QCOMPARE(run([](auto &c) { return c.list(u"Recipes"_s, u"title"_s, true); }), 0);
     const QJsonArray notes = json().array();
-    QCOMPARE(notes.at(0).toObject().value(u"title"_s).toString(), u"Sourdough"_s);
-    QVERIFY(notes.at(0).toObject().value(u"pinned"_s).toBool());
-    QVERIFY(!notes.at(1).toObject().value(u"pinned"_s).toBool());
+    // In the order asked for; a favorite is not put first.
+    QCOMPARE(notes.at(0).toObject().value(u"title"_s).toString(), u"Pancakes"_s);
+    QVERIFY(!notes.at(0).toObject().value(u"favorite"_s).toBool());
+    QVERIFY(notes.at(1).toObject().value(u"favorite"_s).toBool());
 }
 
 void TestVaultCommands::searchesWithFilters()

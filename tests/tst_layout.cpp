@@ -23,7 +23,7 @@ private Q_SLOTS:
     void followsAMovedNotebook();
     void keepsWhatItDoesNotUse();
     void leavesAnUnreadableFileAlone();
-    void keepsPinnedNotes();
+    void keepsFavorites();
     void keepsTheViewsEmojis();
     void keepsNotebookTargets();
 
@@ -226,33 +226,46 @@ void TestLayout::leavesAnUnreadableFileAlone()
     QCOMPARE(file.readAll(), bytes);
 }
 
-void TestLayout::keepsPinnedNotes()
+void TestLayout::keepsFavorites()
 {
     Layout layout;
-    layout.setPinned(u"Ashfall/Chapters/Ch 2.md"_s, true);
-    layout.setPinned(u"Ashfall/Chapters/Prologue.md"_s, true);
-    layout.setPinned(u"Ashfall/Chapters/Prologue.md"_s, true);
-    layout.setPinned(u"Gone.md"_s, true);
+    layout.setFavorite(u"Ashfall/Chapters/Ch 2.md"_s, true);
+    layout.setFavorite(u"Ashfall/Chapters/Prologue.md"_s, true);
+    layout.setFavorite(u"Ashfall/Chapters/Prologue.md"_s, true);
+    layout.setFavorite(u"Gone.md"_s, true);
     QString error;
     QVERIFY(layout.write(*m_vault, &error));
-    // In the order pinned, without what is gone.
-    QCOMPARE(read(Layout::kPath), u"pinned:\n"
-                                  "  - Ashfall/Chapters/Ch 2.md\n"
-                                  "  - Ashfall/Chapters/Prologue.md\n"_s);
-    QCOMPARE(Layout::read(*m_vault).value().pinned(),
+    // In the order given, without what is gone.
+    QCOMPARE(read(Layout::kPath), u"favorites:\n"
+                                  "  notes:\n"
+                                  "    - Ashfall/Chapters/Ch 2.md\n"
+                                  "    - Ashfall/Chapters/Prologue.md\n"_s);
+    // With an emoji of its own beside them, both are read.
+    Layout starred = Layout::read(*m_vault).value();
+    starred.setViewEmoji(u"favorites"_s, u"\U0001F496"_s);
+    QVERIFY(starred.write(*m_vault, &error));
+    QCOMPARE(Layout::read(*m_vault).value().viewEmoji(u"favorites"_s), u"\U0001F496"_s);
+    QCOMPARE(Layout::read(*m_vault).value().favorites().size(), 2);
+    QCOMPARE(Layout::read(*m_vault).value().favorites(),
              (QStringList{u"Ashfall/Chapters/Ch 2.md"_s, u"Ashfall/Chapters/Prologue.md"_s}));
+    // One put first moves there.
+    Layout moved = Layout::read(*m_vault).value();
+    moved.setFavorite(u"Ashfall/Chapters/Prologue.md"_s, true, 0);
+    QCOMPARE(moved.favorites(),
+             (QStringList{u"Ashfall/Chapters/Prologue.md"_s, u"Ashfall/Chapters/Ch 2.md"_s}));
 
-    // A pin goes with its note, and with a notebook moved around it.
+    // A favorite goes with its note, and with a notebook moved around it.
     QVERIFY(m_vault->moveNote(u"Ashfall/Chapters/Ch 2.md"_s, u"Inbox/Ch 2.md"_s, &error));
     QVERIFY(Layout::follow(*m_vault, u"Ashfall/Chapters/Ch 2.md"_s, u"Inbox/Ch 2.md"_s, &error));
     QVERIFY(m_vault->moveFolder(u"Ashfall"_s, u"Saga"_s, &error));
     QVERIFY(Layout::follow(*m_vault, u"Ashfall"_s, u"Saga"_s, &error));
-    QCOMPARE(Layout::read(*m_vault).value().pinned(),
+    QCOMPARE(Layout::read(*m_vault).value().favorites(),
              (QStringList{u"Inbox/Ch 2.md"_s, u"Saga/Chapters/Prologue.md"_s}));
 
     layout = Layout::read(*m_vault).value();
-    layout.setPinned(u"Inbox/Ch 2.md"_s, false);
-    QCOMPARE(layout.pinned(), QStringList{u"Saga/Chapters/Prologue.md"_s});
+    layout.setFavorite(u"Inbox/Ch 2.md"_s, false);
+    QCOMPARE(layout.favorites(), QStringList{u"Saga/Chapters/Prologue.md"_s});
+    QCOMPARE(Layout::defaultEmoji(u"favorites"_s), u"\u2B50"_s);
 }
 
 void TestLayout::keepsTheViewsEmojis()

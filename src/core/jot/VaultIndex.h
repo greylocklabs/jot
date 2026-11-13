@@ -78,9 +78,8 @@ struct SearchHit
 
 /// Puts `notes` in `order`, one of Settings::noteSorts(): "updated" most recently changed first,
 /// "created" most recently made first by the `created` front matter key (or when it last
-/// changed, for a note without one), "title" by title. Notes in `pinned` come first, in the
-/// same order among themselves.
-void sortNotes(QList<NoteInfo> &notes, const QString &order, const QStringList &pinned = {});
+/// changed, for a note without one), "title" by title.
+void sortNotes(QList<NoteInfo> &notes, const QString &order);
 
 /// What Jot knows about a vault's notes, kept in SQLite for search, links, tags and
 /// tasks. It is a cache: deleting it loses nothing, and refresh() rebuilds it from the

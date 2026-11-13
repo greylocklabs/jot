@@ -1190,7 +1190,7 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Pinned</source>
+        <source>Search favorites</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1242,11 +1242,11 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Unpin</source>
+        <source>Remove from favorites</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Pin to the top</source>
+        <source>Add to favorites</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2977,6 +2977,10 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Favorites</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Notebooks</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4021,7 +4025,7 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Pin the note to the top, or unpin it</source>
+        <source>Add the note to favorites, or remove it</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -4621,7 +4625,7 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Could not pin the note: %1</source>
+        <source>Could not change the favorites: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

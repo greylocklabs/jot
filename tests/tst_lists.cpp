@@ -48,6 +48,7 @@ private Q_SLOTS:
     void makesANotebookReadyToName();
     void dropsNotesAndNotebooksOnNotebooks();
     void noteMenuOffersNoTask();
+    void favoritesFromTheNoteMenuShowInTheSidebar();
     void opensNotesInTabsFromTheList();
     void notebookMenuMakesANotebookInside();
     void notebookMenuMakesADataFile();
@@ -568,6 +569,43 @@ void TestLists::noteMenuOffersNoTask()
     // A to-do is a checkbox in a note, so a note is never made a task.
     QTRY_VERIFY(menuEntry(u"Open"_s));
     QVERIFY(!menuEntry(u"Make a task"_s));
+}
+
+void TestLists::favoritesFromTheNoteMenuShowInTheSidebar()
+{
+    const auto pancakes = [this] {
+        return findItem(
+            [](QQuickItem *item) {
+                return item->isVisible() &&
+                       item->property("path").toString() == u"Recipes/Pancakes.md"_s;
+            },
+            qobject_cast<QQuickItem *>(m_noteList.get()));
+    };
+    QVERIFY(pancakes());
+    click(pancakes(), Qt::RightButton);
+    QQuickItem *add = nullptr;
+    QTRY_VERIFY(add = menuEntry(u"Add to favorites"_s));
+    click(add);
+    QTRY_VERIFY(m_vault->isFavorite(u"Recipes/Pancakes.md"_s));
+
+    // Favorites in the sidebar lists it, as a notebook lists its notes.
+    auto *favorites =
+        qobject_cast<QQuickItem *>(m_sidebar.get())->findChild<QQuickItem *>(u"favorites"_s);
+    QVERIFY(favorites && favorites->isVisible());
+    click(favorites);
+    QTRY_VERIFY(m_vault->notes()->favorites());
+    QCOMPARE(m_vault->notes()->rowCount(), 1);
+    QVERIFY(favorites->property("selected").toBool());
+
+    // From its menu it goes again, and undo brings it back.
+    QTRY_VERIFY(pancakes());
+    click(pancakes(), Qt::RightButton);
+    QQuickItem *remove = nullptr;
+    QTRY_VERIFY(remove = menuEntry(u"Remove from favorites"_s));
+    click(remove);
+    QTRY_COMPARE(m_vault->notes()->rowCount(), 0);
+    QVERIFY(m_vault->undo());
+    QCOMPARE(m_vault->notes()->rowCount(), 1);
 }
 
 void TestLists::opensNotesInTabsFromTheList()

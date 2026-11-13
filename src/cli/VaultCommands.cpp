@@ -97,13 +97,13 @@ int VaultCommands::list(const QString &notebook, const QString &order, bool json
         return 1;
     }
     QList<NoteInfo> notes = m_index.notesIn(notebook);
-    // Without the pins when the layout cannot be read, which is said once.
+    // Without the favorites when the layout cannot be read, which is said once.
     QString error;
     const std::optional<Layout> layout = Layout::read(m_vault, &error);
     if (!layout)
         m_err << tr("jot: %1").arg(error) << "\n";
-    const QStringList pinned = layout ? layout->pinned() : QStringList();
-    sortNotes(notes, order.isEmpty() ? u"updated"_s : order, pinned);
+    const QStringList favorites = layout ? layout->favorites() : QStringList();
+    sortNotes(notes, order.isEmpty() ? u"updated"_s : order);
     if (json) {
         QJsonArray array;
         for (const NoteInfo &note : std::as_const(notes))
@@ -111,7 +111,7 @@ int VaultCommands::list(const QString &notebook, const QString &order, bool json
                                      {u"title"_s, note.title},
                                      {u"tags"_s, QJsonArray::fromStringList(note.tags)},
                                      {u"modified"_s, when(note.modified)},
-                                     {u"pinned"_s, pinned.contains(note.path)}});
+                                     {u"favorite"_s, favorites.contains(note.path)}});
         print(m_out, array);
         return 0;
     }

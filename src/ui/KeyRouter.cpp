@@ -143,7 +143,7 @@ QList<KeyAction> KeyRouter::actions()
         act(u"record"_s, tr("Record from the microphone, or stop"), window, {}, {}, u"R"_s),
         act(u"export"_s, tr("Export the note..."), window, {}, {}, u"e"_s),
         act(u"history"_s, tr("Past versions of the note"), window, {}, {}, u"h"_s),
-        act(u"togglePin"_s, tr("Pin the note to the top, or unpin it"), window, {}),
+        act(u"toggleFavorite"_s, tr("Add the note to favorites, or remove it"), window, {}),
         act(u"importJoplin"_s, tr("Import from Joplin..."), window, {}),
         act(u"viMode"_s, tr("Vi mode on or off"), window, {}),
         act(u"editColors"_s, tr("Edit the theme's colors"), window, {}),
