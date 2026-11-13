@@ -2549,6 +2549,15 @@ void TestNoteEditor::runsViCommands()
     // The whole note's replace is one step to undo.
     type(u"u"_s);
     QCOMPARE(text(), u"one cat\ntwo dog cat\nthree"_s);
+    // One match keeps what is around it, for lookarounds and groups alike.
+    body->setProperty("text", u"one cat\ntwo dog cat\nthree"_s);
+    run(u"2"_s);
+    run(u"s/(?<=two )(d)og/\\1ingo/"_s);
+    QCOMPARE(text(), u"one cat\ntwo dingo cat\nthree"_s);
+    run(u"s/CAT/cow/i"_s);
+    QCOMPARE(text(), u"one cat\ntwo dingo cow\nthree"_s);
+    type(u"u"_s);
+    type(u"u"_s);
     run(u"s/zebra/x/"_s);
     QVERIFY(message->property("text").toString().contains(u"zebra"_s));
 
