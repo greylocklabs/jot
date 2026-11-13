@@ -203,6 +203,14 @@ void TestMarkdownEdit::continuesLists_data()
     QTest::newRow("a ticked task gives an open one")
         << u"- [x] milk|"_s << u"- [x] milk\n- [ ] |"_s;
     QTest::newRow("splits the item") << u"- mi|lk"_s << u"- mi\n- |lk"_s;
+    // Just before another item's marker, the line breaks without a second marker.
+    QTest::newRow("before a task's marker")
+        << u"- [ ] Foo|- [ ] Bar"_s << u"- [ ] Foo\n|- [ ] Bar"_s;
+    QTest::newRow("before a bullet") << u"- Foo|- Bar"_s << u"- Foo\n|- Bar"_s;
+    QTest::newRow("before a number") << u"1. Foo|2. Bar"_s << u"1. Foo\n|2. Bar"_s;
+    QTest::newRow("before a marker, past spaces") << u"- Foo| - Bar"_s << u"- Foo\n|- Bar"_s;
+    QTest::newRow("nested, before a marker") << u"  - Foo|- Bar"_s << u"  - Foo\n  |- Bar"_s;
+    QTest::newRow("a dash in words still splits") << u"- Foo|-ish bar"_s << u"- Foo\n- |-ish bar"_s;
     QTest::newRow("nested keeps its indent") << u"  - milk|"_s << u"  - milk\n  - |"_s;
     QTest::newRow("quote") << u"> said|"_s << u"> said\n> |"_s;
     QTest::newRow("quoted list") << u"> - a|"_s << u"> - a\n> - |"_s;
