@@ -991,6 +991,7 @@ bool VaultController::renameCurrent(const QString &title)
     if (!m_vault || m_current.isEmpty() || wanted.isEmpty() || wanted == currentTitle())
         return false;
     saveNow();
+    const QString before = currentTitle();
     const QString folder = m_current.contains(u'/') ? m_current.section(u'/', 0, -2) : QString();
 
     // A note with nothing in it yet, named "people.csv", becomes a CSV file. One with words in
@@ -1061,6 +1062,14 @@ bool VaultController::renameCurrent(const QString &title)
         moved(m_current, to);
         m_current = to;
         readCurrent();
+    }
+    if (!m_renamingBack) {
+        Change change;
+        change.kind = Change::Kind::Rename;
+        change.path = to;
+        change.before = before;
+        change.after = wanted;
+        remember(change);
     }
     // The title key holds what the file name cannot; when the name can, it goes. A data file
     // has no front matter, so its name is all it has.
@@ -2063,6 +2072,23 @@ bool VaultController::apply(Change &change, bool back, bool *stale)
     if (change.kind == Change::Kind::Text) {
         return back ? replaceTaskText(change.path, change.after, change.before, stale)
                     : replaceTaskText(change.path, change.before, change.after, stale);
+    }
+    if (change.kind == Change::Kind::Rename) {
+        // Moved or gone since, it is not this change's to rename.
+        *stale = !m_vault || !QFileInfo(m_vault->absolute(change.path)).isFile();
+        if (*stale) {
+            setProblem(tr("%1 has moved or gone since, so it was left as it is.")
+                           .arg(Vault::titleFromPath(change.path)));
+            return false;
+        }
+        if (m_current != change.path)
+            setCurrent(change.path);
+        m_renamingBack = true;
+        const bool renamed = renameCurrent(back ? change.before : change.after);
+        m_renamingBack = false;
+        if (renamed)
+            change.path = m_current;
+        return renamed;
     }
     if (change.kind == Change::Kind::Favorite) {
         // Gone since, it is no favorite to change.

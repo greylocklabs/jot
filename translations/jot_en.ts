@@ -3957,11 +3957,11 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Undo ticking, trashing or restoring</source>
+        <source>Undo ticking, renaming, trashing or restoring</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Redo ticking, trashing or restoring</source>
+        <source>Redo ticking, renaming, trashing or restoring</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

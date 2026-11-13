@@ -571,6 +571,17 @@ Rectangle {
                         show(Vault.currentTitle)
                         root.editBody()
                     }
+                    // With no typing of its own left to undo, a rename is taken back, or done
+                    // again.
+                    Keys.onPressed: event => {
+                        if (event.matches(StandardKey.Undo) && !canUndo && Vault.canUndo) {
+                            Vault.undo()
+                            event.accepted = true
+                        } else if (event.matches(StandardKey.Redo) && !canRedo && Vault.canRedo) {
+                            Vault.redo()
+                            event.accepted = true
+                        }
+                    }
                 }
                 // With saving manual, typing not yet saved.
                 Rectangle {
