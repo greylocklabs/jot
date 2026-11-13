@@ -2170,6 +2170,8 @@ void TestVaultController::syncsWithAFolder()
     sync->syncNow();
     QVERIFY(finished.wait(10000));
     QCOMPARE(readFile(m_root + u"/From the NAS.md"_s), u"written elsewhere\n"_s);
+    // A note the sync brought in is no change waiting to be sent.
+    QTRY_VERIFY(m_vault->index()->note(u"From the NAS.md"_s));
     QVERIFY(!sync->pending());
     QVERIFY2(sync->details().contains(u"1 received"_s), qPrintable(sync->details()));
     QTRY_VERIFY(m_vault->index()->note(u"From the NAS.md"_s));
