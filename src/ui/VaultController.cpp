@@ -2560,6 +2560,9 @@ void VaultController::reloadModels()
     applyNoteSort();
     if (m_index) {
         m_index->setHidden(m_hidden);
+        // A hidden notebook is no place to list notes from, nor to make them in.
+        if (!m_notes.notebook().isEmpty() && m_index->isHidden(m_notes.notebook()))
+            m_notes.setNotebook({});
         m_notebooks.reload(m_vault.get(), m_index->noteCounts(), m_index->noteCount(),
                            [this](const QString &path) { return m_index->isHidden(path); });
         m_tagTree.reload(m_index->tagCounts());

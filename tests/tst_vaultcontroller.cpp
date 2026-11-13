@@ -505,6 +505,12 @@ void TestVaultController::hidesNotesAndNotebooksFromView()
     QVERIFY(column(*m_vault->notes(), "path").contains(u"Inbox/Groceries.md"_s));
     QVERIFY(m_vault->setHidden(u"Recipes"_s, false));
     QCOMPARE(m_vault->noteCount(), before);
+    // Hiding the notebook shown shows every note instead, so new ones are not made out of
+    // sight.
+    m_vault->notes()->setNotebook(u"Recipes"_s);
+    QVERIFY(m_vault->setHidden(u"Recipes"_s, true));
+    QVERIFY(m_vault->notes()->notebook().isEmpty());
+    QVERIFY(m_vault->undo());
     QVERIFY(column(*m_vault->notebooks(), "path").contains(u"Recipes"_s));
 
     // Trashing a notebook takes its hidden notes out of the index too; undone, they come back
