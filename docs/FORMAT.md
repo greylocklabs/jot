@@ -96,15 +96,16 @@ Jot reads a simple subset of YAML: `key: value` with plain or quoted strings, an
 
 Keys Jot understands:
 
-| Key       | Type                      | Meaning                                        |
-| --------- | ------------------------- | ---------------------------------------------- |
-| `title`   | string                    | Title, when the file name cannot hold it       |
-| `tags`    | list of strings           | Tags, nested with `/`: `cast/lead`             |
-| `aliases` | list of strings           | Other names links and mentions can use         |
-| `created` | ISO 8601 date-time        | When the note was created                      |
-| `type`    | string                    | The note's type; searchable as `type:` for now |
-| `target`  | whole number              | Words the note is meant to reach               |
-| `lang`    | language code, as `en_GB` | The language spelling is checked in            |
+| Key       | Type                      | Meaning                                                |
+| --------- | ------------------------- | ------------------------------------------------------ |
+| `title`   | string                    | Title, when the file name cannot hold it               |
+| `tags`    | list of strings           | Tags, nested with `/`: `cast/lead`                     |
+| `aliases` | list of strings           | Other names links and mentions can use                 |
+| `created` | ISO 8601 date-time        | When the note was created                              |
+| `type`    | string                    | The note's type; searchable as `type:` for now         |
+| `target`  | whole number              | Words the note is meant to reach                       |
+| `lang`    | language code, as `en_GB` | The language spelling is checked in                    |
+| `tasks`   | `off`                     | Keeps the note's checkboxes out of the lists of to-dos |
 
 Rules:
 

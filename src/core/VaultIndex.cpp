@@ -357,7 +357,10 @@ void VaultIndex::read(const QString &path)
         query.addBindValue(link.line);
         exec(query, "link");
     }
-    for (const NoteScan::Task &task : scan.tasks) {
+    // `tasks: off` keeps a checklist that is no to-do list out of every list of to-dos.
+    const QString tasksKey = meta.value(u"tasks"_s).toString().trimmed().toLower();
+    const bool tasksOff = tasksKey == u"off" || tasksKey == u"false" || tasksKey == u"no";
+    for (const NoteScan::Task &task : tasksOff ? QList<NoteScan::Task>() : scan.tasks) {
         QSqlQuery query(db);
         query.prepare(u"INSERT INTO tasks VALUES (?, ?, ?, ?)"_s);
         query.addBindValue(path);
