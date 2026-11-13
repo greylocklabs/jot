@@ -153,9 +153,15 @@ Rectangle {
                         "id": "title",
                         "name": qsTr("By title")
                     }
-                ]
+                ].concat(Vault.notebookSort !== "" ? [
+                                                         {
+                                                             "id": "",
+                                                             "name": qsTr("Use the default")
+                                                         }
+                                                     ] : [])
                 currentValue: Vault.notes.order
-                onActivated: value => Vault.notes.order = value
+                // In a notebook, the notebook keeps it; elsewhere it is the default.
+                onActivated: value => Vault.chooseSort(value)
             }
         }
     }

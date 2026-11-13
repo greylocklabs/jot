@@ -137,6 +137,9 @@ class VaultController : public QObject
     Q_PROPERTY(QString problem READ problem NOTIFY problemChanged)
     /// A Joplin import, or a look at what one would do, is under way in the background.
     Q_PROPERTY(bool importingJoplin READ importingJoplin NOTIFY joplinImportChanged)
+    /// The sort of the notebook shown, when it has one of its own; empty when it uses the
+    /// default.
+    Q_PROPERTY(QString notebookSort READ notebookSort NOTIFY noteSortChanged)
     /// Of the notes the import under way writes, how many are written so far.
     Q_PROPERTY(int joplinImportDone READ joplinImportDone NOTIFY joplinImportChanged)
     Q_PROPERTY(int joplinImportTotal READ joplinImportTotal NOTIFY joplinImportChanged)
@@ -401,6 +404,10 @@ public:
     /// importJoplin() in the background, ending with joplinImportFinished(). Nothing while
     /// another is under way.
     Q_INVOKABLE void startJoplinImport(const QUrl &file, const QString &folder, bool dryRun);
+    /// Sorts the notes as `sort` says: the notebook shown keeps it as its own, and All notes and
+    /// tags make it the default. Empty puts the notebook shown back on the default.
+    Q_INVOKABLE void chooseSort(const QString &sort);
+    [[nodiscard]] QString notebookSort() const;
     [[nodiscard]] bool importingJoplin() const { return m_joplinThread != nullptr; }
     [[nodiscard]] int joplinImportDone() const { return m_joplinDone; }
     [[nodiscard]] int joplinImportTotal() const { return m_joplinTotal; }
@@ -532,6 +539,7 @@ Q_SIGNALS:
     /// characters: line breaks as one, without a byte order mark.
     void revealPosition(int position);
     void joplinImportChanged();
+    void noteSortChanged();
     /// A startJoplinImport() finished, with the map importJoplin() gives.
     void joplinImportFinished(const QVariantMap &summary);
 
@@ -609,6 +617,10 @@ private:
     std::unique_ptr<VaultIndex> m_index;
     std::unique_ptr<VaultWatcher> m_watcher;
     QPointer<QThread> m_joplinThread;
+    /// Each notebook's own sort, by its path, as the layout file keeps them.
+    QHash<QString, QString> m_notebookSorts;
+    /// Sorts the note list as the notebook shown says, or else as the default.
+    void applyNoteSort();
     int m_joplinDone = 0;
     int m_joplinTotal = 0;
     NotebookModel m_notebooks;

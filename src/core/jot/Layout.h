@@ -40,6 +40,13 @@ public:
     void setEmoji(const QString &folder, const QString &emoji);
     /// Every notebook's emoji, by its path.
     [[nodiscard]] QHash<QString, QString> emojis() const;
+    /// How the notebook's notes are sorted, as Settings::noteSorts() names them, or empty for
+    /// the default sort. Notebooks inside it have their own.
+    [[nodiscard]] QString sort(const QString &folder) const;
+    /// Gives the notebook a sort of its own, or takes it away when `sort` is empty.
+    void setSort(const QString &folder, const QString &sort);
+    /// Every notebook's own sort, by its path.
+    [[nodiscard]] QHash<QString, QString> sorts() const;
 
     /// What a notebook, its notebooks inside included, is to come to: a number of words, and
     /// the day to reach it by when there is one.

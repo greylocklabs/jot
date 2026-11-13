@@ -152,8 +152,10 @@ void TestLayout::followsAMovedNotebook()
     layout.setEmoji(u"Ashfall"_s, u"a"_s);
     layout.setEmoji(u"Ashfall/Chapters"_s, u"b"_s);
     layout.setEmoji(u"Inbox"_s, u"c"_s);
+    layout.setSort(u"Ashfall/Chapters"_s, u"title"_s);
     QString error;
     QVERIFY(layout.write(*m_vault, &error));
+    QCOMPARE(Layout::read(*m_vault)->sort(u"Ashfall/Chapters"_s), u"title"_s);
 
     QVERIFY(m_vault->moveFolder(u"Ashfall"_s, u"Inbox/Ashfall"_s, &error));
     QVERIFY2(Layout::follow(*m_vault, u"Ashfall"_s, u"Inbox/Ashfall"_s, &error), qPrintable(error));
@@ -162,6 +164,10 @@ void TestLayout::followsAMovedNotebook()
     QCOMPARE(moved.emoji(u"Inbox/Ashfall/Chapters"_s), u"b"_s);
     QCOMPARE(moved.emoji(u"Inbox"_s), u"c"_s);
     QCOMPARE(moved.emoji(u"Ashfall"_s), QString());
+    // Its sort goes with it, and is its own, not its parent's.
+    QCOMPARE(moved.sort(u"Inbox/Ashfall/Chapters"_s), u"title"_s);
+    QCOMPARE(moved.sort(u"Inbox/Ashfall"_s), QString());
+    QCOMPARE(moved.sorts().size(), 1);
 }
 
 void TestLayout::keepsWhatItDoesNotUse()
