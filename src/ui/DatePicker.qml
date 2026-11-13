@@ -58,6 +58,7 @@ AbstractButton {
 
     Popup {
         id: calendar
+        objectName: "calendar"
         y: root.height + Theme.space1
         padding: Theme.space3
 

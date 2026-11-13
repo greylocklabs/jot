@@ -1005,6 +1005,13 @@ Rectangle {
                     } else {
                         items = Vault.frontMatterSuggestions(query.kind, query.key ?? "",
                                                              query.text)
+                        // A day other than today is picked from a month.
+                        if (query.kind === "value" && query.key === "created")
+                            items.push({
+                                           "text": qsTr("Pick a date..."),
+                                           "detail": "",
+                                           "action": "date"
+                                       })
                     }
                     frontMatterPopup.items = items
                     frontMatterPopup.highlighted = 0
@@ -1016,6 +1023,14 @@ Rectangle {
                     if (!item)
                         return
                     const start = frontMatterStart
+                    if (item.action === "date") {
+                        frontMatterPopup.items = []
+                        dismissedFrontMatter = start
+                        createdPicker.start = start
+                        createdPicker.end = cursorPosition
+                        createdPicker.clicked()
+                        return
+                    }
                     const written = frontMatterKind === "key" ? item.text + ": " : item.text
                     frontMatterPopup.items = []
                     dismissedFrontMatter = start
@@ -1354,6 +1369,25 @@ Rectangle {
                         objectName: "markerPopup"
                         wanted: body.activeFocus
                         onPicked: index => body.pickMarker(index)
+                    }
+                    // The month `created:` picks a day from, at the cursor; it writes the day there.
+                    DatePicker {
+                        id: createdPicker
+
+                        /// What the day takes the place of.
+                        property int start: -1
+                        property int end: -1
+
+                        objectName: "createdPicker"
+                        opacity: 0
+                        width: 1
+                        height: parent.height
+                        onPicked: day => {
+                            const written = day.toLocaleDateString(Qt.locale("C"), "yyyy-MM-dd")
+                            styler.replace(start, end, written)
+                            body.cursorPosition = start + written.length
+                            body.forceActiveFocus()
+                        }
                     }
                     SuggestionPopup {
                         id: frontMatterPopup

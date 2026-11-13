@@ -2560,7 +2560,8 @@ QVariantList VaultController::frontMatterSuggestions(const QString &kind, const 
             offered.append({type, {}});
     } else if (key == u"tasks") {
         offered = {{u"off"_s, tr("Keep its checkboxes out of Tasks")},
-                   {u"on"_s, tr("List its checkboxes in Tasks")}};
+                   // What a note without the key does.
+                   {u"on"_s, tr("List its checkboxes in Tasks (default)")}};
     } else if (key == u"created") {
         const QDateTime now = QDateTime::currentDateTime();
         offered = {{now.date().toString(Qt::ISODate), tr("Today")},

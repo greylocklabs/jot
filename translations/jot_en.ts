@@ -1103,6 +1103,10 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Pick a date...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>The note&apos;s headings will be listed here.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4983,7 +4987,7 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>List its checkboxes in Tasks</source>
+        <source>List its checkboxes in Tasks (default)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
