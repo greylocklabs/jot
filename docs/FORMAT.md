@@ -110,6 +110,8 @@ Keys Jot understands:
 Rules:
 
 - Every other key is kept exactly as written.
+- Jot warns, without changing anything, about a fence never closed, a line that is no
+  `key: value` or list item, and a value of the wrong kind for a key above.
 - When Jot changes a key, it rewrites only that key's lines, so comments, order and quoting in the
   rest of the front matter survive.
 - Jot writes `created` once, when you make a note or import one, because file times do not survive

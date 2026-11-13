@@ -62,6 +62,7 @@ private Q_SLOTS:
 
     void drawsTheNoteAndKeepsDrawingItAcrossSwitches();
     void numbersANotesLinesWhenAsked();
+    void warnsOfFrontMatterProblems();
     void opensALongNoteAtTheTop();
     void theTitleFollowsAnEditedTitleKey();
     void aTickFromTheTaskViewKeepsTheEditorsUndo();
@@ -195,6 +196,26 @@ void TestNoteEditor::cleanup()
     VaultController::setInstance(nullptr);
     m_vault.reset();
     SettingsForeign::s_instance = nullptr;
+}
+
+void TestNoteEditor::warnsOfFrontMatterProblems()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    QQuickItem *warning = find(u"frontMatterProblems"_s);
+    QVERIFY(!warning->isVisible());
+    body->setProperty("text", u"---\ntags: [a]\ntarget: lots\n---\nBody\n"_s);
+    QTRY_VERIFY(warning->isVisible());
+    QVERIFY(warning->property("tip").toString().contains(u"lots"_s));
+
+    // Pressed, it goes to the line.
+    body->setProperty("cursorPosition", 0);
+    QMetaObject::invokeMethod(warning, "clicked");
+    QCOMPARE(body->property("cursorPosition").toInt(), int(u"---\ntags: [a]\n"_s.size()));
+    QVERIFY(body->hasActiveFocus());
+
+    body->setProperty("text", u"---\ntarget: 300\n---\nBody\n"_s);
+    QTRY_VERIFY(!warning->isVisible());
 }
 
 void TestNoteEditor::numbersANotesLinesWhenAsked()

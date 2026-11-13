@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QList>
 #include <QString>
 #include <QStringList>
 #include <QStringView>
@@ -33,6 +34,19 @@ NoteParts splitFrontMatter(QStringView note);
 /// comments and quoting. A note without front matter gets some.
 [[nodiscard]] QString setFrontMatterKey(const QString &note, const QString &key,
                                         const QVariant &value);
+
+/// Something wrong with a note's front matter, on its line of the note, counted from 1.
+struct FrontMatterProblem
+{
+    int line = 0;
+    QString message;
+    bool operator==(const FrontMatterProblem &) const = default;
+};
+
+/// What is wrong with `note`'s front matter: a fence never closed, a line that is no
+/// `key: value` or list item, or a value of the wrong kind for a key Jot reads. Keys Jot does
+/// not know are fine, as they are kept as written.
+[[nodiscard]] QList<FrontMatterProblem> frontMatterProblems(QStringView note);
 
 /// A YAML scalar as written after a key or a list dash, with its quotes and comment removed.
 [[nodiscard]] QString readYamlScalar(QStringView text);

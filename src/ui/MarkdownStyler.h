@@ -64,6 +64,8 @@ class MarkdownStyler : public QObject
     Q_PROPERTY(QString language READ language WRITE setLanguage NOTIFY spellingChanged)
     /// The note's front matter keys, as the text has them now.
     Q_PROPERTY(QVariantMap frontMatter READ frontMatter NOTIFY frontMatterChanged)
+    /// What is wrong with the front matter, each as `{line, message}`, the line counted from 1.
+    Q_PROPERTY(QVariantList frontMatterProblems READ frontMatterProblems NOTIFY frontMatterChanged)
 
 public:
     explicit MarkdownStyler(QObject *parent = nullptr);
@@ -89,6 +91,7 @@ public:
     /// The words and characters in `text`, as `count` has them.
     Q_INVOKABLE static QVariantMap countOf(const QString &text);
     [[nodiscard]] QVariantMap frontMatter() const { return m_frontMatter; }
+    [[nodiscard]] QVariantList frontMatterProblems() const { return m_frontMatterProblems; }
     [[nodiscard]] bool sourceMode() const { return m_sourceMode; }
     void setSourceMode(bool source);
     [[nodiscard]] bool focusMode() const { return m_focusMode; }
@@ -185,6 +188,7 @@ private:
     int m_width = 600;
     bool m_imagesPending = false;
     QVariantMap m_frontMatter;
+    QVariantList m_frontMatterProblems;
     /// The headings the tables of contents were last drawn with.
     QList<std::pair<int, QString>> m_headings;
     bool m_sourceMode = false;

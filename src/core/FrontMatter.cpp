@@ -1,6 +1,9 @@
 #include "jot/FrontMatter.h"
 
+#include <QDate>
+#include <QDateTime>
 #include <QLocale>
+#include <QObject>
 #include <QRegularExpression>
 
 using namespace Qt::StringLiterals;
@@ -193,6 +196,62 @@ NoteParts splitFrontMatter(QStringView note)
     if (span.start < 0)
         return {{}, note.sliced(span.bodyStart), false};
     return {note.sliced(span.start, span.end - span.start), note.sliced(span.bodyStart), true};
+}
+
+QList<FrontMatterProblem> frontMatterProblems(QStringView note)
+{
+    const qsizetype offset = note.startsWith(kByteOrderMark) ? 1 : 0;
+    qsizetype next = 0;
+    if (!note.sliced(offset).startsWith(u"---") || !isFence(lineAt(note, offset, &next), false))
+        return {};
+    QList<FrontMatterProblem> problems;
+    const auto wrong = [&problems](int line, const QString &message) {
+        problems.append({line, message});
+    };
+    static const QRegularExpression language(u"^[A-Za-z]{2,3}([_-][A-Za-z0-9]{2,4})?$"_s);
+    static const QStringList switches{u"on"_s, u"off"_s, u"true"_s, u"false"_s, u"yes"_s, u"no"_s};
+    int number = 1;
+    bool closed = false;
+    while (next < note.size()) {
+        const QStringView line = lineAt(note, next, &next);
+        ++number;
+        if (isFence(line, true)) {
+            closed = true;
+            break;
+        }
+        const QStringView trimmed = line.trimmed();
+        if (trimmed.isEmpty() || trimmed.startsWith(u'#') || isIndented(line) ||
+            isListItem(trimmed))
+            continue;
+        const QString key = keyOf(line);
+        if (key.isEmpty()) {
+            wrong(number, QObject::tr("Line %1 is not key: value").arg(number));
+            continue;
+        }
+        const QString value = readScalar(line.sliced(line.indexOf(u':') + 1).trimmed());
+        if (value.isEmpty() || value.startsWith(u'['))
+            continue;
+        if (key == u"target") {
+            bool whole = false;
+            if (value.toInt(&whole) < 0 || !whole)
+                wrong(number, QObject::tr("target is a number of words, not %1").arg(value));
+        } else if (key == u"tasks") {
+            if (!switches.contains(value.toLower()))
+                wrong(number, QObject::tr("tasks is on or off, not %1").arg(value));
+        } else if (key == u"created") {
+            if (!QDateTime::fromString(value, Qt::ISODate).isValid() &&
+                !QDate::fromString(value, Qt::ISODate).isValid())
+                wrong(number, QObject::tr("created is a date, as 2026-11-13, not %1").arg(value));
+        } else if (key == u"lang") {
+            if (!language.match(value).hasMatch())
+                wrong(number, QObject::tr("lang is a language code, as en_US, not %1").arg(value));
+        }
+    }
+    // Unclosed, everything after it is read as the note, so its lines are no problem of the
+    // front matter's.
+    if (!closed)
+        return {{1, QObject::tr("The front matter has no closing --- line")}};
+    return problems;
 }
 
 QVariantMap readFrontMatter(QStringView yaml)

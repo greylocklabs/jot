@@ -140,14 +140,19 @@ void MarkdownStyler::setDocument(QQuickTextDocument *document)
 void MarkdownStyler::readFrontMatter()
 {
     QVariantMap keys;
+    QVariantList problems;
     if (m_document && m_document->textDocument()) {
         const QString text = m_document->textDocument()->toPlainText();
         if (const NoteParts parts = splitFrontMatter(text); parts.hasFrontMatter)
             keys = jot::readFrontMatter(parts.frontMatter);
+        for (const FrontMatterProblem &problem : jot::frontMatterProblems(text))
+            problems.append(
+                QVariantMap{{u"line"_s, problem.line}, {u"message"_s, problem.message}});
     }
-    if (keys == m_frontMatter)
+    if (keys == m_frontMatter && problems == m_frontMatterProblems)
         return;
     m_frontMatter = keys;
+    m_frontMatterProblems = problems;
     Q_EMIT frontMatterChanged();
 }
 

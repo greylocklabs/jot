@@ -517,6 +517,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Front matter problem</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 front matter problems</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Delete</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2181,6 +2189,30 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>not a color</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Line %1 is not key: value</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>target is a number of words, not %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>tasks is on or off, not %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>created is a date, as 2026-11-13, not %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>lang is a language code, as en_US, not %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The front matter has no closing --- line</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
