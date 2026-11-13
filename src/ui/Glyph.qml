@@ -248,9 +248,10 @@ Item {
                     ctx.lineWidth = root.stroke
                     ctx.lineCap = "round"
                     ctx.lineJoin = "round"
-                    // Round from the right, open at the upper right.
+                    // Round from the lower right to the upper right, leaving a gap between the
+                    // tail and the head.
                     ctx.beginPath()
-                    ctx.arc(at(12), at(12), 9 * unit, 0, Math.PI * 1.78)
+                    ctx.arc(at(12), at(12), 9 * unit, Math.PI * 0.15, Math.PI * 1.78)
                     ctx.stroke()
                     // A corner for the head, inside the circle's box.
                     ctx.beginPath()
