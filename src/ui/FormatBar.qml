@@ -19,18 +19,14 @@ Rectangle {
         id: shortcuts
     }
 
-    /// The note's front matter, from the styler.
-    property var frontMatter: ({})
     /// Whether there is a microphone, and whether it is recording.
     property bool canRecord: false
     property bool recording: false
 
     signal formatRequested(string action)
 
-    readonly property string task: frontMatter.task || ""
-
     readonly property real trailingWidth: modesHolder.width + outlineToggle.implicitWidth
-                                          + taskToggle.implicitWidth + 2 * trailing.spacing
+                                          + trailing.spacing
     /// Too narrow for a few formatting buttons beside the switches: the switches go below the
     /// buttons, and wrap as they must.
     readonly property bool stacked: row.visible && width - 2 * Theme.space5 - Theme.space3
@@ -309,22 +305,6 @@ Rectangle {
             Accessible.description: root.withKey(qsTr("Show the note's headings beside it"),
                                                  "outline")
             onToggled: Settings.outlineShown = checked
-        }
-
-        // A note that is a task shows in Tasks until it is done.
-        Toggle {
-            id: taskToggle
-
-            text: qsTr("Task")
-            // Follows the note: a click asks for the change, and the text says what it is.
-            checked: root.task !== ""
-            focusPolicy: Qt.NoFocus
-            Accessible.description: checked ? qsTr("No longer a task") : qsTr(
-                                                  "Make this note a task")
-            onToggled: {
-                checked = Qt.binding(() => root.task !== "")
-                root.formatRequested("taskNote")
-            }
         }
     }
 

@@ -420,7 +420,6 @@ Rectangle {
             top: noteTabs.bottom
         }
         visible: Vault.current !== "" && Vault.writable && !root.dataFile && !root.distractionFree
-        frontMatter: styler.frontMatter
         canRecord: recorder.available
         recording: recorder.recording
         onFormatRequested: action => root.format(action, "")
@@ -740,12 +739,6 @@ Rectangle {
                         onClicked: resolver.openFor(conflictBanner.first)
                     }
                 }
-            }
-
-            TaskDetails {
-                visible: Vault.writable && !root.dataFile && styler.frontMatter.task !== undefined
-                frontMatter: styler.frontMatter
-                onFormatRequested: (action, argument) => root.format(action, argument)
             }
 
             Text {

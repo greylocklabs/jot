@@ -96,20 +96,15 @@ Jot reads a simple subset of YAML: `key: value` with plain or quoted strings, an
 
 Keys Jot understands:
 
-| Key        | Type                       | Meaning                                        |
-| ---------- | -------------------------- | ---------------------------------------------- |
-| `title`    | string                     | Title, when the file name cannot hold it       |
-| `tags`     | list of strings            | Tags, nested with `/`: `cast/lead`             |
-| `aliases`  | list of strings            | Other names links and mentions can use         |
-| `created`  | ISO 8601 date-time         | When the note was created                      |
-| `task`     | `open` or `done`           | Makes the note a task                          |
-| `due`      | ISO 8601 date or date-time | When a task is due                             |
-| `done`     | ISO 8601 date-time         | When a task was completed                      |
-| `repeat`   | rule, as `every week`      | How a task repeats                             |
-| `priority` | `p1` to `p4`               | A task's priority: urgent, high, medium, low   |
-| `type`     | string                     | The note's type; searchable as `type:` for now |
-| `target`   | whole number               | Words the note is meant to reach               |
-| `lang`     | language code, as `en_GB`  | The language spelling is checked in            |
+| Key       | Type                      | Meaning                                        |
+| --------- | ------------------------- | ---------------------------------------------- |
+| `title`   | string                    | Title, when the file name cannot hold it       |
+| `tags`    | list of strings           | Tags, nested with `/`: `cast/lead`             |
+| `aliases` | list of strings           | Other names links and mentions can use         |
+| `created` | ISO 8601 date-time        | When the note was created                      |
+| `type`    | string                    | The note's type; searchable as `type:` for now |
+| `target`  | whole number              | Words the note is meant to reach               |
+| `lang`    | language code, as `en_GB` | The language spelling is checked in            |
 
 Rules:
 
@@ -118,16 +113,14 @@ Rules:
   rest of the front matter survive.
 - Jot writes `created` once, when you make a note or import one, because file times do not survive
   copies and sync. A note without it shows the file's modification time.
-- Jot writes `created` and `done` in UTC, ending in `Z`. A `due` with a time and no offset is in
-  local time.
+- Jot writes `created` in UTC, ending in `Z`.
 - Jot never writes an `updated` key. The file's modification time is the update time, which keeps
   saves from rewriting the front matter.
 - No id is required or written. Links work by path and name.
 - A list key also accepts a single string, which is one item: `tags: a, b` is the one tag `a, b`.
-  `aliases` also accepts `alias`, and `tags` `tag`. A leading `#` on a tag is dropped, and `task:`
-  ignores case.
-- Reopening a task removes its `done:`. Making a note no longer a task removes `task:` and leaves
-  `due:`.
+  `aliases` also accepts `alias`, and `tags` `tag`. A leading `#` on a tag is dropped.
+- A note is never a to-do itself: `task:`, `due:`, `done:`, `repeat:` and `priority:`, which Jot
+  0.5 read as a task note, are ordinary keys, kept as written.
 
 ### Body
 
@@ -207,14 +200,8 @@ goes on to the desktop's trash. The trash is never synced.
 
 ## Tasks
 
-There are two kinds, and the task view shows both:
-
-- **Checkboxes** in any note: a list item starting `[ ]` or `[x]` (or `[X]`), after `-`, `*`, `+`,
-  `1.` or `1)`. Ticking one in Jot edits that line.
-- **Task notes**: a note with `task: open` or `task: done` in its front matter, and optionally
-  `due`, `done`, `repeat` and `priority`. Completing one sets `task: done` and `done:` to the current time; one
-  that repeats, with a `due` day, is due again on its next day after today instead, and stays
-  open.
+A to-do is a checkbox in any note: a list item starting `[ ]` or `[x]` (or `[X]`), after `-`,
+`*`, `+`, `1.` or `1)`. Ticking one in Jot edits that line.
 
 A checkbox says more about itself in plain words on its own line, each starting with an `@`:
 
@@ -232,7 +219,7 @@ A checkbox says more about itself in plain words on its own line, each starting 
   with a number (`every 2 weeks`) or `other`, `every weekday`, `every monday` through
   `every sunday`, and `every 2 weeks on monday`, in any case. A rule is the most of the words
   after `@every` that make one of these, so words after it, even a number, stay the to-do's
-  own. `repeat:` on a task note takes the same rules, as `repeat: every week`.
+  own.
 - `@done` and a date is when it was done. Ticking one that repeats and is due writes the next one
   above it, unticked and due on its next day after today, and gives the ticked one `@done` and
   today's date. A rule Jot does not read is kept, and only ticked.
@@ -435,7 +422,7 @@ read while Joplin is closed. Either maps onto this format as follows:
 | Note title                          | File name, with `title:` when it had unsafe characters       |
 | Tags                                | `tags:`                                                      |
 | `created_time`, `updated_time`      | `created:`, and the file's modification time                 |
-| To-do, `todo_completed`, `todo_due` | `task:`, `done:`, `due:`                                     |
+| To-do, `todo_completed`, `todo_due` | A checkbox atop the note, with `@due` and `@done`            |
 | Resource used by notes              | File in the `.assets` folder of the first note that uses it  |
 | `:/id` links                        | Relative Markdown links                                      |
 | HTML notes                          | Kept as HTML inside the `.md` file, with its links rewritten |

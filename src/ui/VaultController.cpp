@@ -1837,55 +1837,6 @@ bool VaultController::setTaskText(const QString &path, int line, const QString &
         true);
 }
 
-bool VaultController::scheduleTaskNote(const QString &path, const QString &line)
-{
-    const TaskLine said = readTaskLine(line);
-    return rewriteNote(
-        path,
-        [said](const QString &text) {
-            QString changed = setFrontMatterKey(
-                text, u"due"_s,
-                said.due.isEmpty() ? QVariant() : QVariant(QString(said.due).replace(u'T', u' ')));
-            return std::optional(setFrontMatterKey(
-                changed, u"repeat"_s, said.repeat.isEmpty() ? QVariant() : QVariant(said.repeat)));
-        },
-        true);
-}
-
-bool VaultController::completeTask(const QString &path)
-{
-    return rewriteNote(
-        path,
-        [](const QString &text) {
-            // One that repeats comes round again on its next day after today, still open.
-            const QVariantMap meta = readFrontMatter(splitFrontMatter(text).frontMatter);
-            const QString due = meta.value(u"due"_s).toString().trimmed();
-            const QString rule = meta.value(u"repeat"_s).toString().trimmed();
-            QDate next = nextOccurrence(rule, QDate::fromString(due.left(10), Qt::ISODate));
-            while (next.isValid() && next <= QDate::currentDate())
-                next = nextOccurrence(rule, next);
-            if (next.isValid())
-                return std::optional(
-                    setFrontMatterKey(text, u"due"_s, next.toString(Qt::ISODate) + due.mid(10)));
-            QString changed = setFrontMatterKey(text, u"task"_s, u"done"_s);
-            changed = setFrontMatterKey(changed, u"done"_s,
-                                        QDateTime::currentDateTimeUtc().toString(Qt::ISODate));
-            return std::optional(changed);
-        },
-        true);
-}
-
-bool VaultController::reopenTask(const QString &path)
-{
-    return rewriteNote(
-        path,
-        [](const QString &text) {
-            return std::optional(setFrontMatterKey(setFrontMatterKey(text, u"task"_s, u"open"_s),
-                                                   u"done"_s, QVariant()));
-        },
-        true);
-}
-
 bool VaultController::undo()
 {
     if (m_undo.isEmpty())
@@ -2164,25 +2115,10 @@ int VaultController::notesInNotebook(const QString &path) const
     return m_index ? int(m_index->notesIn(path).size()) : 0;
 }
 
-bool VaultController::setTask(const QString &path, bool task)
-{
-    // Only the task key: a due date is the user's own, and comes back if it is a task again.
-    return rewriteNote(path, [task](const QString &text) {
-        return std::optional(
-            setFrontMatterKey(text, u"task"_s, task ? QVariant(u"open"_s) : QVariant()));
-    });
-}
-
 QString VaultController::titleOf(const QString &path) const
 {
     const std::optional<NoteInfo> info = m_index ? m_index->note(path) : std::nullopt;
     return info ? info->title : Vault::titleFromPath(path);
-}
-
-bool VaultController::isTask(const QString &path) const
-{
-    const std::optional<NoteInfo> info = m_index ? m_index->note(path) : std::nullopt;
-    return info && !info->task.isEmpty();
 }
 
 QString VaultController::linkTo(const QString &path) const

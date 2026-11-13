@@ -143,7 +143,6 @@ QList<KeyAction> KeyRouter::actions()
         act(u"export"_s, tr("Export the note..."), window, {}, {}, u"e"_s),
         act(u"history"_s, tr("Past versions of the note"), window, {}, {}, u"h"_s),
         act(u"togglePin"_s, tr("Pin the note to the top, or unpin it"), window, {}),
-        act(u"toggleTask"_s, tr("Make the note a task, or not"), window, {}),
         act(u"importJoplin"_s, tr("Import from Joplin..."), window, {}),
         act(u"viMode"_s, tr("Vi mode on or off"), window, {}),
         act(u"editColors"_s, tr("Edit the theme's colors"), window, {}),

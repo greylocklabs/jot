@@ -159,7 +159,7 @@ void TestToDoReminders::manyAtOnceComeAsOne()
 void TestToDoReminders::buttonsOpenTickAndSnooze()
 {
     write(u"Today.md"_s, u"# Today\n\n- [ ] Call Soren @due 2026-10-28 09:00\n"_s);
-    write(u"Taxes.md"_s, u"---\ntask: open\ndue: 2026-10-28T09:00\n---\n"_s);
+    write(u"Taxes.md"_s, u"- [ ] Taxes @due 2026-10-28 09:00\n"_s);
     QVERIFY(m_vault->openPath(m_dir->filePath(u"Notes"_s)));
     m_reminders.setup(m_vault.get(), &m_server, m_settings.get());
     QSignalSpy opened(&m_reminders, &ToDoReminders::openRequested);
@@ -182,11 +182,11 @@ void TestToDoReminders::buttonsOpenTickAndSnooze()
     QCOMPARE(m_server.shown.size(), 3);
     QCOMPARE(m_server.shown.last().title, u"Taxes"_s);
 
-    // Done ticks the box, or the task note.
+    // Done ticks the box.
     m_server.click(3, u"done"_s);
     QString error;
     QVERIFY(
-        notefile::read(m_dir->filePath(u"Notes/Taxes.md"_s), &error)->contains(u"task: done"_s));
+        notefile::read(m_dir->filePath(u"Notes/Taxes.md"_s), &error)->startsWith(u"- [x] Taxes"_s));
     // A notification already closed is not answered.
     m_server.click(call, u"default"_s);
     QCOMPARE(opened.size(), 1);

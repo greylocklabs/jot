@@ -47,7 +47,7 @@ private Q_SLOTS:
     void renamesANoteInItsRow();
     void makesANotebookReadyToName();
     void dropsNotesAndNotebooksOnNotebooks();
-    void noteMenuMakesATask();
+    void noteMenuOffersNoTask();
     void opensNotesInTabsFromTheList();
     void notebookMenuMakesANotebookInside();
     void notebookMenuMakesADataFile();
@@ -251,7 +251,7 @@ void TestLists::schedulesAToDoByDoubleClick()
         return findItem(
             [&path](QQuickItem *each) {
                 return each->isVisible() && each->property("path").toString() == path &&
-                       each->property("kind").isValid();
+                       each->property("wording").isValid();
             },
             item);
     };
@@ -279,12 +279,11 @@ void TestLists::schedulesAToDoByDoubleClick()
     QTRY_VERIFY(
         notefile::read(m_root + u"/Ashfall/Characters/Soren.md"_s, &error)
             ->contains(u"- [ ] decide what he wants by act two @weekly @due 2030-01-02 @p3"_s));
-    // A task note's goes in its front matter.
     QTRY_VERIFY(row = rowFor(u"Inbox/Groceries.md"_s));
     doubleClick(row);
     set(u"2030-01-03"_s);
-    QTRY_VERIFY(
-        notefile::read(m_root + u"/Inbox/Groceries.md"_s, &error)->contains(u"due: 2030-01-03"_s));
+    QTRY_VERIFY(notefile::read(m_root + u"/Inbox/Groceries.md"_s, &error)
+                    ->startsWith(u"- [ ] Groceries @due 2030-01-03 @p3"_s));
 }
 
 void TestLists::cleanup()
@@ -493,7 +492,7 @@ void TestLists::dropsNotesAndNotebooksOnNotebooks()
     QTRY_VERIFY(QFileInfo(m_root + u"/Recipes"_s).isDir());
 }
 
-void TestLists::noteMenuMakesATask()
+void TestLists::noteMenuOffersNoTask()
 {
     // Looked up each time, since the list makes its rows again when a note changes.
     const auto pancakes = [this] {
@@ -506,14 +505,9 @@ void TestLists::noteMenuMakesATask()
     };
     QVERIFY(pancakes());
     click(pancakes(), Qt::RightButton);
-    QTRY_VERIFY(menuEntry(u"Make a task"_s));
-    click(menuEntry(u"Make a task"_s));
-    QTRY_VERIFY(m_vault->isTask(u"Recipes/Pancakes.md"_s));
-
-    // Opened again, it offers the other way.
-    QTRY_VERIFY(pancakes());
-    click(pancakes(), Qt::RightButton);
-    QTRY_VERIFY(menuEntry(u"Not a task"_s));
+    // A to-do is a checkbox in a note, so a note is never made a task.
+    QTRY_VERIFY(menuEntry(u"Open"_s));
+    QVERIFY(!menuEntry(u"Make a task"_s));
 }
 
 void TestLists::opensNotesInTabsFromTheList()

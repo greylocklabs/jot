@@ -129,7 +129,6 @@ qt_add_qml_module(jotui
         ViStatusLine.qml
         WhichKey.qml
         Tip.qml
-        TaskDetails.qml
         ReportDialog.qml
         TrashConfirm.qml
         JoplinImport.qml

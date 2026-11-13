@@ -504,18 +504,6 @@
         <source>Outline</source>
         <translation type="unfinished"></translation>
     </message>
-    <message>
-        <source>Task</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>No longer a task</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Make this note a task</source>
-        <translation type="unfinished"></translation>
-    </message>
 </context>
 <context>
     <name>HistoryDialog</name>
@@ -1227,14 +1215,6 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>Past versions...</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Not a task</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Make a task</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -3055,21 +3035,6 @@ Press %1 to make one.</source>
     </message>
 </context>
 <context>
-    <name>TaskDetails</name>
-    <message>
-        <source>Done</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Add a due date</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>No due date</source>
-        <translation type="unfinished"></translation>
-    </message>
-</context>
-<context>
     <name>TaskList</name>
     <message>
         <source>%1 (%2)</source>
@@ -3438,26 +3403,6 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Tasks</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>1 task note</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>%1 task notes</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>1 task</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>%1 tasks</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Index</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3475,10 +3420,6 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>jot: %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>usage: jot search &lt;words&gt; [tag:name] [in:notebook] [task:open]</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -3538,7 +3479,19 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Task notes</source>
+        <source>To-dos</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>1 open</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 open</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>usage: jot search &lt;words&gt; [tag:name] [in:notebook] [type:name]</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -3980,10 +3933,6 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Make the note a task, or not</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Import from Joplin...</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4407,10 +4356,6 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>Tomorrow</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Task notes</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

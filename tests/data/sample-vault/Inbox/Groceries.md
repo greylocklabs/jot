@@ -1,7 +1,3 @@
----
-task: open
-due: 2026-10-20
-priority: p3
----
+- [ ] Groceries @due 2026-10-20 @p3
 - [ ] watercolor paper
 - [ ] oat milk

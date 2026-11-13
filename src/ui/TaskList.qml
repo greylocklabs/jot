@@ -259,7 +259,6 @@ Rectangle {
         delegate: AbstractButton {
             id: item
 
-            required property string kind
             required property string path
             required property string title
             required property string note
@@ -291,7 +290,6 @@ Rectangle {
             onDoubleClicked: {
                 if (!Vault.writable || done)
                     return
-                scheduler.kind = kind
                 scheduler.path = path
                 scheduler.line = line
                 scheduler.written = wording
@@ -325,10 +323,7 @@ Rectangle {
                     Accessible.checked: item.done
                     // Unticked in Done, it is open again.
                     onClicked: {
-                        if (item.kind === "note")
-                            item.done ? Vault.reopenTask(item.path) : Vault.completeTask(item.path)
-                        else
-                            Vault.setTaskDone(item.path, item.line, !item.done)
+                        Vault.setTaskDone(item.path, item.line, !item.done)
                     }
 
                     background: Rectangle {
@@ -371,7 +366,7 @@ Rectangle {
                         color: item.done ? Theme.textMuted : Theme.text
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.textBase
-                        font.weight: item.kind === "note" ? Theme.weightBold : Theme.weightStrong
+                        font.weight: Theme.weightStrong
                     }
                     // Where it is written, unless the heading says so, and whether it repeats.
                     Text {
@@ -437,18 +432,14 @@ Rectangle {
         id: scheduler
 
         objectName: "taskListSchedule"
-        /// The to-do it is for: a checkbox or a task note, where, and its words as written.
-        property string kind
+        /// The to-do it is for: where it is, and its words as written.
         property string path
         property int line
         property string written
 
         parent: Overlay.overlay
         onChosen: line => {
-            if (kind === "note")
-                Vault.scheduleTaskNote(path, line)
-            else
-                Vault.setTaskText(path, scheduler.line, written, line)
+            Vault.setTaskText(path, scheduler.line, written, line)
         }
     }
 }

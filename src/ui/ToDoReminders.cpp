@@ -164,9 +164,7 @@ void ToDoReminders::onAction(uint id, const QString &key)
     } else if (key == u"default"_s) {
         Q_EMIT openRequested(todo.path, todo.line);
     } else if (key == u"done"_s) {
-        const bool ticked = todo.kind == u"note"_s
-                                ? m_vault->completeTask(todo.path)
-                                : m_vault->setTaskDone(todo.path, todo.line, true, todo.text);
+        const bool ticked = m_vault->setTaskDone(todo.path, todo.line, true, todo.text);
         // Left as it was, as when the note changed since, the to-do is shown to tick by hand.
         if (!ticked) {
             Q_EMIT openRequested(todo.path, todo.line);

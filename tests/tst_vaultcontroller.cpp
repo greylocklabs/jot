@@ -649,14 +649,6 @@ void TestVaultController::actsOnNotesThatAreNotShown()
     QVERIFY(m_vault->openPath(m_root));
     m_vault->setCurrent(u"Welcome.md"_s);
 
-    QVERIFY(!m_vault->isTask(u"Recipes/Pancakes.md"_s));
-    QVERIFY(m_vault->setTask(u"Recipes/Pancakes.md"_s, true));
-    QVERIFY(m_vault->isTask(u"Recipes/Pancakes.md"_s));
-    QVERIFY(m_vault->setTask(u"Inbox/Groceries.md"_s, false));
-    const QString groceries = readFile(m_root + u"/Inbox/Groceries.md"_s);
-    QVERIFY(!groceries.contains(u"task:"_s));
-    QVERIFY(groceries.contains(u"due:"_s));
-
     // Copy link writes a link from the vault's root, which works pasted in any notebook.
     QCOMPARE(m_vault->linkTo(u"Ashfall/Characters/Soren.md"_s),
              u"[Soren](/Ashfall/Characters/Soren.md)"_s);
@@ -1868,16 +1860,14 @@ void TestVaultController::listsAndTicksWhatIsLeftToDo()
     tasks.setView(u"all"_s);
     QCOMPARE(m_settings->tasksView(), u"all"_s);
     // The ones with a day first, then the open boxes, note by note.
-    QCOMPARE(column(tasks, "kind"), (QStringList{u"note"_s, u"task"_s, u"task"_s, u"task"_s,
-                                                 u"task"_s, u"task"_s, u"task"_s, u"task"_s}));
     QCOMPARE(
         column(tasks, "title"),
         (QStringList{u"Groceries"_s, u"Fares for act two #ashfall/act-two"_s, u"Feed the starter"_s,
                      u"decide what he wants by act two"_s, u"Ask playtesters about the stranger"_s,
                      u"watercolor paper"_s, u"oat milk"_s, u"Restock the maple syrup"_s}));
-    QCOMPARE(column(tasks, "note").mid(1),
-             (QStringList{u"Crossings"_s, u"Sourdough"_s, u"Soren"_s, u"Crossings"_s,
-                          u"Groceries"_s, u"Groceries"_s, u"Pancakes"_s}));
+    QCOMPARE(column(tasks, "note"),
+             (QStringList{u"Groceries"_s, u"Crossings"_s, u"Sourdough"_s, u"Soren"_s,
+                          u"Crossings"_s, u"Groceries"_s, u"Groceries"_s, u"Pancakes"_s}));
     QCOMPARE(column(tasks, "priority"),
              (QStringList{u"3"_s, u"2"_s, u"0"_s, u"3"_s, u"4"_s, u"0"_s, u"0"_s, u"0"_s}));
 
@@ -1902,26 +1892,11 @@ void TestVaultController::listsAndTicksWhatIsLeftToDo()
     QVERIFY(!m_vault->unsaved());
     QVERIFY(!m_vault->setTaskDone(u"Inbox/Groceries.md"_s, 2, true)); // not a task
 
-    QVERIFY(m_vault->completeTask(u"Inbox/Groceries.md"_s));
-    QVERIFY(m_vault->currentText().contains(u"task: done"_s));
-    QVERIFY(m_vault->currentText().contains(u"\ndone: 20"_s));
-    QCOMPARE(column(tasks, "kind"), QStringList(6, u"task"_s));
-
-    // A task note that repeats is due again on its next day after today, still open.
-    QString error;
-    QVERIFY(notefile::write(m_root + u"/Inbox/Rent.md"_s,
-                            u"---\ntask: open\ndue: 2026-01-01 09:00\nrepeat: every month\n---\n"_s,
-                            &error));
-    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Inbox/Rent.md"_s), 3000);
-    QCOMPARE(m_vault->index()->note(u"Inbox/Rent.md"_s)->repeat, u"every month"_s);
-    QVERIFY(m_vault->completeTask(u"Inbox/Rent.md"_s));
-    QDate next(2026, 1, 1);
-    while (next <= QDate::currentDate())
-        next = next.addMonths(1);
-    const QString rent = readFile(m_root + u"/Inbox/Rent.md"_s);
-    QVERIFY2(rent.contains(u"due: %1 09:00"_s.arg(next.toString(Qt::ISODate))), qPrintable(rent));
-    QVERIFY(rent.contains(u"task: open"_s));
-    QVERIFY(!rent.contains(u"\ndone:"_s));
+    QVERIFY(
+        m_vault->setTaskDone(u"Inbox/Groceries.md"_s, 1, true, u"Groceries @due 2026-10-20 @p3"_s));
+    QVERIFY(m_vault->currentText().startsWith(u"- [x] Groceries"_s));
+    // Eggs, typed in above, came; watercolor paper and Groceries went.
+    QCOMPARE(tasks.rowCount(), 6);
 
     QSignalSpy reveal(m_vault.get(), &VaultController::revealPosition);
     m_vault->openAt(u"Ashfall/Characters/Soren.md"_s, 7);
@@ -1944,7 +1919,7 @@ void TestVaultController::listsAndReopensDoneToDos()
 
     // Ticked or completed today, each is at the top, under Today, with its box ticked.
     QVERIFY(m_vault->setTaskDone(u"Ashfall/Characters/Soren.md"_s, 7, true));
-    QVERIFY(m_vault->completeTask(u"Inbox/Groceries.md"_s));
+    QVERIFY(m_vault->setTaskDone(u"Inbox/Groceries.md"_s, 1, true));
     QCOMPARE(titles().size(), before.size() + 2);
     QVERIFY(titles().mid(0, 2).contains(u"decide what he wants by act two"_s));
     QVERIFY(titles().mid(0, 2).contains(u"Groceries"_s));
@@ -1955,15 +1930,15 @@ void TestVaultController::listsAndReopensDoneToDos()
 
     // Opened again, they leave the list, and the note forgets when it was done.
     QVERIFY(m_vault->setTaskDone(u"Ashfall/Characters/Soren.md"_s, 7, false));
-    QVERIFY(m_vault->reopenTask(u"Inbox/Groceries.md"_s));
+    QVERIFY(m_vault->setTaskDone(u"Inbox/Groceries.md"_s, 1, false));
     QCOMPARE(titles(), before);
     const QString groceries = readFile(m_root + u"/Inbox/Groceries.md"_s);
-    QVERIFY(groceries.contains(u"task: open"_s));
-    QVERIFY(!groceries.contains(u"\ndone:"_s));
+    QVERIFY(groceries.startsWith(u"- [ ] Groceries"_s));
+    QVERIFY(!groceries.contains(u"@done"_s));
     QVERIFY(!readFile(m_root + u"/Ashfall/Characters/Soren.md"_s).contains(u"@done "_s));
-    // Reopening is undone like a tick.
+    // Unticking is undone like a tick.
     QVERIFY(m_vault->undo());
-    QVERIFY(readFile(m_root + u"/Inbox/Groceries.md"_s).contains(u"task: done"_s));
+    QVERIFY(readFile(m_root + u"/Inbox/Groceries.md"_s).startsWith(u"- [x] Groceries"_s));
 }
 
 void TestVaultController::syncsWithAFolder()
@@ -2249,13 +2224,13 @@ void TestVaultController::undoesAndRedoesTicks()
     QVERIFY(m_vault->redo());
     QVERIFY(readFile(soren).contains(u"- [x] decide what he wants"_s));
 
-    // A task note's completion comes back too.
+    // Another note's tick comes back too.
     const QString groceries = m_root + u"/Inbox/Groceries.md"_s;
-    QVERIFY(m_vault->completeTask(u"Inbox/Groceries.md"_s));
-    QVERIFY(readFile(groceries).contains(u"task: done"_s));
+    QVERIFY(m_vault->setTaskDone(u"Inbox/Groceries.md"_s, 1, true));
+    QVERIFY(readFile(groceries).startsWith(u"- [x] Groceries"_s));
     QVERIFY(m_vault->undo());
-    QVERIFY(readFile(groceries).contains(u"task: open"_s));
-    QVERIFY(!readFile(groceries).contains(u"\ndone: "_s));
+    QVERIFY(readFile(groceries).startsWith(u"- [ ] Groceries"_s));
+    QVERIFY(!readFile(groceries).contains(u"@done"_s));
 
     // Changed since, the note is left alone and the step forgotten.
     QVERIFY(m_vault->undo());
@@ -2271,12 +2246,12 @@ void TestVaultController::undoesAndRedoesTicks()
     QVERIFY(!m_vault->canUndo());
 
     // A note renamed since has its step dropped, and the one before it still undoes.
-    QVERIFY(m_vault->completeTask(u"Inbox/Groceries.md"_s));
+    QVERIFY(m_vault->setTaskDone(u"Inbox/Groceries.md"_s, 1, true));
     QVERIFY(m_vault->setTaskDone(u"Ashfall/Characters/Soren.md"_s, 7, false));
     QVERIFY(QFile::rename(soren, m_root + u"/Ashfall/Characters/Soren Vale.md"_s));
     QVERIFY(!m_vault->undo());
     QVERIFY(m_vault->undo());
-    QVERIFY(readFile(groceries).contains(u"task: open"_s));
+    QVERIFY(readFile(groceries).startsWith(u"- [ ] Groceries"_s));
     QVERIFY(!m_vault->canUndo());
 }
 

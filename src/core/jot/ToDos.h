@@ -12,17 +12,15 @@
 
 namespace jot {
 
-/// A to-do: a checkbox in a note, or a note that is a task.
+/// A to-do: a checkbox in a note.
 struct ToDo
 {
-    /// "note" for a task note, "task" for a checkbox.
-    QString kind;
     QString path;
-    /// Its line in the note, counted from 1; 0 for a task note.
+    /// Its line in the note, counted from 1.
     int line = 0;
-    /// Its words: the checkbox's without its markers, or the task note's title.
+    /// Its words, without its markers.
     QString title;
-    /// The title of the note a checkbox is in; empty for a task note.
+    /// The title of the note it is in.
     QString note;
     /// "2026-10-29", or "2026-10-29T14:00" with a time; empty when it is not due.
     QString due;
@@ -30,16 +28,14 @@ struct ToDo
     QString repeat;
     /// 1 urgent, 2 high, 3 medium, 4 low; 0 for none.
     int priority = 0;
-    /// A checkbox's own #tags, or a task note's.
+    /// Its own #tags.
     QStringList tags;
-    /// A checkbox's text as written, markers and all, which ticking it looks for; empty for a
-    /// task note.
+    /// Its text as written, markers and all, which ticking it looks for.
     QString text;
     /// When it was made: its note's `created:`, or the file's last change when that is not
-    /// written. A checkbox goes by the note it is in.
+    /// written.
     QDateTime created;
-    /// When it was done, from a checkbox's @done or a task note's `done:`; empty when it is open or
-    /// that was not written.
+    /// When it was done, from its @done; empty when it is open or that was not written.
     QString done;
 
     /// The day it is due, invalid when it is not.
@@ -95,8 +91,7 @@ void sortToDos(QList<ToDo> &list, ToDoSort sort, bool descending);
 /// The to-dos in `view` as of `today`, with `tag` or one nested in it when it is given, and of
 /// `priority`, 0 for none, when that is. Open ones
 /// that are dated come soonest first, a day's untimed ones before its timed ones; undated ones come
-/// task notes first, then by note. Done ones come most recently done first, then those with no day
-/// written.
+/// by note. Done ones come most recently done first, then those with no day written.
 [[nodiscard]] QList<ToDo> toDos(const VaultIndex &index, ToDoView view, const QDate &today,
                                 const QString &tag = {},
                                 std::optional<int> priority = std::nullopt);

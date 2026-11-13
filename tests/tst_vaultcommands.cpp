@@ -97,13 +97,13 @@ void TestVaultCommands::statusSaysWhatTheVaultHolds()
     const QJsonObject status = json().object();
     QCOMPARE(status.value(u"notes"_s).toInt(), 15);
     QCOMPARE(status.value(u"notebooks"_s).toInt(), 6);
-    QCOMPARE(status.value(u"openTasks"_s).toInt(), 7);
-    QCOMPARE(status.value(u"openTaskNotes"_s).toInt(), 1);
+    QCOMPARE(status.value(u"openTasks"_s).toInt(), 8);
+    QVERIFY(!status.contains(u"openTaskNotes"_s));
     QVERIFY(status.value(u"writable"_s).toBool());
 
     QCOMPARE(run([](auto &c) { return c.status(u"/cache/index.sqlite"_s, false); }), 0);
     QVERIFY2(m_out.contains(u"15 notes in 6 notebooks"_s), qPrintable(m_out));
-    QVERIFY(m_out.contains(u"1 task note, 7 tasks"_s));
+    QVERIFY2(m_out.contains(u"8 open"_s), qPrintable(m_out));
 }
 
 void TestVaultCommands::listsNotesNewestOrByTitle()
@@ -185,7 +185,7 @@ void TestVaultCommands::listsWhatIsLeftToDo()
     QCOMPARE(run([](auto &c) { return c.listTasks(true); }), 0);
     const QJsonArray tasks = json().array();
     QCOMPARE(tasks.size(), 8);
-    QCOMPARE(tasks.first().toObject().value(u"kind"_s).toString(), u"note"_s);
+    QCOMPARE(tasks.first().toObject().value(u"title"_s).toString(), u"Groceries"_s);
     QCOMPARE(tasks.first().toObject().value(u"priority"_s).toInt(), 3);
     QCOMPARE(tasks.last().toObject().value(u"title"_s).toString(), u"Restock the maple syrup"_s);
     QCOMPARE(tasks.last().toObject().value(u"note"_s).toString(), u"Pancakes"_s);
@@ -193,18 +193,6 @@ void TestVaultCommands::listsWhatIsLeftToDo()
 
     // A due that is not a date is never overdue.
     QString error;
-    QVERIFY(notefile::write(m_vault->absolute(u"Someday.md"_s),
-                            u"---\ntask: open\ndue: someday\n---\n"_s, &error));
-    m_index->update({u"Someday.md"_s});
-    m_index->update({u"Inbox/Groceries.md"_s});
-    QCOMPARE(run([](auto &c) { return c.listTasks(false); }), 0);
-    // One due on no day it can read counts as due on none.
-    QVERIFY2(m_out.contains(u"[ ] Someday\n"_s), qPrintable(m_out));
-    QVERIFY(notefile::write(m_vault->absolute(u"Someday.md"_s),
-                            u"---\ntask: open\ndue: someday soon maybe\n---\n"_s, &error));
-    m_index->update({u"Someday.md"_s});
-    QCOMPARE(run([](auto &c) { return c.listTasks(false); }), 0);
-    QVERIFY2(m_out.contains(u"[ ] Someday\n"_s), qPrintable(m_out));
     QVERIFY(!isOverdue(u"someday"_s, QDate(2026, 10, 15)));
     QVERIFY(isOverdue(u"2026-10-14T09:00:00Z"_s, QDate(2026, 10, 15)));
     QVERIFY(!isOverdue(u"2026-10-15"_s, QDate(2026, 10, 15)));

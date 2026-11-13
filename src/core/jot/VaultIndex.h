@@ -20,17 +20,8 @@ struct NoteInfo
     QString title;
     QStringList tags;
     QStringList aliases;
-    /// "open", "done" or empty for a note that is not a task.
-    QString task;
-    QString due;
     QString created;
     QString type;
-    /// When a task note was done, from `done:`; empty when it is not said.
-    QString done;
-    /// How a task note repeats, from `repeat:`, such as "every week"; empty when it does not.
-    QString repeat;
-    /// A task note's priority from `priority:`, `p1` urgent to `p4` low, as 1 to 4; 0 for none.
-    int priority = 0;
     /// When the file last changed, in nanoseconds since 1970.
     qint64 modified = 0;
 };
@@ -98,7 +89,7 @@ class VaultIndex
 {
 public:
     /// Raised whenever what the index stores changes shape; an older index is rebuilt.
-    static constexpr int kSchema = 9;
+    static constexpr int kSchema = 10;
 
     explicit VaultIndex(Vault vault, QString databasePath = {});
     ~VaultIndex();
@@ -123,8 +114,8 @@ public:
     [[nodiscard]] QHash<QString, int> noteCounts() const;
 
     /// Notes matching `query`: words, each matched at the start of a word, plus any of
-    /// `tag:name` (with its nested tags), `in:folder`, `task:open`, `task:done` and
-    /// `type:name`. Best matches first, titles counting most.
+    /// `tag:name` (with its nested tags), `in:folder` and `type:name`. Best matches first, titles
+    /// counting most.
     [[nodiscard]] QList<SearchHit> search(const QString &query, int limit = 50) const;
 
     [[nodiscard]] QList<NoteLink> linksFrom(const QString &path) const;
@@ -147,12 +138,8 @@ public:
     [[nodiscard]] QStringList tagged(const QString &tag) const;
     /// Unticked checkboxes across the vault, note by note.
     [[nodiscard]] QList<NoteTask> openTasks() const;
-    /// Notes whose front matter makes them tasks that are still open, soonest due first.
-    [[nodiscard]] QList<NoteInfo> openTaskNotes() const;
     /// Ticked checkboxes across the vault, note by note.
     [[nodiscard]] QList<NoteTask> doneTasks() const;
-    /// Notes whose front matter makes them tasks that are done, by title.
-    [[nodiscard]] QList<NoteInfo> doneTaskNotes() const;
 
 private:
     bool createSchema(QString *error);
