@@ -3,6 +3,57 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## Unreleased
+
+### Breaking
+
+- A note is no longer a task: a to-do is a checkbox. `task:`, `due:`, `done:`, `repeat:` and
+  `priority:` in front matter are ordinary keys, and the Task toggle is gone. A Joplin to-do
+  imports as a checkbox at the top of its note, with its day and when it was done.
+- Favorites replace pins. Pinned notes are no longer read from `.jot/layout.yaml` or sorted first;
+  favorite them again from the note's menu. `jot ls --json` says `favorite` in place of `pinned`.
+- Find and replace moves to Ctrl+H, leaving Ctrl+R to vi's redo.
+
+### Added
+
+- Favorites, under Tasks in the sidebar: add a note from its menu, the palette or by dropping it
+  there, drag them into your own order, and right-click to change the star.
+- `tasks: off` in a note's front matter keeps its checkboxes out of Tasks, reminders and the CLI.
+- Hide notes and notebooks from the lists without ignoring them, from their menus; Hide and Ignore
+  sit side by side and say what each does.
+- Each notebook remembers its own sort, and Settings sets the default for the rest.
+- Line numbers in the left margin, from the toolbar, with the cursor's line in the accent color.
+- Toolbar row two holds the modes, the outline, line numbers, a warning sign when front matter is
+  invalid, and a red trash button that asks first. When saving by hand, a Save button joins them.
+- Front matter completes keys and values as you type, marks the default value, and offers a month
+  to pick `created:` from.
+- Vi mode has a `:` command line (`:N`, `:$`, `:w`, `:q`, `:wq`, `:s`, `:%s`, `:noh`) that offers
+  commands as you type, and `:help` opens the vi keys.
+- Right-click a note for an edit menu with spelling, undo, cut, copy, paste and a Format submenu,
+  and right-click a to-do in Tasks for its actions.
+- Reference links, `[text][label]` with `[label]: Note.md` below, show as links, follow on click,
+  count as backlinks and are kept up to date on renames.
+- Sync shows as in Callie: a round button that turns while syncing, beside a status pill that says
+  when the vault last synced and lists what is waiting.
+- Ctrl+Shift+N makes a notebook.
+- Settings can hide the word and character counts under notes; a note's own target still shows.
+- Joplin imports run in the background, keeping notes made or edited meanwhile as they are.
+
+### Changed
+
+- Renaming a note can be undone and redone, from the note or the title field.
+- The closing line of front matter shows, with room below it before the note.
+
+### Fixed
+
+- Global quick add brings Jot to the front on Wayland.
+- The vi status line gives way as the window narrows instead of overlapping.
+- A notebook's emoji is no longer cut off by the expand arrow.
+- Completions show only while typing, and in vi only in insert mode.
+- Sync buttons, Connect and Commit wait while a sync or a check runs.
+- A line break before a list marker no longer doubles the marker.
+- Line numbers keep clear of folded lines and drawings.
+
 ## 0.5.9 - 2026-11-12
 
 ### New
