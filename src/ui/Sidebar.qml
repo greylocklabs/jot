@@ -102,6 +102,48 @@ Rectangle {
         font.letterSpacing: 0.6
     }
 
+    /// A row's emoji and name. The emoji is drawn on its own, a little larger than the name: at
+    /// the name's size, Qt's scaling of color emoji drops an edge of some at fractional scales.
+    component RowLabel: Item {
+        id: rowLabel
+
+        property string emoji
+        property string text
+        property bool selected
+        /// Where the name starts, past the emoji and the room after it.
+        readonly property real nameX: rowName.x
+
+        implicitWidth: rowName.x + rowName.implicitWidth
+        implicitHeight: Math.max(rowEmoji.implicitHeight, rowName.implicitHeight)
+
+        Text {
+            id: rowEmoji
+
+            anchors.verticalCenter: parent.verticalCenter
+            width: visible ? Math.ceil(font.pixelSize * 1.25) : 0
+            visible: rowLabel.emoji !== ""
+            text: rowLabel.emoji
+            horizontalAlignment: Text.AlignHCenter
+            font.pixelSize: 16
+        }
+        Text {
+            id: rowName
+
+            anchors {
+                left: rowEmoji.right
+                leftMargin: rowEmoji.visible ? Theme.space2 : 0
+                right: parent.right
+                verticalCenter: parent.verticalCenter
+            }
+            text: rowLabel.text
+            elide: Text.ElideRight
+            color: rowLabel.selected ? Theme.text : Theme.textMuted
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.textMd
+            font.weight: rowLabel.selected ? Theme.weightBold : Theme.weightStrong
+        }
+    }
+
     component Entry: AbstractButton {
         id: row
 
@@ -176,19 +218,16 @@ Rectangle {
                 }
 
                 contentItem: Item {
-                    Text {
+                    RowLabel {
                         anchors {
                             left: parent.left
                             // In line with the notebooks' names, past where their folds go.
                             leftMargin: Theme.space4 + Theme.smallGlyphSize + Theme.space3
                             verticalCenter: parent.verticalCenter
                         }
-                        text: (Vault.viewEmoji.tasks ?? "") !== "" ? Vault.viewEmoji.tasks + "  "
-                                                                     + tasks.label : tasks.label
-                        color: tasks.selected ? Theme.text : Theme.textMuted
-                        font.family: Theme.fontFamily
-                        font.pixelSize: Theme.textMd
-                        font.weight: tasks.selected ? Theme.weightBold : Theme.weightStrong
+                        emoji: Vault.viewEmoji.tasks ?? ""
+                        text: tasks.label
+                        selected: tasks.selected
                     }
                     Text {
                         anchors {
@@ -255,19 +294,15 @@ Rectangle {
                         border.color: Theme.accent
                         border.width: 2
                     }
-                    Text {
+                    RowLabel {
                         anchors {
                             left: parent.left
                             leftMargin: Theme.space4 + Theme.smallGlyphSize + Theme.space3
                             verticalCenter: parent.verticalCenter
                         }
-                        text: (Vault.viewEmoji.favorites ?? "") !== "" ? Vault.viewEmoji.favorites
-                                                                         + "  " + favorites.label :
-                                                                         favorites.label
-                        color: favorites.selected ? Theme.text : Theme.textMuted
-                        font.family: Theme.fontFamily
-                        font.pixelSize: Theme.textMd
-                        font.weight: favorites.selected ? Theme.weightBold : Theme.weightStrong
+                        emoji: Vault.viewEmoji.favorites ?? ""
+                        text: favorites.label
+                        selected: favorites.selected
                     }
                     Text {
                         anchors {
@@ -443,21 +478,14 @@ Rectangle {
                         border.color: Theme.accent
                     }
 
-                    // How far the name is from the emoji's start, to type the new one where it was.
-                    TextMetrics {
-                        id: emojiRoom
-                        text: notebook.emoji !== "" ? notebook.emoji + "  " : ""
-                        font: nameLabel.font
-                    }
-
                     // Typing a new name, in the row's place and shape, its text where the name
                     // was: Return or leaving keeps it, Escape does not.
                     Loader {
                         anchors {
                             fill: parent
                             // Where the name is drawn, past its emoji, less the field's own padding.
-                            leftMargin: notebook.contentItem.x + nameLabel.x
-                                        + emojiRoom.advanceWidth - Theme.space2
+                            leftMargin: notebook.contentItem.x + nameLabel.x + nameLabel.nameX
+                                        - Theme.space2
                             rightMargin: Theme.space3
                             topMargin: Theme.space1
                             bottomMargin: Theme.space1
@@ -524,26 +552,19 @@ Rectangle {
                                 implicitHeight: Theme.smallGlyphSize
                             }
                         }
-                        Text {
+                        RowLabel {
                             id: nameLabel
 
                             anchors {
                                 left: fold.right
-                                // Clear of the fold, as an emoji can reach left of its box.
-                                leftMargin: Theme.space1
                                 right: countLabel.left
                                 rightMargin: Theme.space3
                                 verticalCenter: parent.verticalCenter
                             }
+                            emoji: notebook.emoji
                             // Renaming, only the emoji stays, beside the name being typed.
-                            text: notebook.renaming ? notebook.emoji : notebook.emoji !== ""
-                                                      ? notebook.emoji + "  " + notebook.name :
-                                                        notebook.name
-                            elide: Text.ElideRight
-                            color: notebook.selected ? Theme.text : Theme.textMuted
-                            font.family: Theme.fontFamily
-                            font.pixelSize: Theme.textMd
-                            font.weight: notebook.selected ? Theme.weightBold : Theme.weightStrong
+                            text: notebook.renaming ? "" : notebook.name
+                            selected: notebook.selected
                         }
                         Text {
                             id: countLabel
@@ -673,19 +694,16 @@ Rectangle {
         }
 
         contentItem: Item {
-            Text {
+            RowLabel {
                 anchors {
                     left: parent.left
                     // In line with the notebooks' names, past where their folds go.
                     leftMargin: Theme.space4 + Theme.smallGlyphSize + Theme.space3
                     verticalCenter: parent.verticalCenter
                 }
-                text: (Vault.viewEmoji.trash ?? "") !== "" ? Vault.viewEmoji.trash + "  "
-                                                             + trashEntry.label : trashEntry.label
-                color: trashEntry.selected ? Theme.text : Theme.textMuted
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.textMd
-                font.weight: trashEntry.selected ? Theme.weightBold : Theme.weightStrong
+                emoji: Vault.viewEmoji.trash ?? ""
+                text: trashEntry.label
+                selected: trashEntry.selected
             }
         }
     }
