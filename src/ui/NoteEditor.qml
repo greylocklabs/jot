@@ -1026,8 +1026,6 @@ Rectangle {
                     if (item.action === "date") {
                         frontMatterPopup.items = []
                         dismissedFrontMatter = start
-                        createdPicker.start = start
-                        createdPicker.end = cursorPosition
                         createdPicker.clicked()
                         return
                     }
@@ -1374,18 +1372,23 @@ Rectangle {
                     DatePicker {
                         id: createdPicker
 
-                        /// What the day takes the place of.
-                        property int start: -1
-                        property int end: -1
-
                         objectName: "createdPicker"
                         opacity: 0
                         width: 1
                         height: parent.height
+                        // Only the month it opens is seen or reached.
+                        activeFocusOnTab: false
+                        focusPolicy: Qt.NoFocus
+                        Accessible.ignored: true
+                        // The value is read again where the cursor is, as the text may have
+                        // changed while the month was open; elsewhere the day is not written.
                         onPicked: day => {
-                            const written = day.toLocaleDateString(Qt.locale("C"), "yyyy-MM-dd")
-                            styler.replace(start, end, written)
-                            body.cursorPosition = start + written.length
+                            const value = styler.frontMatterAt(body.cursorPosition)
+                            if (value.kind === "value" && value.key === "created") {
+                                const written = day.toLocaleDateString(Qt.locale("C"), "yyyy-MM-dd")
+                                styler.replace(value.start, body.cursorPosition, written)
+                                body.cursorPosition = value.start + written.length
+                            }
                             body.forceActiveFocus()
                         }
                     }
