@@ -257,6 +257,42 @@ Popup {
                                                            ])
                 }
                 Table {
+                    objectName: "viCommands"
+                    visible: root.tab === "vi"
+                    title: Settings.leaderKey === ":" ? qsTr("Commands, after Space") : qsTr(
+                                                            "Commands, after :")
+                    rows: [
+                        {
+                            "keys": [":N"],
+                            "label": qsTr("Go to line N; :0 and :1 the top, :$ the end")
+                        },
+                        {
+                            "keys": [":w"],
+                            "label": qsTr("Save")
+                        },
+                        {
+                            "keys": [":q"],
+                            "label": qsTr("Close the tab")
+                        },
+                        {
+                            "keys": [":wq"],
+                            "label": qsTr("Save and close the tab")
+                        },
+                        {
+                            "keys": [":s/old/new/"],
+                            "label": qsTr("Replace on the line; g for every match, i for any case")
+                        },
+                        {
+                            "keys": [":%s/old/new/g"],
+                            "label": qsTr("Replace in the whole note, as one step to undo")
+                        },
+                        {
+                            "keys": [":noh"],
+                            "label": qsTr("Clear the find highlights")
+                        }
+                    ]
+                }
+                Table {
                     visible: root.tab === "vi"
                     title: qsTr("After the leader (%1)").arg(Settings.leaderKey === " " ? qsTr(
                                                                                               "Space") :

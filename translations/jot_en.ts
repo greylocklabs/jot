@@ -809,6 +809,42 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Commands, after Space</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Commands, after :</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Go to line N; :0 and :1 the top, :$ the end</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Close the tab</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Save and close the tab</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Replace on the line; g for every match, i for any case</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Replace in the whole note, as one step to undo</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Clear the find highlights</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>After the leader (%1)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3670,6 +3706,10 @@ Press %1 to make one.</source>
 <context>
     <name>ViStatusLine</name>
     <message>
+        <source>Command</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>1 line</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4715,6 +4755,32 @@ Press %1 to make one.</source>
     <message>
         <source>Could not set what the vault ignores: %1</source>
         <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>jot::ViEditor</name>
+    <message>
+        <source>Not a command: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Not a pattern: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This note cannot be changed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Not found: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message numerus="yes">
+        <source>Replaced on %n line(s)</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
     </message>
 </context>
 <context>

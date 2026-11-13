@@ -24,6 +24,28 @@ Rectangle {
     /// Lines picked in Visual mode.
     property int pickedLines: 0
     property date now: new Date()
+    /// A command is being typed after `:`, in place of the mode and file.
+    property bool commanding: false
+    /// What the last command had to say, shown for a while.
+    property string message
+
+    /// A command was typed and Return pressed.
+    signal run(string command)
+    /// The command line was left without running anything.
+    signal cancelled
+
+    function openCommand() {
+        message = ""
+        command.text = ""
+        commanding = true
+        command.forceActiveFocus()
+    }
+
+    function say(words) {
+        message = words
+        if (words !== "")
+            messageTimer.restart()
+    }
 
     readonly property color modeFill: mode === "insert" ? Theme.insertMode : mode === "visual"
                                                           ? Theme.visualMode : Theme.accent
@@ -78,10 +100,56 @@ Rectangle {
         color: Theme.hairline
     }
 
+    // The command being typed, as in vim's command line.
+    Row {
+        anchors.left: parent.left
+        anchors.leftMargin: Theme.space3
+        anchors.right: rightSide.left
+        anchors.verticalCenter: parent.verticalCenter
+        visible: root.commanding
+        spacing: 2
+
+        Label {
+            text: ":"
+            font.family: Theme.monoFontFamily
+        }
+        TextInput {
+            id: command
+
+            objectName: "viCommand"
+            anchors.verticalCenter: parent.verticalCenter
+            width: parent.width - Theme.space5
+            color: Theme.text
+            selectionColor: Theme.tint(Theme.accent, 0.4)
+            font.family: Theme.monoFontFamily
+            font.pixelSize: Theme.textSm
+            Accessible.name: qsTr("Command")
+            Keys.onPressed: event => {
+                if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                    const typed = text
+                    root.commanding = false
+                    root.run(typed)
+                    event.accepted = true
+                } else if (event.key === Qt.Key_Escape || (event.key === Qt.Key_Backspace && text
+                                                           === "")) {
+                    // Backspace past the start leaves too, as in vim.
+                    root.commanding = false
+                    root.cancelled()
+                    event.accepted = true
+                }
+            }
+            onActiveFocusChanged: {
+                if (!activeFocus)
+                    root.commanding = false
+            }
+        }
+    }
+
     Row {
         anchors.left: parent.left
         anchors.leftMargin: Theme.space2
         anchors.verticalCenter: parent.verticalCenter
+        visible: !root.commanding
         spacing: Theme.space2
 
         Segment {
@@ -127,9 +195,23 @@ Rectangle {
             color: Theme.textMuted
             font.family: Theme.monoFontFamily
         }
+        Label {
+            objectName: "viMessage"
+            visible: root.message !== ""
+            text: root.message
+            color: Theme.textMuted
+        }
+    }
+
+    Timer {
+        id: messageTimer
+        interval: 4000
+        onTriggered: root.message = ""
     }
 
     Row {
+        id: rightSide
+
         anchors.right: parent.right
         anchors.rightMargin: Theme.space2
         anchors.verticalCenter: parent.verticalCenter

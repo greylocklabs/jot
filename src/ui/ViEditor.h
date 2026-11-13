@@ -56,12 +56,20 @@ public:
     [[nodiscard]] int percent() const;
     [[nodiscard]] int pickedLines() const;
     [[nodiscard]] QVariantList matches() const { return m_matches; }
+    /// Runs a command typed after `:`, as vim does: a line number, `$`, `w`, `q`, `wq`,
+    /// `s/old/new/` on the line or `%s/old/new/g` in the whole note, or `noh`. Gives what to
+    /// say in the status line, empty when there is nothing to say.
+    Q_INVOKABLE QString runCommand(const QString &command);
 
 Q_SIGNALS:
     /// Escape in normal mode: the keyboard is done with the note.
     void leaveRequested();
     /// The text from `start` to `end` was yanked, to flash it.
     void yanked(int start, int end);
+    /// `:` in normal mode, or Space when `:` is the leader: a command is to be typed.
+    void commandLineRequested();
+    /// `:noh`: find highlights are to go.
+    void highlightsCleared();
     void targetChanged();
     void routerChanged();
     void enabledChanged();
