@@ -251,6 +251,13 @@ void TestNoteEditor::numbersANotesLinesWhenAsked()
     QCOMPARE(body->property("leftPadding").toReal(), 0.0);
     QVERIFY(gutter->x() + gutter->width() < 0);
     QVERIFY(gutter->mapToScene(QPointF()).x() >= 0);
+    // A wider margin for many lines keeps the text inside the page on the right too.
+    const QString welcome = body->property("text").toString();
+    body->setProperty("text", QString(u"line\n"_s).repeated(12000));
+    QTRY_VERIFY(gutter->width() > 30);
+    QQuickItem *scroll = find(u"scroll"_s);
+    QTRY_VERIFY(body->mapToItem(scroll, QPointF(body->width(), 0)).x() <= scroll->width());
+    body->setProperty("text", welcome);
     auto *document = body->property("textDocument").value<QQuickTextDocument *>();
     const QVariantList lines = DataStyler::lineTops(document, 0, 100000);
     QCOMPARE(lines.size(), document->textDocument()->blockCount());

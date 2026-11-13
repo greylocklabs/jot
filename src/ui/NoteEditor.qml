@@ -511,7 +511,7 @@ Rectangle {
             spacing: Theme.space5
 
             Row {
-                width: parent.width - 2 * parent.padding
+                width: parent.width - parent.leftPadding - parent.rightPadding
                 spacing: Theme.space3
 
                 // The buttons beside the title line up with its first line's letters, not the
@@ -587,7 +587,7 @@ Rectangle {
             Row {
                 objectName: "notePath"
                 visible: Settings.developerMode && Vault.current !== ""
-                width: parent.width - 2 * parent.padding
+                width: parent.width - parent.leftPadding - parent.rightPadding
                 spacing: Theme.space2
 
                 Text {
@@ -617,7 +617,7 @@ Rectangle {
                 readonly property var copies: Vault.currentConflicts
                 readonly property var first: copies.length > 0 ? copies[0] : null
 
-                width: parent.width - 2 * parent.padding
+                width: parent.width - parent.leftPadding - parent.rightPadding
                 height: bannerRow.implicitHeight + 2 * Theme.space3
                 visible: first !== null
                 radius: Theme.radiusMd
@@ -670,7 +670,7 @@ Rectangle {
             }
 
             Text {
-                width: parent.width - 2 * parent.padding
+                width: parent.width - parent.leftPadding - parent.rightPadding
                 visible: Vault.problem !== ""
                 text: Vault.problem
                 wrapMode: Text.WordWrap
@@ -685,7 +685,7 @@ Rectangle {
                 id: dataProblem
 
                 objectName: "dataProblem"
-                width: parent.width - 2 * parent.padding
+                width: parent.width - parent.leftPadding - parent.rightPadding
                 visible: root.dataFile && dataStyler.problem.line !== undefined
                 text: visible ? qsTr("Line %1, column %2: %3").arg(dataStyler.problem.line).arg(
                                     dataStyler.problem.column).arg(dataStyler.problem.message) : ""
@@ -713,7 +713,7 @@ Rectangle {
                 objectName: "tableView"
                 visible: root.tableShown
                 editable: Vault.writable && !Settings.readMode
-                width: parent.width - 2 * parent.padding
+                width: parent.width - parent.leftPadding - parent.rightPadding
                 // The rest of the window below the title, scrolled inside the table.
                 height: Math.max(240, flick.height - title.height - 2 * page.padding - page.spacing)
                 records: tableModel
@@ -725,7 +725,7 @@ Rectangle {
 
                 objectName: "reader"
                 visible: Settings.readMode && !root.dataFile
-                width: parent.width - 2 * parent.padding
+                width: parent.width - parent.leftPadding - parent.rightPadding
                 readOnly: true
                 // NoteReader draws the document itself; the TextEdit only shows it.
                 textFormat: TextEdit.PlainText
@@ -841,7 +841,7 @@ Rectangle {
                 objectName: "body"
                 visible: (!Settings.readMode || root.dataFile) && !root.tableShown
 
-                width: parent.width - 2 * parent.padding
+                width: parent.width - parent.leftPadding - parent.rightPadding
                 readOnly: !Vault.writable
                 wrapMode: TextEdit.Wrap
                 textFormat: TextEdit.PlainText
@@ -1789,7 +1789,7 @@ Rectangle {
             }
 
             Backlinks {
-                width: parent.width - 2 * parent.padding
+                width: parent.width - parent.leftPadding - parent.rightPadding
             }
         }
     }
