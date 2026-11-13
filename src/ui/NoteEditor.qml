@@ -886,11 +886,11 @@ Rectangle {
                     Vault.edit(text)
                     if (root.dataFile && !root.tableShown)
                         tableCheck.restart()
-                    // Once the cursor has moved too, so it is read where the typing ended.
-                    Qt.callLater(findLink)
-                    Qt.callLater(findEmoji)
-                    Qt.callLater(findMarker)
-                    Qt.callLater(findFrontMatter)
+                    // Once the cursor has moved too, so it is read where the typing ended. Only for
+                    // typing: a change vi makes in normal mode, as cw does before insert mode,
+                    // offers nothing.
+                    if (typing)
+                        Qt.callLater(findSuggestions)
                 }
                 onCursorRectangleChanged: flick.follow(cursorRectangle)
                 onActiveFocusChanged: {
@@ -916,8 +916,9 @@ Rectangle {
                 /// Offers notes for the link target being typed at the cursor, if any. Only typing
                 /// asks, so moving through an existing link leaves Return and Tab alone.
                 function findLink() {
-                    const query = activeFocus && !readOnly && selectionStart === selectionEnd
-                          ? styler.linkTargetAt(cursorPosition) : ({})
+                    const query = typing && selectionStart === selectionEnd ? styler.linkTargetAt(
+                                                                                  cursorPosition) : (
+                                                                                  {})
                     linkStart = query.start === undefined ? -1 : query.start
                     if (linkStart < 0 || linkStart === dismissedLink) {
                         if (linkStart < 0)
@@ -943,8 +944,8 @@ Rectangle {
 
                 /// Offers emoji for the name being typed after a colon, as for links.
                 function findEmoji() {
-                    const query = activeFocus && !readOnly && selectionStart === selectionEnd
-                          && linkStart < 0 ? styler.emojiAt(cursorPosition) : ({})
+                    const query = typing && selectionStart === selectionEnd && linkStart < 0
+                          ? styler.emojiAt(cursorPosition) : ({})
                     emojiStart = query.start === undefined ? -1 : query.start
                     if (emojiStart < 0 || emojiStart === dismissedEmoji) {
                         if (emojiStart < 0)
@@ -966,9 +967,8 @@ Rectangle {
 
                 /// Offers to-do markers, @weekly, @due and the rest, after an @ on a to-do's line.
                 function findMarker() {
-                    const query = activeFocus && !readOnly && selectionStart === selectionEnd
-                          && linkStart < 0 && emojiStart < 0 ? styler.markerAt(cursorPosition) : (
-                                                                   {})
+                    const query = typing && selectionStart === selectionEnd && linkStart < 0
+                          && emojiStart < 0 ? styler.markerAt(cursorPosition) : ({})
                     markerStart = query.start === undefined ? -1 : query.start
                     if (markerStart < 0 || markerStart === dismissedMarker) {
                         if (markerStart < 0)
@@ -984,6 +984,19 @@ Rectangle {
                     markerPopup.highlighted = 0
                 }
 
+                /// Text is being typed: the note has the keys, can change, and in vi mode is in
+                /// insert mode, so suggestions are offered only then.
+                readonly property bool typing: activeFocus && !readOnly && (!Settings.viMode
+                                                                            || vi.mode === "insert")
+
+                /// Looks again for what to suggest, as after a keystroke.
+                function findSuggestions() {
+                    findLink()
+                    findEmoji()
+                    findMarker()
+                    findFrontMatter()
+                }
+
                 /// Where the front matter key or value being typed starts, or -1, and the one
                 /// Escape put away.
                 property int frontMatterStart: -1
@@ -992,9 +1005,10 @@ Rectangle {
 
                 /// Offers keys at the start of a front matter line, and values after one.
                 function findFrontMatter() {
-                    const query = activeFocus && !readOnly && !root.dataFile && selectionStart
-                          === selectionEnd && linkStart < 0 && emojiStart < 0 && markerStart < 0
-                          ? styler.frontMatterAt(cursorPosition) : ({})
+                    const query = typing && !root.dataFile && selectionStart === selectionEnd
+                          && linkStart < 0 && emojiStart < 0 && markerStart < 0 ? styler.frontMatterAt(
+                                                                                      cursorPosition) :
+                                                                                  ({})
                     frontMatterStart = query.start === undefined ? -1 : query.start
                     if (frontMatterStart < 0 || frontMatterStart === dismissedFrontMatter) {
                         if (frontMatterStart < 0)
@@ -1199,6 +1213,11 @@ Rectangle {
                     onYanked: (start, end) => styler.flash(start, end)
                     onMatchesChanged: styler.setMatches(matches)
                     onCommandLineRequested: statusLine.openCommand()
+                    // Leaving insert mode puts suggestions away; they come again with typing.
+                    onModeChanged: {
+                        if (mode !== "insert")
+                            Qt.callLater(body.findSuggestions)
+                    }
                     onHighlightsCleared: {
                         styler.setMatches([])
                         if (findBar.visible)

@@ -118,6 +118,7 @@ private Q_SLOTS:
     void editsInViModes();
     void runsViCommands();
     void completesFrontMatter();
+    void suggestsOnlyWhileTypingInVi();
     void undoesTitleEdits();
     void showsWhereViIsAlongTheFoot();
     void keepsOneCursorAcrossViModes();
@@ -2726,6 +2727,43 @@ void TestNoteEditor::undoesTitleEdits()
     QTRY_VERIFY(title->hasActiveFocus());
     QTest::keyClick(m_window.get(), Qt::Key_Z, Qt::ControlModifier);
     QVERIFY(m_vault->isFavorite(u"Hello.md"_s));
+}
+
+void TestNoteEditor::suggestsOnlyWhileTypingInVi()
+{
+    m_settings->setViMode(true);
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    auto *vi = body->findChild<QObject *>(u"vi"_s);
+    auto *popup = m_editor->findChild<QObject *>(u"frontMatterPopup"_s);
+    body->forceActiveFocus();
+    body->setProperty("text", u"---\ntype: x\nta\n---\nBody\n"_s);
+    // Moved onto a key in normal mode, as j does, nothing is offered.
+    body->setProperty("cursorPosition", int(u"---\ntype: x\nta"_s.size()));
+    QMetaObject::invokeMethod(body, "findSuggestions");
+    // What the text set asked to look for is done before the mode changes.
+    QTest::qWait(50);
+    QCOMPARE(vi->property("mode").toString(), u"normal"_s);
+    QVERIFY(popup->property("items").toList().isEmpty());
+    // Entering insert mode offers nothing until something is typed; leaving puts it away.
+    vi->setProperty("mode", u"insert"_s);
+    QTest::qWait(50);
+    QVERIFY(popup->property("items").toList().isEmpty());
+    QTest::keyClick(m_window.get(), Qt::Key_G);
+    QTRY_VERIFY(!popup->property("items").toList().isEmpty());
+    vi->setProperty("mode", u"normal"_s);
+    QTRY_VERIFY(popup->property("items").toList().isEmpty());
+    // A change from normal mode into insert mode, as cf does, offers nothing either, though
+    // it leaves a key's start before the cursor.
+    body->setProperty("text", u"---\ntype: x\ntaXg\n---\nBody\n"_s);
+    QTest::qWait(50);
+    body->setProperty("cursorPosition", int(u"---\ntype: x\nta"_s.size()));
+    QTest::keyClick(m_window.get(), Qt::Key_C);
+    QTest::keyClick(m_window.get(), Qt::Key_F);
+    QTest::keyClick(m_window.get(), Qt::Key_G);
+    QTRY_COMPARE(vi->property("mode").toString(), u"insert"_s);
+    QTest::qWait(50);
+    QVERIFY(popup->property("items").toList().isEmpty());
 }
 
 void TestNoteEditor::keepsOneCursorAcrossViModes()
