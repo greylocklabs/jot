@@ -2709,7 +2709,10 @@ void TestNoteEditor::completesFrontMatter()
     auto *calendar = picker->findChild<QObject *>(u"calendar"_s);
     QTRY_VERIFY(calendar->property("opened").toBool());
     QVERIFY(calendar->property("opacity").toReal() > 0.9);
+    // Its days take clicks, though the button it opens from does not.
+    QVERIFY(calendar->property("enabled").toBool());
     QVERIFY(!picker->property("activeFocusOnTab").toBool());
+    QVERIFY(!picker->property("enabled").toBool());
     QVERIFY(QMetaObject::invokeMethod(picker, "picked",
                                       Q_ARG(QDateTime, QDateTime(QDate(2026, 3, 14), QTime()))));
     QVERIFY(text().contains(u"created: 2026-03-14\n"_s));
