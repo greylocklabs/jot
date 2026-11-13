@@ -505,6 +505,14 @@ void TestVaultController::hidesNotesAndNotebooksFromView()
     QVERIFY(column(*m_vault->notes(), "path").contains(u"Inbox/Groceries.md"_s));
     QVERIFY(m_vault->setHidden(u"Recipes"_s, false));
     QCOMPARE(m_vault->noteCount(), before);
+    // Moved since it was hidden, undoing that leaves it be, and says so.
+    QVERIFY(m_vault->setHidden(u"Recipes/Pancakes.md"_s, true));
+    QVERIFY(m_vault->moveNoteTo(u"Recipes/Pancakes.md"_s, u"Inbox"_s));
+    QVERIFY(!m_vault->undo());
+    QVERIFY(m_vault->problem().contains(u"moved or gone"_s));
+    QVERIFY(m_vault->moveNoteTo(u"Inbox/Pancakes.md"_s, u"Recipes"_s));
+    QVERIFY(m_vault->setHidden(u"Recipes/Pancakes.md"_s, false));
+
     // Hiding the notebook shown shows every note instead, so new ones are not made out of
     // sight.
     m_vault->notes()->setNotebook(u"Recipes"_s);
@@ -525,7 +533,7 @@ void TestVaultController::hidesNotesAndNotebooksFromView()
     // A hidden note trashed and brought back is hidden still.
     QVERIFY(m_vault->trashNote(u"Inbox/Groceries.md"_s, false));
     // Writing the layout for anything else leaves out the note that is gone.
-    QVERIFY(m_vault->setPinned(u"Welcome.md"_s, true));
+    QVERIFY(m_vault->setNotebookEmoji(u"Recipes"_s, u"x"_s));
     QVERIFY(!m_vault->hiddenPaths().contains(u"Inbox/Groceries.md"_s));
     QVERIFY(m_vault->undo());
     QVERIFY(m_vault->hiddenPaths().contains(u"Inbox/Groceries.md"_s));
