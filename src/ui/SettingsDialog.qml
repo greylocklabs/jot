@@ -652,11 +652,12 @@ Popup {
                                 gitForm.visible = false
                             }
                         }
-                        StickerButton {
-                            visible: Vault.sync.configured
-                            text: qsTr("Stop syncing")
-                            onClicked: Vault.sync.stop()
-                        }
+                    }
+                    StickerButton {
+                        objectName: "stopSyncing"
+                        visible: Vault.sync.configured
+                        text: qsTr("Stop syncing")
+                        onClicked: Vault.sync.stop()
                     }
                     // A git repository anywhere, reached as git reaches it from a terminal.
                     Column {

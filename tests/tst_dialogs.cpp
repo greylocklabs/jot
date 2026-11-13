@@ -45,6 +45,7 @@ private Q_SLOTS:
     void settingsTabsFitWithoutScrolling();
     void anEmptyDateReadsAsSomethingToPress();
     void gitSyncStartsFromTheVaultsOwnRepository();
+    void stopSyncingSitsApartFromTheSyncButtons();
     void themeColorsFinishHoweverClosed();
     void showsAndRestoresPastVersions();
     void importsFromTheJoplinOnThisComputer();
@@ -279,6 +280,41 @@ void TestDialogs::gitSyncStartsFromTheVaultsOwnRepository()
     QTRY_COMPARE(url->property("text").toString(), u"git@example.org:me/notes.git"_s);
     QCOMPARE(branch->property("text").toString(), u"notes"_s);
     QVERIFY(content->findChild<QQuickItem *>(u"gitOwnRepository"_s)->isVisible());
+}
+
+void TestDialogs::stopSyncingSitsApartFromTheSyncButtons()
+{
+    const QString nas = m_dir.filePath(u"nas"_s);
+    QVERIFY(QDir().mkpath(nas));
+    SyncController *sync = m_vault->sync();
+    QSignalSpy finished(sync, &SyncController::finished);
+    QVERIFY(sync->syncWithFolder(QUrl::fromLocalFile(nas)));
+    QVERIFY(finished.wait(10000));
+
+    QQuickWindow window;
+    window.resize(900, 700);
+    window.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&window));
+    QQmlEngine engine;
+    QQmlComponent component(&engine);
+    component.setData("import Jot.Ui\nSettingsDialog {}\n", QUrl(u"qrc:/test.qml"_s));
+    std::unique_ptr<QObject> settings(component.create());
+    QVERIFY2(settings, qPrintable(component.errorString()));
+    settings->setProperty("parent", QVariant::fromValue(window.contentItem()));
+    settings->setProperty("tab", u"sync"_s);
+    QMetaObject::invokeMethod(settings.get(), "open");
+    QTRY_VERIFY(settings->property("opened").toBool());
+    auto *content = settings->property("contentItem").value<QQuickItem *>();
+    auto *stop = content->findChild<QQuickItem *>(u"stopSyncing"_s);
+    auto *buttons = content->findChild<QQuickItem *>(u"syncWithBucket"_s)->parentItem();
+    QVERIFY(stop->isVisible());
+    QVERIFY(stop->parentItem() != buttons);
+    const qreal gap = stop->mapToItem(content, QPointF()).y() -
+                      buttons->mapToItem(content, QPointF(0, buttons->height())).y();
+    QCOMPARE(gap, stop->parentItem()->property("spacing").toReal());
+
+    sync->stop();
+    QVERIFY(!sync->configured());
 }
 
 void TestDialogs::themeColorsFinishHoweverClosed()
