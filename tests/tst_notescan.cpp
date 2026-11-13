@@ -168,6 +168,8 @@ void TestNoteScan::rewritesAToDosWords()
     QCOMPARE(removeTask(note, 2, u"water @weekly"_s), std::optional(u"# Chores\n- [x] sweep\n"_s));
     QCOMPARE(removeTask(u"a\n- [ ] b"_s, 2, {}), std::optional(u"a"_s));
     QCOMPARE(removeTask(u"- [ ] b"_s, 1, {}), std::optional(QString()));
+    QCOMPARE(removeTask(u"a\r\n- [ ] b"_s, 2, {}), std::optional(u"a"_s));
+    QCOMPARE(removeTask(u"- [ ] b\r\nc\r\n"_s, 1, {}), std::optional(u"c\r\n"_s));
     QCOMPARE(removeTask(note, 1, {}), std::nullopt);
 }
 

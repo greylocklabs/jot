@@ -600,12 +600,14 @@ std::optional<QString> removeTask(const QString &note, int line, const QString &
         return std::nullopt;
     qsizetype start = note.lastIndexOf(u'\n', place->mark) + 1;
     qsizetype end = note.indexOf(u'\n', place->mark);
-    // Its line break goes with it; on the last line, the one before it does.
+    // Its line break goes with it; on the last line, the one before it does, \r and all.
     if (end >= 0) {
         ++end;
     } else {
         end = note.size();
         if (start > 0)
+            --start;
+        if (start > 0 && note.at(start - 1) == u'\r')
             --start;
     }
     QString changed = note;
