@@ -36,6 +36,17 @@
   </categories>
 
   <releases>
+    <release version="0.6.1" date="2026-11-13">
+      <description>
+        <ul>
+          <li>A notebook lists and counts only its own notes, as Joplin does, in the app and in jot ls; notes in the notebooks inside it show there. A search within a notebook still finds them, and All notes lists every note.</li>
+          <li>Vi insert mode no longer offers suggestions before anything is typed.</li>
+          <li>A link in Styled mode leaves no gap before the text after it.</li>
+          <li>Sidebar emoji keep their edges at fractional display scales, such as 125%.</li>
+          <li>Notebooks, notes, to-dos, trashed notes and the links and mentions under a note show the pointer when hovered, as things that open on a click.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.6.0" date="2026-11-13">
       <description>
         <ul>
