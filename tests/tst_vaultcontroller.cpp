@@ -217,6 +217,13 @@ void TestVaultController::leavesOutWhatTheVaultIgnores()
              (QStringList{u"Scratch/"_s, u"node_modules/"_s, u'/' + notebook + u'/'}));
     QVERIFY(!column(*m_vault->notebooks(), "path").contains(notebook));
 
+    // A note too, which, open, is put away.
+    m_vault->setCurrent(u"Inbox/Groceries.md"_s);
+    QVERIFY(m_vault->ignoreNote(u"Inbox/Groceries.md"_s));
+    QVERIFY(m_vault->ignorePatterns().contains(u"/Inbox/Groceries.md"_s));
+    QVERIFY(!m_vault->index()->note(u"Inbox/Groceries.md"_s));
+    QVERIFY(m_vault->current().isEmpty());
+
     // With nothing ignored, the scratch note and the package's README are notes too.
     QVERIFY(m_vault->setIgnore({}, false));
     QVERIFY(!m_vault->respectsGitignore());

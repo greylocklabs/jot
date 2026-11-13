@@ -214,6 +214,8 @@ public:
     Q_INVOKABLE bool setIgnore(const QStringList &patterns, bool gitignore);
     /// Adds the notebook at `path` to the vault's ignore patterns.
     Q_INVOKABLE bool ignoreNotebook(const QString &path);
+    /// Adds the note at `path` to the vault's ignore patterns, so Jot no longer reads it.
+    Q_INVOKABLE bool ignoreNote(const QString &path);
     /// The notebook templates are kept in.
     Q_INVOKABLE QString templatesFolder() const;
     /// Makes a note in the notebook shown from the template at `path`, its variables filled

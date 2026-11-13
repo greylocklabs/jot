@@ -1258,7 +1258,11 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Hide</source>
+        <source>Hide this note</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Ignore this note</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

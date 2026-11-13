@@ -2983,6 +2983,20 @@ bool VaultController::ignoreNotebook(const QString &path)
     return setIgnore(patterns, respectsGitignore());
 }
 
+bool VaultController::ignoreNote(const QString &path)
+{
+    if (path.isEmpty())
+        return false;
+    QStringList patterns = ignorePatterns();
+    const QString pattern = VaultIgnore::literal(path, false);
+    if (!patterns.contains(pattern))
+        patterns.append(pattern);
+    // Ignored, it is no note to show.
+    if (path == m_current)
+        setCurrent({});
+    return setIgnore(patterns, respectsGitignore());
+}
+
 void VaultController::readIgnoreAgain()
 {
     if (!m_vault)
