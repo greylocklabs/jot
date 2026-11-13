@@ -3,6 +3,19 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## Unreleased
+
+### Changed
+
+- A notebook lists and counts only its own notes, as Joplin does; notes in the notebooks inside
+  it show there. A search within a notebook still finds them, and All notes lists every note.
+
+### Fixed
+
+- Vi insert mode no longer offers suggestions before anything is typed.
+- A link in Styled mode leaves no gap before the text after it.
+- Sidebar emoji keep their edges at fractional display scales, such as 125%.
+
 ## 0.6.0 - 2026-11-13
 
 ### Breaking
