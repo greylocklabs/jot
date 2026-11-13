@@ -116,11 +116,40 @@ const QSet<QString> &MarkdownHighlighter::definedLabels()
     if (!document() || !m_labelsStale)
         return m_labels;
     m_labelsStale = false;
+    // Read as the blocks are styled, since later blocks' states may not be worked out yet:
+    // nothing in front matter, a code fence or a math block defines a label.
     QSet<QString> labels;
+    QString fence;
+    bool frontMatter = false;
+    bool math = false;
     for (QTextBlock line = document()->begin(); line.isValid(); line = line.next()) {
-        if (kindOf(line.userState()) == InFence || kindOf(line.userState()) == InFrontMatter)
+        const QString text = line.text();
+        if (line == document()->begin() && (text == u"---" || text == u"\uFEFF---")) {
+            frontMatter = true;
             continue;
-        if (const QRegularExpressionMatch m = definitionPattern().match(line.text()); m.hasMatch())
+        }
+        if (frontMatter) {
+            frontMatter = text.trimmed() != u"---" && text.trimmed() != u"...";
+            continue;
+        }
+        if (const QRegularExpressionMatch m = fencePattern().match(text); m.hasMatch()) {
+            if (fence.isEmpty())
+                fence = m.captured(1);
+            else if (m.captured(1).startsWith(fence) && m.captured(2).isEmpty())
+                fence.clear();
+            continue;
+        }
+        if (!fence.isEmpty())
+            continue;
+        QString single;
+        if (isMathFence(text, &single)) {
+            if (single.isEmpty())
+                math = !math;
+            continue;
+        }
+        if (math)
+            continue;
+        if (const QRegularExpressionMatch m = definitionPattern().match(text); m.hasMatch())
             labels.insert(labelKey(m.captured(1)));
     }
     if (labels != m_labels) {

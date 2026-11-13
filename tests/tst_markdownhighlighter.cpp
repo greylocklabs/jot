@@ -353,6 +353,11 @@ void TestMarkdownHighlighter::saysWhatIsUnderAPosition()
     end.movePosition(QTextCursor::End);
     end.insertText(u"\n[m]: Mara.md\n"_s);
     QTRY_COMPARE(formatAt(find(u"her"_s)).foreground().color(), m_look.accent);
+    // Nor does one in code, math or front matter.
+    setText(u"---\n[a]: A.md\n---\nSee [x][a], [y][b] and [z][c].\n```\n[b]: B.md\n```\n$$\n"
+            u"[c]: C.md\n$$\n"_s);
+    for (const QString &word : {u"x]"_s, u"y]"_s, u"z]"_s})
+        QVERIFY2(formatAt(find(word)).foreground().color() != m_look.accent, qPrintable(word));
     // Another text in the same document forgets the last one's definitions.
     setText(u"Ask [her][m].\n"_s);
     QVERIFY(formatAt(find(u"her"_s)).foreground().color() != m_look.accent);
