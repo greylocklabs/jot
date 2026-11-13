@@ -155,6 +155,9 @@ too. Jot writes:
 Spaces become `%20`, and a path with `(` or `)` is written `<like this>`. Following a link to a
 `.md` file that is not there yet makes that note.
 
+Jot also reads reference links, `[Soren][1]` with `[1]: Characters/Soren.md` on a line of its own,
+and resolves and rewrites the definition's target like any other link. It never writes them.
+
 Jot resolves a link in this order:
 
 1. a path from the linking note's folder, then from the vault root, with or without `.md`; one

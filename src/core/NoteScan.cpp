@@ -60,6 +60,15 @@ const QRegularExpression &markdownPattern()
     return markdown;
 }
 
+/// A reference link's definition, `[label]: target "title"`, on a line of its own: the label is
+/// captured first and the target, as written, second.
+const QRegularExpression &definitionPattern()
+{
+    static const QRegularExpression definition(
+        uR"(^ {0,3}\[([^\[\]]+)\]:[ \t]*(<[^>]*>|\S+)(?:[ \t]+(?:"[^"]*"|'[^']*'|\([^)]*\)))?[ \t]*$)"_s);
+    return definition;
+}
+
 /// Calls `visit` with each line of `body` that is prose rather than code: its number in the
 /// file, where it starts in `body`, and its text with code spans blanked out.
 void forEachProseLine(QStringView body, int firstLine,
@@ -128,6 +137,15 @@ NoteScan scanNote(QStringView body, int firstLine)
 
         const QString text = withoutCodeSpans(line);
         QString rest = text;
+        // A reference link's definition is the link, wherever `[text][label]` uses it.
+        if (const QRegularExpressionMatch m = definitionPattern().match(text); m.hasMatch()) {
+            QString target = m.captured(2);
+            if (target.startsWith(u'<'))
+                target = target.mid(1, target.size() - 2);
+            if (!target.isEmpty() && !target.startsWith(u'#') && !isUrl(target))
+                scan.links.append({target, u"link"_s, number});
+            return;
+        }
         // Each with where it starts, so the line's links keep the order they are written in.
         QList<std::pair<qsizetype, NoteScan::Link>> found;
         for (const QRegularExpressionMatch &m : markdownPattern().globalMatch(rest)) {
@@ -396,6 +414,9 @@ QString readingMarkdown(QStringView original,
         QList<Change> changes;
         // Matched with code spans blanked, so what is in them stays as written.
         const QString prose = withoutCodeSpans(line);
+        // A reference link's definition is not shown, and a # in its target is no tag.
+        if (definitionPattern().match(prose).hasMatch())
+            return;
         QString rest = prose;
         // Tags, but not the # in a link's target or label, such as a heading's anchor.
         for (const QRegularExpressionMatch &m : markdownPattern().globalMatch(rest)) {
@@ -485,7 +506,14 @@ QString rewriteLinks(QStringView body,
     QList<Edit> edits;
     forEachProseLine(body, 1, [&](int, qsizetype lineStart, const QString &line) {
         const QString text = withoutCodeSpans(line);
-        for (const QRegularExpressionMatch &m : markdownPattern().globalMatch(text)) {
+        auto matches = markdownPattern().globalMatch(text);
+        QList<QRegularExpressionMatch> found;
+        while (matches.hasNext())
+            found.append(matches.next());
+        // A reference link's definition holds the target its uses go to.
+        if (const QRegularExpressionMatch m = definitionPattern().match(text); m.hasMatch())
+            found = {m};
+        for (const QRegularExpressionMatch &m : std::as_const(found)) {
             QString target = m.captured(2);
             const bool bracketed = target.startsWith(u'<');
             if (bracketed)
