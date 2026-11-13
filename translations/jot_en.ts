@@ -3144,6 +3144,30 @@ Press %1 to make one.</source>
         <source>Priority</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Go to the note</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Untick</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Tick</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Set date and repeat...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copy text</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Delete the to-do</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>TaskSchedule</name>

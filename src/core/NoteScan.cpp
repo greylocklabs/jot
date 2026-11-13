@@ -578,6 +578,40 @@ std::optional<QString> setTaskText(const QString &note, int line, const QString 
     return changed.replace(place->start, place->end - place->start, now);
 }
 
+std::optional<QString> setTaskPriority(const QString &note, int line, const QString &text,
+                                       int priority)
+{
+    const std::optional<TaskPlace> place = findTask(note, line, text);
+    if (!place)
+        return std::nullopt;
+    QString words =
+        withoutMarkers(note.sliced(place->start, place->end - place->start), {TaskMarker::Priority})
+            .trimmed();
+    if (const QString marker = priorityMarker(priority); !marker.isEmpty())
+        words += u' ' + marker;
+    QString changed = note;
+    return changed.replace(place->start, place->end - place->start, words);
+}
+
+std::optional<QString> removeTask(const QString &note, int line, const QString &text)
+{
+    const std::optional<TaskPlace> place = findTask(note, line, text);
+    if (!place)
+        return std::nullopt;
+    qsizetype start = note.lastIndexOf(u'\n', place->mark) + 1;
+    qsizetype end = note.indexOf(u'\n', place->mark);
+    // Its line break goes with it; on the last line, the one before it does.
+    if (end >= 0) {
+        ++end;
+    } else {
+        end = note.size();
+        if (start > 0)
+            --start;
+    }
+    QString changed = note;
+    return changed.remove(start, end - start);
+}
+
 std::optional<QString> setTaskDone(const QString &note, int line, bool done, const QString &text,
                                    const QDate &today)
 {
