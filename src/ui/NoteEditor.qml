@@ -1863,7 +1863,7 @@ Rectangle {
             right: outline.visible && !outline.floating ? outline.left : parent.right
             bottom: statusLine.visible ? statusLine.top : parent.bottom
         }
-        visible: Vault.current !== "" && !root.dataFile
+        visible: Vault.current !== "" && !root.dataFile && text !== ""
         topPadding: Theme.space1
         bottomPadding: Theme.space1
         leftPadding: Theme.space4
@@ -1878,13 +1878,17 @@ Rectangle {
         }
         text: {
             const words = count.words.toLocaleString(Qt.locale(), "f", 0)
-            const parts = [picked >= 0 ? qsTr("%1 of %2 words").arg(picked.toLocaleString(Qt.locale(),
-                                                                                          "f", 0)).arg(
+            const parts = []
+            // With the counts off, only a word target shows.
+            if (Settings.showCounts) {
+                parts.push(picked >= 0 ? qsTr("%1 of %2 words").arg(picked.toLocaleString(Qt.locale(
+                                                                                              ), "f", 0)).arg(
                                              words) : count.words === 1 ? qsTr("1 word") : qsTr(
                                                                               "%1 words").arg(
-                                                                              words)]
-            parts.push(qsTr("%1 characters").arg(count.characters.toLocaleString(Qt.locale(), "f",
-                                                                                 0)))
+                                                                              words))
+                parts.push(qsTr("%1 characters").arg(count.characters.toLocaleString(Qt.locale(),
+                                                                                     "f", 0)))
+            }
 
             if (target > 0)
                 parts.push(qsTr("%1% of %2").arg(Math.floor(100 * count.words / target)).arg(
@@ -1892,6 +1896,8 @@ Rectangle {
             // The notebook's target, counting this note as it is now.
             if (Vault.currentTarget.words > 0)
                 parts.push(Vault.targetProgress(count.words))
+            if (!Settings.showCounts)
+                return parts.join(", ")
             const today = Vault.wordsToday.toLocaleString(Qt.locale(), "f", 0)
             parts.push(Settings.dailyWordGoal > 0 ? qsTr("today %1 of %2").arg(today).arg(Settings.dailyWordGoal.toLocaleString(
                                                                                               Qt.locale(

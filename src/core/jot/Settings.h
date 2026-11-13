@@ -89,6 +89,9 @@ class Settings : public QObject
     Q_PROPERTY(bool spellcheck READ spellcheck WRITE setSpellcheck NOTIFY spellcheckChanged)
     /// Words to write each day, for a streak; 0 for no goal.
     Q_PROPERTY(int dailyWordGoal READ dailyWordGoal WRITE setDailyWordGoal NOTIFY writingChanged)
+    /// The counts under a note: its words, characters and those written today. A word target
+    /// shows either way.
+    Q_PROPERTY(bool showCounts READ showCounts WRITE setShowCounts NOTIFY writingChanged)
     /// The shortcuts chosen in place of the built-in ones, by action id, each as Qt writes key
     /// sequences portably: "Ctrl+J", several apart with "; ", or "" for none.
     Q_PROPERTY(QVariantMap keys READ keys NOTIFY keysChanged)
@@ -175,6 +178,8 @@ public:
     [[nodiscard]] bool spellcheck() const { return m_spellcheck; }
     void setSpellcheck(bool on);
     [[nodiscard]] int dailyWordGoal() const { return m_dailyWordGoal; }
+    [[nodiscard]] bool showCounts() const { return m_showCounts; }
+    void setShowCounts(bool shown);
     void setDailyWordGoal(int words);
     static inline const QStringList kLeaderKeys = {QStringLiteral(","), QStringLiteral(":"),
                                                    QStringLiteral(" ")};
@@ -277,6 +282,7 @@ private:
     bool m_autosave = true;
     bool m_spellcheck = true;
     int m_dailyWordGoal = 0;
+    bool m_showCounts = true;
     QVariantMap m_keys;
     QString m_lastSeenVersion;
     bool m_keepRunning = true;
