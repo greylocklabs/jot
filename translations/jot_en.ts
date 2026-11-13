@@ -947,10 +947,6 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Not synced</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4451,10 +4447,6 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Could not sync: %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Tried %1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4468,10 +4460,6 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>Last commit: %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Changes here wait for the next sync</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -4495,12 +4483,38 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Sync failed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message numerus="yes">
+        <source>%n change(s) to send</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Sync failed: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Notes changed: %1, lines added: %2, removed: %3</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Notes sent: %1, received: %2</source>
         <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Waiting to be sent:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message numerus="yes">
+        <source>and %n more</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
     </message>
     <message numerus="yes">
         <source>%n file(s) not committed</source>
@@ -4906,6 +4920,10 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>From %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 (deleted)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
