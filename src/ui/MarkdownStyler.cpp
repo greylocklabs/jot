@@ -234,6 +234,15 @@ int MarkdownStyler::lineAt(int position) const
     return m_document->textDocument()->findBlock(position).blockNumber();
 }
 
+int MarkdownStyler::lineStart(int line) const
+{
+    if (!m_document || !m_document->textDocument())
+        return 0;
+    const QTextDocument *text = m_document->textDocument();
+    const QTextBlock block = text->findBlockByNumber(line);
+    return block.isValid() ? block.position() : text->characterCount() - 1;
+}
+
 bool MarkdownStyler::tidyTaskLine(int line)
 {
     QTextDocument *document = m_document ? m_document->textDocument() : nullptr;

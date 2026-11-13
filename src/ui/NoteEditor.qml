@@ -428,11 +428,7 @@ Rectangle {
         whyNotTable: tableModel.why
         frontMatterProblems: styler.frontMatterProblems
         onProblemPicked: line => {
-            const lines = body.text.split("\n")
-            let at = 0
-            for (let i = 0; i < line - 1 && i < lines.length; ++i)
-                at += lines[i].length + 1
-            body.cursorPosition = Math.min(at, body.length)
+            body.cursorPosition = styler.lineStart(line - 1)
             body.forceActiveFocus()
         }
         onFormatRequested: action => root.format(action, "")
