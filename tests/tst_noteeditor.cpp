@@ -876,7 +876,6 @@ void TestNoteEditor::keepsDeleteAwayFromTheTitle()
     for (const int width : {240, 900}) {
         editor->setWidth(width);
         QTRY_VERIFY(trash->isVisible());
-        QCOMPARE(trash->property("text").toString(), u"Delete"_s);
         QTRY_VERIFY(trash->mapToScene({0, trash->height()}).y() <= title->mapToScene({0, 0}).y());
         QTRY_VERIFY2(title->property("contentHeight").toReal() < 1.5 * line,
                      qPrintable(QString::number(title->property("contentHeight").toReal())));
@@ -888,6 +887,14 @@ void TestNoteEditor::keepsDeleteAwayFromTheTitle()
     QVERIFY(trash->isVisible());
     m_settings->setReadMode(false);
     QTRY_VERIFY(find(u"formatButtons"_s)->isVisible());
+
+    // The trash icon asks in the trash dialog first.
+    auto *confirm = m_editor->findChild<QObject *>(u"trashConfirm"_s);
+    QMetaObject::invokeMethod(trash, "clicked");
+    QTRY_VERIFY(confirm->property("opened").toBool());
+    QCOMPARE(confirm->property("path").toString(), u"Crossings.md"_s);
+    QVERIFY(QFileInfo::exists(m_root + u"/Crossings.md"_s));
+    QMetaObject::invokeMethod(confirm, "close");
 }
 
 void TestNoteEditor::foldsFormattingThatDoesNotFitIntoAMenu()

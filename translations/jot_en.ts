@@ -525,11 +525,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Delete</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Move to trash?</source>
+        <source>Move to trash</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
