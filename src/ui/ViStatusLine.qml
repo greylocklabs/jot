@@ -24,6 +24,18 @@ Rectangle {
     /// Lines picked in Visual mode.
     property int pickedLines: 0
     property date now: new Date()
+    /// The room beside the mode and the cursor's place, which the rest of the right-hand side
+    /// takes while it fits.
+    readonly property real spare: width - modeSegment.width - cursorSegment.implicitWidth - 4
+                                  * Theme.space2
+    /// What else shares the left with the file: lines picked, keys pending and what a command
+    /// said, each with its gap.
+    readonly property real besideFile: (pickedLabel.visible ? pickedLabel.implicitWidth
+                                                              + Theme.space2 : 0) + (
+                                           pendingLabel.visible ? pendingLabel.implicitWidth
+                                                                  + Theme.space2 : 0) + (
+                                           messageLabel.visible ? messageLabel.implicitWidth
+                                                                  + Theme.space2 : 0)
     /// A command is being typed after `:`, in place of the mode and file.
     property bool commanding: false
     /// What the last command had to say, shown for a while.
@@ -224,6 +236,8 @@ Rectangle {
         spacing: Theme.space2
 
         Segment {
+            id: modeSegment
+
             objectName: "viMode"
             fill: root.modeFill
 
@@ -234,32 +248,63 @@ Rectangle {
                 font.letterSpacing: 1.2
             }
         }
+        // As the line narrows, the folders go first, then the name is cut short, then the file
+        // goes, leaving the mode and the right-hand side.
         Segment {
-            objectName: "viFile"
-            visible: root.path !== ""
+            id: fileSegment
 
+            /// What there is for the file between the mode and the right-hand side.
+            readonly property real room: root.width - modeSegment.width - rightSide.width - 2
+                                         * Theme.space2 - 3 * Theme.space2 - 2 * Theme.space3
+                                         - root.besideFile
+            readonly property real glyphRoom: fileGlyph.width + 6
+
+            objectName: "viFile"
+            visible: root.path !== "" && room >= glyphRoom + 40
+
+            TextMetrics {
+                id: folderMetrics
+                font: folderLabel.font
+                text: root.folders
+            }
+            TextMetrics {
+                id: nameMetrics
+                font: nameLabel.font
+                text: root.fileName
+            }
             Glyph {
+                id: fileGlyph
                 anchors.verticalCenter: parent.verticalCenter
                 name: root.kind
                 color: root.modeFill
                 stroke: Theme.fineGlyphStroke
             }
             Label {
-                visible: root.folders !== ""
+                id: folderLabel
+                objectName: "viFolders"
+                visible: root.folders !== "" && fileSegment.room >= fileSegment.glyphRoom
+                         + folderMetrics.advanceWidth + 6 + nameMetrics.advanceWidth
                 text: root.folders
                 color: Theme.textFaint
             }
             Label {
+                id: nameLabel
+                objectName: "viFileName"
+                width: Math.min(nameMetrics.advanceWidth, Math.max(0, fileSegment.room
+                                                                   - fileSegment.glyphRoom))
+                elide: Text.ElideRight
                 text: root.fileName
             }
         }
         Label {
+            id: pickedLabel
             objectName: "viPicked"
             visible: root.mode === "visual" && root.pickedLines > 0
             text: root.pickedLines === 1 ? qsTr("1 line") : qsTr("%1 lines").arg(root.pickedLines)
             color: Theme.textMuted
         }
         Label {
+            id: pendingLabel
             objectName: "viPending"
             visible: root.pending !== ""
             text: root.pending
@@ -267,6 +312,7 @@ Rectangle {
             font.family: Theme.monoFontFamily
         }
         Label {
+            id: messageLabel
             objectName: "viMessage"
             visible: root.message !== ""
             text: root.message
@@ -345,6 +391,8 @@ Rectangle {
         spacing: Theme.space2
 
         Segment {
+            id: cursorSegment
+
             objectName: "viCursor"
             visible: root.showCursor
 
@@ -353,8 +401,11 @@ Rectangle {
             }
         }
         Segment {
+            id: placeSegment
+
             objectName: "viPlace"
-            visible: root.place !== ""
+            // On a line too narrow for all, the clock goes, then this.
+            visible: root.place !== "" && root.spare >= placeSegment.implicitWidth + Theme.space2
 
             Label {
                 text: root.place
@@ -362,7 +413,11 @@ Rectangle {
             }
         }
         Segment {
+            id: clockSegment
+
             objectName: "viClock"
+            visible: root.spare >= placeSegment.implicitWidth + clockSegment.implicitWidth + 2
+                     * Theme.space2
 
             Glyph {
                 anchors.verticalCenter: parent.verticalCenter

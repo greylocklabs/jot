@@ -117,6 +117,7 @@ private Q_SLOTS:
     void tickingARepeatingToDoWritesTheNext();
     void editsInViModes();
     void runsViCommands();
+    void viStatusLineGivesWayAsItNarrows();
     void completesFrontMatter();
     void hidesCountsButNotTargets();
     void savesByHandFromTheBar();
@@ -2921,6 +2922,48 @@ void TestNoteEditor::hidesCountsButNotTargets()
     QVERIFY(!counts->property("text").toString().contains(u"characters"_s));
     m_settings->setShowCounts(true);
     QTRY_VERIFY(counts->property("text").toString().contains(u"characters"_s));
+}
+
+void TestNoteEditor::viStatusLineGivesWayAsItNarrows()
+{
+    m_settings->setViMode(true);
+    m_vault->setCurrent(u"Ashfall/Characters/Mara Vey.md"_s);
+    QQuickItem *line = find(u"viStatusLine"_s);
+    QQuickItem *folders = find(u"viFolders"_s);
+    QQuickItem *name = find(u"viFileName"_s);
+    QQuickItem *file = find(u"viFile"_s);
+    QQuickItem *cursor = find(u"viCursor"_s, line);
+    auto *editor = qobject_cast<QQuickItem *>(m_editor.get());
+    const auto clear = [&] {
+        // What shows on the left ends before the right-hand side begins.
+        const qreal left =
+            file->isVisible()
+                ? file->mapToItem(line, {file->width(), 0}).x()
+                : find(u"viMode"_s)->mapToItem(line, {find(u"viMode"_s)->width(), 0}).x();
+        return left <= cursor->mapToItem(line, QPointF()).x();
+    };
+    editor->setWidth(1000);
+    QTRY_VERIFY(folders->isVisible());
+    QTRY_VERIFY(clear());
+    // Narrower, the folders go and the name is cut short.
+    editor->setWidth(420);
+    QTRY_VERIFY(!folders->isVisible());
+    QTRY_VERIFY(clear());
+    // What a command says takes its room from the file too.
+    QMetaObject::invokeMethod(line, "say", Q_ARG(QVariant, u"Replaced on 12 lines"_s));
+    QTRY_VERIFY(find(u"viMessage"_s, line)->isVisible());
+    QTRY_VERIFY(clear());
+    const auto messageEnd = [&] {
+        QQuickItem *message = find(u"viMessage"_s, line);
+        return message->mapToItem(line, {message->width(), 0}).x();
+    };
+    QTRY_VERIFY(messageEnd() <= cursor->mapToItem(line, QPointF()).x());
+    // Narrower still, only the mode and the right-hand side.
+    editor->setWidth(250);
+    QTRY_VERIFY(!file->isVisible());
+    QTRY_VERIFY(clear());
+    QVERIFY(name);
+    editor->setWidth(1000);
 }
 
 void TestNoteEditor::keepsOneCursorAcrossViModes()
