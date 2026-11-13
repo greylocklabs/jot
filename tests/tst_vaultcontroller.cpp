@@ -2174,6 +2174,9 @@ void TestVaultController::syncsWithAFolder()
     QTRY_VERIFY(m_vault->index()->note(u"From the NAS.md"_s));
     QVERIFY(!sync->pending());
     QVERIFY2(sync->details().contains(u"1 received"_s), qPrintable(sync->details()));
+    // A note moved here waits to be sent too, though its file did not change.
+    QVERIFY(m_vault->moveNoteTo(u"Recipes/Pancakes.md"_s, u"Inbox"_s));
+    QTRY_VERIFY(sync->pending());
     QTRY_VERIFY(m_vault->index()->note(u"From the NAS.md"_s));
 
     // A bucket needs its address, region, name and key before it is even checked.

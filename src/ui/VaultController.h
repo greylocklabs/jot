@@ -20,6 +20,7 @@
 #include <QObject>
 #include <QPointer>
 #include <QQmlEngine>
+#include <QSet>
 #include <QStandardPaths>
 #include <QThread>
 #include <QTimer>
@@ -572,8 +573,11 @@ private:
     void close();
     void notesChangedOnDisk(const QStringList &paths);
     void reloadModels();
-    /// Says whether notes wait for the next sync: changed since the last began, not by it.
+    /// Says whether notes wait for the next sync: changed since the last began, not by it, or
+    /// made, moved or gone since it ended.
     void updateSyncPending();
+    /// The notes there were when the last sync ended.
+    QSet<QString> m_syncedPaths;
     /// Reads the whole vault again after what it ignores changed.
     void readIgnoreAgain();
     /// Works out currentTarget() again.
