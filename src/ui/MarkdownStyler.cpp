@@ -304,12 +304,19 @@ QVariantMap MarkdownStyler::frontMatterAt(int position) const
     const QTextBlock here = document->findBlock(position);
     if (here.blockNumber() == 0)
         return {};
-    // Within the fences, or anywhere after an opening one not closed yet.
-    for (QTextBlock block = first.next(); block.isValid() && block != here; block = block.next()) {
+    // Within the fences only: a note that opens with a `---` rule and none after is all body.
+    bool closed = false;
+    for (QTextBlock block = first.next(); block.isValid(); block = block.next()) {
         const QString line = block.text().trimmed();
-        if (line == u"---" || line == u"...")
-            return {};
+        if (line == u"---" || line == u"...") {
+            if (block.blockNumber() <= here.blockNumber())
+                return {};
+            closed = true;
+            break;
+        }
     }
+    if (!closed)
+        return {};
     const QString before = here.text().left(position - here.position());
     // What was typed of a value ends at the cursor, so after a space nothing is being typed.
     const auto value = [&](const QString &key, QString typed) {

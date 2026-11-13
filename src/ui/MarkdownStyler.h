@@ -138,7 +138,7 @@ public:
     /// The markers offered for `typed`, the letters after an @, as of today: `{text, shown,
     /// detail}` for each.
     Q_INVOKABLE static QVariantList markerSuggestions(const QString &typed);
-    /// What is being typed in the front matter at `position`: `{kind, key, text, start}`, where
+    /// What is being typed in closed front matter at `position`: `{kind, key, text, start}`, where
     /// `kind` is "key" for a key at the start of a line, or "value" for a key's value, or a list
     /// item under it, and `text` runs from `start` to `position`. Empty elsewhere.
     Q_INVOKABLE QVariantMap frontMatterAt(int position) const;
