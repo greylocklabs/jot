@@ -15,6 +15,7 @@
 #include <QImageReader>
 #include <QRegularExpression>
 #include <QTextDocument>
+#include <QTimer>
 
 using namespace Qt::StringLiterals;
 
@@ -54,7 +55,7 @@ const QRegularExpression &referencePattern()
 const QRegularExpression &definitionPattern()
 {
     static const QRegularExpression definition(
-        uR"(^ {0,3}\[([^\[\]]+)\]:[ \t]*(<[^>]*>|\S+)(?:[ \t]+(?:"[^"]*"|'[^']*'|\([^)]*\)))?[ \t]*$)"_s);
+        uR"(^ {0,3}\[(?!\^)([^\[\]]+)\]:[ \t]*(<[^>]*>|\S+)(?:[ \t]+(?:"[^"]*"|'[^']*'|\([^)]*\)))?[ \t]*$)"_s);
     return definition;
 }
 
@@ -93,7 +94,13 @@ bool overlaps(const QList<Range> &taken, int start, int end)
 
 MarkdownHighlighter::MarkdownHighlighter(QTextDocument *document)
     : QSyntaxHighlighter(document), m_code(std::make_unique<CodeHighlighter>())
-{}
+{
+    // Connected before the highlighter's own restyling, so a change is known before it runs.
+    setDocument(nullptr);
+    if (document)
+        connect(document, &QTextDocument::contentsChange, this, [this] { m_labelsStale = true; });
+    setDocument(document);
+}
 
 MarkdownHighlighter::~MarkdownHighlighter() = default;
 
@@ -102,6 +109,26 @@ void MarkdownHighlighter::setLook(const Look &look)
     m_look = look;
     m_code->setColors(look.code, look.boldWeight);
     rehighlight();
+}
+
+const QSet<QString> &MarkdownHighlighter::definedLabels()
+{
+    if (!document() || !m_labelsStale)
+        return m_labels;
+    m_labelsStale = false;
+    QSet<QString> labels;
+    for (QTextBlock line = document()->begin(); line.isValid(); line = line.next()) {
+        if (kindOf(line.userState()) == InFence || kindOf(line.userState()) == InFrontMatter)
+            continue;
+        if (const QRegularExpressionMatch m = definitionPattern().match(line.text()); m.hasMatch())
+            labels.insert(labelKey(m.captured(1)));
+    }
+    if (labels != m_labels) {
+        m_labels = labels;
+        // Uses above a new definition were styled before it was there.
+        QTimer::singleShot(0, this, [this] { rehighlight(); });
+    }
+    return m_labels;
 }
 
 void MarkdownHighlighter::setResolver(Resolver resolver)
@@ -1076,7 +1103,9 @@ void MarkdownHighlighter::inlineStyles(const QString &text, int from)
         take(m);
     }
     for (const QRegularExpressionMatch &m : referencePattern().globalMatch(text, from)) {
-        if (!free(m) || !m.captured(1).isEmpty())
+        if (!free(m) || !m.captured(1).isEmpty() ||
+            !definedLabels().contains(
+                labelKey(m.captured(3).isEmpty() ? m.captured(2) : m.captured(3))))
             continue;
         mark(int(m.capturedStart()), int(m.capturedStart(2) - m.capturedStart()));
         merge(int(m.capturedStart(2)), int(m.capturedLength(2)), link);

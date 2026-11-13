@@ -61,11 +61,11 @@ const QRegularExpression &markdownPattern()
 }
 
 /// A reference link's definition, `[label]: target "title"`, on a line of its own: the label is
-/// captured first and the target, as written, second.
+/// captured first and the target, as written, second. A footnote's, `[^1]: words`, is not one.
 const QRegularExpression &definitionPattern()
 {
     static const QRegularExpression definition(
-        uR"(^ {0,3}\[([^\[\]]+)\]:[ \t]*(<[^>]*>|\S+)(?:[ \t]+(?:"[^"]*"|'[^']*'|\([^)]*\)))?[ \t]*$)"_s);
+        uR"(^ {0,3}\[(?!\^)([^\[\]]+)\]:[ \t]*(<[^>]*>|\S+)(?:[ \t]+(?:"[^"]*"|'[^']*'|\([^)]*\)))?[ \t]*$)"_s);
     return definition;
 }
 
