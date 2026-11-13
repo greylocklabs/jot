@@ -2716,6 +2716,11 @@ void TestNoteEditor::completesFrontMatter()
     QVERIFY(QMetaObject::invokeMethod(picker, "picked",
                                       Q_ARG(QDateTime, QDateTime(QDate(2026, 3, 14), QTime()))));
     QVERIFY(text().contains(u"created: 2026-03-14\n"_s));
+    // A day typed whole is offered nothing more, so Return is a new line.
+    QTest::keyClick(m_window.get(), Qt::Key_Space);
+    QTest::keyClick(m_window.get(), Qt::Key_Backspace);
+    QTest::qWait(50);
+    QVERIFY(items().isEmpty());
     // Remove the line, so what follows starts where it did.
     {
         QString without = text();
