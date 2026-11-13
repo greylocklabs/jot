@@ -139,6 +139,7 @@ void MarkdownStyler::setDocument(QQuickTextDocument *document)
 
 void MarkdownStyler::readFrontMatter()
 {
+    findClosingFence();
     QVariantMap keys;
     QVariantList problems;
     if (m_document && m_document->textDocument()) {
@@ -225,6 +226,34 @@ void MarkdownStyler::replace(int start, int end, const QString &text)
     cursor.setPosition(start);
     cursor.setPosition(end, QTextCursor::KeepAnchor);
     cursor.insertText(text);
+}
+
+void MarkdownStyler::findClosingFence()
+{
+    int found = -1;
+    QString mark;
+    if (m_document && m_document->textDocument()) {
+        const QTextDocument *document = m_document->textDocument();
+        const QTextBlock first = document->firstBlock();
+        // Opened as the highlighter reads it: a first line of `---` alone, a byte order mark
+        // before it aside.
+        const bool opens = first.text() == u"---" || first.text() == u"\uFEFF---";
+        for (QTextBlock block = first.next(); opens && block.isValid(); block = block.next()) {
+            const QString line = block.text().trimmed();
+            if (line != u"---" && line != u"...")
+                continue;
+            if (!block.contains(m_cursorPosition)) {
+                found = block.position() + int(block.text().indexOf(line));
+                mark = line;
+            }
+            break;
+        }
+    }
+    if (found == m_closingFence && mark == m_closingFenceMark)
+        return;
+    m_closingFence = found;
+    m_closingFenceMark = mark;
+    Q_EMIT closingFenceChanged();
 }
 
 int MarkdownStyler::lineAt(int position) const
@@ -504,6 +533,7 @@ void MarkdownStyler::setCursorPosition(int position)
     if (m_highlighter)
         m_highlighter->setCursorPosition(position);
     Q_EMIT cursorPositionChanged();
+    findClosingFence();
     scheduleImages();
 }
 

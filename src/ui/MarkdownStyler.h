@@ -64,6 +64,11 @@ class MarkdownStyler : public QObject
     Q_PROPERTY(QString language READ language WRITE setLanguage NOTIFY spellingChanged)
     /// The note's front matter keys, as the text has them now.
     Q_PROPERTY(QVariantMap frontMatter READ frontMatter NOTIFY frontMatterChanged)
+    /// Where the closing fence of the front matter starts, while the cursor is off its line;
+    /// -1 otherwise. Styled mode draws it at the top of the room the line keeps.
+    Q_PROPERTY(int closingFence READ closingFence NOTIFY closingFenceChanged)
+    /// That fence as written, `---` or `...`.
+    Q_PROPERTY(QString closingFenceMark READ closingFenceMark NOTIFY closingFenceChanged)
     /// What is wrong with the front matter, each as `{line, message}`, the line counted from 1.
     Q_PROPERTY(QVariantList frontMatterProblems READ frontMatterProblems NOTIFY frontMatterChanged)
 
@@ -149,6 +154,8 @@ public:
     Q_INVOKABLE void replace(int start, int end, const QString &text);
     /// The line, from 0, `position` is on.
     Q_INVOKABLE int lineAt(int position) const;
+    [[nodiscard]] int closingFence() const { return m_closingFence; }
+    [[nodiscard]] QString closingFenceMark() const { return m_closingFenceMark; }
     /// Where `line`, from 0, starts; the end of the text past the last line.
     Q_INVOKABLE int lineStart(int line) const;
     /// Writes the days said in words on the to-do on `line`, from 0, as dates, and ticks one
@@ -176,6 +183,7 @@ Q_SIGNALS:
     void widthChanged();
     void imagesChanged();
     void frontMatterChanged();
+    void closingFenceChanged();
     void sourceModeChanged();
     void focusModeChanged();
     void foldCommentsChanged();
@@ -196,6 +204,10 @@ private:
     int m_width = 600;
     bool m_imagesPending = false;
     QVariantMap m_frontMatter;
+    int m_closingFence = -1;
+    QString m_closingFenceMark;
+    /// Finds the closing fence again, as the text or the cursor moved.
+    void findClosingFence();
     QVariantList m_frontMatterProblems;
     /// The headings the tables of contents were last drawn with.
     QList<std::pair<int, QString>> m_headings;

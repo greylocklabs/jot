@@ -118,6 +118,7 @@ private Q_SLOTS:
     void editsInViModes();
     void runsViCommands();
     void completesFrontMatter();
+    void showsTheClosingFenceWithRoomBelow();
     void suggestsOnlyWhileTypingInVi();
     void undoesTitleEdits();
     void showsWhereViIsAlongTheFoot();
@@ -2771,6 +2772,33 @@ void TestNoteEditor::suggestsOnlyWhileTypingInVi()
     QTRY_COMPARE(vi->property("mode").toString(), u"insert"_s);
     QTest::qWait(50);
     QVERIFY(popup->property("items").toList().isEmpty());
+}
+
+void TestNoteEditor::showsTheClosingFenceWithRoomBelow()
+{
+    m_vault->setCurrent(u"Recipes/Sourdough.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    QQuickItem *fence = find(u"frontMatterFence"_s);
+    QVERIFY(fence);
+    QTRY_VERIFY2(fence->isVisible(), qPrintable(fence->property("at").toString()));
+    // Drawn at the top of its line, which keeps room below it before the note.
+    const QString text = body->property("text").toString();
+    const int at = int(text.indexOf(u"---"_s, 3));
+    QRectF line;
+    QMetaObject::invokeMethod(body, "positionToRectangle", Q_RETURN_ARG(QRectF, line),
+                              Q_ARG(int, at));
+    QVERIFY(line.height() > 1.8 * fence->height());
+    // On its line, the cursor shows it as written instead.
+    body->forceActiveFocus();
+    body->setProperty("cursorPosition", at);
+    QTRY_VERIFY(!fence->isVisible());
+    // Closed with `...`, that is what shows; with no fence opening the note, none.
+    body->setProperty("text", u"---\ntags: [a]\n...\nBody\n"_s);
+    body->setProperty("cursorPosition", int(body->property("text").toString().size()));
+    QTRY_VERIFY(fence->isVisible());
+    QCOMPARE(fence->property("text").toString(), u"..."_s);
+    body->setProperty("text", u" ---\ntags: [a]\n---\nBody\n"_s);
+    QTRY_VERIFY(!fence->isVisible());
 }
 
 void TestNoteEditor::keepsOneCursorAcrossViModes()
