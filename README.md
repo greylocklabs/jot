@@ -59,6 +59,14 @@ jot import joplin notes.jex      # or a Joplin export
 
 `--json` gives scripts the same, and the shell completions know your notebooks and notes.
 
+## Settings
+
+Preferences live in `$XDG_CONFIG_HOME/jot/settings.ini`, which can be copied or synced to another
+computer as it is. What belongs to this computer goes in `local.ini` beside it: the vault's folder,
+each vault's sync settings, the window's column widths and the modes it was left in, folded
+notebooks and tags, the to-do view shown, the quick capture shortcut, and the last version run.
+Sign-ins stay in the system keyring, and a vault's own settings in its `.jot/vault.yaml`.
+
 ## Development
 
 On Fedora 44+, Debian 13+ or Ubuntu 26.04+, in a clone made with `git clone --recurse-submodules`:
