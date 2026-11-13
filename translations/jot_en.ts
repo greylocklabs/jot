@@ -4809,6 +4809,54 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Title, when the file name cannot hold it</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Tags, as a list</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Other names links can use</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>When the note was made</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The note&apos;s type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Words the note is to reach</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The language spelling is checked in</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>off keeps its checkboxes out of Tasks</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Used in other notes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Keep its checkboxes out of Tasks</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>List its checkboxes in Tasks</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Now</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>From the Joplin app on this computer</source>
         <translation type="unfinished"></translation>
     </message>

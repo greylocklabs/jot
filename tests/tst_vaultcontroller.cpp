@@ -95,6 +95,7 @@ private Q_SLOTS:
     void attachesDroppedFilesAndPastedImages();
     void listsBacklinksAndMentions();
     void previewsWhatALinkLeadsTo();
+    void suggestsFrontMatterKeysAndValues();
     void listsAndTicksWhatIsLeftToDo();
     void headsToDosByDay();
     void undoesAndRedoesTicks();
@@ -1981,6 +1982,31 @@ void TestVaultController::listsBacklinksAndMentions()
 
     m_vault->setCurrent(u"Recipes/Sourdough.md"_s);
     QCOMPARE(links.rowCount(), 0);
+}
+
+void TestVaultController::suggestsFrontMatterKeysAndValues()
+{
+    QFile mood(m_root + u"/Mood.md"_s);
+    QVERIFY(mood.open(QIODevice::WriteOnly));
+    mood.write("---\nmood: calm\n---\nQuiet.\n");
+    mood.close();
+    QVERIFY(m_vault->openPath(m_root));
+    const auto texts = [this](const QString &kind, const QString &key, const QString &typed) {
+        QStringList found;
+        for (const QVariant &item : m_vault->frontMatterSuggestions(kind, key, typed))
+            found.append(item.toMap().value(u"text"_s).toString());
+        return found;
+    };
+    // Jot's own keys first, then those other notes use.
+    QCOMPARE(texts(u"key"_s, {}, {}).first(), u"title"_s);
+    QCOMPARE(texts(u"key"_s, {}, u"mo"_s), QStringList{u"mood"_s});
+    // A key already typed whole is not offered again.
+    QVERIFY(!texts(u"key"_s, {}, u"tags"_s).contains(u"tags"_s));
+    QVERIFY(texts(u"value"_s, u"type"_s, {}).contains(u"location"_s));
+    QCOMPARE(texts(u"value"_s, u"tags"_s, u"foo"_s), QStringList{u"food"_s});
+    QCOMPARE(texts(u"value"_s, u"created"_s, {}).first(),
+             QDate::currentDate().toString(Qt::ISODate));
+    QVERIFY(texts(u"value"_s, u"title"_s, {}).isEmpty());
 }
 
 void TestVaultController::previewsWhatALinkLeadsTo()
