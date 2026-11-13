@@ -7,8 +7,9 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ### Changed
 
-- A notebook lists and counts only its own notes, as Joplin does; notes in the notebooks inside
-  it show there. A search within a notebook still finds them, and All notes lists every note.
+- A notebook lists and counts only its own notes, as Joplin does, in the app and in `jot ls`;
+  notes in the notebooks inside it show there. A search within a notebook still finds them, and
+  All notes lists every note.
 
 ### Fixed
 

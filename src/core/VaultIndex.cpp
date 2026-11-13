@@ -597,6 +597,14 @@ QList<NoteInfo> VaultIndex::shownIn(const QString &folder) const
     return notes;
 }
 
+QList<NoteInfo> VaultIndex::listedIn(const QString &folder) const
+{
+    QList<NoteInfo> notes = shownIn(folder);
+    if (!folder.isEmpty())
+        notes.removeIf([&folder](const NoteInfo &note) { return folderOf(note.path) != folder; });
+    return notes;
+}
+
 QHash<QString, int> VaultIndex::noteCounts() const
 {
     QSqlQuery query(u"SELECT path FROM notes"_s, QSqlDatabase::database(m_connection));

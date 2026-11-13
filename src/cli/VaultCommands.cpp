@@ -102,7 +102,7 @@ int VaultCommands::list(const QString &notebook, const QString &order, bool json
         m_err << tr("jot: no notebook called %1").arg(notebook) << "\n";
         return 1;
     }
-    QList<NoteInfo> notes = m_index.shownIn(notebook);
+    QList<NoteInfo> notes = m_index.listedIn(notebook);
     // Without the favorites when the layout cannot be read, which is said once.
     QString error;
     const std::optional<Layout> layout = Layout::read(m_vault, &error);
