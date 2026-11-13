@@ -115,6 +115,7 @@ private Q_SLOTS:
     void readsDiagramsAsPictures();
     void tickingARepeatingToDoWritesTheNext();
     void editsInViModes();
+    void runsViCommands();
     void showsWhereViIsAlongTheFoot();
     void keepsOneCursorAcrossViModes();
     void formatsWithTheShortcutsChosen();
@@ -2504,6 +2505,64 @@ void TestNoteEditor::editsInViModes()
     body->setProperty("cursorPosition", 0);
     type(u"j"_s);
     QCOMPARE(text(), u"jha big beta\n**z**"_s);
+}
+
+void TestNoteEditor::runsViCommands()
+{
+    m_settings->setViMode(true);
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    auto *vi = body->findChild<QObject *>(u"vi"_s);
+    QQuickItem *command = find(u"viCommand"_s);
+    QQuickItem *message = find(u"viMessage"_s);
+    body->forceActiveFocus();
+    body->setProperty("text", u"one cat\ntwo cat cat\nthree"_s);
+    body->setProperty("cursorPosition", 0);
+    const auto text = [body] { return body->property("text").toString(); };
+    const auto type = [this](const QString &keys) {
+        for (const QChar c : keys)
+            QTest::keyClick(m_window.get(), c.toLatin1());
+    };
+    const auto run = [&](const QString &typed) {
+        type(u":"_s);
+        QTRY_VERIFY(command->hasActiveFocus());
+        type(typed);
+        QTest::keyClick(m_window.get(), Qt::Key_Return);
+        QTRY_VERIFY(body->hasActiveFocus());
+    };
+
+    // A line number goes there, $ to the end.
+    run(u"3"_s);
+    QCOMPARE(vi->property("line").toInt(), 3);
+    run(u"0"_s);
+    QCOMPARE(vi->property("line").toInt(), 1);
+    run(u"$"_s);
+    QCOMPARE(vi->property("line").toInt(), 3);
+
+    // Replacing on the line takes the first match, or every one with g.
+    run(u"2"_s);
+    run(u"s/cat/dog/"_s);
+    QCOMPARE(text(), u"one cat\ntwo dog cat\nthree"_s);
+    run(u"%s/cat/cow/g"_s);
+    QCOMPARE(text(), u"one cow\ntwo dog cow\nthree"_s);
+    QVERIFY(message->property("text").toString().contains(u"2"_s));
+    // The whole note's replace is one step to undo.
+    type(u"u"_s);
+    QCOMPARE(text(), u"one cat\ntwo dog cat\nthree"_s);
+    run(u"s/zebra/x/"_s);
+    QVERIFY(message->property("text").toString().contains(u"zebra"_s));
+
+    // What it does not know, it says; Escape leaves without running anything.
+    run(u"frobnicate"_s);
+    QVERIFY(message->property("text").toString().contains(u"frobnicate"_s));
+    run(u"3"_s);
+    type(u":"_s);
+    QTRY_VERIFY(command->hasActiveFocus());
+    type(u"1"_s);
+    QTest::keyClick(m_window.get(), Qt::Key_Escape);
+    QTRY_VERIFY(body->hasActiveFocus());
+    QCOMPARE(vi->property("line").toInt(), 3);
+    QCOMPARE(vi->property("mode").toString(), u"normal"_s);
 }
 
 void TestNoteEditor::keepsOneCursorAcrossViModes()

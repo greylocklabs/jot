@@ -9,9 +9,12 @@
 #include <QInputMethod>
 #include <QKeyEvent>
 #include <QQuickTextDocument>
+#include <QRegularExpression>
 #include <QTextBlock>
 #include <QTextCursor>
 #include <QTextDocument>
+
+#include <algorithm>
 
 using namespace Qt::StringLiterals;
 
@@ -182,6 +185,13 @@ bool ViEditor::key(const QKeyEvent *event)
     if (name.isEmpty())
         return false;
 
+    // The command line opens on `:`, or on Space when `:` leads.
+    const bool colonLeads = m_router && m_router->leaderKey() == u":";
+    if (m_mode != kVisual && m_pending.isEmpty() &&
+        (!m_router || m_router->pending() != u"leader") && name == (colonLeads ? u" "_s : u":"_s)) {
+        Q_EMIT commandLineRequested();
+        return true;
+    }
     if (m_router && m_router->viMode() && m_pending.isEmpty() &&
         (m_router->pending() == u"leader" || name == m_router->leaderKey())) {
         m_router->press(name);
@@ -550,6 +560,108 @@ void ViEditor::setCursor(int position)
 bool ViEditor::writable() const
 {
     return m_target && !m_target->property("readOnly").toBool();
+}
+
+QString ViEditor::runCommand(const QString &command)
+{
+    const QString typed = command.trimmed();
+    QTextDocument *text = document();
+    if (typed.isEmpty() || !text)
+        return {};
+    const auto toLine = [this, text](int number) {
+        const QTextBlock block =
+            text->findBlockByNumber(std::clamp(number, 1, text->blockCount()) - 1);
+        setCursor(block.position());
+        return QString();
+    };
+    bool number = false;
+    const int line = typed.toInt(&number);
+    if (number)
+        return toLine(line);
+    if (typed == u"$")
+        return toLine(text->blockCount());
+    const auto trigger = [this](const QString &id) {
+        if (m_router)
+            Q_EMIT m_router->triggered(id);
+    };
+    if (typed == u"w") {
+        trigger(u"save"_s);
+        return {};
+    }
+    if (typed == u"q") {
+        trigger(u"closeTab"_s);
+        return {};
+    }
+    if (typed == u"wq" || typed == u"x") {
+        trigger(u"save"_s);
+        trigger(u"closeTab"_s);
+        return {};
+    }
+    if (typed == u"noh" || typed == u"nohlsearch") {
+        endSteps();
+        Q_EMIT highlightsCleared();
+        return {};
+    }
+    const bool everywhere = typed.startsWith(u"%s");
+    if (!everywhere && !typed.startsWith(u's'))
+        return tr("Not a command: %1").arg(typed);
+    // s/old/new/flags, with any character in place of the slash, and a backslash before one
+    // meant as is.
+    const QString rest = typed.mid(everywhere ? 2 : 1);
+    if (rest.isEmpty() || rest.front().isLetterOrNumber() || rest.front().isSpace())
+        return tr("Not a command: %1").arg(typed);
+    const QChar slash = rest.front();
+    QStringList parts{QString()};
+    for (qsizetype i = 1; i < rest.size(); ++i) {
+        if (rest.at(i) == u'\\' && i + 1 < rest.size() && rest.at(i + 1) == slash) {
+            parts.last() += slash;
+            ++i;
+        } else if (rest.at(i) == slash && parts.size() < 3) {
+            parts.append(QString());
+        } else {
+            parts.last() += rest.at(i);
+        }
+    }
+    if (parts.size() < 2 || parts.first().isEmpty())
+        return tr("Not a command: %1").arg(typed);
+    const QString flags = parts.size() > 2 ? parts.at(2) : QString();
+    QRegularExpression pattern(parts.at(0), flags.contains(u'i')
+                                                ? QRegularExpression::CaseInsensitiveOption
+                                                : QRegularExpression::NoPatternOption);
+    if (!pattern.isValid())
+        return tr("Not a pattern: %1").arg(pattern.errorString());
+    if (!writable())
+        return tr("This note cannot be changed");
+    const bool all = flags.contains(u'g');
+    const QString after = parts.at(1);
+    const QTextBlock first = everywhere ? text->begin() : text->findBlock(cursor());
+    const QTextBlock last = everywhere ? text->lastBlock() : first;
+    QTextCursor edit(text);
+    edit.beginEditBlock();
+    int changed = 0;
+    for (QTextBlock block = first; block.isValid(); block = block.next()) {
+        const QString was = block.text();
+        QString now = was;
+        if (all) {
+            now.replace(pattern, after);
+        } else if (const QRegularExpressionMatch m = pattern.match(was); m.hasMatch()) {
+            QString one = was.mid(m.capturedStart(), m.capturedLength());
+            one.replace(pattern, after);
+            now = was.left(m.capturedStart()) + one + was.mid(m.capturedEnd());
+        }
+        if (now != was) {
+            edit.setPosition(block.position());
+            edit.setPosition(block.position() + int(was.size()), QTextCursor::KeepAnchor);
+            edit.insertText(now);
+            ++changed;
+        }
+        if (block == last)
+            break;
+    }
+    edit.endEditBlock();
+    if (changed == 0)
+        return tr("Not found: %1").arg(parts.at(0));
+    return everywhere ? tr("Replaced on %n line(s)", "", changed) : QString();
 }
 
 } // namespace jot

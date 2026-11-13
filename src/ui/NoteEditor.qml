@@ -1113,6 +1113,12 @@ Rectangle {
                     onLeaveRequested: root.leftNote()
                     onYanked: (start, end) => styler.flash(start, end)
                     onMatchesChanged: styler.setMatches(matches)
+                    onCommandLineRequested: statusLine.openCommand()
+                    onHighlightsCleared: {
+                        styler.setMatches([])
+                        if (findBar.visible)
+                            findBar.close()
+                    }
                 }
 
                 // The text is read for a table once typing pauses, so Edit as table can say
@@ -1883,6 +1889,11 @@ Rectangle {
         column: vi.column
         pickedLines: vi.pickedLines
         place: vi.percent + "%"
+        onRun: typed => {
+            body.forceActiveFocus()
+            statusLine.say(vi.runCommand(typed))
+        }
+        onCancelled: body.forceActiveFocus()
     }
 
     ConflictResolver {
