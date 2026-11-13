@@ -2312,14 +2312,18 @@ QVariantMap VaultController::joplinFinished(const QString &file, bool dryRun, bo
             m_watcher->start();
         reloadModels();
         // The watcher was restarted, so it will not report what the import wrote, even one that
-        // failed partway: the note shown is read again if its file changed, or the next
-        // keystroke would save over the import. What was typed was saved first, so nothing is
-        // lost.
+        // failed partway: if it changed the note shown, that is taken in as any outside edit is,
+        // merging with what was typed while it ran, or the next keystroke would save over it.
         if (!m_current.isEmpty()) {
             QString ignored;
-            if (notefile::read(m_vault->absolute(m_current), &ignored).value_or(m_currentText) !=
-                m_currentText)
-                readCurrent();
+            if (const std::optional<QString> theirs =
+                    notefile::read(m_vault->absolute(m_current), &ignored);
+                theirs && *theirs != m_savedText) {
+                if (m_unsaved)
+                    takeOutsideEdit(*theirs);
+                else
+                    readCurrent();
+            }
         }
     }
     if (!done) {
