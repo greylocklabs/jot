@@ -133,6 +133,7 @@ QList<KeyAction> KeyRouter::actions()
             {}, u"f"_s),
         act(u"typewriter"_s, tr("Typewriter scrolling: keep the line in the middle"), window, {},
             {}, u"w"_s),
+        act(u"lineNumbers"_s, tr("Line numbers beside the note"), window, {}),
         act(u"distractionFree"_s, tr("Fullscreen with only the note"), window, {u"F11"_s}),
         act(u"readMode"_s, tr("Read the note, or write in it"), window, {u"Ctrl+Shift+R"_s}, {},
             u"v"_s),

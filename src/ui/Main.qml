@@ -896,6 +896,7 @@ ApplicationWindow {
             return Vault.tabs.length > 1
         case "focusMode":
         case "typewriter":
+        case "lineNumbers":
         case "distractionFree":
             return Vault.isOpen
         case "export":
@@ -1070,6 +1071,9 @@ ApplicationWindow {
             break
         case "typewriter":
             Settings.typewriter = !Settings.typewriter
+            break
+        case "lineNumbers":
+            Settings.lineNumbers = !Settings.lineNumbers
             break
         case "distractionFree":
             window.setDistractionFree(!window.distractionFree)

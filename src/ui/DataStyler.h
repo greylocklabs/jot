@@ -37,9 +37,9 @@ public:
     void setKind(const QString &kind);
     [[nodiscard]] QVariantMap problem() const;
 
-    /// The lines that start between `top` and `bottom` in the text's own layout, each as its
-    /// number from 1 and where it starts.
-    Q_INVOKABLE QVariantList lineTops(qreal top, qreal bottom) const;
+    /// The lines of `document` that start between `top` and `bottom` in its layout, each as its
+    /// number from 1, where it starts, and the height of its first line.
+    Q_INVOKABLE static QVariantList lineTops(QQuickTextDocument *document, qreal top, qreal bottom);
     /// Where the bracket at or just before `position` and its partner are, outside strings;
     /// empty when there is none there or it has no partner.
     Q_INVOKABLE QVariantList brackets(int position) const;

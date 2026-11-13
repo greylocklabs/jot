@@ -164,12 +164,12 @@ void DataStyler::checkNow()
     Q_EMIT problemChanged();
 }
 
-QVariantList DataStyler::lineTops(qreal top, qreal bottom) const
+QVariantList DataStyler::lineTops(QQuickTextDocument *quick, qreal top, qreal bottom)
 {
     QVariantList lines;
-    if (!m_document || !m_document->textDocument())
+    if (!quick || !quick->textDocument())
         return lines;
-    QTextDocument *document = m_document->textDocument();
+    QTextDocument *document = quick->textDocument();
     QAbstractTextDocumentLayout *layout = document->documentLayout();
     int number = 1;
     for (QTextBlock block = document->begin(); block.isValid(); block = block.next(), ++number) {
@@ -178,7 +178,12 @@ QVariantList DataStyler::lineTops(qreal top, qreal bottom) const
             continue;
         if (box.top() > bottom)
             break;
-        lines.append(QVariantMap{{u"number"_s, number}, {u"y"_s, box.top()}});
+        // The first line's height, so a number can sit level with a line taller than its own.
+        const QTextLayout *text = block.layout();
+        const qreal height =
+            text && text->lineCount() > 0 ? text->lineAt(0).height() : box.height();
+        lines.append(
+            QVariantMap{{u"number"_s, number}, {u"y"_s, box.top()}, {u"height"_s, height}});
     }
     return lines;
 }

@@ -509,6 +509,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Lines</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show line numbers beside the note</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Delete</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2400,6 +2408,10 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Show line numbers beside notes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Keep these notes the same as a copy elsewhere, in another folder, such as a NAS, a USB drive or a network share, or in an S3 bucket, and so on other computers syncing with it. Jot syncs when it opens, shortly after you write, and every few minutes, unless it is set to sync only when asked. Where both copies changed, it merges them, or keeps both.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3906,6 +3918,10 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>Typewriter scrolling: keep the line in the middle</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Line numbers beside the note</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
