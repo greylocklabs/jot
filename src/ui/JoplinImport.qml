@@ -5,7 +5,8 @@ import QtQuick.Dialogs
 
 /// Brings Joplin's notes into the notes folder: from the Joplin app on this computer when there
 /// is one, or from a .jex export, see what importing would do, then import. Importing again is
-/// safe, so the summary says what is new.
+/// safe, so the summary says what is new. Both run in the background, and the summary shows when
+/// they finish, even if the dialog was closed meanwhile.
 Popup {
     id: root
 
@@ -15,10 +16,20 @@ Popup {
     /// What importing would do, then what it did, as Vault.importJoplin() gives it.
     property var summary: ({})
     property bool imported: false
+    /// Looking at what importing would do, so there is no summary yet.
+    property bool looking: false
+    /// Importing, after Import was pressed.
+    property bool importing: false
+    readonly property bool busy: looking || importing
 
     /// Brings Joplin's notes into the notebook at `folder`, asking for an export when the Joplin
     /// app is not on this computer.
     function start(folder) {
+        // One at a time: asking again shows the one under way.
+        if (root.busy) {
+            root.open()
+            return
+        }
         root.folder = folder
         const profile = Vault.joplinProfile()
         if (profile.toString() === "")
@@ -30,8 +41,27 @@ Popup {
     function preview(file) {
         root.file = file
         root.imported = false
-        root.summary = Vault.importJoplin(file, root.folder, true)
+        root.summary = {}
+        root.looking = true
         root.open()
+        Vault.startJoplinImport(file, root.folder, true)
+    }
+
+    function title() {
+        if (root.imported)
+            return qsTr("Imported from Joplin")
+        if (root.looking || root.summary.ok === true)
+            return qsTr("Import from Joplin?")
+        return qsTr("Could not import from Joplin")
+    }
+
+    function importLabel() {
+        if (!root.importing)
+            return qsTr("Import")
+        if (Vault.joplinImportTotal === 0)
+            return qsTr("Importing...")
+        return qsTr("Importing %1 of %2...").arg(Vault.joplinImportDone).arg(
+                    Vault.joplinImportTotal)
     }
 
     function counts(s) {
@@ -48,6 +78,18 @@ Popup {
             parts.push(s.attachments === 1 ? qsTr("1 attachment") : qsTr("%1 attachments").arg(
                                                  s.attachments))
         return parts.join(", ")
+    }
+
+    Connections {
+        target: Vault
+        enabled: root.busy
+        function onJoplinImportFinished(summary) {
+            root.summary = summary
+            root.imported = root.importing && summary.ok === true
+            root.looking = false
+            root.importing = false
+            root.open()
+        }
     }
 
     anchors.centerIn: Overlay.overlay
@@ -86,8 +128,7 @@ Popup {
             // Room for the X in the corner.
             width: parent.width - Theme.space7
             wrapMode: Text.Wrap
-            text: !root.summary.ok ? qsTr("Could not import from Joplin") : root.imported ? qsTr("Imported from Joplin") :
-                                                                                            qsTr("Import from Joplin?")
+            text: root.title()
             color: Theme.text
             font.family: Theme.displayFontFamily
             font.pixelSize: Theme.textLg
@@ -110,8 +151,9 @@ Popup {
             width: parent.width
             wrapMode: Text.Wrap
             textFormat: Text.PlainText
-            text: root.summary.ok ? root.counts(root.summary) : (root.summary.error ?? "")
-            color: root.summary.ok ? Theme.text : Theme.danger
+            text: root.looking ? qsTr("Looking at what to import...") : root.summary.ok
+                                 ? root.counts(root.summary) : (root.summary.error ?? "")
+            color: root.summary.ok || root.looking ? Theme.text : Theme.danger
             font.family: Theme.fontFamily
             font.pixelSize: Theme.textMd
         }
@@ -169,20 +211,24 @@ Popup {
                 objectName: "confirmImport"
                 accent: true
                 visible: root.summary.ok === true && !root.imported
-                enabled: Vault.writable
-                text: qsTr("Import")
+                enabled: Vault.writable && !root.busy
+                text: root.importLabel()
                 onClicked: {
-                    root.summary = Vault.importJoplin(root.file, root.folder, false)
-                    root.imported = root.summary.ok === true
+                    root.importing = true
+                    // One that cannot start, as when the note being edited cannot be saved, finishes
+                    // at once with the reason.
+                    Vault.startJoplinImport(root.file, root.folder, false)
                 }
             }
             StickerButton {
-                text: root.imported || !root.summary.ok ? qsTr("Done") : qsTr("Cancel")
+                // Closing leaves an import running; the summary shows when it finishes.
+                text: root.busy ? qsTr("Close") : root.imported || !root.summary.ok ? qsTr("Done") :
+                                                                                      qsTr("Cancel")
                 onClicked: root.close()
             }
             StickerButton {
                 objectName: "chooseExport"
-                visible: !root.imported
+                visible: !root.imported && !root.busy
                 text: qsTr("Use an export...")
                 tip: qsTr("Import a .jex file exported from Joplin instead")
                 onClicked: {

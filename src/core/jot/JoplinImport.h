@@ -6,6 +6,7 @@
 #include <QString>
 #include <QStringList>
 
+#include <functional>
 #include <optional>
 
 namespace jot {
@@ -57,8 +58,9 @@ struct JoplinImport
 /// folders, merging with folders of the same name; Joplin's `:/id` links become relative links;
 /// and each attachment goes into the `.assets` folder of the first note that uses it. With
 /// `dryRun` nothing is written. Nothing when the vault cannot be written, with `error` set.
-[[nodiscard]] std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport &from,
-                                                       const QString &folder, bool dryRun,
-                                                       QString *error);
+/// `progress`, when given, hears how many of the notes to write are written so far.
+[[nodiscard]] std::optional<JoplinImport>
+importJoplin(const Vault &vault, const JoplinExport &from, const QString &folder, bool dryRun,
+             QString *error, const std::function<void(int done, int total)> &progress = {});
 
 } // namespace jot

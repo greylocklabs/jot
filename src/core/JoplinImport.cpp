@@ -173,7 +173,8 @@ int JoplinImport::count(Outcome outcome) const
 }
 
 std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport &from,
-                                         const QString &folder, bool dryRun, QString *error)
+                                         const QString &folder, bool dryRun, QString *error,
+                                         const std::function<void(int done, int total)> &progress)
 {
     if (!dryRun && !vault.writable()) {
         *error = QObject::tr("this vault is from a newer Jot, so this one only reads it");
@@ -505,6 +506,8 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
     };
 
     int written = 0;
+    if (progress)
+        progress(0, int(writes.size()));
     for (const Planned &write : writes) {
         const auto &note = *write.note;
         const QString text = fileText(note, write.title, write.path, note.body, true);
@@ -520,6 +523,8 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
             }
         }
         ledger.notes[note.id] = {write.path, iso(note.updated), sha(text)};
+        if (progress)
+            progress(written + 1, int(writes.size()));
         // Now and then on the way, so a long import cut short leaves little to bring again.
         if (++written % 50 == 0) {
             QString why;

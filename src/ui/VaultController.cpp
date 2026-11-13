@@ -94,6 +94,9 @@ VaultController::VaultController(Settings &settings, QObject *parent)
 VaultController::~VaultController()
 {
     saveNow();
+    // An import under way finishes, so its files are whole; what it did goes unsaid.
+    if (m_joplinThread)
+        m_joplinThread->wait();
     if (s_instance == this)
         s_instance = nullptr;
 }
@@ -2211,45 +2214,117 @@ QUrl VaultController::joplinProfile() const
     return database.isEmpty() ? QUrl() : QUrl::fromLocalFile(database);
 }
 
-QVariantMap VaultController::importJoplin(const QUrl &file, const QString &folder, bool dryRun)
+namespace {
+
+QVariantMap joplinFailed(const QString &why)
 {
-    const auto failed = [](const QString &why) {
-        return QVariantMap{{u"ok"_s, false}, {u"error"_s, why}};
-    };
-    if (!m_vault)
-        return failed(tr("No notes folder is open."));
-    QString error;
-    const std::optional<JoplinExport> from = readJoplin(file.toLocalFile(), &error);
+    return {{u"ok"_s, false}, {u"error"_s, why}};
+}
+
+std::optional<JoplinImport> runJoplinImport(const Vault &vault, const QString &file,
+                                            const QString &folder, bool dryRun, QString *error,
+                                            const std::function<void(int, int)> &progress = {})
+{
+    const std::optional<JoplinExport> from = readJoplin(file, error);
     if (!from)
-        return failed(error);
+        return std::nullopt;
+    return jot::importJoplin(vault, *from, folder, dryRun, error, progress);
+}
+
+} // namespace
+
+std::optional<QVariantMap> VaultController::joplinCannotStart(bool dryRun)
+{
+    if (!m_vault)
+        return joplinFailed(tr("No notes folder is open."));
     // What is typed so far is saved first, so the import cannot pass it by; if it cannot be
     // saved, nothing is imported, as reading the note again afterwards would lose it.
     if (!dryRun) {
         saveNow();
         if (m_unsaved)
-            return failed(tr("Could not save the note being edited, so nothing was imported."));
+            return joplinFailed(
+                tr("Could not save the note being edited, so nothing was imported."));
     }
+    return std::nullopt;
+}
+
+QVariantMap VaultController::importJoplin(const QUrl &file, const QString &folder, bool dryRun)
+{
+    if (const std::optional<QVariantMap> failed = joplinCannotStart(dryRun))
+        return *failed;
+    QString error;
     const std::optional<JoplinImport> done =
-        jot::importJoplin(*m_vault, *from, folder, dryRun, &error);
-    if (!dryRun) {
+        runJoplinImport(*m_vault, file.toLocalFile(), folder, dryRun, &error);
+    return joplinFinished(file.toLocalFile(), dryRun, true, done, error);
+}
+
+void VaultController::startJoplinImport(const QUrl &file, const QString &folder, bool dryRun)
+{
+    if (m_joplinThread)
+        return;
+    if (const std::optional<QVariantMap> failed = joplinCannotStart(dryRun)) {
+        Q_EMIT joplinImportFinished(*failed);
+        return;
+    }
+    m_joplinDone = 0;
+    m_joplinTotal = 0;
+    const Vault vault = *m_vault;
+    const QString path = file.toLocalFile();
+    m_joplinThread = QThread::create([this, vault, path, folder, dryRun] {
+        const auto progress = [this](int done, int total) {
+            QMetaObject::invokeMethod(
+                this,
+                [this, done, total] {
+                    m_joplinDone = done;
+                    m_joplinTotal = total;
+                    Q_EMIT joplinImportChanged();
+                },
+                Qt::QueuedConnection);
+        };
+        QString error;
+        const std::optional<JoplinImport> done =
+            runJoplinImport(vault, path, folder, dryRun, &error, progress);
+        QMetaObject::invokeMethod(
+            this,
+            [this, root = vault.root(), path, dryRun, done, error] {
+                m_joplinThread->wait();
+                m_joplinThread = nullptr;
+                const bool sameVault = m_vault && m_vault->root() == root;
+                const QVariantMap summary = joplinFinished(path, dryRun, sameVault, done, error);
+                Q_EMIT joplinImportChanged();
+                Q_EMIT joplinImportFinished(summary);
+            },
+            Qt::QueuedConnection);
+    });
+    connect(m_joplinThread, &QThread::finished, m_joplinThread, &QObject::deleteLater);
+    m_joplinThread->start(QThread::LowPriority);
+    Q_EMIT joplinImportChanged();
+}
+
+QVariantMap VaultController::joplinFinished(const QString &file, bool dryRun, bool sameVault,
+                                            const std::optional<JoplinImport> &done,
+                                            const QString &error)
+{
+    if (!dryRun && sameVault) {
         // Even a failed import may have written some notes, which the lists should show.
         m_index->refresh();
         if (m_watcher)
             m_watcher->start();
         reloadModels();
-    }
-    // The watcher was restarted, so it will not report what the import wrote, even one that
-    // failed partway: the note shown is read again if its file changed, or the next keystroke
-    // would save over the import. What was typed was saved first, so nothing is lost.
-    if (!dryRun && !m_current.isEmpty()) {
-        QString ignored;
-        if (notefile::read(m_vault->absolute(m_current), &ignored).value_or(m_currentText) !=
-            m_currentText)
-            readCurrent();
+        // The watcher was restarted, so it will not report what the import wrote, even one that
+        // failed partway: the note shown is read again if its file changed, or the next
+        // keystroke would save over the import. What was typed was saved first, so nothing is
+        // lost.
+        if (!m_current.isEmpty()) {
+            QString ignored;
+            if (notefile::read(m_vault->absolute(m_current), &ignored).value_or(m_currentText) !=
+                m_currentText)
+                readCurrent();
+        }
     }
     if (!done) {
-        qCWarning(lcVault) << "could not import" << file.toLocalFile() << error;
-        return failed(error);
+        qCWarning(lcVault) << "could not import" << file << error;
+        return joplinFailed(error);
     }
     QStringList keptEdits;
     QStringList notBroughtBack;
@@ -2259,10 +2334,9 @@ QVariantMap VaultController::importJoplin(const QUrl &file, const QString &folde
         else if (note.outcome == JoplinImport::Outcome::Removed)
             notBroughtBack.append(note.path);
     }
-    const QString local = file.toLocalFile();
-    const QString source = local == joplinProfileDatabase()
+    const QString source = file == joplinProfileDatabase()
                                ? tr("From the Joplin app on this computer")
-                               : tr("From %1").arg(QFileInfo(local).fileName());
+                               : tr("From %1").arg(QFileInfo(file).fileName());
     return {{u"ok"_s, true},
             {u"source"_s, source},
             {u"created"_s, done->count(JoplinImport::Outcome::Created)},
