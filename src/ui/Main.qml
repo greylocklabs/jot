@@ -256,6 +256,51 @@ ApplicationWindow {
                 }
                 spacing: Theme.space4
 
+                // When the notes last synced, red after a sync that failed, with a dot while
+                // changes wait for the next. On a narrow window it goes into the button's tip.
+                Row {
+                    id: syncStamp
+
+                    objectName: "syncStamp"
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: syncButton.visible && window.width >= 960 && (Vault.sync.stamp !== ""
+                                                                           || Vault.sync.problem
+                                                                           !== "")
+                    spacing: Theme.space2
+
+                    Rectangle {
+                        objectName: "syncPending"
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: Vault.sync.pending && !Vault.sync.syncing
+                        width: Theme.space2
+                        height: width
+                        radius: width / 2
+                        color: Theme.accent
+                    }
+                    Text {
+                        objectName: "syncStampText"
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: Vault.sync.stamp !== "" ? Vault.sync.stamp : qsTr("Not synced")
+                        color: Vault.sync.problem !== "" ? Theme.danger : Theme.textMuted
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.textSm
+                        font.weight: Theme.weightStrong
+                    }
+                    HoverHandler {
+                        id: stampHover
+                    }
+                    Loader {
+                        active: stampHover.hovered && Vault.sync.details !== ""
+
+                        sourceComponent: Tip {
+                            parent: syncStamp
+                            text: Vault.sync.details
+                            delay: Theme.durSlow * 2
+                            closePolicy: Popup.NoAutoClose
+                        }
+                    }
+                }
+
                 // Where the notes sync to: how it stands, and a sync at a click.
                 StickerButton {
                     id: syncButton
@@ -266,7 +311,9 @@ ApplicationWindow {
                     glyph: "refresh"
                     spinning: Vault.sync.syncing
                     Accessible.name: qsTr("Sync now")
-                    tip: Vault.sync.summary
+                    tip: syncStamp.visible || Vault.sync.details === "" ? Vault.sync.summary :
+                                                                          Vault.sync.summary + "\n"
+                                                                          + Vault.sync.details
                     onClicked: Vault.sync.syncNow()
 
                     // The last sync went wrong; the tip says how.

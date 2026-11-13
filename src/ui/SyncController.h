@@ -55,6 +55,12 @@ class SyncController : public QObject
     Q_PROPERTY(bool checking READ checking NOTIFY changed)
     /// How sync stands, in a few words: "Synced 3 minutes ago", "Syncing...".
     Q_PROPERTY(QString summary READ summary NOTIFY changed)
+    /// When the last sync that worked was, as "Updated 3:45 PM"; empty before one.
+    Q_PROPERTY(QString stamp READ stamp NOTIFY changed)
+    /// What the last sync did, and what went wrong since, in lines to hover over.
+    Q_PROPERTY(QString details READ details NOTIFY changed)
+    /// Notes changed here since the last sync, which the next one sends.
+    Q_PROPERTY(bool pending READ pending NOTIFY changed)
 
 public:
     explicit SyncController(Settings &settings, QObject *parent = nullptr);
@@ -128,6 +134,9 @@ public:
     static constexpr int kSignInMs = 5 * 60 * 1000;
     [[nodiscard]] QDateTime lastSynced() const { return m_lastSynced; }
     [[nodiscard]] QString problem() const { return m_problem; }
+    [[nodiscard]] QString stamp() const;
+    [[nodiscard]] QString details() const;
+    [[nodiscard]] bool pending() const { return m_pending; }
     [[nodiscard]] QString summary() const;
 
     /// How long after a change here a sync follows, and how often one runs regardless unless
@@ -168,6 +177,10 @@ private:
     bool m_checking = false;
     QDateTime m_lastSynced;
     QString m_problem;
+    /// When the problem came, and what the last sync that worked did.
+    QDateTime m_failedAt;
+    SyncReport m_lastReport;
+    bool m_pending = false;
     /// A commit or push asked for, to go with the next sync.
     SyncRequest m_request;
     int m_uncommitted = 0;

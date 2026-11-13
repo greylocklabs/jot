@@ -146,6 +146,11 @@ void TestGitSync::sendsAndBringsNotes()
     QVERIFY2(report.failure.isEmpty(), qPrintable(report.failure));
     QVERIFY(report.pushed.contains(u"Ashfall/Mara Vey.md"_s));
     QCOMPARE(inRemote(u"Ashfall/Mara Vey.md"_s), QByteArray("# Mara\n"));
+    // What the latest commit was, for the title bar's stamp.
+    QVERIFY(!report.lastCommit.isEmpty());
+    QVERIFY(report.commitFiles >= 1);
+    QVERIFY(report.commitAdded >= 1);
+    QCOMPARE(report.commitRemoved, 0);
     report = sync(desk);
     QVERIFY2(report.failure.isEmpty(), qPrintable(report.failure));
     QVERIFY(report.pulled.contains(u"Ashfall/Mara Vey.md"_s));
