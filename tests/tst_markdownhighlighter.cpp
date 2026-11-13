@@ -205,6 +205,15 @@ void TestMarkdownHighlighter::frontMatterIsNotMarkdown()
     QCOMPARE(yaml.foreground().color(), m_look.faint);
     QVERIFY(yaml.property(QTextFormat::FontPixelSize).toInt() < 16);
     QVERIFY(formatAt(find(u"Title"_s)).property(QTextFormat::FontPixelSize).toInt() > 24);
+    // Its closing line is room before the note, away from the cursor; on it, as written.
+    const int closing = find(u"---\n# Title"_s);
+    const QTextCharFormat room = formatAt(closing);
+    QCOMPARE(room.foreground().color(), QColor(Qt::transparent));
+    QVERIFY(room.property(QTextFormat::FontPixelSize).toInt() > m_look.pixelSize);
+    m_highlighter->setCursorPosition(closing + 1);
+    QCOMPARE(formatAt(closing).foreground().color(), m_look.faint);
+    m_highlighter->setCursorPosition(-1);
+    QCOMPARE(formatAt(closing).foreground().color(), QColor(Qt::transparent));
     // A --- later on is a rule, not front matter.
     setText(u"Text\n---\n# Title\n"_s);
     QVERIFY(formatAt(find(u"Title"_s)).property(QTextFormat::FontPixelSize).toInt() > 24);
