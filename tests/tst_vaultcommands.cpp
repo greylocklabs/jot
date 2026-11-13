@@ -130,6 +130,9 @@ void TestVaultCommands::listsNotesNewestOrByTitle()
 
     QCOMPARE(run([](auto &c) { return c.list({}, {}, false); }), 0);
     QCOMPARE(m_out.count(u'\n'), 15);
+    // A notebook lists its own notes, as the app does, not those of the notebooks in it.
+    QCOMPARE(run([](auto &c) { return c.list(u"Ashfall"_s, {}, true); }), 0);
+    QCOMPARE(json().array().size(), 3);
     QCOMPARE(run([](auto &c) { return c.list(u"Nowhere"_s, {}, false); }), 1);
     QVERIFY(m_err.contains(u"no notebook called Nowhere"_s));
     QCOMPARE(run([](auto &c) { return c.list({}, u"titel"_s, false); }), 2);
@@ -372,7 +375,7 @@ void TestVaultCommands::importsAJoplinExportAfterADryRun()
             .value_or(QString());
     QVERIFY(!text.contains(u"40.6"_s));
     // The index has it straight away, so ls and search find it.
-    QCOMPARE(run([](auto &c) { return c.list(u"From Joplin"_s, {}, true); }), 0);
+    QCOMPARE(run([](auto &c) { return c.list(u"From Joplin/Travel"_s, {}, true); }), 0);
     QCOMPARE(json().array().size(), 1);
 
     QCOMPARE(run([&](auto &c) { return c.importJoplin(jex, u"From Joplin"_s, false, false); }), 0);

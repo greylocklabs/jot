@@ -44,7 +44,7 @@ settings and folders, so it runs beside an installed Jot.
 
 ```sh
 jot status                       # the vault, its notes and what is left to do
-jot ls Recipes --order title     # notes in a notebook, or all of them
+jot ls Recipes --order title     # a notebook's own notes, or all of them
 jot search ferry tag:ashfall     # search, with tag:, in: and type: filters
 echo "Bring a lantern." | jot new "Ferry checklist" --notebook Ashfall
 jot show "mara"                  # print a note, by title, alias or path

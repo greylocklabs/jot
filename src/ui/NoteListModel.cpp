@@ -124,12 +124,7 @@ void NoteListModel::refill()
                         notes.append(note);
                 }
             } else {
-                // A notebook lists its own notes; those in its notebooks are listed there.
-                notes = m_index->shownIn(m_notebook);
-                if (!m_notebook.isEmpty())
-                    notes.removeIf([this](const NoteInfo &note) {
-                        return note.path.section(u'/', 0, -2) != m_notebook;
-                    });
+                notes = m_index->listedIn(m_notebook);
             }
             sortNotes(notes, m_order);
             for (const NoteInfo &note : std::as_const(notes))

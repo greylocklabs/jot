@@ -54,7 +54,7 @@ const cli::Paint &paintFor(int fd)
 /// The commands, for --help and for completion.
 const QList<std::pair<QString, QString>> kCommands = {
     {u"status"_s, u"The vault, how many notes it holds, and what is left to do"_s},
-    {u"ls"_s, u"List notes, newest first, in a notebook or all: jot ls Recipes"_s},
+    {u"ls"_s, u"List a notebook's own notes, newest first, or all: jot ls Recipes"_s},
     {u"search"_s, u"Search notes: jot search ferry tag:ashfall in:Notes"_s},
     {u"new"_s, u"Make a note: jot new \"Idea\"; its body is read from a pipe"_s},
     {u"show"_s, u"Print a note, by its title, an alias or its path"_s},
