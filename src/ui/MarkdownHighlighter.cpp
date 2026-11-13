@@ -563,10 +563,10 @@ void MarkdownHighlighter::styleBlock(const QString &text)
     }
     if (state == InFrontMatter) {
         const bool closing = trimmed == u"---" || trimmed == u"...";
-        // Its closing line, away from the cursor, is room between the front matter and the
-        // note, as written once the cursor is on it.
+        // Its closing line, away from the cursor, keeps room for the fence the editor draws at
+        // its top and a gap below it before the note, as written once the cursor is on it.
         if (closing && !m_cursorHere) {
-            reserve(text, int(text.indexOf(trimmed)), m_look.pixelSize * 3 / 2);
+            reserve(text, int(text.indexOf(trimmed)), m_look.pixelSize * 5 / 2);
             return;
         }
         QTextCharFormat yaml = faint;

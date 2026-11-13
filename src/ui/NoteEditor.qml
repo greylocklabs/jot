@@ -1381,6 +1381,29 @@ Rectangle {
                     width: body.width - body.leftPadding
                 }
 
+                // The front matter's closing fence, at the top of the room its line keeps below
+                // the front matter, written out once the cursor is on it.
+                Text {
+                    objectName: "frontMatterFence"
+
+                    readonly property int at: root.dataFile || Settings.sourceMode ? -1 :
+                                                                                     styler.closingFence
+                    readonly property rect line: {
+                        body.layoutTick
+                        return body.positionToRectangle(Math.max(0, Math.min(at, body.length)))
+                    }
+
+                    visible: at >= 0
+                    x: line.x
+                    y: line.y
+                    text: styler.closingFenceMark
+                    color: Theme.textFaint
+                    font.family: body.font.family
+                    // As the highlighter sizes the rest of the front matter: two below the note's
+                    // text, which zooming changes, so no fixed size of the theme's.
+                    font.pixelSize: Math.max(body.font.pixelSize - 2, 8)
+                }
+
                 Repeater {
                     model: styler.images.filter(each => !each.audio && !each.video)
 
