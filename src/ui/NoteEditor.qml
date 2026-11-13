@@ -855,7 +855,13 @@ Rectangle {
                 persistentSelection: true
                 tabStopDistance: 4 * Theme.space5
                 Accessible.name: qsTr("Note")
+                /// The text as last heard of. Restyling, as when the spelling dictionary
+                /// arrives, says the text changed too, though none of it did.
+                property string heard
                 onTextChanged: {
+                    if (text === heard)
+                        return
+                    heard = text
                     if (root.loading || root.loaded !== Vault.current)
                         return
                     Vault.edit(text)

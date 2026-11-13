@@ -2844,6 +2844,14 @@ void TestNoteEditor::suggestsOnlyWhileTypingInVi()
     vi->setProperty("mode", u"insert"_s);
     QTest::qWait(50);
     QVERIFY(popup->property("items").toList().isEmpty());
+    // Nor does restyling, as when the spelling dictionary arrives, though the editor hears of it
+    // as a change.
+    auto *styler = m_editor->findChild<QObject *>(u"styler"_s);
+    const bool focus = styler->property("focusMode").toBool();
+    styler->setProperty("focusMode", !focus);
+    styler->setProperty("focusMode", focus);
+    QTest::qWait(50);
+    QVERIFY(popup->property("items").toList().isEmpty());
     QTest::keyClick(m_window.get(), Qt::Key_G);
     QTRY_VERIFY(!popup->property("items").toList().isEmpty());
     vi->setProperty("mode", u"normal"_s);
