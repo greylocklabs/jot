@@ -21,6 +21,7 @@ private Q_SLOTS:
     void marksShowOnTheCursorsLine();
     void emphasisAndCode();
     void linksShowTheirTextOrLabel();
+    void foldedMarksTakeNoRoom();
     void fencedCodeCarriesAcrossLines();
     void codeIsColoredByItsLanguage();
     void frontMatterIsNotMarkdown();
@@ -63,6 +64,18 @@ void TestMarkdownHighlighter::init()
     m_highlighter->setLook(m_look);
     // No cursor anywhere yet, as when the document first loads.
     m_highlighter->setCursorPosition(-1);
+}
+
+void TestMarkdownHighlighter::foldedMarksTakeNoRoom()
+{
+    // A long target folds to nothing, leaving no gap before the comma after the link.
+    setText(u"We play using [Poker Now](https://www.pokernow.club/a/long/path), a free site.\n"_s);
+    m_document->setTextWidth(4000);
+    const QTextBlock block = m_document->firstBlock();
+    QTextLine line = block.layout()->lineAt(0);
+    QVERIFY(line.isValid());
+    const qreal gap = line.cursorToX(find(u","_s)) - line.cursorToX(find(u"]("_s));
+    QVERIFY2(gap < 1.0, qPrintable(QString::number(gap)));
 }
 
 void TestMarkdownHighlighter::setText(const QString &text)

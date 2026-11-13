@@ -547,9 +547,13 @@ void MarkdownHighlighter::mark(int start, int length)
     if (m_cursorHere) {
         format.setForeground(m_look.faint);
     } else {
-        // Folded away: there to edit, but taking next to no room.
+        // Folded away: there to edit, but taking next to no room. The smallest font still
+        // gives each character a pixel, which a long link target adds up to a gap, so it is
+        // squeezed too.
         format.setForeground(Qt::transparent);
         format.setProperty(QTextFormat::FontPixelSize, 1);
+        format.setFontLetterSpacingType(QFont::PercentageSpacing);
+        format.setFontLetterSpacing(1);
     }
     merge(start, length, format);
 }
