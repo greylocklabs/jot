@@ -74,6 +74,7 @@ private Q_SLOTS:
     void importsNotebooksNotesTagsAndAttachments();
     void aDryRunWritesNothingAndPlansTheSame();
     void importingAgainSkipsUpdatesAndKeepsJotEdits();
+    void keepsAnEditMadeWhileImporting();
     void findsANoteMovedInJot();
     void aSubNotebookAloneMovesUnderItsParentLater();
     void mergesWithFoldersAndNumbersClashingNames();
@@ -181,6 +182,36 @@ void TestJoplinImport::importingAgainSkipsUpdatesAndKeepsJotEdits()
     QVERIFY(again);
     QCOMPARE(again->count(JoplinImport::Outcome::Removed), 1);
     QVERIFY(!QFileInfo::exists(m_vault->absolute(u"Stories/Places/The ferry.md"_s)));
+}
+
+void TestJoplinImport::keepsAnEditMadeWhileImporting()
+{
+    QString error;
+    QVERIFY(importJoplin(*m_vault, stories(), {}, false, &error));
+    JoplinExport changed = stories();
+    changed.notes[0].body = u"Crossing at noon."_s;
+    changed.notes[0].updated = at(5);
+    changed.notes[1].body = u"Joplin's newer Mara."_s;
+    changed.notes[1].updated = at(5);
+
+    // Mara is saved from Jot after the import planned to update it, before it is written.
+    const QString edited = read(u"Stories/Mara.md"_s) + u"\nA line written in Jot.\n"_s;
+    const auto progress = [&](int done, int) {
+        if (done == 0)
+            QVERIFY(notefile::write(m_vault->absolute(u"Stories/Mara.md"_s), edited, &error));
+    };
+    const auto again = importJoplin(*m_vault, changed, {}, false, &error, progress);
+    QVERIFY(again);
+    QCOMPARE(again->count(JoplinImport::Outcome::Updated), 1);
+    QCOMPARE(again->count(JoplinImport::Outcome::ChangedInJot), 1);
+    QCOMPARE(read(u"Stories/Mara.md"_s), edited);
+    QVERIFY(read(u"Stories/Places/The ferry.md"_s).contains(u"Crossing at noon."_s));
+
+    // Importing again still sees it as edited in Jot.
+    const auto later = importJoplin(*m_vault, changed, {}, false, &error);
+    QVERIFY(later);
+    QCOMPARE(later->count(JoplinImport::Outcome::ChangedInJot), 1);
+    QCOMPARE(read(u"Stories/Mara.md"_s), edited);
 }
 
 void TestJoplinImport::findsANoteMovedInJot()
