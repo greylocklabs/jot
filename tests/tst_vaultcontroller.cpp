@@ -1879,6 +1879,8 @@ void TestVaultController::listsAndTicksWhatIsLeftToDo()
     QVERIFY(readFile(m_root + u"/Ashfall/Characters/Soren.md"_s)
                 .contains(u"- [x] decide what he wants"_s));
     QCOMPARE(tasks.rowCount(), 7);
+    // It had no day, so the count in the sidebar, of those due by today, stays.
+    QCOMPARE(tasks.todayCount(), 3);
 
     // One in the note shown goes through the editor's text, unsaved edits and all.
     m_vault->setCurrent(u"Inbox/Groceries.md"_s);
@@ -1899,6 +1901,8 @@ void TestVaultController::listsAndTicksWhatIsLeftToDo()
     QVERIFY(m_vault->currentText().startsWith(u"- [x] Groceries"_s));
     // Eggs, typed in above, came; watercolor paper and Groceries went.
     QCOMPARE(tasks.rowCount(), 6);
+    // Groceries was overdue, so the count drops.
+    QCOMPARE(tasks.todayCount(), 2);
 
     QSignalSpy reveal(m_vault.get(), &VaultController::revealPosition);
     m_vault->openAt(u"Ashfall/Characters/Soren.md"_s, 7);
