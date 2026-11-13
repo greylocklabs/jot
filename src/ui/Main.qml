@@ -256,36 +256,141 @@ ApplicationWindow {
                 }
                 spacing: Theme.space4
 
-                // When the notes last synced, red after a sync that failed, with a dot while
-                // changes wait for the next. On a narrow window it goes into the button's tip.
-                Row {
-                    id: syncStamp
+                // Where the notes sync to, as Callie shows it: a round button that syncs now, and
+                // beside it a pill saying how sync stands, which says more when hovered. On a
+                // narrow window the pill keeps only its mark, then goes, and the button's tip
+                // says it all.
+                AbstractButton {
+                    id: syncButton
+
+                    /// Turning, for at least a moment, so a sync that is over at once still shows.
+                    readonly property bool turning: Vault.sync.syncing || minimumTurn.running
+
+                    objectName: "syncButton"
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: Vault.isOpen && Vault.sync.configured
+                    width: syncStatus.height
+                    height: syncStatus.height
+                    enabled: !turning
+                    focusPolicy: Qt.NoFocus
+                    Accessible.name: qsTr("Sync now")
+                    onClicked: {
+                        minimumTurn.restart()
+                        Vault.sync.syncNow()
+                    }
+
+                    Timer {
+                        id: minimumTurn
+                        interval: Theme.durSlow * 4
+                    }
+                    // A sync Jot starts itself turns for the moment too.
+                    Connections {
+                        target: Vault.sync
+                        function onChanged() {
+                            if (Vault.sync.syncing && !minimumTurn.running)
+                                minimumTurn.restart()
+                        }
+                    }
+                    HoverHandler {
+                        cursorShape: Qt.PointingHandCursor
+                    }
+
+                    background: Rectangle {
+                        radius: height / 2
+                        color: syncButton.hovered && syncButton.enabled ? Theme.tint(syncStatus.ink,
+                                                                                     0.28) : Theme.tint(
+                                                                              syncStatus.ink, 0.16)
+                    }
+                    contentItem: Item {
+                        Glyph {
+                            id: syncGlyph
+                            anchors.centerIn: parent
+                            width: 13
+                            height: 13
+                            stroke: Theme.fineGlyphStroke
+                            name: "refresh"
+                            color: syncStatus.ink
+
+                            RotationAnimator on rotation {
+                                running: syncButton.turning && Theme.durSlow > 0
+                                from: 0
+                                to: 360
+                                duration: Theme.durSlow * 4
+                                loops: Animation.Infinite
+                                onRunningChanged: {
+                                    if (!running)
+                                        syncGlyph.rotation = 0
+                                }
+                            }
+                        }
+                    }
+
+                    Loader {
+                        active: syncButton.hovered
+
+                        sourceComponent: Tip {
+                            parent: syncButton
+                            y: syncButton.height + Theme.space2
+                            text: syncStatus.visible && !syncStatus.compact ? qsTr("Sync now") :
+                                                                              qsTr("Sync now")
+                                                                              + "\n" + Vault.sync.details
+                            delay: Theme.durSlow * 2
+                            closePolicy: Popup.NoAutoClose
+                        }
+                    }
+                }
+                Rectangle {
+                    id: syncStatus
+
+                    readonly property bool failed: Vault.sync.problem !== "" && !Vault.sync.syncing
+                    // Pink is kept for actions, so a healthy sync stays neutral.
+                    readonly property color ink: failed ? Theme.danger : Vault.sync.syncing
+                                                          ? Theme.textFaint : Theme.textMuted
+                    readonly property bool compact: window.width < 1100
 
                     objectName: "syncStamp"
                     anchors.verticalCenter: parent.verticalCenter
-                    visible: syncButton.visible && window.width >= 960 && (Vault.sync.stamp !== ""
-                                                                           || Vault.sync.problem
-                                                                           !== "")
-                    spacing: Theme.space2
+                    visible: syncButton.visible && Vault.sync.label !== "" && window.width >= 760
+                    height: 28
+                    width: compact ? height : row.implicitWidth + 2 * Theme.space4
+                    radius: height / 2
+                    color: Theme.tint(ink, 0.16)
+                    Accessible.role: Accessible.StaticText
+                    Accessible.name: Vault.sync.label
 
-                    Rectangle {
-                        objectName: "syncPending"
-                        anchors.verticalCenter: parent.verticalCenter
-                        visible: Vault.sync.pending && !Vault.sync.syncing
-                        width: Theme.space2
-                        height: width
-                        radius: width / 2
-                        color: Theme.accent
+                    Row {
+                        id: row
+
+                        anchors.centerIn: parent
+                        spacing: Theme.space3
+
+                        Glyph {
+                            id: check
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: !Vault.sync.syncing && !syncStatus.failed &&
+                                     !Vault.sync.pending
+                            name: "check"
+                            width: 12
+                            height: 12
+                            stroke: 1.8
+                            color: syncStatus.ink
+                        }
+                        Text {
+                            objectName: "syncStampText"
+                            anchors.verticalCenter: parent.verticalCenter
+                            // Compact keeps a mark for the states without a check.
+                            visible: !syncStatus.compact || !check.visible
+                            text: !syncStatus.compact ? Vault.sync.label : syncStatus.failed ? "!" :
+                                                                                               Vault.sync.pending
+                                                                                               ? String(Vault.sync.waiting.length) :
+                                                                                                 "..."
+                            color: syncStatus.ink
+                            font.family: Theme.fontFamily
+                            font.pixelSize: Theme.textSm
+                            font.weight: Theme.weightHeavy
+                        }
                     }
-                    Text {
-                        objectName: "syncStampText"
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: Vault.sync.stamp !== "" ? Vault.sync.stamp : qsTr("Not synced")
-                        color: Vault.sync.problem !== "" ? Theme.danger : Theme.textMuted
-                        font.family: Theme.fontFamily
-                        font.pixelSize: Theme.textSm
-                        font.weight: Theme.weightStrong
-                    }
+
                     HoverHandler {
                         id: stampHover
                     }
@@ -293,40 +398,12 @@ ApplicationWindow {
                         active: stampHover.hovered && Vault.sync.details !== ""
 
                         sourceComponent: Tip {
-                            parent: syncStamp
+                            parent: syncStatus
+                            y: syncStatus.height + Theme.space2
                             text: Vault.sync.details
-                            delay: Theme.durSlow * 2
+                            delay: Theme.durSlow
                             closePolicy: Popup.NoAutoClose
                         }
-                    }
-                }
-
-                // Where the notes sync to: how it stands, and a sync at a click.
-                StickerButton {
-                    id: syncButton
-
-                    objectName: "syncButton"
-                    anchors.verticalCenter: parent.verticalCenter
-                    visible: Vault.isOpen && Vault.sync.configured
-                    glyph: "refresh"
-                    spinning: Vault.sync.syncing
-                    Accessible.name: qsTr("Sync now")
-                    tip: syncStamp.visible || Vault.sync.details === "" ? Vault.sync.summary :
-                                                                          Vault.sync.summary + "\n"
-                                                                          + Vault.sync.details
-                    onClicked: Vault.sync.syncNow()
-
-                    // The last sync went wrong; the tip says how.
-                    Rectangle {
-                        visible: Vault.sync.problem !== "" && !Vault.sync.syncing
-                        width: Theme.badgeSize
-                        height: Theme.badgeSize
-                        x: parent.width - width * 0.8
-                        y: -height * 0.2
-                        radius: width / 2
-                        color: Theme.danger
-                        border.width: width / 5
-                        border.color: Theme.bg
                     }
                 }
 

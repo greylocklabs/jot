@@ -59,8 +59,13 @@ class SyncController : public QObject
     Q_PROPERTY(QString stamp READ stamp NOTIFY changed)
     /// What the last sync did, and what went wrong since, in lines to hover over.
     Q_PROPERTY(QString details READ details NOTIFY changed)
-    /// Notes changed here since the last sync, which the next one sends, as setPending() says.
+    /// Notes changed here since the last sync, which the next one sends, as setWaiting() says.
     Q_PROPERTY(bool pending READ pending NOTIFY changed)
+    /// Those notes, by vault path, a deleted one marked so.
+    Q_PROPERTY(QStringList waiting READ waiting NOTIFY changed)
+    /// How sync stands for the title bar's pill: "Syncing...", "Sync failed", "3 changes to
+    /// send" or "Updated 10:14 AM"; empty before the first sync.
+    Q_PROPERTY(QString label READ label NOTIFY changed)
 
 public:
     explicit SyncController(Settings &settings, QObject *parent = nullptr);
@@ -136,8 +141,10 @@ public:
     [[nodiscard]] QString problem() const { return m_problem; }
     [[nodiscard]] QString stamp() const;
     [[nodiscard]] QString details() const;
-    [[nodiscard]] bool pending() const { return m_pending; }
-    void setPending(bool pending);
+    [[nodiscard]] bool pending() const { return !m_waiting.isEmpty(); }
+    [[nodiscard]] QStringList waiting() const { return m_waiting; }
+    void setWaiting(const QStringList &waiting);
+    [[nodiscard]] QString label() const;
     /// When the last sync that worked began; notes changed since, apart from those it wrote,
     /// wait for the next.
     [[nodiscard]] QDateTime syncedFrom() const { return m_syncedFrom; }
@@ -188,7 +195,7 @@ private:
     QDateTime m_startedAt;
     QDateTime m_syncedFrom;
     SyncReport m_lastReport;
-    bool m_pending = false;
+    QStringList m_waiting;
     /// A commit or push asked for, to go with the next sync.
     SyncRequest m_request;
     int m_uncommitted = 0;

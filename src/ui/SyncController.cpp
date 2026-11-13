@@ -60,7 +60,7 @@ void SyncController::setVault(const QString &root, std::function<void()> save)
     m_lastSynced = {};
     m_failedAt = {};
     m_lastReport = {};
-    m_pending = false;
+    m_waiting.clear();
     m_syncedFrom = {};
     m_soon.stop();
     applyInterval();
@@ -102,11 +102,11 @@ void SyncController::reloadOptions()
     Q_EMIT changed();
 }
 
-void SyncController::setPending(bool pending)
+void SyncController::setWaiting(const QStringList &waiting)
 {
-    if (m_pending == pending)
+    if (m_waiting == waiting)
         return;
-    m_pending = pending;
+    m_waiting = waiting;
     Q_EMIT changed();
 }
 
@@ -499,37 +499,61 @@ QString SyncController::stamp() const
     return tr("Updated %1").arg(QLocale().toString(m_lastSynced.time(), QLocale::ShortFormat));
 }
 
+QString SyncController::label() const
+{
+    if (!configured())
+        return {};
+    if (syncing())
+        return tr("Syncing...");
+    if (!m_problem.isEmpty())
+        return tr("Sync failed");
+    if (!m_waiting.isEmpty())
+        return tr("%n change(s) to send", nullptr, int(m_waiting.size()));
+    return stamp();
+}
+
 QString SyncController::details() const
 {
     if (!configured())
         return {};
+    const auto when = [](const QDateTime &time) {
+        return QLocale().toString(time, QLocale::LongFormat);
+    };
     QStringList lines;
-    if (!m_problem.isEmpty()) {
-        lines << tr("Could not sync: %1").arg(m_problem);
+    if (syncing()) {
+        lines << tr("Syncing...");
+    } else if (!m_problem.isEmpty()) {
+        lines << tr("Sync failed: %1").arg(m_problem);
         if (m_failedAt.isValid())
-            lines << tr("Tried %1").arg(QLocale().toString(m_failedAt, QLocale::LongFormat));
-        if (m_lastSynced.isValid())
-            lines
-                << tr("Last worked %1").arg(QLocale().toString(m_lastSynced, QLocale::LongFormat));
-        return lines.join(u'\n');
-    }
-    if (!m_lastSynced.isValid())
-        return tr("Not synced yet");
-    lines << tr("Synced %1").arg(QLocale().toString(m_lastSynced, QLocale::LongFormat));
-    const SyncReport &last = m_lastReport;
-    if (!last.lastCommit.isEmpty()) {
-        lines << tr("Last commit: %1").arg(last.lastCommit)
-              << tr("Notes changed: %1, lines added: %2, removed: %3")
-                     .arg(last.commitFiles)
-                     .arg(last.commitAdded)
-                     .arg(last.commitRemoved);
+            lines << tr("Tried %1").arg(when(m_failedAt));
+        lines << (m_lastSynced.isValid() ? tr("Last worked %1").arg(when(m_lastSynced))
+                                         : tr("Not synced yet"));
+    } else if (!m_lastSynced.isValid()) {
+        lines << tr("Not synced yet");
     } else {
-        lines << tr("Notes sent: %1, received: %2")
-                     .arg(last.pushed.size())
-                     .arg(last.pulled.size() + last.merged.size());
+        lines << tr("Synced %1").arg(when(m_lastSynced));
+        const SyncReport &last = m_lastReport;
+        if (!last.lastCommit.isEmpty()) {
+            lines << tr("Last commit: %1").arg(last.lastCommit)
+                  << tr("Notes changed: %1, lines added: %2, removed: %3")
+                         .arg(last.commitFiles)
+                         .arg(last.commitAdded)
+                         .arg(last.commitRemoved);
+        } else {
+            lines << tr("Notes sent: %1, received: %2")
+                         .arg(last.pushed.size())
+                         .arg(last.pulled.size() + last.merged.size());
+        }
     }
-    if (m_pending)
-        lines << tr("Changes here wait for the next sync");
+    // What the next sync sends, the first few by name.
+    if (!m_waiting.isEmpty()) {
+        constexpr qsizetype kNamed = 8;
+        lines << tr("Waiting to be sent:");
+        for (const QString &path : m_waiting.first(std::min(kNamed, m_waiting.size())))
+            lines << u"    "_s + path;
+        if (m_waiting.size() > kNamed)
+            lines << u"    "_s + tr("and %n more", nullptr, int(m_waiting.size() - kNamed));
+    }
     return lines.join(u'\n');
 }
 

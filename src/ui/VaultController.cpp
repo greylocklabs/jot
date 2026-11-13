@@ -2691,7 +2691,7 @@ void VaultController::updateSyncPending()
 {
     const QDateTime since = m_sync.syncedFrom();
     if (!m_index || !since.isValid()) {
-        m_sync.setPending(false);
+        m_sync.setWaiting({});
         return;
     }
     // Changed after the last sync began, other than by it, so the next sends it.
@@ -2712,9 +2712,16 @@ void VaultController::updateSyncPending()
         now.insert(note.path);
     // One the sync wrote counts once changed after it ended.
     const qint64 ended = m_sync.lastSynced().toMSecsSinceEpoch() * 1000000;
-    m_sync.setPending(now != expected || std::ranges::any_of(notes, [&](const NoteInfo &note) {
-                          return note.modified > (written.contains(note.path) ? ended : after);
-                      }));
+    QStringList waiting;
+    for (const NoteInfo &note : notes) {
+        if (!expected.contains(note.path) ||
+            note.modified > (written.contains(note.path) ? ended : after))
+            waiting.append(note.path);
+    }
+    for (const QString &gone : expected - now)
+        waiting.append(tr("%1 (deleted)").arg(gone));
+    waiting.sort(Qt::CaseInsensitive);
+    m_sync.setWaiting(waiting);
 }
 
 void VaultController::reloadModels()

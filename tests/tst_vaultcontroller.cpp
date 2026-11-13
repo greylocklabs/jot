@@ -2153,6 +2153,7 @@ void TestVaultController::syncsWithAFolder()
     QCOMPARE(readFile(nas + u"/Inbox/Groceries.md"_s), readFile(m_root + u"/Inbox/Groceries.md"_s));
     // The title bar's stamp says when, and its details what was sent.
     QVERIFY(sync->stamp().startsWith(u"Updated "_s));
+    QCOMPARE(sync->label(), sync->stamp());
     QVERIFY2(sync->details().contains(u"Notes sent:"_s), qPrintable(sync->details()));
     QVERIFY(!sync->pending());
     // A change here waits for the next sync, which sends it.
@@ -2160,7 +2161,10 @@ void TestVaultController::syncsWithAFolder()
     m_vault->edit(m_vault->currentText() + u"More.\n"_s);
     m_vault->saveNow();
     QTRY_VERIFY(sync->pending());
-    QVERIFY(sync->details().contains(u"wait"_s));
+    // The pill says how many, and its hover which.
+    QCOMPARE(sync->waiting(), QStringList{u"Welcome.md"_s});
+    QCOMPARE(sync->label(), u"1 change(s) to send"_s);
+    QVERIFY(sync->details().contains(u"Waiting to be sent:\n    Welcome.md"_s));
 
     // A note written there comes here, and into the lists.
     QFile there(nas + u"/From the NAS.md"_s);
@@ -2187,12 +2191,20 @@ void TestVaultController::syncsWithAFolder()
     // A note moved here waits to be sent too, though its file did not change.
     QVERIFY(m_vault->moveNoteTo(u"Recipes/Pancakes.md"_s, u"Inbox"_s));
     QTRY_VERIFY(sync->pending());
+    QCOMPARE(sync->waiting(),
+             (QStringList{u"Inbox/Pancakes.md"_s, u"Recipes/Pancakes.md (deleted)"_s}));
     // A sync that fails leaves it waiting.
     QVERIFY(QDir().rename(nas, nas + u" away"_s));
     sync->syncNow();
     QVERIFY(finished.wait(10000));
     QVERIFY(!sync->problem().isEmpty());
     QVERIFY(sync->pending());
+    // Failed, the pill says so, and its hover what went wrong, when it last worked, and what
+    // still waits.
+    QCOMPARE(sync->label(), u"Sync failed"_s);
+    QVERIFY(sync->details().startsWith(u"Sync failed: "_s));
+    QVERIFY(sync->details().contains(u"Last worked"_s));
+    QVERIFY(sync->details().contains(u"Inbox/Pancakes.md"_s));
     QVERIFY(QDir().rename(nas + u" away"_s, nas));
     QTRY_VERIFY(m_vault->index()->note(u"From the NAS.md"_s));
 
