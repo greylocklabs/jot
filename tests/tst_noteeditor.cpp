@@ -2556,6 +2556,10 @@ void TestNoteEditor::runsViCommands()
     QCOMPARE(text(), u"one cat\ntwo dingo cat\nthree"_s);
     run(u"s/CAT/cow/i"_s);
     QCOMPARE(text(), u"one cat\ntwo dingo cow\nthree"_s);
+    // With g, groups and a doubled backslash read the same as for one match.
+    run(u"s/(o)/[\\1\\\\]/g"_s);
+    QCOMPARE(text(), u"one cat\ntw[o\\] ding[o\\] c[o\\]w\nthree"_s);
+    type(u"u"_s);
     type(u"u"_s);
     type(u"u"_s);
     run(u"s/zebra/x/"_s);

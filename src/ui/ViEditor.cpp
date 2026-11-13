@@ -671,11 +671,16 @@ QString ViEditor::runCommand(const QString &command)
     for (QTextBlock block = first; block.isValid(); block = block.next()) {
         const QString was = block.text();
         QString now = was;
-        if (all) {
-            now.replace(pattern, after);
-        } else if (const QRegularExpressionMatch m = pattern.match(was); m.hasMatch()) {
-            now = was.left(m.capturedStart()) + expanded(after, m) + was.mid(m.capturedEnd());
+        // Each match, or the first, with its groups put in the same way.
+        now.clear();
+        qsizetype from = 0;
+        for (const QRegularExpressionMatch &m : pattern.globalMatch(was)) {
+            now += was.mid(from, m.capturedStart() - from) + expanded(after, m);
+            from = m.capturedEnd();
+            if (!all)
+                break;
         }
+        now += was.mid(from);
         if (now != was) {
             edit.setPosition(block.position());
             edit.setPosition(block.position() + int(was.size()), QTextCursor::KeepAnchor);
