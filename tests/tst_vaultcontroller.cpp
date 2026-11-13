@@ -2153,7 +2153,7 @@ void TestVaultController::syncsWithAFolder()
     QCOMPARE(readFile(nas + u"/Inbox/Groceries.md"_s), readFile(m_root + u"/Inbox/Groceries.md"_s));
     // The title bar's stamp says when, and its details what was sent.
     QVERIFY(sync->stamp().startsWith(u"Updated "_s));
-    QVERIFY2(sync->details().contains(u"sent"_s), qPrintable(sync->details()));
+    QVERIFY2(sync->details().contains(u"Notes sent:"_s), qPrintable(sync->details()));
     QVERIFY(!sync->pending());
     // A change here waits for the next sync, which sends it.
     m_vault->setCurrent(u"Welcome.md"_s);
@@ -2173,7 +2173,7 @@ void TestVaultController::syncsWithAFolder()
     // A note the sync brought in is no change waiting to be sent.
     QTRY_VERIFY(m_vault->index()->note(u"From the NAS.md"_s));
     QVERIFY(!sync->pending());
-    QVERIFY2(sync->details().contains(u"1 received"_s), qPrintable(sync->details()));
+    QVERIFY2(sync->details().contains(u"received: 1"_s), qPrintable(sync->details()));
     // A note moved here waits to be sent too, though its file did not change.
     QVERIFY(m_vault->moveNoteTo(u"Recipes/Pancakes.md"_s, u"Inbox"_s));
     QTRY_VERIFY(sync->pending());

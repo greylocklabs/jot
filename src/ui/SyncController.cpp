@@ -519,12 +519,14 @@ QString SyncController::details() const
     const SyncReport &last = m_lastReport;
     if (!last.lastCommit.isEmpty()) {
         lines << tr("Last commit: %1").arg(last.lastCommit)
-              << tr("%n note(s) changed, ", nullptr, last.commitFiles) +
-                     tr("%n line(s) added, ", nullptr, last.commitAdded) +
-                     tr("%n removed", nullptr, last.commitRemoved);
+              << tr("Notes changed: %1, lines added: %2, removed: %3")
+                     .arg(last.commitFiles)
+                     .arg(last.commitAdded)
+                     .arg(last.commitRemoved);
     } else {
-        lines << tr("%n note(s) sent, ", nullptr, int(last.pushed.size())) +
-                     tr("%n received", nullptr, int(last.pulled.size() + last.merged.size()));
+        lines << tr("Notes sent: %1, received: %2")
+                     .arg(last.pushed.size())
+                     .arg(last.pulled.size() + last.merged.size());
     }
     if (m_pending)
         lines << tr("Changes here wait for the next sync");
