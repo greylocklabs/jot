@@ -572,9 +572,15 @@ Rectangle {
         }
         MenuEntry {
             objectName: "hideNote"
-            text: qsTr("Hide")
+            text: qsTr("Hide this note")
             enabled: Vault.writable
             onTriggered: Vault.setHidden(noteMenu.path, true)
+        }
+        MenuEntry {
+            objectName: "ignoreNote"
+            text: qsTr("Ignore this note")
+            enabled: Vault.writable
+            onTriggered: Vault.ignoreNote(noteMenu.path)
         }
         MenuEntry {
             text: qsTr("Copy link")
