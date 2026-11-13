@@ -143,6 +143,8 @@ public:
     Q_INVOKABLE void replace(int start, int end, const QString &text);
     /// The line, from 0, `position` is on.
     Q_INVOKABLE int lineAt(int position) const;
+    /// Where `line`, from 0, starts; the end of the text past the last line.
+    Q_INVOKABLE int lineStart(int line) const;
     /// Writes the days said in words on the to-do on `line`, from 0, as dates, and ticks one
     /// said done, as tidiedTaskLine() does; says whether it changed anything.
     Q_INVOKABLE bool tidyTaskLine(int line);
