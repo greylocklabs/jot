@@ -293,6 +293,72 @@ QVariantMap MarkdownStyler::markerAt(int position) const
     return {{u"start"_s, int(query->start)}, {u"text"_s, query->text}};
 }
 
+QVariantMap MarkdownStyler::frontMatterAt(int position) const
+{
+    if (!m_document || !m_document->textDocument())
+        return {};
+    const QTextDocument *document = m_document->textDocument();
+    const QTextBlock first = document->firstBlock();
+    if (first.text().trimmed() != u"---")
+        return {};
+    const QTextBlock here = document->findBlock(position);
+    if (here.blockNumber() == 0)
+        return {};
+    // Within the fences, or anywhere after an opening one not closed yet.
+    for (QTextBlock block = first.next(); block.isValid() && block != here; block = block.next()) {
+        const QString line = block.text().trimmed();
+        if (line == u"---" || line == u"...")
+            return {};
+    }
+    const QString before = here.text().left(position - here.position());
+    const auto value = [&](const QString &key, const QString &typed) {
+        return QVariantMap{{u"kind"_s, u"value"_s},
+                           {u"key"_s, key},
+                           {u"text"_s, typed},
+                           {u"start"_s, position - int(typed.size())}};
+    };
+    const qsizetype colon = before.indexOf(u':');
+    if (colon < 0) {
+        const QString trimmed = before.trimmed();
+        // A list item: the value of the key above it.
+        if (trimmed.startsWith(u'-') && (trimmed.size() == 1 || trimmed.at(1) == u' ')) {
+            for (QTextBlock block = here.previous(); block.isValid() && block != first;
+                 block = block.previous()) {
+                const QString line = block.text();
+                if (line.isEmpty() || line.front().isSpace() || line.startsWith(u'-'))
+                    continue;
+                const qsizetype at = line.indexOf(u':');
+                if (at <= 0)
+                    break;
+                return value(line.left(at).trimmed(), trimmed.mid(1).trimmed());
+            }
+            return {};
+        }
+        if (before.isEmpty() || before.front().isSpace() || before.contains(u' ') ||
+            before.startsWith(u'#'))
+            return {};
+        return {{u"kind"_s, u"key"_s}, {u"text"_s, before}, {u"start"_s, int(here.position())}};
+    }
+    if (before.front().isSpace() || colon + 1 >= before.size() || before.at(colon + 1) != u' ')
+        return {};
+    const QString key = before.left(colon).trimmed();
+    QString rest = before.mid(colon + 1).trimmed();
+    // In a list written on the line, the item after the last comma.
+    if (rest.startsWith(u'[')) {
+        rest = rest.mid(qMax(rest.lastIndexOf(u','), rest.lastIndexOf(u'[')) + 1).trimmed();
+    }
+    // What was typed ends at the cursor, so trailing spaces mean nothing is being typed.
+    if (!before.endsWith(rest))
+        rest.clear();
+    return value(key, rest);
+}
+
+QStringList MarkdownStyler::languages() const
+{
+    // Spelling off has no speller to ask, so one is made for the question.
+    return m_speller ? m_speller->availableLanguages() : Sonnet::Speller().availableLanguages();
+}
+
 QVariantList MarkdownStyler::markerSuggestions(const QString &typed)
 {
     QVariantList out;

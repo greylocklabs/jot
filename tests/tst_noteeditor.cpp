@@ -117,6 +117,7 @@ private Q_SLOTS:
     void tickingARepeatingToDoWritesTheNext();
     void editsInViModes();
     void runsViCommands();
+    void completesFrontMatter();
     void showsWhereViIsAlongTheFoot();
     void keepsOneCursorAcrossViModes();
     void formatsWithTheShortcutsChosen();
@@ -2606,6 +2607,53 @@ void TestNoteEditor::runsViCommands()
     QTRY_VERIFY(body->hasActiveFocus());
     QCOMPARE(vi->property("line").toInt(), 3);
     QCOMPARE(vi->property("mode").toString(), u"normal"_s);
+}
+
+void TestNoteEditor::completesFrontMatter()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    auto *popup = m_editor->findChild<QObject *>(u"frontMatterPopup"_s);
+    QVERIFY(popup);
+    body->forceActiveFocus();
+    body->setProperty("text", u"---\n\n---\nBody\n"_s);
+    body->setProperty("cursorPosition", 4);
+    const auto text = [body] { return body->property("text").toString(); };
+    const auto items = [popup] {
+        QStringList found;
+        for (const QVariant &item : popup->property("items").toList())
+            found.append(item.toMap().value(u"text"_s).toString());
+        return found;
+    };
+    const auto type = [this](const QString &keys) {
+        for (const QChar c : keys)
+            QTest::keyClick(m_window.get(), c.toLatin1());
+    };
+
+    // Keys Jot reads come first; Tab takes one, with its colon.
+    type(u"ta"_s);
+    QTRY_COMPARE(items().mid(0, 3), (QStringList{u"tags"_s, u"target"_s, u"tasks"_s}));
+    QTest::keyClick(m_window.get(), Qt::Key_Tab);
+    QCOMPARE(text(), u"---\ntags: \n---\nBody\n"_s);
+
+    // Then the vault's tags, in a list written on the line.
+    type(u"[fo"_s);
+    QTRY_COMPARE(items(), QStringList{u"food"_s});
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    QCOMPARE(text(), u"---\ntags: [food\n---\nBody\n"_s);
+
+    // A switch offers off and on; Escape puts them away.
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    type(u"tasks: "_s);
+    QTRY_COMPARE(items(), (QStringList{u"off"_s, u"on"_s}));
+    QTest::keyClick(m_window.get(), Qt::Key_Escape);
+    QTRY_VERIFY(items().isEmpty());
+
+    // Nothing is offered in the body.
+    body->setProperty("cursorPosition", int(text().size()));
+    type(u"ta"_s);
+    QTest::qWait(50);
+    QVERIFY(items().isEmpty());
 }
 
 void TestNoteEditor::keepsOneCursorAcrossViModes()

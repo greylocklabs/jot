@@ -92,6 +92,11 @@ lang: en_GB
 - `aliases` are other names links can use to find the note.
 - `target` is the words the note is meant to reach, shown under it as you write.
 - `lang` is the language its spelling is checked in.
+
+Typing a key at the start of a line offers the keys Jot reads and those other notes use, and
+after a key, its values: the vault's tags and types, dictionaries for `lang`, `on` and `off`,
+and today for `created`.
+
 - `tasks: off` keeps its checkboxes out of Tasks, for a checklist that holds no to-dos. They still
   tick.
 

@@ -878,6 +878,7 @@ Rectangle {
                     Qt.callLater(findLink)
                     Qt.callLater(findEmoji)
                     Qt.callLater(findMarker)
+                    Qt.callLater(findFrontMatter)
                 }
                 onCursorRectangleChanged: flick.follow(cursorRectangle)
                 onActiveFocusChanged: {
@@ -971,6 +972,56 @@ Rectangle {
                     markerPopup.highlighted = 0
                 }
 
+                /// Where the front matter key or value being typed starts, or -1, and the one
+                /// Escape put away.
+                property int frontMatterStart: -1
+                property int dismissedFrontMatter: -1
+                property string frontMatterKind
+
+                /// Offers keys at the start of a front matter line, and values after one.
+                function findFrontMatter() {
+                    const query = activeFocus && !readOnly && !root.dataFile && selectionStart
+                          === selectionEnd && linkStart < 0 && emojiStart < 0 && markerStart < 0
+                          ? styler.frontMatterAt(cursorPosition) : ({})
+                    frontMatterStart = query.start === undefined ? -1 : query.start
+                    if (frontMatterStart < 0 || frontMatterStart === dismissedFrontMatter) {
+                        if (frontMatterStart < 0)
+                            dismissedFrontMatter = -1
+                        frontMatterPopup.items = []
+                        return
+                    }
+                    frontMatterKind = query.kind
+                    let items = []
+                    if (query.kind === "value" && query.key === "lang") {
+                        const typed = query.text.toLowerCase()
+                        items = styler.languages().filter(lang => lang.toLowerCase().startsWith(
+                                                                      typed) && lang.toLowerCase()
+                                                                  !== typed).slice(0, 8).map(lang
+                                                                                             => ({
+                                                                                                 "text": lang,
+                                                                                                 "detail": ""
+                                                                                             }))
+                    } else {
+                        items = Vault.frontMatterSuggestions(query.kind, query.key ?? "",
+                                                             query.text)
+                    }
+                    frontMatterPopup.items = items
+                    frontMatterPopup.highlighted = 0
+                }
+
+                /// Writes the key chosen, with its colon, or the value.
+                function pickFrontMatter(index) {
+                    const item = frontMatterPopup.items[index]
+                    if (!item)
+                        return
+                    const start = frontMatterStart
+                    const written = frontMatterKind === "key" ? item.text + ": " : item.text
+                    frontMatterPopup.items = []
+                    dismissedFrontMatter = start
+                    styler.replace(start, cursorPosition, written)
+                    cursorPosition = start + written.length
+                }
+
                 /// Writes the marker chosen, with a space after a whole one.
                 function pickMarker(index) {
                     const item = markerPopup.items[index]
@@ -1046,6 +1097,9 @@ Rectangle {
                     if (markerPopup.items.length > 0 && styler.markerAt(cursorPosition).start
                             !== markerStart)
                         markerPopup.items = []
+                    if (frontMatterPopup.items.length > 0 && styler.frontMatterAt(
+                                cursorPosition).start !== frontMatterStart)
+                        frontMatterPopup.items = []
                 }
 
                 /// Puts `markdown` on lines of its own at `position`.
@@ -1084,6 +1138,17 @@ Rectangle {
                                                                               = body.markerStart
                                                                       markerPopup.items = []
                                                                   })) {
+                        event.accepted = true
+                        return
+                    }
+                    // And for front matter keys and values.
+                    if (frontMatterPopup.visible && body.suggestionKey(event, frontMatterPopup,
+                                                                       body.pickFrontMatter, () => {
+                                                                           body.dismissedFrontMatter
+                                                                                   = body.frontMatterStart
+                                                                           frontMatterPopup.items
+                                                                                   = []
+                                                                       })) {
                         event.accepted = true
                         return
                     }
@@ -1264,6 +1329,12 @@ Rectangle {
                         objectName: "markerPopup"
                         wanted: body.activeFocus
                         onPicked: index => body.pickMarker(index)
+                    }
+                    SuggestionPopup {
+                        id: frontMatterPopup
+                        objectName: "frontMatterPopup"
+                        wanted: body.activeFocus
+                        onPicked: index => body.pickFrontMatter(index)
                     }
                 }
 

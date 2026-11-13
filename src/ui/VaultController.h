@@ -424,6 +424,12 @@ public:
     [[nodiscard]] bool importingJoplin() const { return m_joplinThread != nullptr; }
     [[nodiscard]] int joplinImportDone() const { return m_joplinDone; }
     [[nodiscard]] int joplinImportTotal() const { return m_joplinTotal; }
+    /// What to offer for front matter being typed, as MarkdownStyler::frontMatterAt() gives
+    /// it: for a key, the keys Jot reads and then those other notes use; for a value, the
+    /// vault's tags, types, a switch's on and off, or today for `created`. Each is
+    /// `{text, detail}`, those starting with `typed` first.
+    Q_INVOKABLE QVariantList frontMatterSuggestions(const QString &kind, const QString &key,
+                                                    const QString &typed);
     /// The past versions of the note at `path`, newest first, each a map with `path` (the
     /// version's own vault path), `written`, and `label`, when it was written in words.
     Q_INVOKABLE QVariantList historyOf(const QString &path) const;
@@ -630,6 +636,8 @@ private:
     std::unique_ptr<VaultIndex> m_index;
     std::unique_ptr<VaultWatcher> m_watcher;
     QPointer<QThread> m_joplinThread;
+    /// The front matter keys the vault's notes use, most used first; read when first wanted.
+    std::optional<QStringList> m_frontMatterKeys;
     /// Each notebook's own sort, by its path, as the layout file keeps them.
     QHash<QString, QString> m_notebookSorts;
     /// Sorts the note list as the notebook shown says, or else as the default.

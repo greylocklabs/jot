@@ -2422,6 +2422,79 @@ std::optional<QVariantMap> VaultController::joplinCannotStart(bool dryRun)
     return std::nullopt;
 }
 
+QVariantList VaultController::frontMatterSuggestions(const QString &kind, const QString &key,
+                                                     const QString &typed)
+{
+    QList<std::pair<QString, QString>> offered;
+    if (kind == u"key") {
+        offered = {{u"title"_s, tr("Title, when the file name cannot hold it")},
+                   {u"tags"_s, tr("Tags, as a list")},
+                   {u"aliases"_s, tr("Other names links can use")},
+                   {u"created"_s, tr("When the note was made")},
+                   {u"type"_s, tr("The note's type")},
+                   {u"target"_s, tr("Words the note is to reach")},
+                   {u"lang"_s, tr("The language spelling is checked in")},
+                   {u"tasks"_s, tr("off keeps its checkboxes out of Tasks")}};
+        if (!m_frontMatterKeys && m_vault && m_index) {
+            QHash<QString, int> uses;
+            for (const NoteInfo &note : m_index->notesIn({})) {
+                QString ignored;
+                const std::optional<QString> text =
+                    notefile::read(m_vault->absolute(note.path), &ignored);
+                if (!text)
+                    continue;
+                const NoteParts parts = splitFrontMatter(*text);
+                if (parts.hasFrontMatter) {
+                    for (const QString &each : readFrontMatter(parts.frontMatter).keys())
+                        ++uses[each];
+                }
+            }
+            QStringList keys = uses.keys();
+            std::ranges::sort(keys, [&uses](const QString &a, const QString &b) {
+                return uses[a] != uses[b] ? uses[a] > uses[b] : a < b;
+            });
+            m_frontMatterKeys = keys;
+        }
+        for (const QString &each : m_frontMatterKeys.value_or(QStringList())) {
+            if (std::ranges::none_of(offered,
+                                     [&each](const auto &known) { return known.first == each; }))
+                offered.append({each, tr("Used in other notes")});
+        }
+    } else if (key == u"tags" || key == u"tag") {
+        for (const QString &tag : m_index ? m_index->tags() : QStringList())
+            offered.append({tag, {}});
+    } else if (key == u"type") {
+        QStringList types;
+        for (const NoteInfo &note : m_index ? m_index->notesIn({}) : QList<NoteInfo>()) {
+            if (!note.type.isEmpty() && !types.contains(note.type))
+                types.append(note.type);
+        }
+        types.sort(Qt::CaseInsensitive);
+        for (const QString &type : std::as_const(types))
+            offered.append({type, {}});
+    } else if (key == u"tasks") {
+        offered = {{u"off"_s, tr("Keep its checkboxes out of Tasks")},
+                   {u"on"_s, tr("List its checkboxes in Tasks")}};
+    } else if (key == u"created") {
+        const QDateTime now = QDateTime::currentDateTime();
+        offered = {{now.date().toString(Qt::ISODate), tr("Today")},
+                   {now.toOffsetFromUtc(now.offsetFromUtc()).toString(Qt::ISODate), tr("Now")}};
+    }
+    QVariantList found;
+    QVariantList inside;
+    for (const auto &[text, detail] : std::as_const(offered)) {
+        if (text.compare(typed, Qt::CaseInsensitive) == 0)
+            continue;
+        const QVariantMap item{{u"text"_s, text}, {u"detail"_s, detail}};
+        if (text.startsWith(typed, Qt::CaseInsensitive))
+            found.append(item);
+        else if (typed.size() > 1 && text.contains(typed, Qt::CaseInsensitive))
+            inside.append(item);
+    }
+    found.append(inside);
+    return found.mid(0, 8);
+}
+
 QVariantMap VaultController::importJoplin(const QUrl &file, const QString &folder, bool dryRun)
 {
     if (const std::optional<QVariantMap> failed = joplinCannotStart(dryRun))
@@ -2535,6 +2608,7 @@ void VaultController::reloadModels()
     m_sync.localChanged();
     Q_EMIT currentConflictsChanged();
     m_notebookEmoji.clear();
+    m_frontMatterKeys.reset();
     m_favorites.clear();
     m_hidden.clear();
     if (m_vault) {
