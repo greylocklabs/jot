@@ -2633,6 +2633,25 @@ void TestNoteEditor::runsViCommands()
     run(u"s/zebra/x/"_s);
     QVERIFY(message->property("text").toString().contains(u"zebra"_s));
 
+    // Commands are offered as they are typed: Tab takes one, and one needing more typed, as s/
+    // does, waits on the line for it.
+    QQuickItem *offered = find(u"viCommandList"_s);
+    type(u":"_s);
+    QTRY_VERIFY(command->hasActiveFocus());
+    QVERIFY(offered->isVisible());
+    type(u"no"_s);
+    QTest::keyClick(m_window.get(), Qt::Key_Tab);
+    QCOMPARE(command->property("text").toString(), u"noh"_s);
+    QVERIFY(!offered->isVisible());
+    command->setProperty("text", QString());
+    type(u"s"_s);
+    QTest::keyClick(m_window.get(), Qt::Key_Down);
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    QCOMPARE(command->property("text").toString(), u"s/"_s);
+    QVERIFY(command->hasActiveFocus());
+    QTest::keyClick(m_window.get(), Qt::Key_Escape);
+    QTRY_VERIFY(body->hasActiveFocus());
+
     // What it does not know, it says; Escape leaves without running anything.
     run(u"frobnicate"_s);
     QVERIFY(message->property("text").toString().contains(u"frobnicate"_s));

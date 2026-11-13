@@ -28,6 +28,48 @@ Rectangle {
     property bool commanding: false
     /// What the last command had to say, shown for a while.
     property string message
+    /// The commands there are, to offer as one is typed.
+    readonly property var commands: [
+        {
+            "text": "w",
+            "detail": qsTr("Save")
+        },
+        {
+            "text": "q",
+            "detail": qsTr("Close the tab")
+        },
+        {
+            "text": "wq",
+            "detail": qsTr("Save and close the tab")
+        },
+        {
+            "text": "s/",
+            "detail": qsTr("Replace on the line: s/old/new/")
+        },
+        {
+            "text": "%s/",
+            "detail": qsTr("Replace in the whole note: %s/old/new/g")
+        },
+        {
+            "text": "noh",
+            "detail": qsTr("Clear the find highlights")
+        },
+        {
+            "text": "$",
+            "detail": qsTr("Go to the last line")
+        },
+        {
+            "text": "help",
+            "detail": qsTr("Vi's keys and commands")
+        }
+    ]
+    /// Those that start with what is typed, which is not one of them already.
+    readonly property var offered: commanding ? commands.filter(each => each.text.startsWith(
+                                                                            command.text)
+                                                                        && each.text
+                                                                        !== command.text) : []
+    /// The one the arrows chose, or -1.
+    property int chosen: -1
 
     /// A command was typed and Return pressed.
     signal run(string command)
@@ -37,8 +79,20 @@ Rectangle {
     function openCommand() {
         message = ""
         command.text = ""
+        chosen = -1
         commanding = true
         command.forceActiveFocus()
+    }
+
+    /// Puts the command chosen, or the first offered, on the line; says whether one was.
+    function take() {
+        const each = offered[Math.max(chosen, 0)]
+        if (!each)
+            return false
+        command.text = each.text
+        command.cursorPosition = command.text.length
+        chosen = -1
+        return true
     }
 
     function say(words) {
@@ -124,8 +178,25 @@ Rectangle {
             font.family: Theme.monoFontFamily
             font.pixelSize: Theme.textSm
             Accessible.name: qsTr("Command")
+            onTextEdited: root.chosen = -1
             Keys.onPressed: event => {
-                if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                if (event.key === Qt.Key_Down || event.key === Qt.Key_Up) {
+                    const count = root.offered.length
+                    if (count > 0)
+                        root.chosen = event.key === Qt.Key_Down ? (root.chosen + 1) % count : (
+                                                                      root.chosen + count - 1)
+                                                                  % count
+                    event.accepted = true
+                } else if (event.key === Qt.Key_Tab) {
+                    root.take()
+                    event.accepted = true
+                } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                    // One chosen with the arrows is taken first; one that needs more typed,
+                    // as s/ does, waits for it.
+                    if (root.chosen >= 0 && root.take() && text.endsWith("/")) {
+                        event.accepted = true
+                        return
+                    }
                     const typed = text
                     root.commanding = false
                     root.run(typed)
@@ -200,6 +271,62 @@ Rectangle {
             visible: root.message !== ""
             text: root.message
             color: Theme.textMuted
+        }
+    }
+
+    // The commands that start with what is typed, above the line.
+    Rectangle {
+        objectName: "viCommandList"
+        visible: root.commanding && root.offered.length > 0
+        x: Theme.space3
+        y: -height - Theme.space1
+        width: 320
+        height: list.implicitHeight + 2 * Theme.space2
+        radius: Theme.radiusMd
+        color: Theme.surface
+        border.color: Theme.border
+
+        Column {
+            id: list
+
+            anchors.fill: parent
+            anchors.margins: Theme.space2
+
+            Repeater {
+                model: root.offered
+
+                Rectangle {
+                    id: offer
+
+                    required property var modelData
+                    required property int index
+
+                    width: list.width
+                    height: Theme.listRowHeight
+                    radius: Theme.radiusSm
+                    color: offer.index === root.chosen ? Theme.tint(Theme.accent, 0.18) :
+                                                         "transparent"
+
+                    Row {
+                        anchors.verticalCenter: parent.verticalCenter
+                        x: Theme.space2
+                        spacing: Theme.space3
+
+                        Text {
+                            text: ":" + offer.modelData.text
+                            color: Theme.text
+                            font.family: Theme.monoFontFamily
+                            font.pixelSize: Theme.textSm
+                        }
+                        Text {
+                            text: offer.modelData.detail
+                            color: Theme.textMuted
+                            font.family: Theme.fontFamily
+                            font.pixelSize: Theme.textSm
+                        }
+                    }
+                }
+            }
         }
     }
 
