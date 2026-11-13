@@ -449,8 +449,8 @@ void TestVaultController::ordersNotesAsAsked()
     file.close();
     notes.setNotebook(u"Ashfall"_s);
     m_settings->setNoteSort(u"created"_s);
-    // Anything that reads the layout again, as pinning does.
-    QVERIFY(m_vault->setPinned(u"Recipes/Pancakes.md"_s, true));
+    // Anything that reads the layout again, as a favorite does.
+    QVERIFY(m_vault->setFavorite(u"Recipes/Pancakes.md"_s, true));
     notes.setNotebook(u"Recipes"_s);
     QCOMPARE(notes.order(), u"created"_s);
     QVERIFY(m_vault->notebookSort().isEmpty());
@@ -490,10 +490,20 @@ void TestVaultController::listsFavoritesInTheirOrder()
     // Undone and done again, in its place.
     QVERIFY(m_vault->setFavorite(u"Welcome.md"_s, false));
     QCOMPARE(column(notes, "title"), QStringList{u"Sourdough"_s});
+    // Undone, it is a favorite again, with nothing to say about the trash.
+    QVERIFY(m_vault->undoTrashes().isEmpty());
     QVERIFY(m_vault->undo());
+    QVERIFY(m_vault->redoTrashes().isEmpty());
     QCOMPARE(column(notes, "title"), (QStringList{u"Welcome"_s, u"Sourdough"_s}));
     QVERIFY(m_vault->redo());
     QCOMPARE(column(notes, "title"), QStringList{u"Sourdough"_s});
+
+    // One gone from the vault is not counted.
+    QVERIFY(m_vault->setFavorite(u"Welcome.md"_s, true));
+    QVERIFY(QFile::remove(m_root + u"/Welcome.md"_s));
+    QVERIFY(m_vault->setFavorite(u"Recipes/Pancakes.md"_s, true));
+    QCOMPARE(m_vault->favorites(),
+             (QStringList{u"Recipes/Sourdough.md"_s, u"Recipes/Pancakes.md"_s}));
 
     // Moved, it stays a favorite.
     QVERIFY(m_vault->moveNoteTo(u"Recipes/Sourdough.md"_s, u"Ashfall"_s));

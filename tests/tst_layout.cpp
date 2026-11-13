@@ -266,6 +266,14 @@ void TestLayout::keepsFavorites()
     layout.setFavorite(u"Inbox/Ch 2.md"_s, false);
     QCOMPARE(layout.favorites(), QStringList{u"Saga/Chapters/Prologue.md"_s});
     QCOMPARE(Layout::defaultEmoji(u"favorites"_s), u"\u2B50"_s);
+
+    // Written on one line, they are read, and a new one is kept beside them.
+    write(Layout::kPath, u"favorites: [Saga/Chapters/Prologue.md]\n"_s);
+    layout = Layout::read(*m_vault).value();
+    QCOMPARE(layout.favorites(), QStringList{u"Saga/Chapters/Prologue.md"_s});
+    layout.setFavorite(u"Inbox/Ch 2.md"_s, true);
+    QVERIFY(layout.write(*m_vault, &error));
+    QCOMPARE(Layout::read(*m_vault).value().favorites().size(), 2);
 }
 
 void TestLayout::keepsTheViewsEmojis()
