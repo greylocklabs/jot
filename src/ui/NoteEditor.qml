@@ -1005,8 +1005,8 @@ Rectangle {
                     } else {
                         items = Vault.frontMatterSuggestions(query.kind, query.key ?? "",
                                                              query.text)
-                        // A day other than today is picked from a month.
-                        if (query.kind === "value" && query.key === "created")
+                        // A day other than today is picked from a month, before one is typed.
+                        if (query.kind === "value" && query.key === "created" && query.text === "")
                             items.push({
                                            "text": qsTr("Pick a date..."),
                                            "detail": "",
