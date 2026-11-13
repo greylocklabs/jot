@@ -89,7 +89,7 @@ class VaultIndex
 {
 public:
     /// Raised whenever what the index stores changes shape; an older index is rebuilt.
-    static constexpr int kSchema = 10;
+    static constexpr int kSchema = 11;
 
     explicit VaultIndex(Vault vault, QString databasePath = {});
     ~VaultIndex();

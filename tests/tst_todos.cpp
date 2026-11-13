@@ -21,6 +21,7 @@ private Q_SLOTS:
     void filtersByPriority();
     void sortsAsAsked();
     void remindsAtTheTimeOrInTheMorning();
+    void leavesOutNotesWithTasksOff();
 
 private:
     QStringList titles(ToDoView view, const QString &tag = {}) const;
@@ -202,4 +203,28 @@ void TestToDos::remindsAtTheTimeOrInTheMorning()
 }
 
 QTEST_GUILESS_MAIN(TestToDos)
+void TestToDos::leavesOutNotesWithTasksOff()
+{
+    const QString path = u"Packing.md"_s;
+    const auto write = [this, &path](const QString &text) {
+        QString error;
+        QVERIFY2(notefile::write(m_vault->absolute(path), text, &error), qPrintable(error));
+        m_index->update({path});
+    };
+    const QString list = u"- [ ] Tent @due 2026-10-28\n- [x] Stove @done 2026-10-28\n"_s;
+    write(u"---\ntasks: off\n---\n"_s + list);
+    QVERIFY(!titles(ToDoView::All).contains(u"Tent"_s));
+    QVERIFY(!titles(ToDoView::Today).contains(u"Tent"_s));
+    QVERIFY(!titles(ToDoView::Done).contains(u"Stove"_s));
+    // However it is written, as YAML's other words for off.
+    write(u"---\ntasks: false\n---\n"_s + list);
+    QVERIFY(!titles(ToDoView::All).contains(u"Tent"_s));
+    write(u"---\ntasks: Off\n---\n"_s + list);
+    QVERIFY(!titles(ToDoView::All).contains(u"Tent"_s));
+    // Taking the key away puts them back.
+    write(list);
+    QVERIFY(titles(ToDoView::Today).contains(u"Tent"_s));
+    QVERIFY(titles(ToDoView::Done).contains(u"Stove"_s));
+}
+
 #include "tst_todos.moc"

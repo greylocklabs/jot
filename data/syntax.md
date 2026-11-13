@@ -92,6 +92,8 @@ lang: en_GB
 - `aliases` are other names links can use to find the note.
 - `target` is the words the note is meant to reach, shown under it as you write.
 - `lang` is the language its spelling is checked in.
+- `tasks: off` keeps its checkboxes out of Tasks, for a checklist that holds no to-dos. They still
+  tick.
 
 ## Tables
 
