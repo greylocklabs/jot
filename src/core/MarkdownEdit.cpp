@@ -632,6 +632,20 @@ std::optional<Edit> continueList(const QString &text, qsizetype from, qsizetype 
         return difference(text, changed, cursor, cursor);
     }
 
+    // Before another item's marker on the same line, the line only breaks: that item keeps
+    // its own marker rather than gaining a second.
+    const qsizetype end = lineEndOf(text, from);
+    if (const Line rest = parse(text.mid(to, end - to).trimmed());
+        listed &&
+        (rest.kind == Line::Bullet || rest.kind == Line::Numbered || rest.kind == Line::Task)) {
+        const QString broken = u'\n' + line.indent + line.quote;
+        const qsizetype marker =
+            to + (text.mid(to, end - to).size() - text.mid(to, end - to).trimmed().size());
+        const QString changed = text.left(from) + broken + text.mid(marker);
+        const qsizetype cursor = from + broken.size();
+        return difference(text, changed, cursor, cursor);
+    }
+
     // A quoted heading carries on as quoted text, not as another heading.
     QString block = listed ? line.block : QString();
     if (line.kind == Line::Task) {
