@@ -1095,8 +1095,14 @@ bool VaultController::writeFavorite(const QString &path, bool favorite, int at)
         return false;
     QString error;
     std::optional<Layout> layout = Layout::read(*m_vault, &error);
-    if (layout)
+    if (layout) {
+        // `at` counts the favorites still there, as favorites() lists them.
+        for (const QString &gone : layout->favorites()) {
+            if (!QFileInfo(m_vault->absolute(gone)).isFile())
+                layout->setFavorite(gone, false);
+        }
         layout->setFavorite(path, favorite, at);
+    }
     if (!layout || !layout->write(*m_vault, &error)) {
         qCWarning(lcVault) << "could not change the favorites" << path << error;
         setProblem(tr("Could not change the favorites: %1").arg(error));

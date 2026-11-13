@@ -504,6 +504,15 @@ void TestVaultController::listsFavoritesInTheirOrder()
     QVERIFY(m_vault->setFavorite(u"Recipes/Pancakes.md"_s, true));
     QCOMPARE(m_vault->favorites(),
              (QStringList{u"Recipes/Sourdough.md"_s, u"Recipes/Pancakes.md"_s}));
+    // While the file still names the one gone, places count only those there.
+    QFile layout(m_root + u"/.jot/layout.yaml"_s);
+    QVERIFY(layout.open(QIODevice::WriteOnly));
+    layout.write("favorites:\n  notes:\n    - Gone.md\n    - Recipes/Sourdough.md\n"
+                 "    - Recipes/Pancakes.md\n");
+    layout.close();
+    QVERIFY(m_vault->moveFavorite(u"Recipes/Sourdough.md"_s, 1));
+    QCOMPARE(m_vault->favorites(),
+             (QStringList{u"Recipes/Pancakes.md"_s, u"Recipes/Sourdough.md"_s}));
 
     // Moved, it stays a favorite.
     QVERIFY(m_vault->moveNoteTo(u"Recipes/Sourdough.md"_s, u"Ashfall"_s));
