@@ -605,11 +605,8 @@ QHash<QString, int> VaultIndex::noteCounts() const
         const QString path = query.value(0).toString();
         if (isHidden(path))
             continue;
-        QString folder = folderOf(path);
-        while (!folder.isEmpty()) {
+        if (const QString folder = folderOf(path); !folder.isEmpty())
             ++counts[folder];
-            folder = folderOf(folder);
-        }
     }
     return counts;
 }

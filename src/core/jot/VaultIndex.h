@@ -116,7 +116,8 @@ public:
     [[nodiscard]] QList<NoteInfo> notesIn(const QString &folder) const;
     /// notesIn(), without those hidden, for what lists them to be seen.
     [[nodiscard]] QList<NoteInfo> shownIn(const QString &folder) const;
-    /// How many notes each folder holds, counting those in its own folders, by folder path.
+    /// How many notes each folder holds itself, not counting those in its own folders, by folder
+    /// path.
     [[nodiscard]] QHash<QString, int> noteCounts() const;
 
     /// Notes matching `query`: words, each matched at the start of a word, plus any of

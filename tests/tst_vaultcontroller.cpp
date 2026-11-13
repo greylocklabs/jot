@@ -344,8 +344,9 @@ void TestVaultController::listsNotebooksThatFold()
     QCOMPARE(column(notebooks, "path"),
              (QStringList{QString(), u"Ashfall"_s, u"Ashfall/Characters"_s, u"Ashfall/Places"_s,
                           u"Ashfall/Records"_s, u"Inbox"_s, u"Recipes"_s}));
+    // Each counts only its own notes, not those of the notebooks in it; All notes counts every one.
     QCOMPARE(column(notebooks, "count"),
-             (QStringList{u"15"_s, u"11"_s, u"2"_s, u"1"_s, u"5"_s, u"1"_s, u"2"_s}));
+             (QStringList{u"15"_s, u"3"_s, u"2"_s, u"1"_s, u"5"_s, u"1"_s, u"2"_s}));
     QCOMPARE(column(notebooks, "depth").at(2), u"1"_s);
 
     notebooks.toggle(u"Ashfall"_s);
@@ -398,7 +399,14 @@ void TestVaultController::listsNotesByNotebookTagAndSearch()
     notes.setTag(u"food"_s);
     QCOMPARE(notes.rowCount(), 2);
 
-    // A search stays inside the notebook or tag shown.
+    // A notebook lists its own notes, not those of the notebooks in it.
+    notes.setNotebook(u"Ashfall"_s);
+    QCOMPARE(notes.rowCount(), 3);
+    for (const QString &path : column(notes, "path"))
+        QCOMPARE(path.count(u'/'), 1);
+    notes.setNotebook(u"Recipes"_s);
+
+    // A search stays inside the notebook or tag shown, and reaches the notebooks in it.
     notes.setQuery(u"starter"_s);
     QCOMPARE(column(notes, "path"), QStringList{u"Recipes/Sourdough.md"_s});
     notes.setNotebook(u"Ashfall"_s);
