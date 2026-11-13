@@ -689,6 +689,8 @@ private:
     QHash<QString, std::pair<QDateTime, int>> m_noteWords;
     QVariantMap m_viewEmoji;
     QStringList m_favorites;
+    /// Renaming as undo or redo does, which is not remembered as a change of its own.
+    bool m_renamingBack = false;
     /// Makes the note at `path` a favorite at `at`, or not, without remembering it for undo.
     bool writeFavorite(const QString &path, bool favorite, int at);
     QString m_indexPath;
@@ -711,10 +713,10 @@ private:
     /// brought back from it.
     struct Change
     {
-        enum class Kind { Text, Trash, Notebook, Favorite, Hide };
+        enum class Kind { Text, Trash, Notebook, Favorite, Hide, Rename };
         Kind kind = Kind::Text;
         QString path;
-        /// Text: what the note said before and after.
+        /// Text: what the note said before and after. Rename: its title before and after.
         QString before;
         QString after;
         /// Trash and Notebook: where the note or notebook is in the trash while it is there.

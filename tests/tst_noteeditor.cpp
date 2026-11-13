@@ -118,6 +118,7 @@ private Q_SLOTS:
     void editsInViModes();
     void runsViCommands();
     void completesFrontMatter();
+    void undoesTitleEdits();
     void showsWhereViIsAlongTheFoot();
     void keepsOneCursorAcrossViModes();
     void formatsWithTheShortcutsChosen();
@@ -2676,6 +2677,32 @@ void TestNoteEditor::completesFrontMatter()
     type(u"ta"_s);
     QTest::qWait(50);
     QVERIFY(items().isEmpty());
+}
+
+void TestNoteEditor::undoesTitleEdits()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *title = find(u"title"_s);
+    title->forceActiveFocus();
+    QTRY_VERIFY(title->hasActiveFocus());
+    title->setProperty("cursorPosition", title->property("text").toString().size());
+    QTest::keyClick(m_window.get(), Qt::Key_X);
+    QCOMPARE(title->property("text").toString(), u"Welcomex"_s);
+    QTest::keyClick(m_window.get(), Qt::Key_Z, Qt::ControlModifier);
+    QCOMPARE(title->property("text").toString(), u"Welcome"_s);
+
+    // A rename done is taken back by undo, there or in the field, and done again by redo.
+    QVERIFY(m_vault->renameCurrent(u"Hello"_s));
+    QCOMPARE(m_vault->current(), u"Hello.md"_s);
+    QVERIFY(m_vault->undo());
+    QCOMPARE(m_vault->current(), u"Welcome.md"_s);
+    QTRY_COMPARE(title->property("text").toString(), u"Welcome"_s);
+    QVERIFY(m_vault->redo());
+    QCOMPARE(m_vault->current(), u"Hello.md"_s);
+    title->forceActiveFocus();
+    QTRY_VERIFY(title->hasActiveFocus());
+    QTest::keyClick(m_window.get(), Qt::Key_Z, Qt::ControlModifier);
+    QTRY_COMPARE(m_vault->current(), u"Welcome.md"_s);
 }
 
 void TestNoteEditor::keepsOneCursorAcrossViModes()
