@@ -102,8 +102,7 @@ Rectangle {
         font.letterSpacing: 0.6
     }
 
-    /// A row's emoji and name. The emoji is drawn on its own, a little larger than the name: at
-    /// the name's size, Qt's scaling of color emoji drops an edge of some at fractional scales.
+    /// A row's emoji and name, the emoji drawn on its own at Theme.emojiSize.
     component RowLabel: Item {
         id: rowLabel
 
@@ -120,11 +119,11 @@ Rectangle {
             id: rowEmoji
 
             anchors.verticalCenter: parent.verticalCenter
-            width: visible ? Math.ceil(font.pixelSize * 1.25) : 0
+            width: visible ? Theme.emojiBox : 0
             visible: rowLabel.emoji !== ""
             text: rowLabel.emoji
             horizontalAlignment: Text.AlignHCenter
-            font.pixelSize: 16
+            font.pixelSize: Theme.emojiSize
         }
         Text {
             id: rowName
