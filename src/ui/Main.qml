@@ -980,6 +980,7 @@ ApplicationWindow {
         case "newFromTemplate":
             return Vault.isOpen && Vault.writable && !Vault.showingTrash
         case "dailyNote":
+        case "newNotebook":
             return Vault.isOpen && Vault.writable
         case "quickAdd":
         case "importJoplin":
@@ -1059,6 +1060,11 @@ ApplicationWindow {
         case "newNote":
             if (Vault.newNote() !== "")
                 editor.editTitle()
+            break
+            // Its name is typed in the sidebar, brought back for it if put away.
+        case "newNotebook":
+            Settings.columnsHidden = false
+            sidebar.newNotebook()
             break
         case "newFromTemplate":
             templateMenu.templates = Vault.templates()

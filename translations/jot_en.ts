@@ -3077,6 +3077,10 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>%1 (%2)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Name of %1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3982,6 +3986,10 @@ Press %1 to make one.</source>
     <name>jot::KeyRouter</name>
     <message>
         <source>New note</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>New notebook</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

@@ -1,4 +1,5 @@
 #include "JoplinDatabaseBuilder.h"
+#include "KeyRouter.h"
 #include "SettingsForeign.h"
 #include "ThemeController.h"
 #include "VaultController.h"
@@ -18,6 +19,7 @@
 #include <QQuickTextDocument>
 #include <QQuickWindow>
 #include <QRegularExpression>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QStyleHints>
 #include <QTemporaryDir>
@@ -53,6 +55,7 @@ private Q_SLOTS:
     void asksBeforeTrashingSharedAttachments();
     void narrowWindowOverlapsNothing();
     void viHelpOpensAtTheViKeys();
+    void makesANotebookFromTheKeyboard();
     void columnsGiveWayToTheNote();
     void showsTheSyntaxGuide();
     void filtersToDosByPriority();
@@ -712,6 +715,30 @@ void TestDialogs::viHelpOpensAtTheViKeys()
     QTRY_VERIFY(help = main->findChild<QObject *>(u"keyHelp"_s));
     QTRY_VERIFY(help->property("opened").toBool());
     QCOMPARE(help->property("tab").toString(), u"vi"_s);
+}
+
+void TestDialogs::makesANotebookFromTheKeyboard()
+{
+    // The tests after this one use the vault open before it.
+    const QString before = m_vault->root();
+    const auto back = qScopeGuard([this, &before] { m_vault->openPath(before); });
+    const QString folder = m_dir.filePath(u"Keyboard notebooks"_s);
+    QVERIFY(QDir().mkpath(folder));
+    QVERIFY(m_vault->openPath(folder));
+    QQmlEngine engine;
+    QQmlComponent component(&engine);
+    component.loadFromModule("Jot.Ui", "Main");
+    std::unique_ptr<QObject> main(component.create());
+    QVERIFY2(main, qPrintable(component.errorString()));
+    auto *window = qobject_cast<QQuickWindow *>(main.get());
+    QVERIFY(QTest::qWaitForWindowExposed(window));
+    // Ctrl+Shift+N, as the + beside Notebooks says when hovered.
+    QVERIFY(KeyRouter::conflict(u"newNotebook"_s, u"Ctrl+Shift+N"_s).isEmpty());
+    QVERIFY(QMetaObject::invokeMethod(window, "run", Q_ARG(QVariant, u"newNotebook"_s)));
+    QTRY_VERIFY(QFileInfo(folder + u"/New notebook"_s).isDir());
+    QObject *sidebar = main->findChild<QObject *>(u"sidebar"_s);
+    QVERIFY(sidebar);
+    QCOMPARE(sidebar->property("renamingPath").toString(), u"New notebook"_s);
 }
 
 void TestDialogs::narrowWindowOverlapsNothing()

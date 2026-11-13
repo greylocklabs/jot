@@ -92,6 +92,7 @@ QList<KeyAction> KeyRouter::actions()
     const QString visual = u"visual"_s;
     return {
         act(u"newNote"_s, tr("New note"), window, {int(K::New)}, {}, u"n"_s),
+        act(u"newNotebook"_s, tr("New notebook"), window, {u"Ctrl+Shift+N"_s}),
         act(u"newFromTemplate"_s, tr("New note from a template"), window, {}, {}, u"N"_s),
         act(u"dailyNote"_s, tr("Today's note"), window, {}, {}, u"j"_s),
         act(u"quickAdd"_s, tr("Add a to-do to the inbox"), window, {u"Ctrl+Shift+A"_s}, {}, u"a"_s),

@@ -19,6 +19,11 @@ Rectangle {
     /// A notebook, tag, Tasks or Trash opened from the keyboard, so its list takes the keys.
     signal entered
 
+    /// Makes a notebook at the top of the vault, ready to name.
+    function newNotebook() {
+        root.renamingPath = Vault.newNotebook()
+    }
+
     /// The rows the keyboard moves through, top to bottom: Tasks, Favorites, notebooks, tags and
     /// Trash.
     function rows() {
@@ -80,6 +85,10 @@ Rectangle {
     }
 
     color: Theme.surface
+
+    KeyRouter {
+        id: shortcuts
+    }
 
     component Heading: Text {
         leftPadding: Theme.space5
@@ -300,7 +309,7 @@ Rectangle {
                     visible: Vault.writable
                     focusPolicy: Qt.NoFocus
                     Accessible.name: qsTr("New notebook")
-                    onClicked: root.renamingPath = Vault.newNotebook()
+                    onClicked: root.newNotebook()
 
                     HoverHandler {
                         cursorShape: Qt.PointingHandCursor
@@ -322,7 +331,12 @@ Rectangle {
                     }
                     Tip {
                         visible: addNotebook.hovered
-                        text: addNotebook.Accessible.name
+                        text: {
+                            shortcuts.actions
+                            const key = shortcuts.keyText("newNotebook")
+                            return key === "" ? addNotebook.Accessible.name : qsTr("%1 (%2)").arg(
+                                                    addNotebook.Accessible.name).arg(key)
+                        }
                         delay: Theme.durSlow * 2
                     }
                 }
@@ -515,6 +529,8 @@ Rectangle {
 
                             anchors {
                                 left: fold.right
+                                // Clear of the fold, as an emoji can reach left of its box.
+                                leftMargin: Theme.space1
                                 right: countLabel.left
                                 rightMargin: Theme.space3
                                 verticalCenter: parent.verticalCenter
