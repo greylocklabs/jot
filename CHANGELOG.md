@@ -3,6 +3,22 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## 0.5.9 - 2026-11-12
+
+### New
+
+- Hold back or forward to pick a note from the trail
+- Write and read only markdown links
+- Switch data files between styled, source and read
+- Keep this computer's settings in local.ini
+- Change keyboard shortcuts in place
+
+### Fixed
+
+- Keep # and ? in note names out of link anchors and queries
+- Read a data file kept as text again when its mode is picked
+- Read hand-written shortcuts and keep fixed keys taken
+
 ## 0.5.8 - 2026-11-12
 
 ### New

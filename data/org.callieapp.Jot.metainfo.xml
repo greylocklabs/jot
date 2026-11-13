@@ -36,6 +36,20 @@
   </categories>
 
   <releases>
+    <release version="0.5.9" date="2026-11-12">
+      <description>
+        <ul>
+          <li>Hold back or forward to pick a note from the trail</li>
+          <li>Write and read only markdown links</li>
+          <li>Switch data files between styled, source and read</li>
+          <li>Keep this computer's settings in local.ini</li>
+          <li>Change keyboard shortcuts in place</li>
+          <li>Keep # and ? in note names out of link anchors and queries</li>
+          <li>Read a data file kept as text again when its mode is picked</li>
+          <li>Read hand-written shortcuts and keep fixed keys taken</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.5.8" date="2026-11-12">
       <description>
         <ul>
