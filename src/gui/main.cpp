@@ -98,8 +98,15 @@ int main(int argc, char *argv[])
     const bool standalone = parser.isSet(vaultOption);
     greylock::SingleInstance single(greylock::identity::appId(), QDBusConnection::sessionBus());
     const QString kQuickAdd = u"jot:quick-add"_s;
-    if (!standalone &&
-        !single.claim(parser.isSet(quickAddOption) ? QStringList{kQuickAdd} : QStringList()))
+    // The desktop lets a window come to the front only with a token it gave the launch, so a
+    // launch that hands over passes its own on.
+    const QString kActivationToken = u"jot:activation-token:"_s;
+    QStringList handOver;
+    if (parser.isSet(quickAddOption))
+        handOver.append(kQuickAdd);
+    if (const QString token = qEnvironmentVariable("XDG_ACTIVATION_TOKEN"); !token.isEmpty())
+        handOver.append(kActivationToken + token);
+    if (!standalone && !single.claim(handOver))
         return 0;
 
     // A vault given for one run, as for screenshots, leaves the user's settings alone.
@@ -202,9 +209,13 @@ int main(int argc, char *argv[])
                        : qobject_cast<QQuickWindow *>(engine.rootObjects().first());
     // A second launch, a reminder or the tray brings the window back, and can ask it to do
     // something by its command's name.
-    const auto showWindow = [&engine](const QString &command = {}) {
+    // `token`, from the desktop, lets the window come to the front over the one in use.
+    const auto showWindow = [&engine](const QString &command = {}, const QString &token = {}) {
         if (engine.rootObjects().isEmpty())
             return;
+        // Qt's Wayland activation takes the token from here, once.
+        if (!token.isEmpty())
+            qputenv("XDG_ACTIVATION_TOKEN", token.toUtf8());
         // Looked up each time: live QML replaces the window.
         QObject *root = engine.rootObjects().first();
         if (auto *shown = qobject_cast<QQuickWindow *>(root)) {
@@ -219,11 +230,15 @@ int main(int argc, char *argv[])
     // Quick add from anywhere: the desktop's key, or a key bound to jot-gui --quick-add.
     QObject::connect(&single, &greylock::SingleInstance::opened, &engine,
                      [&](const QStringList &uris) {
-                         if (uris.contains(kQuickAdd))
-                             showWindow(u"quickAdd"_s);
+                         QString token;
+                         for (const QString &uri : uris) {
+                             if (uri.startsWith(kActivationToken))
+                                 token = uri.mid(kActivationToken.size());
+                         }
+                         showWindow(uris.contains(kQuickAdd) ? u"quickAdd"_s : QString(), token);
                      });
     QObject::connect(&capture, &jot::QuickCapture::activated, &engine,
-                     [&] { showWindow(u"quickAdd"_s); });
+                     [&](const QString &token) { showWindow(u"quickAdd"_s, token); });
     if (!standalone) {
         capture.setWanted(settings.quickCaptureKey());
         QObject::connect(&settings, &jot::Settings::quickCaptureKeyChanged, &capture,

@@ -172,10 +172,10 @@ void QuickCapture::shortcutsBound(uint response, const QVariantMap &results)
 }
 
 void QuickCapture::shortcutActivated(const QDBusObjectPath &session, const QString &id, qulonglong,
-                                     const QVariantMap &)
+                                     const QVariantMap &options)
 {
     if (session.path() == m_session && id == QLatin1StringView(kId))
-        Q_EMIT activated();
+        Q_EMIT activated(options.value(u"activation_token"_s).toString());
 }
 
 void QuickCapture::close()
