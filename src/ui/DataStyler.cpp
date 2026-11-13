@@ -188,6 +188,13 @@ QVariantList DataStyler::lineTops(QQuickTextDocument *quick, qreal top, qreal bo
     return lines;
 }
 
+int DataStyler::lineNumberAt(QQuickTextDocument *quick, int position)
+{
+    if (!quick || !quick->textDocument())
+        return 0;
+    return quick->textDocument()->findBlock(position).blockNumber() + 1;
+}
+
 QVariantList DataStyler::brackets(int position) const
 {
     if (!m_document || !m_document->textDocument() || m_kind == u"csv" || m_kind == u"tsv")
