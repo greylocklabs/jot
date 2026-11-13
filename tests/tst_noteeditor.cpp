@@ -118,6 +118,7 @@ private Q_SLOTS:
     void editsInViModes();
     void runsViCommands();
     void completesFrontMatter();
+    void savesByHandFromTheBar();
     void showsTheClosingFenceWithRoomBelow();
     void suggestsOnlyWhileTypingInVi();
     void undoesTitleEdits();
@@ -2799,6 +2800,26 @@ void TestNoteEditor::showsTheClosingFenceWithRoomBelow()
     QCOMPARE(fence->property("text").toString(), u"..."_s);
     body->setProperty("text", u" ---\ntags: [a]\n---\nBody\n"_s);
     QTRY_VERIFY(!fence->isVisible());
+}
+
+void TestNoteEditor::savesByHandFromTheBar()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *save = find(u"saveButton"_s);
+    QVERIFY(save);
+    // Saving as typed, there is no button.
+    QVERIFY(!save->isVisible());
+    m_settings->setAutosave(false);
+    QTRY_VERIFY(save->isVisible());
+    QVERIFY(!save->isEnabled());
+    m_vault->edit(m_vault->currentText() + u"More.\n"_s);
+    QTRY_VERIFY(save->isEnabled());
+    QMetaObject::invokeMethod(save, "clicked");
+    QVERIFY(!m_vault->unsaved());
+    QString error;
+    QVERIFY(notefile::read(m_root + u"/Welcome.md"_s, &error)->endsWith(u"More.\n"_s));
+    QTRY_VERIFY(!save->isEnabled());
+    m_settings->setAutosave(true);
 }
 
 void TestNoteEditor::keepsOneCursorAcrossViModes()

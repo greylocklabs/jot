@@ -373,8 +373,8 @@ Rectangle {
 
             objectName: "frontMatterProblems"
             anchors {
-                right: trash.visible ? trash.left : parent.right
-                rightMargin: trash.visible ? Theme.space2 : 0
+                right: save.visible ? save.left : trash.visible ? trash.left : parent.right
+                rightMargin: save.visible || trash.visible ? Theme.space2 : 0
                 verticalCenter: parent.verticalCenter
             }
             visible: root.frontMatterProblems.length > 0 && !root.dataFile
@@ -411,6 +411,23 @@ Rectangle {
                     closePolicy: Popup.NoAutoClose
                 }
             }
+        }
+        // With saving by hand, Save, there to press once something is typed.
+        FormatButton {
+            id: save
+
+            objectName: "saveButton"
+            anchors {
+                right: trash.visible ? trash.left : parent.right
+                rightMargin: trash.visible ? Theme.space2 : 0
+                verticalCenter: parent.verticalCenter
+            }
+            visible: !Settings.autosave && Vault.writable
+            enabled: Vault.unsaved
+            label: qsTr("Save")
+            tip: Vault.unsaved ? root.withKey(qsTr("Save what was typed"), "save") : qsTr(
+                                     "Nothing to save")
+            onClicked: Vault.saveNow()
         }
         // Delete, an icon like the bar's others; it asks in the trash dialog first.
         AbstractButton {
@@ -507,7 +524,9 @@ Rectangle {
                 anchors.centerIn: parent
                 visible: button.glyph === ""
                 text: button.label
-                color: button.hovered ? Theme.text : Theme.textMuted
+                color: !button.enabled ? Theme.textFaint : button.hovered ? Theme.text :
+                                                                            Theme.textMuted
+
                 font.family: button.mono ? Theme.monoFontFamily : Theme.fontFamily
                 font.pixelSize: Theme.textMd
                 font.weight: button.bold ? Theme.weightHeavy : Theme.weightBold

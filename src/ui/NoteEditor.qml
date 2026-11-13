@@ -541,8 +541,7 @@ Rectangle {
                         shown = value
                     }
 
-                    width: parent.width - (unsavedMark.visible ? unsavedMark.width + parent.spacing :
-                                                                 0)
+                    width: parent.width
                     readOnly: !Vault.writable
                     wrapMode: TextInput.Wrap
                     color: Theme.text
@@ -577,27 +576,6 @@ Rectangle {
                             Vault.redo()
                             event.accepted = true
                         }
-                    }
-                }
-                // With saving manual, typing not yet saved.
-                Rectangle {
-                    id: unsavedMark
-
-                    objectName: "unsavedMark"
-                    y: parent.firstLineMiddle - height / 2
-                    width: 10
-                    height: 10
-                    radius: 5
-                    visible: Vault.unsaved && !Settings.autosave
-                    color: Theme.accent
-                    Accessible.name: qsTr("Not saved")
-
-                    HoverHandler {
-                        id: unsavedHover
-                    }
-                    Tip {
-                        visible: unsavedHover.hovered
-                        text: qsTr("Not saved yet. Ctrl+S saves.")
                     }
                 }
             }

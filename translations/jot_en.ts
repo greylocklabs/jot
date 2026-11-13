@@ -525,6 +525,18 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Save</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Save what was typed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Nothing to save</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Move to trash</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1035,14 +1047,6 @@
     </message>
     <message>
         <source>Title</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Not saved</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Not saved yet. Ctrl+S saves.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
