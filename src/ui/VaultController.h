@@ -637,6 +637,10 @@ private:
     QStringList m_hidden;
     /// setHidden() without remembering it for undo.
     bool writeHidden(const QString &path, bool hidden);
+    /// What of the note or notebook at `path` is hidden, as the rest of each path after `path`.
+    [[nodiscard]] QStringList hiddenUnder(const QString &path) const;
+    /// Hides again what hiddenUnder() said of a note or notebook now at `path`.
+    void hideAgain(const QString &path, const QStringList &hidden);
     int m_joplinDone = 0;
     int m_joplinTotal = 0;
     NotebookModel m_notebooks;
@@ -700,6 +704,9 @@ private:
         QString after;
         /// Trash and Notebook: where the note or notebook is in the trash while it is there.
         QString location;
+        /// Trash and Notebook: what of it was hidden, as the rest of each path after its own,
+        /// so bringing it back hides that again.
+        QStringList hidden;
         bool keepAttachments = false;
         /// Trash: the change moved the note to the trash, rather than bringing it back.
         /// Favorite: the change made it a favorite, rather than taking that away. Hide: the

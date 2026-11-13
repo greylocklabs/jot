@@ -13,7 +13,7 @@ SwitcherModel::SwitcherModel(QObject *parent) : QAbstractListModel(parent) {}
 
 void SwitcherModel::reload(const VaultIndex *index)
 {
-    m_notes = index ? index->notesIn({}) : QList<NoteInfo>();
+    m_notes = index ? index->shownIn({}) : QList<NoteInfo>();
     // Recently changed notes first while nothing is typed.
     std::ranges::sort(m_notes,
                       [](const NoteInfo &a, const NoteInfo &b) { return a.modified > b.modified; });

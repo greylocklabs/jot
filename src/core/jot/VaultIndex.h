@@ -105,8 +105,8 @@ public:
     /// Reads these notes again, or drops those that are gone, as the watcher reports them.
     void update(const QStringList &paths);
 
-    /// Keeps the notes and notebooks at `paths` out of the lists, counts, search, tags and
-    /// to-dos the index gives. note(), resolve() and the links still find them.
+    /// Keeps the notes and notebooks at `paths` out of shownIn(), the counts, search, tags and
+    /// to-dos the index gives. notesIn(), note(), resolve() and the links still find them.
     void setHidden(const QStringList &paths) { m_hidden = paths; }
     /// Whether the note or notebook at `path`, or a notebook it is in, is hidden.
     [[nodiscard]] bool isHidden(const QString &path) const;
@@ -114,6 +114,8 @@ public:
     [[nodiscard]] int noteCount() const;
     /// The notes in `folder` and the folders inside it; every note for an empty folder.
     [[nodiscard]] QList<NoteInfo> notesIn(const QString &folder) const;
+    /// notesIn(), without those hidden, for what lists them to be seen.
+    [[nodiscard]] QList<NoteInfo> shownIn(const QString &folder) const;
     /// How many notes each folder holds, counting those in its own folders, by folder path.
     [[nodiscard]] QHash<QString, int> noteCounts() const;
 

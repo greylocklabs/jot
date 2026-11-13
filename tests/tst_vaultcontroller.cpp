@@ -504,6 +504,23 @@ void TestVaultController::hidesNotesAndNotebooksFromView()
     QVERIFY(m_vault->setHidden(u"Recipes"_s, false));
     QCOMPARE(m_vault->noteCount(), before);
     QVERIFY(column(*m_vault->notebooks(), "path").contains(u"Recipes"_s));
+
+    // Trashing a notebook takes its hidden notes out of the index too; undone, they come back
+    // hidden.
+    QVERIFY(m_vault->setHidden(u"Inbox/Groceries.md"_s, true));
+    QVERIFY(m_vault->trashNotebook(u"Inbox"_s));
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QVERIFY(m_vault->preview(u"Inbox/Groceries.md"_s).isEmpty());
+    QVERIFY(m_vault->undo());
+    QCOMPARE(m_vault->hiddenPaths(), QStringList{u"Inbox/Groceries.md"_s});
+    QVERIFY(!column(*m_vault->notes(), "path").contains(u"Inbox/Groceries.md"_s));
+    // A hidden note trashed and brought back is hidden still.
+    QVERIFY(m_vault->trashNote(u"Inbox/Groceries.md"_s, false));
+    // Writing the layout for anything else leaves out the note that is gone.
+    QVERIFY(m_vault->setPinned(u"Welcome.md"_s, true));
+    QVERIFY(!m_vault->hiddenPaths().contains(u"Inbox/Groceries.md"_s));
+    QVERIFY(m_vault->undo());
+    QVERIFY(m_vault->hiddenPaths().contains(u"Inbox/Groceries.md"_s));
 }
 
 void TestVaultController::listsFavoritesInTheirOrder()
