@@ -311,7 +311,12 @@ QVariantMap MarkdownStyler::frontMatterAt(int position) const
             return {};
     }
     const QString before = here.text().left(position - here.position());
-    const auto value = [&](const QString &key, const QString &typed) {
+    // What was typed of a value ends at the cursor, so after a space nothing is being typed.
+    const auto value = [&](const QString &key, QString typed) {
+        while (!typed.isEmpty() && typed.front().isSpace())
+            typed.remove(0, 1);
+        if (!typed.isEmpty() && typed.back().isSpace())
+            typed.clear();
         return QVariantMap{{u"kind"_s, u"value"_s},
                            {u"key"_s, key},
                            {u"text"_s, typed},
@@ -330,7 +335,7 @@ QVariantMap MarkdownStyler::frontMatterAt(int position) const
                 const qsizetype at = line.indexOf(u':');
                 if (at <= 0)
                     break;
-                return value(line.left(at).trimmed(), trimmed.mid(1).trimmed());
+                return value(line.left(at).trimmed(), before.mid(before.indexOf(u'-') + 1));
             }
             return {};
         }
@@ -342,21 +347,20 @@ QVariantMap MarkdownStyler::frontMatterAt(int position) const
     if (before.front().isSpace() || colon + 1 >= before.size() || before.at(colon + 1) != u' ')
         return {};
     const QString key = before.left(colon).trimmed();
-    QString rest = before.mid(colon + 1).trimmed();
+    QString rest = before.mid(colon + 1);
     // In a list written on the line, the item after the last comma.
-    if (rest.startsWith(u'[')) {
-        rest = rest.mid(qMax(rest.lastIndexOf(u','), rest.lastIndexOf(u'[')) + 1).trimmed();
-    }
-    // What was typed ends at the cursor, so trailing spaces mean nothing is being typed.
-    if (!before.endsWith(rest))
-        rest.clear();
+    if (rest.trimmed().startsWith(u'['))
+        rest = rest.mid(qMax(rest.lastIndexOf(u','), rest.lastIndexOf(u'[')) + 1);
     return value(key, rest);
 }
 
 QStringList MarkdownStyler::languages() const
 {
-    // Spelling off has no speller to ask, so one is made for the question.
-    return m_speller ? m_speller->availableLanguages() : Sonnet::Speller().availableLanguages();
+    // Spelling off has no speller to ask, so one is made for the question, once.
+    if (m_speller)
+        return m_speller->availableLanguages();
+    static const QStringList installed = Sonnet::Speller().availableLanguages();
+    return installed;
 }
 
 QVariantList MarkdownStyler::markerSuggestions(const QString &typed)

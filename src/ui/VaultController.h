@@ -636,7 +636,8 @@ private:
     std::unique_ptr<VaultIndex> m_index;
     std::unique_ptr<VaultWatcher> m_watcher;
     QPointer<QThread> m_joplinThread;
-    /// The front matter keys the vault's notes use, most used first; read when first wanted.
+    /// The front matter keys the vault's notes use, most used first; read when first wanted,
+    /// once for each vault opened, so keys new since come with the next.
     std::optional<QStringList> m_frontMatterKeys;
     /// Each notebook's own sort, by its path, as the layout file keeps them.
     QHash<QString, QString> m_notebookSorts;
