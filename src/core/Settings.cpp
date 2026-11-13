@@ -4,6 +4,7 @@
 
 #include <QCryptographicHash>
 #include <QDir>
+#include <QFileInfo>
 #include <QStandardPaths>
 #include <QTime>
 #include <QUuid>
@@ -55,6 +56,19 @@ const QString kSpellcheck = u"editor/spellcheck"_s;
 const QString kDailyWordGoal = u"writing/dailyGoal"_s;
 const QString kComputerId = u"app/computerId"_s;
 
+// What names this computer's folders, sizes its window, or records what it last did goes in
+// local.ini, so settings.ini can be copied to another computer as it is. Each vault's sync
+// settings, under sync/, go there too.
+const QStringList kLocalKeys{kVaultPath,       kCollapsedNotebooks, kCollapsedTags,     kTasksView,
+                             kLastSeenVersion, kQuickCaptureKey,    kLastReminderCheck, kSourceMode,
+                             kReadMode,        kOutlineShown,       kColumnsHidden,     kFocusMode,
+                             kSidebarWidth,    kNoteListWidth,      kComputerId};
+
+bool isLocal(const QString &key)
+{
+    return kLocalKeys.contains(key) || key.startsWith(u"sync/"_s);
+}
+
 /// A saved width within its bounds; 0 stays 0, the theme's own.
 int bounded(int width, int lowest, int highest)
 {
@@ -68,55 +82,78 @@ constexpr int kMaxNoteListWidth = 640;
 } // namespace
 
 Settings::Settings(const QString &path, QObject *parent)
-    : QObject(parent), m_store(path, QSettings::IniFormat)
+    : QObject(parent), m_store(path, QSettings::IniFormat),
+      m_local(QFileInfo(path).dir().filePath(u"local.ini"_s), QSettings::IniFormat)
 {
-    m_vaultPath = m_store.value(kVaultPath).toString();
-    m_theme = m_store.value(kTheme).toString();
-    m_noteSort = m_store.value(kNoteSort).toString();
+    m_vaultPath = get(kVaultPath).toString();
+    // A theme file in Jot's own folder is kept relative to it, so it travels with this file.
+    const QString theme = get(kTheme).toString();
+    m_theme = theme.endsWith(u".toml"_s) && QDir::isRelativePath(theme)
+                  ? QDir::cleanPath(QFileInfo(m_store.fileName()).dir().filePath(theme))
+                  : theme;
+    m_noteSort = get(kNoteSort).toString();
     if (!noteSorts().contains(m_noteSort))
         m_noteSort = noteSorts().first();
-    m_collapsedNotebooks = m_store.value(kCollapsedNotebooks).toStringList();
-    m_collapsedTags = m_store.value(kCollapsedTags).toStringList();
-    m_tasksView = m_store.value(kTasksView, u"today"_s).toString();
+    m_collapsedNotebooks = get(kCollapsedNotebooks).toStringList();
+    m_collapsedTags = get(kCollapsedTags).toStringList();
+    m_tasksView = get(kTasksView, u"today"_s).toString();
     if (!toDoViews().contains(m_tasksView))
         m_tasksView = u"today"_s;
-    m_tasksSort = m_store.value(kTasksSort, u"due"_s).toString();
+    m_tasksSort = get(kTasksSort, u"due"_s).toString();
     if (!kTaskSorts.contains(m_tasksSort))
         m_tasksSort = u"due"_s;
-    m_tasksSortDescending = m_store.value(kTasksSortDescending, false).toBool();
-    m_checkForUpdates = m_store.value(kCheckForUpdates, true).toBool();
-    m_lastSeenVersion = m_store.value(kLastSeenVersion).toString();
-    m_keepRunning = m_store.value(kKeepRunning, true).toBool();
-    m_remindersOn = m_store.value(kRemindersOn, true).toBool();
-    m_quickCaptureKey = m_store.value(kQuickCaptureKey, false).toBool();
-    if (const QTime time = QTime::fromString(m_store.value(kReminderTime).toString(), u"HH:mm"_s);
+    m_tasksSortDescending = get(kTasksSortDescending, false).toBool();
+    m_checkForUpdates = get(kCheckForUpdates, true).toBool();
+    m_lastSeenVersion = get(kLastSeenVersion).toString();
+    m_keepRunning = get(kKeepRunning, true).toBool();
+    m_remindersOn = get(kRemindersOn, true).toBool();
+    m_quickCaptureKey = get(kQuickCaptureKey, false).toBool();
+    if (const QTime time = QTime::fromString(get(kReminderTime).toString(), u"HH:mm"_s);
         time.isValid())
         m_reminderTime = time.toString(u"HH:mm"_s);
-    m_lastReminderCheck = m_store.value(kLastReminderCheck).toDateTime();
-    m_sourceMode = m_store.value(kSourceMode, false).toBool();
-    m_readMode = m_store.value(kReadMode, false).toBool();
-    m_outlineShown = m_store.value(kOutlineShown, false).toBool();
-    m_columnsHidden = m_store.value(kColumnsHidden, false).toBool();
-    m_focusMode = m_store.value(kFocusMode, false).toBool();
-    m_typewriter = m_store.value(kTypewriter, false).toBool();
-    m_noteFont = m_store.value(kNoteFont).toString();
-    m_sidebarWidth =
-        bounded(m_store.value(kSidebarWidth, 0).toInt(), kMinSidebarWidth, kMaxSidebarWidth);
-    m_noteListWidth =
-        bounded(m_store.value(kNoteListWidth, 0).toInt(), kMinNoteListWidth, kMaxNoteListWidth);
+    m_lastReminderCheck = get(kLastReminderCheck).toDateTime();
+    m_sourceMode = get(kSourceMode, false).toBool();
+    m_readMode = get(kReadMode, false).toBool();
+    m_outlineShown = get(kOutlineShown, false).toBool();
+    m_columnsHidden = get(kColumnsHidden, false).toBool();
+    m_focusMode = get(kFocusMode, false).toBool();
+    m_typewriter = get(kTypewriter, false).toBool();
+    m_noteFont = get(kNoteFont).toString();
+    m_sidebarWidth = bounded(get(kSidebarWidth, 0).toInt(), kMinSidebarWidth, kMaxSidebarWidth);
+    m_noteListWidth = bounded(get(kNoteListWidth, 0).toInt(), kMinNoteListWidth, kMaxNoteListWidth);
     if (!noteFonts().contains(m_noteFont))
         m_noteFont.clear();
-    m_viMode = m_store.value(kViMode, false).toBool();
-    m_developerMode = m_store.value(kDeveloperMode, false).toBool();
-    m_verboseLogging = m_store.value(kVerboseLogging, false).toBool();
-    const QString leader = m_store.value(kLeaderKey).toString();
+    m_viMode = get(kViMode, false).toBool();
+    m_developerMode = get(kDeveloperMode, false).toBool();
+    m_verboseLogging = get(kVerboseLogging, false).toBool();
+    const QString leader = get(kLeaderKey).toString();
     m_leaderKey = kLeaderKeys.contains(leader) ? leader : u","_s;
-    m_leaderTimeout = std::max(0, m_store.value(kLeaderTimeout, 5000).toInt());
-    m_trashDays = std::max(0, m_store.value(kTrashDays, 0).toInt());
-    m_searchTrash = m_store.value(kSearchTrash, true).toBool();
-    m_autosave = m_store.value(kAutosave, true).toBool();
-    m_spellcheck = m_store.value(kSpellcheck, true).toBool();
-    m_dailyWordGoal = std::max(0, m_store.value(kDailyWordGoal, 0).toInt());
+    m_leaderTimeout = std::max(0, get(kLeaderTimeout, 5000).toInt());
+    m_trashDays = std::max(0, get(kTrashDays, 0).toInt());
+    m_searchTrash = get(kSearchTrash, true).toBool();
+    m_autosave = get(kAutosave, true).toBool();
+    m_spellcheck = get(kSpellcheck, true).toBool();
+    m_dailyWordGoal = std::max(0, get(kDailyWordGoal, 0).toInt());
+}
+
+QSettings &Settings::storeFor(const QString &key)
+{
+    return isLocal(key) ? m_local : m_store;
+}
+
+const QSettings &Settings::storeFor(const QString &key) const
+{
+    return isLocal(key) ? m_local : m_store;
+}
+
+void Settings::put(const QString &key, const QVariant &value)
+{
+    storeFor(key).setValue(key, value);
+}
+
+QVariant Settings::get(const QString &key, const QVariant &fallback) const
+{
+    return storeFor(key).value(key, fallback);
 }
 
 QString Settings::defaultPath()
@@ -135,7 +172,7 @@ void Settings::setVaultPath(const QString &path)
     if (m_vaultPath == path)
         return;
     m_vaultPath = path;
-    m_store.setValue(kVaultPath, path);
+    put(kVaultPath, path);
     Q_EMIT vaultPathChanged();
 }
 
@@ -144,7 +181,9 @@ void Settings::setTheme(const QString &idOrPath)
     if (m_theme == idOrPath)
         return;
     m_theme = idOrPath;
-    m_store.setValue(kTheme, idOrPath);
+    const QString relative = QFileInfo(m_store.fileName()).dir().relativeFilePath(idOrPath);
+    put(kTheme,
+        QDir::isAbsolutePath(idOrPath) && !relative.startsWith(u"../"_s) ? relative : idOrPath);
     Q_EMIT themeChanged();
 }
 
@@ -153,7 +192,7 @@ void Settings::setNoteSort(const QString &sort)
     if (m_noteSort == sort || !noteSorts().contains(sort))
         return;
     m_noteSort = sort;
-    m_store.setValue(kNoteSort, sort);
+    put(kNoteSort, sort);
     Q_EMIT noteSortChanged();
 }
 
@@ -167,7 +206,7 @@ void Settings::setTasksSort(const QString &sort)
     if (m_tasksSort == sort || !kTaskSorts.contains(sort))
         return;
     m_tasksSort = sort;
-    m_store.setValue(kTasksSort, sort);
+    put(kTasksSort, sort);
     Q_EMIT tasksSortChanged();
 }
 
@@ -176,7 +215,7 @@ void Settings::setTasksSortDescending(bool descending)
     if (m_tasksSortDescending == descending)
         return;
     m_tasksSortDescending = descending;
-    m_store.setValue(kTasksSortDescending, descending);
+    put(kTasksSortDescending, descending);
     Q_EMIT tasksSortChanged();
 }
 
@@ -185,7 +224,7 @@ void Settings::setTasksView(const QString &view)
     if (m_tasksView == view || !toDoViews().contains(view))
         return;
     m_tasksView = view;
-    m_store.setValue(kTasksView, view);
+    put(kTasksView, view);
     Q_EMIT tasksViewChanged();
 }
 
@@ -194,7 +233,7 @@ void Settings::setCollapsedTags(const QStringList &tags)
     if (m_collapsedTags == tags)
         return;
     m_collapsedTags = tags;
-    m_store.setValue(kCollapsedTags, tags);
+    put(kCollapsedTags, tags);
     Q_EMIT collapsedTagsChanged();
 }
 
@@ -203,7 +242,7 @@ void Settings::setCollapsedNotebooks(const QStringList &paths)
     if (m_collapsedNotebooks == paths)
         return;
     m_collapsedNotebooks = paths;
-    m_store.setValue(kCollapsedNotebooks, paths);
+    put(kCollapsedNotebooks, paths);
     Q_EMIT collapsedNotebooksChanged();
 }
 
@@ -212,7 +251,7 @@ void Settings::setCheckForUpdates(bool check)
     if (m_checkForUpdates == check)
         return;
     m_checkForUpdates = check;
-    m_store.setValue(kCheckForUpdates, check);
+    put(kCheckForUpdates, check);
     Q_EMIT checkForUpdatesChanged();
 }
 
@@ -221,7 +260,7 @@ void Settings::setLastSeenVersion(const QString &version)
     if (m_lastSeenVersion == version)
         return;
     m_lastSeenVersion = version;
-    m_store.setValue(kLastSeenVersion, version);
+    put(kLastSeenVersion, version);
     Q_EMIT lastSeenVersionChanged();
 }
 
@@ -241,15 +280,15 @@ QString syncGroup(const QString &vaultRoot)
 
 QString Settings::syncRemote(const QString &vaultRoot) const
 {
-    return m_store.value(syncGroup(vaultRoot) + u"/remote"_s).toString();
+    return get(syncGroup(vaultRoot) + u"/remote"_s).toString();
 }
 
 int Settings::syncRemoteUses(const QString &remote) const
 {
     int uses = 0;
-    for (const QString &key : m_store.allKeys()) {
+    for (const QString &key : m_local.allKeys()) {
         if (key.startsWith(u"sync/"_s) && key.endsWith(u"/remote"_s) &&
-            m_store.value(key).toString() == remote)
+            get(key).toString() == remote)
             ++uses;
     }
     return uses;
@@ -261,11 +300,11 @@ void Settings::setSyncRemote(const QString &vaultRoot, const QString &remote)
         return;
     const QString group = syncGroup(vaultRoot);
     if (remote.isEmpty()) {
-        m_store.remove(group);
+        m_local.remove(group);
     } else {
         // The vault's own path too, for whoever reads the file.
-        m_store.setValue(group + u"/vault"_s, QDir(vaultRoot).absolutePath());
-        m_store.setValue(group + u"/remote"_s, remote);
+        put(group + u"/vault"_s, QDir(vaultRoot).absolutePath());
+        put(group + u"/remote"_s, remote);
     }
     Q_EMIT syncRemoteChanged();
 }
@@ -275,7 +314,7 @@ void Settings::setKeepRunning(bool keep)
     if (m_keepRunning == keep)
         return;
     m_keepRunning = keep;
-    m_store.setValue(kKeepRunning, keep);
+    put(kKeepRunning, keep);
     Q_EMIT remindersChanged();
 }
 
@@ -284,7 +323,7 @@ void Settings::setRemindersOn(bool on)
     if (m_remindersOn == on)
         return;
     m_remindersOn = on;
-    m_store.setValue(kRemindersOn, on);
+    put(kRemindersOn, on);
     Q_EMIT remindersChanged();
 }
 
@@ -293,7 +332,7 @@ void Settings::setQuickCaptureKey(bool on)
     if (m_quickCaptureKey == on)
         return;
     m_quickCaptureKey = on;
-    m_store.setValue(kQuickCaptureKey, on);
+    put(kQuickCaptureKey, on);
     Q_EMIT quickCaptureKeyChanged();
 }
 
@@ -305,14 +344,14 @@ void Settings::setReminderTime(const QString &time)
     if (!read.isValid() || read.toString(u"HH:mm"_s) == m_reminderTime)
         return;
     m_reminderTime = read.toString(u"HH:mm"_s);
-    m_store.setValue(kReminderTime, m_reminderTime);
+    put(kReminderTime, m_reminderTime);
     Q_EMIT remindersChanged();
 }
 
 void Settings::setLastReminderCheck(const QDateTime &at)
 {
     m_lastReminderCheck = at;
-    m_store.setValue(kLastReminderCheck, at);
+    put(kLastReminderCheck, at);
 }
 
 void Settings::setSidebarWidth(int width)
@@ -322,7 +361,7 @@ void Settings::setSidebarWidth(int width)
     if (m_sidebarWidth == width)
         return;
     m_sidebarWidth = width;
-    m_store.setValue(kSidebarWidth, width);
+    put(kSidebarWidth, width);
     Q_EMIT sidebarWidthChanged();
 }
 
@@ -332,7 +371,7 @@ void Settings::setNoteListWidth(int width)
     if (m_noteListWidth == width)
         return;
     m_noteListWidth = width;
-    m_store.setValue(kNoteListWidth, width);
+    put(kNoteListWidth, width);
     Q_EMIT noteListWidthChanged();
 }
 
@@ -341,7 +380,7 @@ void Settings::resetSidebarWidth()
     if (m_sidebarWidth == 0)
         return;
     m_sidebarWidth = 0;
-    m_store.setValue(kSidebarWidth, 0);
+    put(kSidebarWidth, 0);
     Q_EMIT sidebarWidthChanged();
 }
 
@@ -350,7 +389,7 @@ void Settings::resetNoteListWidth()
     if (m_noteListWidth == 0)
         return;
     m_noteListWidth = 0;
-    m_store.setValue(kNoteListWidth, 0);
+    put(kNoteListWidth, 0);
     Q_EMIT noteListWidthChanged();
 }
 
@@ -364,7 +403,7 @@ void Settings::setNoteFont(const QString &font)
     if (m_noteFont == font || !noteFonts().contains(font))
         return;
     m_noteFont = font;
-    m_store.setValue(kNoteFont, font);
+    put(kNoteFont, font);
     Q_EMIT noteFontChanged();
 }
 
@@ -373,7 +412,7 @@ void Settings::setColumnsHidden(bool hidden)
     if (m_columnsHidden == hidden)
         return;
     m_columnsHidden = hidden;
-    m_store.setValue(kColumnsHidden, hidden);
+    put(kColumnsHidden, hidden);
     Q_EMIT columnsHiddenChanged();
 }
 
@@ -382,7 +421,7 @@ void Settings::setOutlineShown(bool shown)
     if (m_outlineShown == shown)
         return;
     m_outlineShown = shown;
-    m_store.setValue(kOutlineShown, shown);
+    put(kOutlineShown, shown);
     Q_EMIT outlineShownChanged();
 }
 
@@ -391,7 +430,7 @@ void Settings::setFocusMode(bool on)
     if (m_focusMode == on)
         return;
     m_focusMode = on;
-    m_store.setValue(kFocusMode, on);
+    put(kFocusMode, on);
     Q_EMIT focusChanged();
 }
 
@@ -400,7 +439,7 @@ void Settings::setTypewriter(bool on)
     if (m_typewriter == on)
         return;
     m_typewriter = on;
-    m_store.setValue(kTypewriter, on);
+    put(kTypewriter, on);
     Q_EMIT focusChanged();
 }
 
@@ -409,7 +448,7 @@ void Settings::setReadMode(bool read)
     if (m_readMode == read)
         return;
     m_readMode = read;
-    m_store.setValue(kReadMode, read);
+    put(kReadMode, read);
     Q_EMIT readModeChanged();
 }
 
@@ -418,7 +457,7 @@ void Settings::setSourceMode(bool source)
     if (m_sourceMode == source)
         return;
     m_sourceMode = source;
-    m_store.setValue(kSourceMode, source);
+    put(kSourceMode, source);
     Q_EMIT sourceModeChanged();
 }
 
@@ -427,7 +466,7 @@ void Settings::setDeveloperMode(bool on)
     if (m_developerMode == on)
         return;
     m_developerMode = on;
-    m_store.setValue(kDeveloperMode, on);
+    put(kDeveloperMode, on);
     Q_EMIT developerChanged();
 }
 
@@ -436,7 +475,7 @@ void Settings::setVerboseLogging(bool on)
     if (m_verboseLogging == on)
         return;
     m_verboseLogging = on;
-    m_store.setValue(kVerboseLogging, on);
+    put(kVerboseLogging, on);
     Q_EMIT developerChanged();
 }
 
@@ -445,7 +484,7 @@ void Settings::setViMode(bool on)
     if (m_viMode == on)
         return;
     m_viMode = on;
-    m_store.setValue(kViMode, on);
+    put(kViMode, on);
     Q_EMIT keyboardChanged();
 }
 
@@ -454,7 +493,7 @@ void Settings::setLeaderKey(const QString &key)
     if (m_leaderKey == key || !kLeaderKeys.contains(key))
         return;
     m_leaderKey = key;
-    m_store.setValue(kLeaderKey, key);
+    put(kLeaderKey, key);
     Q_EMIT keyboardChanged();
 }
 
@@ -464,7 +503,7 @@ void Settings::setLeaderTimeout(int ms)
     if (m_leaderTimeout == ms)
         return;
     m_leaderTimeout = ms;
-    m_store.setValue(kLeaderTimeout, ms);
+    put(kLeaderTimeout, ms);
     Q_EMIT keyboardChanged();
 }
 
@@ -474,7 +513,7 @@ void Settings::setTrashDays(int days)
     if (m_trashDays == days)
         return;
     m_trashDays = days;
-    m_store.setValue(kTrashDays, days);
+    put(kTrashDays, days);
     Q_EMIT trashChanged();
 }
 
@@ -483,7 +522,7 @@ void Settings::setSearchTrash(bool on)
     if (m_searchTrash == on)
         return;
     m_searchTrash = on;
-    m_store.setValue(kSearchTrash, on);
+    put(kSearchTrash, on);
     Q_EMIT trashChanged();
 }
 
@@ -492,16 +531,16 @@ void Settings::setAutosave(bool on)
     if (m_autosave == on)
         return;
     m_autosave = on;
-    m_store.setValue(kAutosave, on);
+    put(kAutosave, on);
     Q_EMIT autosaveChanged();
 }
 
 QString Settings::computerId()
 {
-    QString id = m_store.value(kComputerId).toString();
+    QString id = get(kComputerId).toString();
     if (id.isEmpty()) {
         id = QUuid::createUuid().toString(QUuid::Id128).left(8);
-        m_store.setValue(kComputerId, id);
+        put(kComputerId, id);
     }
     return id;
 }
@@ -511,7 +550,7 @@ void Settings::setSpellcheck(bool on)
     if (m_spellcheck == on)
         return;
     m_spellcheck = on;
-    m_store.setValue(kSpellcheck, on);
+    put(kSpellcheck, on);
     Q_EMIT spellcheckChanged();
 }
 
@@ -521,7 +560,7 @@ void Settings::setDailyWordGoal(int words)
     if (m_dailyWordGoal == words)
         return;
     m_dailyWordGoal = words;
-    m_store.setValue(kDailyWordGoal, words);
+    put(kDailyWordGoal, words);
     Q_EMIT writingChanged();
 }
 

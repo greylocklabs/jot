@@ -1,5 +1,8 @@
 #include "jot/Settings.h"
 
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
 #include <QSettings>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -31,6 +34,8 @@ private Q_SLOTS:
     void keepsTheTasksView();
     void keepsReminderChoices();
     void countsTheVaultsOnARemote();
+    void machineSettingsStayOutOfSettingsIni();
+    void themesInTheFolderTravelWithIt();
 };
 
 void TestSettings::startsWithDefaults()
@@ -297,7 +302,8 @@ void TestSettings::keepsTheTasksView()
     }
     QCOMPARE(Settings(path).tasksView(), u"upcoming"_s);
     // A view this Jot does not know, as from a newer one, falls back to Today.
-    QSettings(path, QSettings::IniFormat).setValue(u"tasks/view"_s, u"someday"_s);
+    QSettings(QFileInfo(path).dir().filePath(u"local.ini"_s), QSettings::IniFormat)
+        .setValue(u"tasks/view"_s, u"someday"_s);
     Settings settings(path);
     QCOMPARE(settings.tasksView(), u"today"_s);
     settings.setTasksView(u"anytime"_s);
@@ -358,6 +364,63 @@ void TestSettings::countsTheVaultsOnARemote()
     QCOMPARE(settings.syncRemoteUses(u"s3:bucket"_s), 2);
     settings.setSyncRemote(u"/home/mara/Work"_s, {});
     QCOMPARE(settings.syncRemoteUses(u"s3:bucket"_s), 1);
+}
+
+void TestSettings::machineSettingsStayOutOfSettingsIni()
+{
+    QTemporaryDir dir;
+    const QString path = dir.filePath(u"settings.ini"_s);
+    {
+        Settings settings(path);
+        settings.setViMode(true);
+        settings.setTheme(u"paper"_s);
+        settings.setVaultPath(u"/home/mara/Notes"_s);
+        settings.setSidebarWidth(300);
+        settings.setLastSeenVersion(u"0.5.8"_s);
+        settings.setCollapsedNotebooks({u"Ashfall"_s});
+        settings.setSyncRemote(u"/home/mara/Notes"_s, u"s3:bucket"_s);
+    }
+    QFile portable(path);
+    QVERIFY(portable.open(QIODevice::ReadOnly));
+    const QByteArray shared = portable.readAll();
+    QVERIFY(shared.contains("viMode=true"));
+    QVERIFY(shared.contains("theme=paper"));
+    QVERIFY2(!shared.contains("/home/mara") && !shared.contains("0.5.8") &&
+                 !shared.contains("300") && !shared.contains("Ashfall") && !shared.contains("s3:"),
+             shared.constData());
+
+    const QString local = QFileInfo(path).dir().filePath(u"local.ini"_s);
+    QFile machine(local);
+    QVERIFY(machine.open(QIODevice::ReadOnly));
+    QVERIFY(machine.readAll().contains("s3:bucket"));
+    machine.close();
+
+    // Copied without local.ini, settings.ini gives back only its own part.
+    QVERIFY(QFile::remove(local));
+    const Settings copied(path);
+    QVERIFY(copied.viMode());
+    QCOMPARE(copied.theme(), u"paper"_s);
+    QVERIFY(copied.vaultPath().isEmpty());
+    QCOMPARE(copied.sidebarWidth(), 0);
+    QVERIFY(copied.lastSeenVersion().isEmpty());
+    QVERIFY(copied.syncRemote(u"/home/mara/Notes"_s).isEmpty());
+}
+
+void TestSettings::themesInTheFolderTravelWithIt()
+{
+    QTemporaryDir dir;
+    const QString path = dir.filePath(u"settings.ini"_s);
+    const QString mine = dir.filePath(u"themes/mine.toml"_s);
+    Settings(path).setTheme(mine);
+    QFile file(path);
+    QVERIFY(file.open(QIODevice::ReadOnly));
+    QVERIFY(file.readAll().contains("theme=themes/mine.toml"));
+    file.close();
+    QCOMPARE(Settings(path).theme(), mine);
+
+    // A theme elsewhere keeps its whole path.
+    Settings(path).setTheme(u"/somewhere/else.toml"_s);
+    QCOMPARE(Settings(path).theme(), u"/somewhere/else.toml"_s);
 }
 
 QTEST_GUILESS_MAIN(TestSettings)

@@ -8,8 +8,9 @@
 namespace jot {
 
 /// The user's preferences, kept as INI in the config folder. Every setter saves at once
-/// and signals only on a change. Settings that belong to a vault rather than to this
-/// computer live in the vault's `.jot/` instead.
+/// and signals only on a change. settings.ini holds what could go to another computer as it
+/// is; local.ini, beside it, holds this computer's folders, window and what it last did.
+/// Settings that belong to a vault rather than to this computer live in the vault's `.jot/`.
 class Settings : public QObject
 {
     Q_OBJECT
@@ -90,6 +91,7 @@ class Settings : public QObject
                    lastSeenVersionChanged)
 
 public:
+    /// `path` is settings.ini; local.ini goes in the same folder.
     explicit Settings(const QString &path, QObject *parent = nullptr);
 
     /// $XDG_CONFIG_HOME/jot/settings.ini
@@ -223,7 +225,13 @@ Q_SIGNALS:
     void writingChanged();
 
 private:
+    QSettings &storeFor(const QString &key);
+    const QSettings &storeFor(const QString &key) const;
+    void put(const QString &key, const QVariant &value);
+    QVariant get(const QString &key, const QVariant &fallback = {}) const;
+
     QSettings m_store;
+    QSettings m_local;
     QString m_vaultPath;
     QString m_theme;
     QString m_noteSort;
