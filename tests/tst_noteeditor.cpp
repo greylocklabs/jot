@@ -214,6 +214,15 @@ void TestNoteEditor::warnsOfFrontMatterProblems()
     QCOMPARE(body->property("cursorPosition").toInt(), int(u"---\ntags: [a]\n"_s.size()));
     QVERIFY(body->hasActiveFocus());
 
+    // In Read it leaves Read for the line.
+    m_settings->setReadMode(true);
+    QTRY_VERIFY(warning->isVisible());
+    body->setProperty("cursorPosition", 0);
+    QMetaObject::invokeMethod(warning, "clicked");
+    QVERIFY(!m_settings->readMode());
+    QTRY_VERIFY(body->hasActiveFocus());
+    QCOMPARE(body->property("cursorPosition").toInt(), int(u"---\ntags: [a]\n"_s.size()));
+
     body->setProperty("text", u"---\ntarget: 300\n---\nBody\n"_s);
     QTRY_VERIFY(!warning->isVisible());
 }
