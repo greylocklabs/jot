@@ -59,7 +59,12 @@ VaultController::VaultController(Settings &settings, QObject *parent)
     connect(this, &VaultController::currentChanged, this, &VaultController::currentTitleChanged);
     connect(this, &VaultController::currentChanged, this, &VaultController::followCurrentInTabs);
     connect(this, &VaultController::currentChanged, this, &VaultController::refreshTarget);
-    connect(&m_sync, &SyncController::finished, this, &VaultController::updateSyncPending);
+    connect(&m_sync, &SyncController::finished, this, [this] {
+        m_syncedPaths.clear();
+        for (const NoteInfo &note : m_index ? m_index->notesIn({}) : QList<NoteInfo>())
+            m_syncedPaths.insert(note.path);
+        updateSyncPending();
+    });
     // Saving changes the list's order and titles; a burst of saves reloads it once.
     m_reloadTimer.setSingleShot(true);
     m_reloadTimer.setInterval(800);
@@ -192,6 +197,7 @@ void VaultController::close()
     saveNow();
     m_frontMatterKeys.reset();
     m_sync.setVault({}, {});
+    m_syncedPaths.clear();
     // Clears the editor and any problem with the note, which belonged to this vault.
     m_current.clear();
     readCurrent();
@@ -2614,9 +2620,21 @@ void VaultController::updateSyncPending()
     const qint64 after = since.toMSecsSinceEpoch() * 1000000;
     const QStringList written = m_sync.written();
     const QList<NoteInfo> notes = m_index->notesIn({});
-    m_sync.setPending(std::ranges::any_of(notes, [&](const NoteInfo &note) {
-        return note.modified > after && !written.contains(note.path);
-    }));
+    // The notes there should be, had nothing been made, moved or deleted here: those there when
+    // it ended, with what it wrote as the files have it now, as the index may catch up later.
+    QSet<QString> expected = m_syncedPaths;
+    for (const QString &path : written) {
+        if (QFileInfo(m_vault->absolute(path)).isFile())
+            expected.insert(path);
+        else
+            expected.remove(path);
+    }
+    QSet<QString> now;
+    for (const NoteInfo &note : notes)
+        now.insert(note.path);
+    m_sync.setPending(now != expected || std::ranges::any_of(notes, [&](const NoteInfo &note) {
+                          return note.modified > after && !written.contains(note.path);
+                      }));
 }
 
 void VaultController::reloadModels()

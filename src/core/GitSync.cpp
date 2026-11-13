@@ -695,8 +695,9 @@ SyncReport GitSync::sync(const QDateTime &now, const SyncRequest &request)
                     .toInt();
             // The title, then a line such as " 2 files changed, 5 insertions(+), 1 deletion(-)".
             const QStringList log =
-                QString::fromUtf8(
-                    git({u"log"_s, u"-1"_s, u"--format=%s"_s, u"--shortstat"_s, u"HEAD"_s}).out)
+                QString::fromUtf8(git({u"log"_s, u"-1"_s, u"--format=%s"_s, u"--shortstat"_s,
+                                       u"--diff-merges=first-parent"_s, u"HEAD"_s})
+                                      .out)
                     .split(u'\n', Qt::SkipEmptyParts);
             done.lastCommit = log.value(0).trimmed();
             static const QRegularExpression stat(
