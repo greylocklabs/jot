@@ -89,6 +89,11 @@ class ThemeController : public QObject
     Q_PROPERTY(int textLg READ textLg CONSTANT)
     Q_PROPERTY(int textXl READ textXl CONSTANT)
     Q_PROPERTY(int textDisplay READ textDisplay CONSTANT)
+    /// An emoji beside a row's name: a little larger than the name, as at the name's size Qt's
+    /// scaling of color emoji drops an edge of some at fractional scales.
+    Q_PROPERTY(int emojiSize READ emojiSize CONSTANT)
+    /// The room an emoji at emojiSize is given, so names after different ones line up.
+    Q_PROPERTY(int emojiBox READ emojiBox CONSTANT)
     Q_PROPERTY(int text2xl READ text2xl CONSTANT)
 
     /// A destructive button armed for its second click: filled with danger,
@@ -233,6 +238,8 @@ public:
     int textLg() const { return 15; }
     int textXl() const { return 20; }
     int textDisplay() const { return 22; }
+    int emojiSize() const { return 16; }
+    int emojiBox() const { return 20; }
     int text2xl() const { return 28; }
 
     QColor dangerEdge() const;
