@@ -59,7 +59,6 @@ int VaultCommands::status(const QString &indexPath, bool json)
     const QList<NoteInfo> notes = m_index.notesIn({});
     const int notebooks = int(std::ranges::count_if(m_vault.entries(), &VaultEntry::folder));
     const int tasks = int(m_index.openTasks().size());
-    const int taskNotes = int(m_index.openTaskNotes().size());
     if (json) {
         print(m_out, QJsonObject{{u"vault"_s, m_vault.root()},
                                  {u"writable"_s, m_vault.writable()},
@@ -67,7 +66,6 @@ int VaultCommands::status(const QString &indexPath, bool json)
                                  {u"notebooks"_s, notebooks},
                                  {u"tags"_s, int(m_index.tags().size())},
                                  {u"openTasks"_s, tasks},
-                                 {u"openTaskNotes"_s, taskNotes},
                                  {u"index"_s, indexPath}});
         return 0;
     }
@@ -79,8 +77,7 @@ int VaultCommands::status(const QString &indexPath, bool json)
         (notes.size() == 1 ? tr("1 note") : tr("%1 notes").arg(notes.size())) +
             (notebooks == 1 ? tr(" in 1 notebook") : tr(" in %1 notebooks").arg(notebooks)));
     row(tr("Tags"), QString::number(m_index.tags().size()));
-    row(tr("Tasks"), (taskNotes == 1 ? tr("1 task note") : tr("%1 task notes").arg(taskNotes)) +
-                         u", "_s + (tasks == 1 ? tr("1 task") : tr("%1 tasks").arg(tasks)));
+    row(tr("To-dos"), tasks == 1 ? tr("1 open") : tr("%1 open").arg(tasks));
     row(tr("Index"), indexPath);
     return 0;
 }
@@ -127,7 +124,7 @@ int VaultCommands::list(const QString &notebook, const QString &order, bool json
 int VaultCommands::search(const QString &query, bool json)
 {
     if (query.trimmed().isEmpty()) {
-        m_err << tr("usage: jot search <words> [tag:name] [in:notebook] [task:open]") << "\n";
+        m_err << tr("usage: jot search <words> [tag:name] [in:notebook] [type:name]") << "\n";
         return 2;
     }
     const QList<SearchHit> hits = m_index.search(query);
@@ -298,8 +295,7 @@ int VaultCommands::listTasks(bool json, const QString &view, const QString &tag,
     if (json) {
         QJsonArray array;
         for (const ToDo &each : list)
-            array.append(QJsonObject{{u"kind"_s, each.kind},
-                                     {u"path"_s, each.path},
+            array.append(QJsonObject{{u"path"_s, each.path},
                                      {u"line"_s, each.line},
                                      {u"title"_s, each.title},
                                      {u"note"_s, each.note},
@@ -323,7 +319,6 @@ int VaultCommands::listTasks(bool json, const QString &view, const QString &tag,
             : due.isValid() && due < today ? tr("Overdue")
             : due == today                 ? tr("Today")
             : due.isValid()                ? due.toString(Qt::ISODate)
-            : each.kind == u"note"         ? tr("Task notes")
                                            : each.path;
         if (group != last) {
             m_out << m_paint.dim(group) << "\n";
@@ -338,8 +333,7 @@ int VaultCommands::listTasks(bool json, const QString &view, const QString &tag,
             extra << (due < today ? m_paint.danger(each.due) : each.due);
         else if (!done && due.isValid() && each.due.size() > 10)
             extra << each.due.mid(11);
-        m_out << (done ? "  [x] " : "  [ ] ")
-              << (each.kind == u"note" ? m_paint.bold(each.title) : each.title)
+        m_out << (done ? "  [x] " : "  [ ] ") << each.title
               << (extra.isEmpty() ? QString() : u"  "_s + m_paint.dim(extra.join(u"  "_s))) << "\n";
     }
     if (list.isEmpty())

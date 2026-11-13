@@ -103,7 +103,7 @@ class VaultController : public QObject
     Q_PROPERTY(QString currentKind READ currentKind NOTIFY currentChanged)
     Q_PROPERTY(QVariantList currentConflicts READ currentConflicts NOTIFY currentConflictsChanged)
     /// Whether the last change outside the editor can be undone or redone: a to-do ticked from
-    /// the task view, a task note completed, or a note moved to the trash or brought back.
+    /// the task view, or a note moved to the trash or brought back.
     /// Ticks typed in the editor are the editor's own to undo.
     Q_PROPERTY(bool canUndo READ canUndo NOTIFY historyChanged)
     Q_PROPERTY(bool canRedo READ canRedo NOTIFY historyChanged)
@@ -251,10 +251,6 @@ public:
     Q_INVOKABLE void showTrashed(const QString &location);
     /// How many notes the notebook at `path` holds, inside notebooks within it too.
     Q_INVOKABLE int notesInNotebook(const QString &path) const;
-    /// Makes the note at `path` a task, or no longer one. Its due date stays either way.
-    Q_INVOKABLE bool setTask(const QString &path, bool task);
-    /// Whether the note at `path` is a task, done or not.
-    Q_INVOKABLE bool isTask(const QString &path) const;
     /// A Markdown link to the note at `path`, by its title and its path from the vault's root,
     /// for pasting into any note: `[Soren](/Ashfall/Soren.md)`.
     Q_INVOKABLE QString linkTo(const QString &path) const;
@@ -356,14 +352,6 @@ public:
     /// say `text`, as the day popup does for a to-do in Tasks.
     Q_INVOKABLE bool setTaskText(const QString &path, int line, const QString &text,
                                  const QString &now);
-    /// Sets the task note at `path` due and repeating as `line`, a to-do's words with markers
-    /// such as `@weekly @due 2026-11-02`, from the day popup; either missing takes it away.
-    Q_INVOKABLE bool scheduleTaskNote(const QString &path, const QString &line);
-    /// Marks a note that is a task as done, with when it was; one that repeats is due again on
-    /// its next day after today instead.
-    Q_INVOKABLE bool completeTask(const QString &path);
-    /// Marks a note that is a done task as open again, forgetting when it was done.
-    Q_INVOKABLE bool reopenTask(const QString &path);
     /// Takes back the last change, or does again the last one taken back. Refused, and
     /// forgotten, when the note has changed or gone since.
     Q_INVOKABLE bool undo();

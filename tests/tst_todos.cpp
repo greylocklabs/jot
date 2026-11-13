@@ -46,14 +46,15 @@ void TestToDos::init()
                          "- [ ] Plan trip @due 2026-11-02\n"
                          "- [ ] Someday read Proust\n"
                          "- [x] Done already @due 2026-10-28\n"_s);
-    write(u"Taxes.md"_s, u"---\ntask: open\ndue: 2026-10-30\ntags: [home]\npriority: p1\n---\n"_s);
-    write(u"Fence.md"_s, u"---\ntask: open\n---\n"_s);
-    // A time written with a space, as YAML allows, sorts by the clock too.
-    write(u"Dentist.md"_s, u"---\ntask: open\ndue: 2026-10-28 09:00\n---\n"_s);
+    write(u"Taxes.md"_s, u"- [ ] Taxes #home @due 2026-10-30 @p1\n"_s);
+    write(u"Fence.md"_s, u"- [ ] Fence\n"_s);
+    write(u"Dentist.md"_s, u"- [ ] Dentist @due 2026-10-28 09:00\n"_s);
+    // What was once a task note is a note like any other.
+    write(u"Retired.md"_s, u"---\ntask: open\ndue: 2026-10-28\n---\nJust words.\n"_s);
     write(u"Done.md"_s, u"- [x] Pay rent #home @done 2026-10-26\n"
                         "- [x] Water plants @done 2026-10-27\n"
                         "- [X] Old one, no day\n"_s);
-    write(u"Garage.md"_s, u"---\ntask: done\ndone: 2026-10-27T15:30:00Z\n---\n"_s);
+    write(u"Garage.md"_s, u"- [x] Garage @done 2026-10-28\n"_s);
     m_index = std::make_unique<VaultIndex>(*m_vault, m_dir->filePath(u"index.sqlite"_s));
     QString error;
     QVERIFY2(m_index->open(&error), qPrintable(error));
@@ -78,13 +79,13 @@ void TestToDos::showsEachView()
     // Overdue and today's, a day's untimed before its timed.
     QCOMPARE(titles(ToDoView::Today), (QStringList{u"Late fee #home/money"_s, u"Buy rope"_s,
                                                    u"Dentist"_s, u"Call Soren #calls"_s}));
-    QCOMPARE(titles(ToDoView::Upcoming), (QStringList{u"Taxes"_s, u"Plan trip"_s}));
-    // Task notes first, then each note's boxes.
+    QCOMPARE(titles(ToDoView::Upcoming), (QStringList{u"Taxes #home"_s, u"Plan trip"_s}));
+    // By note.
     QCOMPARE(titles(ToDoView::Anytime), (QStringList{u"Fence"_s, u"Someday read Proust"_s}));
     QCOMPARE(titles(ToDoView::All).size(), 8);
+    QVERIFY(!titles(ToDoView::All).contains(u"Retired"_s));
 
     const ToDo call = toDos(*m_index, ToDoView::Today, m_today).last();
-    QCOMPARE(call.kind, u"task"_s);
     QCOMPARE(call.note, u"Inbox"_s);
     QCOMPARE(call.line, 1);
     QCOMPARE(call.due, u"2026-10-28T14:00"_s);
@@ -96,16 +97,13 @@ void TestToDos::showsEachView()
 
 void TestToDos::listsDoneOnesMostRecentFirst()
 {
-    // By when they were done, a moment before a bare day's midnight on the same day; those with
-    // no day written last.
+    // By when they were done; those with no day written last.
     QCOMPARE(titles(ToDoView::Done),
              (QStringList{u"Garage"_s, u"Water plants"_s, u"Pay rent #home"_s, u"Old one, no day"_s,
                           u"Done already"_s}));
     QCOMPARE(titles(ToDoView::Done, u"home"_s), QStringList{u"Pay rent #home"_s});
     const ToDo garage = toDos(*m_index, ToDoView::Done, m_today).first();
-    QCOMPARE(garage.kind, u"note"_s);
-    QCOMPARE(garage.doneAt(),
-             QDateTime(QDate(2026, 10, 27), QTime(15, 30), QTimeZone::UTC).toLocalTime());
+    QCOMPARE(garage.doneAt(), QDateTime(QDate(2026, 10, 28), QTime(0, 0)));
     QCOMPARE(toDos(*m_index, ToDoView::Done, m_today).at(1).doneAt(),
              QDateTime(QDate(2026, 10, 27), QTime(0, 0)));
     // Done ones stay out of the other views.
@@ -118,7 +116,7 @@ void TestToDos::filtersByTag()
 {
     // A tag takes in the tags nested in it, and a task note's own.
     QCOMPARE(titles(ToDoView::All, u"home"_s),
-             (QStringList{u"Late fee #home/money"_s, u"Taxes"_s}));
+             (QStringList{u"Late fee #home/money"_s, u"Taxes #home"_s}));
     QCOMPARE(titles(ToDoView::Today, u"home"_s), QStringList{u"Late fee #home/money"_s});
     QCOMPARE(titles(ToDoView::Today, u"calls"_s), QStringList{u"Call Soren #calls"_s});
 }
@@ -176,7 +174,7 @@ void TestToDos::filtersByPriority()
             found << each.title;
         return found;
     };
-    QCOMPARE(of(1), (QStringList{u"Call Soren #calls"_s, u"Taxes"_s}));
+    QCOMPARE(of(1), (QStringList{u"Call Soren #calls"_s, u"Taxes #home"_s}));
     QVERIFY(of(2).isEmpty());
     QVERIFY(of(0).contains(u"Buy rope"_s));
     QVERIFY(!of(0).contains(u"Taxes"_s));

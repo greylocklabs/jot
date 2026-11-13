@@ -912,7 +912,6 @@ ApplicationWindow {
         case "history":
             return note
         case "rename":
-        case "toggleTask":
         case "togglePin":
             return note && Vault.writable
         case "trash":
@@ -1098,9 +1097,6 @@ ApplicationWindow {
             break
         case "history":
             history.open()
-            break
-        case "toggleTask":
-            Vault.setTask(Vault.current, !Vault.isTask(Vault.current))
             break
         case "togglePin":
             Vault.setPinned(Vault.current, !Vault.isPinned(Vault.current))

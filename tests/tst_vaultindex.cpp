@@ -26,7 +26,7 @@ private Q_SLOTS:
     void dropsNotesThatAreGone();
     void searchesWordsAtTheStartOfWords();
     void indexesDataFilesByNameAndWords();
-    void searchFiltersByTagFolderTaskAndType();
+    void searchFiltersByTagFolderAndType();
     void searchRanksTitlesFirst();
     void searchTakesAwkwardInput();
     void resolvesLinksTheWayObsidianDoes();
@@ -93,9 +93,6 @@ void TestVaultIndex::readsTitlesTagsAndTasks()
     QCOMPARE(mara.tags, (QStringList{u"ashfall"_s, u"cast/lead"_s, u"ferry"_s}));
     QCOMPARE(mara.aliases, QStringList{u"the Ferrywoman"_s});
     QCOMPARE(mara.type, u"character"_s);
-    const NoteInfo errand = *m_index->note(u"Errand.md"_s);
-    QCOMPARE(errand.task, u"open"_s);
-    QCOMPARE(errand.due, u"2026-10-20"_s);
     QCOMPARE(m_index->note(u"Plain.md"_s)->title, u"Plain"_s);
     QVERIFY(m_index->note(u"Plain.md"_s)->modified > 0);
     QCOMPARE(m_index->notesIn(u"Cast"_s).size(), 1);
@@ -172,7 +169,7 @@ void TestVaultIndex::indexesDataFilesByNameAndWords()
     QCOMPARE(m_index->backlinks(u"data/cast.json"_s).size(), 2);
 }
 
-void TestVaultIndex::searchFiltersByTagFolderTaskAndType()
+void TestVaultIndex::searchFiltersByTagFolderAndType()
 {
     write(u"Ashfall/Mara.md"_s, u"---\ntype: Character\ntags: [cast/lead]\n---\nferry\n"_s);
     write(u"Ashfall/Soren.md"_s, u"---\ntype: character\n---\nferry #cast\n"_s);
@@ -190,7 +187,8 @@ void TestVaultIndex::searchFiltersByTagFolderTaskAndType()
              (QStringList{u"Ashfall/Mara.md"_s, u"Ashfall/Soren.md"_s}));
     QCOMPARE(paths(u"tag:cast/lead"_s), QStringList{u"Ashfall/Mara.md"_s});
     QCOMPARE(paths(u"ferry in:Notes"_s), QStringList{u"Notes/Errand.md"_s});
-    QCOMPARE(paths(u"task:open"_s), QStringList{u"Notes/Errand.md"_s});
+    // A note is never a task, so task: is no filter, only words.
+    QCOMPARE(paths(u"task:open"_s), QStringList());
     QCOMPARE(paths(u"type:character"_s),
              (QStringList{u"Ashfall/Mara.md"_s, u"Ashfall/Soren.md"_s}));
     QCOMPARE(paths(u"in:Ash"_s), QStringList());
@@ -337,10 +335,8 @@ void TestVaultIndex::listsOpenTasksAndTaskNotes()
     QCOMPARE(m_index->openTasks(),
              (QList<NoteTask>{{u"Shop.md"_s, 1, false, u"paper"_s, readTaskLine(u"paper"_s)},
                               {u"Shop.md"_s, 3, false, u"ink"_s, readTaskLine(u"ink"_s)}}));
-    QStringList tasks;
-    for (const NoteInfo &note : m_index->openTaskNotes())
-        tasks.append(note.path);
-    QCOMPARE(tasks, (QStringList{u"Soon.md"_s, u"Later.md"_s}));
+    // Notes with task front matter are notes; only checkboxes are to-dos.
+    QCOMPARE(m_index->doneTasks().size(), 1);
 }
 
 void TestVaultIndex::rebuildsAnIndexFromAnotherSchema()
@@ -409,9 +405,6 @@ void TestVaultIndex::readsToDoDatesAndLabels()
     QCOMPARE(tasks.at(0).parts.title, u"Call Soren #calls"_s);
     QCOMPARE(tasks.at(0).parts.due, u"2026-10-29T14:00"_s);
     QCOMPARE(tasks.at(1).parts.repeat, u"every week"_s);
-    QCOMPARE(m_index->openTaskNotes().first().due, u"2026-11-15"_s);
-    QCOMPARE(m_index->openTaskNotes().first().repeat, u"every year"_s);
-    QCOMPARE(m_index->openTaskNotes().first().priority, 2);
 }
 
 QTEST_GUILESS_MAIN(TestVaultIndex)

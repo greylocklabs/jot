@@ -28,12 +28,10 @@ class TaskModel : public QAbstractListModel
 
 public:
     enum Role {
-        /// "note" for a note that is a task, "task" for a checkbox in a note.
-        KindRole = Qt::UserRole + 1,
-        PathRole,
-        /// The to-do's words, or a task note's title.
+        PathRole = Qt::UserRole + 1,
+        /// The to-do's words.
         TitleRole,
-        /// The note a checkbox is in; empty for a task note.
+        /// The note it is in.
         NoteRole,
         LineRole,
         /// When it is due, as the list says it: a time today, a day otherwise; or empty.
@@ -48,8 +46,7 @@ public:
         DoneRole,
         /// 1 urgent to 4 low, or 0 for none.
         PriorityRole,
-        /// What the day popup starts from: a checkbox's words as written, markers and all, or a
-        /// task note's title with markers for its day and repeat.
+        /// What the day popup starts from: the checkbox's words as written, markers and all.
         WordingRole,
     };
 

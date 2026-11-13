@@ -130,19 +130,6 @@ QList<ToDo> toDos(const VaultIndex &index, ToDoView view, const QDate &today, co
                                  : QDateTime::fromMSecsSinceEpoch(note.modified / 1'000'000);
     };
     QList<ToDo> all;
-    for (const NoteInfo &note : done ? index.doneTaskNotes() : index.openTaskNotes())
-        all.append({u"note"_s,
-                    note.path,
-                    0,
-                    note.title,
-                    {},
-                    note.due.trimmed(),
-                    note.repeat.trimmed(),
-                    note.priority,
-                    note.tags,
-                    {},
-                    createdOf(note),
-                    note.done.trimmed()});
     QHash<QString, std::pair<QString, QDateTime>> notes;
     for (const NoteTask &task : done ? index.doneTasks() : index.openTasks()) {
         if (!notes.contains(task.path)) {
@@ -151,7 +138,7 @@ QList<ToDo> toDos(const VaultIndex &index, ToDoView view, const QDate &today, co
                                          : std::pair{task.path, QDateTime()});
         }
         const auto &[title, created] = notes.value(task.path);
-        all.append({u"task"_s, task.path, task.line, task.parts.title, title, task.parts.due,
+        all.append({task.path, task.line, task.parts.title, title, task.parts.due,
                     task.parts.repeat, task.parts.priority, scanNote(task.parts.title).tags,
                     task.text, created, task.parts.done});
     }

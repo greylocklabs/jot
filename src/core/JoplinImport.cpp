@@ -473,6 +473,15 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
         }
 
         QString text = body.endsWith(u'\n') || body.isEmpty() ? body : body + u'\n';
+        // A to-do is a checkbox, at the top of the note, with its day and when it was done.
+        if (note.isTodo) {
+            QString box = (note.completed.isValid() ? u"- [x] "_s : u"- [ ] "_s) + title;
+            if (note.due.isValid())
+                box += u" @due "_s + note.due.toLocalTime().toString(u"yyyy-MM-dd HH:mm"_s);
+            if (note.completed.isValid())
+                box += u" @done "_s + note.completed.toLocalTime().toString(u"yyyy-MM-dd"_s);
+            text = box + (text.isEmpty() ? u"\n"_s : u"\n\n"_s + text);
+        }
         const auto set = [&](const QString &key, const QVariant &value) {
             text = setFrontMatterKey(text, key, value);
         };
@@ -488,13 +497,6 @@ std::optional<JoplinImport> importJoplin(const Vault &vault, const JoplinExport 
         }
         if (!tags.isEmpty())
             set(u"tags"_s, tags);
-        if (note.isTodo) {
-            set(u"task"_s, note.completed.isValid() ? u"done"_s : u"open"_s);
-            if (note.due.isValid())
-                set(u"due"_s, iso(note.due));
-            if (note.completed.isValid())
-                set(u"done"_s, iso(note.completed));
-        }
         if (!note.sourceUrl.isEmpty())
             set(u"source_url"_s, note.sourceUrl);
         if (!note.author.isEmpty())

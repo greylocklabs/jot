@@ -96,7 +96,6 @@ private Q_SLOTS:
     void formatsAndUndoesInOneStep();
     void formatsFromTheKeyboard();
     void setsAToDosDayAndRepeat();
-    void makesTheNoteATaskWithADueDate();
     void continuesAndNestsLists();
     void fillsInTablesWithTheKeys();
     void completesLinkTargetsFromTheKeyboard();
@@ -1424,30 +1423,6 @@ void TestNoteEditor::setsAToDosDayAndRepeat()
     QTest::keyClick(m_window.get(), Qt::Key_Backspace);
     QTest::keyClick(m_window.get(), Qt::Key_Return);
     QTRY_COMPARE(text(), u"- [ ] "_s);
-}
-
-void TestNoteEditor::makesTheNoteATaskWithADueDate()
-{
-    m_vault->setCurrent(u"Recipes/Pancakes.md"_s);
-    QMetaObject::invokeMethod(m_editor.get(), "format", Q_ARG(QVariant, u"taskNote"_s),
-                              Q_ARG(QVariant, QString()));
-    QMetaObject::invokeMethod(m_editor.get(), "format", Q_ARG(QVariant, u"due"_s),
-                              Q_ARG(QVariant, u"2026-11-02"_s));
-    QTRY_VERIFY_WITH_TIMEOUT(!m_vault->unsaved(), 2000);
-
-    QString error;
-    const QString saved = *notefile::read(m_root + u"/Recipes/Pancakes.md"_s, &error);
-    QVERIFY2(saved.contains(u"task: open\n"_s), qPrintable(saved));
-    QVERIFY(saved.contains(u"due: 2026-11-02\n"_s));
-    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->openTaskNotes().size() == 2, 3000);
-
-    QMetaObject::invokeMethod(m_editor.get(), "format", Q_ARG(QVariant, u"taskNote"_s),
-                              Q_ARG(QVariant, QString()));
-    QTRY_VERIFY_WITH_TIMEOUT(!m_vault->unsaved(), 2000);
-    const QString undone = *notefile::read(m_root + u"/Recipes/Pancakes.md"_s, &error);
-    // The due date is the user's own, so it stays for when it is a task again.
-    QVERIFY(!undone.contains(u"task:"_s));
-    QVERIFY(undone.contains(u"due: 2026-11-02"_s));
 }
 
 void TestNoteEditor::continuesAndNestsLists()

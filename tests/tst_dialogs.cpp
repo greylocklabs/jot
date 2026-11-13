@@ -839,7 +839,7 @@ void TestDialogs::columnsGiveWayToTheNote()
         [&taskRow](QQuickItem *at) -> QQuickItem * {
         for (QQuickItem *child : at->childItems()) {
             if (child->property("path").toString() == u"Errands.md"_s &&
-                child->property("kind").toString() == u"task"_s && child->isVisible())
+                child->property("wording").isValid() && child->isVisible())
                 return child;
             if (QQuickItem *found = taskRow(child))
                 return found;

@@ -32,7 +32,6 @@ Rectangle {
         noteMenu.path = path
         noteMenu.folder = Vault.notebookOf(path)
         noteMenu.notebooks = [""].concat(Vault.notebookPaths())
-        noteMenu.task = Vault.isTask(path)
         noteMenu.pinned = Vault.isPinned(path)
         noteMenu.popup(item, x, y)
     }
@@ -516,7 +515,6 @@ Rectangle {
 
         property string path
         property var notebooks: []
-        property bool task: false
         property bool pinned: false
         property string folder
 
@@ -584,11 +582,6 @@ Rectangle {
                 implicitHeight: 1
                 color: Theme.border
             }
-        }
-        MenuEntry {
-            text: noteMenu.task ? qsTr("Not a task") : qsTr("Make a task")
-            enabled: Vault.writable
-            onTriggered: Vault.setTask(noteMenu.path, !noteMenu.task)
         }
         MenuEntry {
             text: qsTr("Move to trash...")

@@ -267,17 +267,18 @@ void TestJoplinImport::writesTasksAndLeavesTrashOut()
     QCOMPARE(done->notes.size(), 3);
     QCOMPARE(done->skipped, QStringList{u"1 note in Joplin's trash"_s});
 
-    const auto front = [&](const QString &path) {
-        const QString text = read(path);
-        return readFrontMatter(splitFrontMatter(text).frontMatter);
-    };
-    const auto open = front(u"Q&A - call ferry office.md"_s);
-    QCOMPARE(open.value(u"title"_s).toString(), u"Q&A / call: ferry office?"_s);
-    QCOMPARE(open.value(u"task"_s).toString(), u"open"_s);
-    QCOMPARE(open.value(u"due"_s).toString(), u"2026-10-10T17:00:00Z"_s);
-    const auto closed = front(u"Book tickets.md"_s);
-    QCOMPARE(closed.value(u"task"_s).toString(), u"done"_s);
-    QCOMPARE(closed.value(u"done"_s).toString(), u"2026-10-03T09:00:00Z"_s);
+    // A to-do is a checkbox at the top of its note, with its day, in local time, and when it
+    // was done; no task front matter.
+    const QString open = read(u"Q&A - call ferry office.md"_s);
+    const NoteParts openParts = splitFrontMatter(open);
+    QCOMPARE(readFrontMatter(openParts.frontMatter).value(u"title"_s).toString(),
+             u"Q&A / call: ferry office?"_s);
+    QVERIFY(!readFrontMatter(openParts.frontMatter).contains(u"task"_s));
+    QCOMPARE(openParts.body.toString(),
+             u"- [ ] Q&A / call: ferry office? @due %1\n\nAsk about times.\n"_s.arg(
+                 at(10, 17).toLocalTime().toString(u"yyyy-MM-dd HH:mm"_s)));
+    QCOMPARE(read(u"Book tickets.md"_s).section(u'\n', -2, -2),
+             u"- [x] Book tickets @done %1"_s.arg(at(3).toLocalTime().toString(u"yyyy-MM-dd"_s)));
     QVERIFY(QFileInfo::exists(m_vault->absolute(u"Book tickets (conflict).md"_s)));
 }
 

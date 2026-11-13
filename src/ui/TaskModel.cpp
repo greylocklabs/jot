@@ -88,7 +88,6 @@ QVariant TaskModel::data(const QModelIndex &index, int role) const
     const QLocale locale;
     const bool done = m_view == u"done";
     switch (role) {
-    case KindRole: return row.kind;
     case PathRole: return row.path;
     case TitleRole: return row.title;
     case NoteRole: return row.note;
@@ -107,16 +106,7 @@ QVariant TaskModel::data(const QModelIndex &index, int role) const
     case RepeatsRole: return !row.repeat.isEmpty();
     case DoneRole: return done;
     case PriorityRole: return row.priority;
-    case WordingRole: {
-        if (row.kind == u"task")
-            return row.text;
-        QString text = row.title;
-        if (!row.repeat.isEmpty())
-            text += u' ' + repeatMarker(row.repeat);
-        if (!row.due.isEmpty())
-            text += u' ' + dueMarker(QString(row.due).left(16).replace(u' ', u'T'));
-        return text;
-    }
+    case WordingRole: return row.text;
     case GroupRole:
         if (done) {
             const QDate on = row.doneAt().date();
@@ -141,17 +131,17 @@ QVariant TaskModel::data(const QModelIndex &index, int role) const
         if (due.isValid())
             return locale.toString(due, due.year() == m_today.year() ? u"dddd, MMMM d"_s
                                                                      : u"dddd, MMMM d, yyyy"_s);
-        return row.kind == u"note" ? tr("Task notes") : row.note;
+        return row.note;
     }
     return {};
 }
 
 QHash<int, QByteArray> TaskModel::roleNames() const
 {
-    return {{KindRole, "kind"},       {PathRole, "path"},         {TitleRole, "title"},
-            {NoteRole, "note"},       {LineRole, "line"},         {DueRole, "due"},
-            {OverdueRole, "overdue"}, {RepeatsRole, "repeats"},   {GroupRole, "group"},
-            {DoneRole, "done"},       {PriorityRole, "priority"}, {WordingRole, "wording"}};
+    return {{PathRole, "path"},         {TitleRole, "title"},    {NoteRole, "note"},
+            {LineRole, "line"},         {DueRole, "due"},        {OverdueRole, "overdue"},
+            {RepeatsRole, "repeats"},   {GroupRole, "group"},    {DoneRole, "done"},
+            {PriorityRole, "priority"}, {WordingRole, "wording"}};
 }
 
 } // namespace jot

@@ -76,7 +76,7 @@ Typing `@` on a to-do offers all of these. Quick add, Ctrl+Shift+A, takes a to-d
 say it, such as `call Soren tomorrow 3pm p1 #calls`, and Ctrl+Shift+D sets the day of the to-do
 the cursor is on.
 
-## Task notes and front matter
+## Front matter
 
 Front matter is YAML between `---` lines at the very top of a note:
 
@@ -84,17 +84,11 @@ Front matter is YAML between `---` lines at the very top of a note:
 ---
 tags: [ferry, cast/lead]
 aliases: [Mara]
-task: open
-due: 2026-11-02 14:00
-repeat: every week
-priority: p2
 target: 2000
 lang: en_GB
 ---
 ```
 
-- `task: open` makes the whole note a to-do, and `task: done` a done one. It takes `due`,
-  `repeat` and `priority` as a to-do's markers do.
 - `aliases` are other names links can use to find the note.
 - `target` is the words the note is meant to reach, shown under it as you write.
 - `lang` is the language its spelling is checked in.
