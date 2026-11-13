@@ -106,6 +106,7 @@ private Q_SLOTS:
     void addsToDosToTheInbox();
     void importsFromJoplinAfterSayingWhatItWouldDo();
     void importsFromJoplinInTheBackground();
+    void typingWhileImportingIsKept();
     void anImportShowsWhatItWroteToTheNoteOpen();
     void anImportThatFailsPartwayStillShowsWhatItWrote();
     void nothingIsImportedOverTypingThatCannotBeSaved();
@@ -2467,6 +2468,50 @@ void TestVaultController::importsFromJoplinInTheBackground()
     m_vault->startJoplinImport(QUrl::fromLocalFile(m_dir->filePath(u"missing.jex"_s)), {}, true);
     QVERIFY(finished.count() == 1 || finished.wait(10000));
     QVERIFY(!finished.first().first().toMap().value(u"ok"_s).toBool());
+}
+
+void TestVaultController::typingWhileImportingIsKept()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    const QString jex = m_dir->filePath(u"export.jex"_s);
+    const auto write = [&](const QString &body, const QString &updated) {
+        QFile file(jex);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write(tar({{u"n1.md"_s, item(u"From Joplin"_s, body,
+                                          u"id: fedcba9876543210fedcba9876543210\n"
+                                          u"user_created_time: 2026-10-01T09:00:00.000Z\n"
+                                          u"user_updated_time: "_s +
+                                              updated + u"\nencryption_applied: 0\ntype_: 1"_s)}}));
+    };
+    QSignalSpy finished(m_vault.get(), &VaultController::joplinImportFinished);
+    const auto importInTheBackground = [&] {
+        finished.clear();
+        m_vault->startJoplinImport(QUrl::fromLocalFile(jex), {}, false);
+        // Typed after the import started, so it is not saved before it.
+        m_vault->edit(m_vault->currentText() + u"Typed meanwhile.\n"_s);
+        QVERIFY(finished.wait(10000));
+        QVERIFY(finished.first().first().toMap().value(u"ok"_s).toBool());
+    };
+
+    // Nothing typed is saved while the import runs, as with autosave off.
+    m_settings->setAutosave(false);
+    const auto autosaveBack = qScopeGuard([this] { m_settings->setAutosave(true); });
+
+    // A note the import does not touch keeps what was typed, still to be saved.
+    write(u"First.\n\nMiddle.\n\nEnd."_s, u"2026-10-02T10:00:00.000Z"_s);
+    m_vault->setCurrent(u"Welcome.md"_s);
+    importInTheBackground();
+    QVERIFY(m_vault->currentText().endsWith(u"Typed meanwhile.\n"_s));
+    QVERIFY(m_vault->unsaved());
+    m_vault->saveNow();
+
+    // The note the import changes merges the two, where they changed different lines.
+    const QString path = u"From Joplin.md"_s;
+    m_vault->setCurrent(path);
+    write(u"Second.\n\nMiddle.\n\nEnd."_s, u"2026-10-03T10:00:00.000Z"_s);
+    importInTheBackground();
+    QVERIFY(m_vault->currentText().contains(u"Second."_s));
+    QVERIFY(m_vault->currentText().contains(u"Typed meanwhile."_s));
 }
 
 void TestVaultController::anImportShowsWhatItWroteToTheNoteOpen()
