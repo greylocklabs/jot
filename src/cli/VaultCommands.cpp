@@ -60,7 +60,7 @@ VaultCommands::VaultCommands(const Vault &vault, VaultIndex &index, QTextStream 
 
 int VaultCommands::status(const QString &indexPath, bool json)
 {
-    const QList<NoteInfo> notes = m_index.notesIn({});
+    const QList<NoteInfo> notes = m_index.shownIn({});
     const int notebooks = int(std::ranges::count_if(m_vault.entries(), [this](const VaultEntry &e) {
         return e.folder && !m_index.isHidden(e.path);
     }));
@@ -102,7 +102,7 @@ int VaultCommands::list(const QString &notebook, const QString &order, bool json
         m_err << tr("jot: no notebook called %1").arg(notebook) << "\n";
         return 1;
     }
-    QList<NoteInfo> notes = m_index.notesIn(notebook);
+    QList<NoteInfo> notes = m_index.shownIn(notebook);
     // Without the favorites when the layout cannot be read, which is said once.
     QString error;
     const std::optional<Layout> layout = Layout::read(m_vault, &error);

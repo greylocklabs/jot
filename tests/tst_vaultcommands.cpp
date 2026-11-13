@@ -24,6 +24,7 @@ private Q_SLOTS:
     void cleanup();
 
     void statusSaysWhatTheVaultHolds();
+    void leavesOutWhatIsHidden();
     void listsNotesNewestOrByTitle();
     void listsWhichNotesAreFavorites();
     void searchesWithFilters();
@@ -89,6 +90,19 @@ int TestVaultCommands::run(const std::function<int(cli::VaultCommands &)> &comma
     out.flush();
     err.flush();
     return code;
+}
+
+void TestVaultCommands::leavesOutWhatIsHidden()
+{
+    QFile layout(m_vault->absolute(u".jot/layout.yaml"_s));
+    QVERIFY(layout.open(QIODevice::WriteOnly));
+    layout.write("hidden:\n  - Recipes\n");
+    layout.close();
+    QCOMPARE(run([](auto &c) { return c.status(u"/cache/index.sqlite"_s, true); }), 0);
+    const QJsonObject status = json().object();
+    QCOMPARE(status.value(u"notes"_s).toInt(), 13);
+    QCOMPARE(status.value(u"notebooks"_s).toInt(), 5);
+    QCOMPARE(status.value(u"openTasks"_s).toInt(), 6);
 }
 
 void TestVaultCommands::statusSaysWhatTheVaultHolds()

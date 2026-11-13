@@ -578,8 +578,6 @@ QList<NoteInfo> VaultIndex::notesIn(const QString &folder) const
         while (query.next()) {
             NoteInfo info;
             info.path = query.value(0).toString();
-            if (isHidden(info.path))
-                continue;
             info.title = query.value(1).toString();
             info.created = query.value(2).toString();
             info.type = query.value(3).toString();
@@ -589,6 +587,13 @@ QList<NoteInfo> VaultIndex::notesIn(const QString &folder) const
             notes.append(info);
         }
     }
+    return notes;
+}
+
+QList<NoteInfo> VaultIndex::shownIn(const QString &folder) const
+{
+    QList<NoteInfo> notes = notesIn(folder);
+    notes.removeIf([this](const NoteInfo &note) { return isHidden(note.path); });
     return notes;
 }
 

@@ -119,12 +119,12 @@ void NoteListModel::refill()
             if (!m_tag.isEmpty()) {
                 const QStringList tagged = m_index->tagged(m_tag);
                 const QSet<QString> wanted(tagged.cbegin(), tagged.cend());
-                for (const NoteInfo &note : m_index->notesIn({})) {
+                for (const NoteInfo &note : m_index->shownIn({})) {
                     if (wanted.contains(note.path))
                         notes.append(note);
                 }
             } else {
-                notes = m_index->notesIn(m_notebook);
+                notes = m_index->shownIn(m_notebook);
             }
             sortNotes(notes, m_order);
             for (const NoteInfo &note : std::as_const(notes))

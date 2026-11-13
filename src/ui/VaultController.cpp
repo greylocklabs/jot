@@ -1145,6 +1145,31 @@ bool VaultController::writeHidden(const QString &path, bool hidden)
     return true;
 }
 
+QStringList VaultController::hiddenUnder(const QString &path) const
+{
+    QStringList found;
+    for (const QString &hidden : m_hidden) {
+        if (hidden == path || hidden.startsWith(path + u'/'))
+            found.append(hidden.mid(path.size()));
+    }
+    return found;
+}
+
+void VaultController::hideAgain(const QString &path, const QStringList &hidden)
+{
+    if (hidden.isEmpty() || !m_vault)
+        return;
+    QString error;
+    std::optional<Layout> layout = Layout::read(*m_vault, &error);
+    if (layout) {
+        for (const QString &rest : hidden)
+            layout->setHidden(path + rest, true);
+    }
+    if (!layout || !layout->write(*m_vault, &error))
+        qCWarning(lcVault) << "could not hide" << path << "again" << error;
+    reloadModels();
+}
+
 bool VaultController::setHidden(const QString &path, bool hidden)
 {
     if (m_hidden.contains(path) == hidden)
@@ -2049,14 +2074,17 @@ bool VaultController::apply(Change &change, bool back, bool *stale)
                                .arg(Vault::titleFromPath(change.path)));
                 return false;
             }
+            change.hidden = hiddenUnder(change.path);
             const std::optional<QString> location = moveNotebookToTrash(change.path);
             if (location)
                 change.location = *location;
             return location.has_value();
         }
         const std::optional<QString> path = bringNotebookBack(change.location, change.path, stale);
-        if (path)
+        if (path) {
             change.path = *path;
+            hideAgain(*path, change.hidden);
+        }
         return path.has_value();
     }
     if (trashes(change.trashed, back)) {
@@ -2067,6 +2095,7 @@ bool VaultController::apply(Change &change, bool back, bool *stale)
                            .arg(Vault::titleFromPath(change.path)));
             return false;
         }
+        change.hidden = hiddenUnder(change.path);
         const std::optional<QString> location =
             moveNoteToTrash(change.path, change.keepAttachments);
         if (location)
@@ -2074,8 +2103,10 @@ bool VaultController::apply(Change &change, bool back, bool *stale)
         return location.has_value();
     }
     const std::optional<QString> path = bringBack(change.location, stale);
-    if (path)
+    if (path) {
         change.path = *path;
+        hideAgain(*path, change.hidden);
+    }
     return path.has_value();
 }
 
@@ -2142,6 +2173,7 @@ QStringList VaultController::notesUsingAttachments(const QString &path) const
 
 bool VaultController::trashNote(const QString &path, bool keepAttachments)
 {
+    const QStringList hidden = hiddenUnder(path);
     const std::optional<QString> location = moveNoteToTrash(path, keepAttachments);
     if (!location)
         return false;
@@ -2150,6 +2182,7 @@ bool VaultController::trashNote(const QString &path, bool keepAttachments)
     change.path = path;
     change.location = *location;
     change.keepAttachments = keepAttachments;
+    change.hidden = hidden;
     remember(change);
     return true;
 }
@@ -2178,6 +2211,7 @@ std::optional<QString> VaultController::moveNoteToTrash(const QString &path, boo
 
 bool VaultController::trashNotebook(const QString &path)
 {
+    const QStringList hidden = hiddenUnder(path);
     const std::optional<QString> location = moveNotebookToTrash(path);
     if (!location)
         return false;
@@ -2185,6 +2219,7 @@ bool VaultController::trashNotebook(const QString &path)
     change.kind = Change::Kind::Notebook;
     change.path = path;
     change.location = *location;
+    change.hidden = hidden;
     remember(change);
     return true;
 }
