@@ -991,7 +991,8 @@ bool VaultController::renameCurrent(const QString &title)
     if (!m_vault || m_current.isEmpty() || wanted.isEmpty() || wanted == currentTitle())
         return false;
     saveNow();
-    const QString before = currentTitle();
+    const QString fromPath = m_current;
+    const QString fromText = m_currentText;
     const QString folder = m_current.contains(u'/') ? m_current.section(u'/', 0, -2) : QString();
 
     // A note with nothing in it yet, named "people.csv", becomes a CSV file. One with words in
@@ -1063,14 +1064,6 @@ bool VaultController::renameCurrent(const QString &title)
         m_current = to;
         readCurrent();
     }
-    if (!m_renamingBack) {
-        Change change;
-        change.kind = Change::Kind::Rename;
-        change.path = to;
-        change.before = before;
-        change.after = wanted;
-        remember(change);
-    }
     // The title key holds what the file name cannot; when the name can, it goes. A data file
     // has no front matter, so its name is all it has.
     const QVariantMap meta = readFrontMatter(splitFrontMatter(m_currentText).frontMatter);
@@ -1087,7 +1080,76 @@ bool VaultController::renameCurrent(const QString &title)
     }
     m_index->update({m_current});
     reloadModels();
+    Change change;
+    change.kind = Change::Kind::Rename;
+    change.location = fromPath;
+    change.path = m_current;
+    change.before = fromText;
+    change.after = m_currentText;
+    remember(change);
     return true;
+}
+
+bool VaultController::moveRenamed(Change &change, bool back, bool *stale)
+{
+    const QString from = back ? change.path : change.location;
+    const QString to = back ? change.location : change.path;
+    const QString was = back ? change.after : change.before;
+    const QString now = back ? change.before : change.after;
+    // Moved, gone or changed since, or its old name taken, it is not this change's to rename.
+    QString ignored;
+    *stale = !m_vault || !QFileInfo(m_vault->absolute(from)).isFile() ||
+             (to != from && QFileInfo::exists(m_vault->absolute(to)));
+    if (!*stale && from != m_current)
+        *stale = notefile::read(m_vault->absolute(from), &ignored).value_or(QString()) != was;
+    if (*stale) {
+        setProblem(tr("%1 has moved or changed since, so it was left as it is.")
+                       .arg(Vault::titleFromPath(from)));
+        return false;
+    }
+    if (m_current != from)
+        setCurrent(from);
+    saveNow();
+    if (to != from) {
+        QString error;
+        const auto expect = [this](const QString &path, const QString &text) {
+            if (m_watcher)
+                m_watcher->expectWrite(path, text);
+        };
+        forgetHistoryKept(from);
+        if (!renameNote(*m_vault, *m_index, from, to, &error, expect)) {
+            qCWarning(lcVault) << "could not rename" << from << error;
+            resyncAfterRename(from, to);
+            setProblem(tr("Could not rename the note: %1").arg(error));
+            return false;
+        }
+        moved(from, to);
+        m_current = to;
+        readCurrent();
+    }
+    // The title key it had or lost goes back as it was, unless typed into since.
+    if (m_currentText == was && now != was) {
+        m_currentText = now;
+        setUnsaved(true);
+        saveNow();
+        Q_EMIT currentChanged();
+    }
+    m_index->update({m_current});
+    reloadModels();
+    Q_EMIT currentTitleChanged();
+    return true;
+}
+
+bool VaultController::undoRenames() const
+{
+    return !m_undo.isEmpty() && m_undo.last().kind == Change::Kind::Rename &&
+           m_undo.last().path == m_current;
+}
+
+bool VaultController::redoRenames() const
+{
+    return !m_redo.isEmpty() && m_redo.last().kind == Change::Kind::Rename &&
+           m_redo.last().location == m_current;
 }
 
 QString VaultController::newNotebook(const QString &parent)
@@ -2073,23 +2135,8 @@ bool VaultController::apply(Change &change, bool back, bool *stale)
         return back ? replaceTaskText(change.path, change.after, change.before, stale)
                     : replaceTaskText(change.path, change.before, change.after, stale);
     }
-    if (change.kind == Change::Kind::Rename) {
-        // Moved or gone since, it is not this change's to rename.
-        *stale = !m_vault || !QFileInfo(m_vault->absolute(change.path)).isFile();
-        if (*stale) {
-            setProblem(tr("%1 has moved or gone since, so it was left as it is.")
-                           .arg(Vault::titleFromPath(change.path)));
-            return false;
-        }
-        if (m_current != change.path)
-            setCurrent(change.path);
-        m_renamingBack = true;
-        const bool renamed = renameCurrent(back ? change.before : change.after);
-        m_renamingBack = false;
-        if (renamed)
-            change.path = m_current;
-        return renamed;
-    }
+    if (change.kind == Change::Kind::Rename)
+        return moveRenamed(change, back, stale);
     if (change.kind == Change::Kind::Favorite) {
         // Gone since, it is no favorite to change.
         *stale = !m_vault || !QFileInfo(m_vault->absolute(change.path)).isFile();

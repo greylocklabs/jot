@@ -2703,6 +2703,29 @@ void TestNoteEditor::undoesTitleEdits()
     QTRY_VERIFY(title->hasActiveFocus());
     QTest::keyClick(m_window.get(), Qt::Key_Z, Qt::ControlModifier);
     QTRY_COMPARE(m_vault->current(), u"Welcome.md"_s);
+
+    // A title the file name cannot hold is kept as front matter, and undo takes it out again.
+    const QString text = m_vault->currentText();
+    QVERIFY(m_vault->renameCurrent(u"Ferry: notes"_s));
+    QVERIFY(m_vault->currentText().contains(u"title: "_s));
+    QVERIFY(m_vault->undo());
+    QCOMPARE(m_vault->current(), u"Welcome.md"_s);
+    QCOMPARE(m_vault->currentText(), text);
+
+    // Its old name taken since, it is left as it is.
+    QVERIFY(m_vault->renameCurrent(u"Hello"_s));
+    QFile taken(m_root + u"/Welcome.md"_s);
+    QVERIFY(taken.open(QIODevice::WriteOnly));
+    taken.close();
+    QVERIFY(!m_vault->undo());
+    QCOMPARE(m_vault->current(), u"Hello.md"_s);
+
+    // Ctrl+Z in the title takes back only a rename, not another change.
+    QVERIFY(m_vault->setFavorite(u"Hello.md"_s, true));
+    title->forceActiveFocus();
+    QTRY_VERIFY(title->hasActiveFocus());
+    QTest::keyClick(m_window.get(), Qt::Key_Z, Qt::ControlModifier);
+    QVERIFY(m_vault->isFavorite(u"Hello.md"_s));
 }
 
 void TestNoteEditor::keepsOneCursorAcrossViModes()

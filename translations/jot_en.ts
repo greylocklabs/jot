@@ -4717,6 +4717,10 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>%1 has moved or changed since, so it was left as it is.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>New notebook</source>
         <translation type="unfinished"></translation>
     </message>

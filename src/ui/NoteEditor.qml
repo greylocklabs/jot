@@ -574,10 +574,11 @@ Rectangle {
                     // With no typing of its own left to undo, a rename is taken back, or done
                     // again.
                     Keys.onPressed: event => {
-                        if (event.matches(StandardKey.Undo) && !canUndo && Vault.canUndo) {
+                        if (event.matches(StandardKey.Undo) && !canUndo && Vault.undoRenames()) {
                             Vault.undo()
                             event.accepted = true
-                        } else if (event.matches(StandardKey.Redo) && !canRedo && Vault.canRedo) {
+                        } else if (event.matches(StandardKey.Redo) && !canRedo && Vault.redoRenames(
+                                       )) {
                             Vault.redo()
                             event.accepted = true
                         }

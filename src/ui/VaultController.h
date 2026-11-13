@@ -389,6 +389,9 @@ public:
     Q_INVOKABLE bool undo();
     Q_INVOKABLE bool redo();
     [[nodiscard]] bool canUndo() const { return !m_undo.isEmpty(); }
+    /// Whether undo, or redo, would rename the note shown, as Ctrl+Z in its title does.
+    Q_INVOKABLE bool undoRenames() const;
+    Q_INVOKABLE bool redoRenames() const;
     [[nodiscard]] bool canRedo() const { return !m_redo.isEmpty(); }
     [[nodiscard]] QString undoTrashes() const;
     [[nodiscard]] QString redoTrashes() const;
@@ -689,8 +692,6 @@ private:
     QHash<QString, std::pair<QDateTime, int>> m_noteWords;
     QVariantMap m_viewEmoji;
     QStringList m_favorites;
-    /// Renaming as undo or redo does, which is not remembered as a change of its own.
-    bool m_renamingBack = false;
     /// Makes the note at `path` a favorite at `at`, or not, without remembering it for undo.
     bool writeFavorite(const QString &path, bool favorite, int at);
     QString m_indexPath;
@@ -716,7 +717,7 @@ private:
         enum class Kind { Text, Trash, Notebook, Favorite, Hide, Rename };
         Kind kind = Kind::Text;
         QString path;
-        /// Text: what the note said before and after. Rename: its title before and after.
+        /// Text and Rename: what the note said before and after.
         QString before;
         QString after;
         /// Trash and Notebook: where the note or notebook is in the trash while it is there.
@@ -735,6 +736,9 @@ private:
     /// Does `change`, or takes it back, keeping where the note went. `stale` says whether it
     /// cannot be done any more, as when the note has changed or gone since.
     bool apply(Change &change, bool back, bool *stale);
+    /// Undoes (`back`) or redoes a rename: the note goes from one path to the other, and its
+    /// text back to what it was, the title key included.
+    bool moveRenamed(Change &change, bool back, bool *stale);
     void remember(const Change &change);
     /// Moves the note at `path` to the trash, and gives where it went there.
     std::optional<QString> moveNoteToTrash(const QString &path, bool keepAttachments);
