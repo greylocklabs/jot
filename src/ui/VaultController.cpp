@@ -2991,9 +2991,14 @@ bool VaultController::ignoreNote(const QString &path)
     const QString pattern = VaultIgnore::literal(path, false);
     if (!patterns.contains(pattern))
         patterns.append(pattern);
-    // Ignored, it is no note to show.
-    if (path == m_current)
+    // Ignored, it is no note to show: what was typed is saved first, so it goes without the
+    // question about unsaved typing that leaving it would ask, and that could keep it open.
+    if (path == m_current) {
+        saveNow();
+        if (m_unsaved)
+            return false;
         setCurrent({});
+    }
     return setIgnore(patterns, respectsGitignore());
 }
 

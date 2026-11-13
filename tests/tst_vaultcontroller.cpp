@@ -217,9 +217,13 @@ void TestVaultController::leavesOutWhatTheVaultIgnores()
              (QStringList{u"Scratch/"_s, u"node_modules/"_s, u'/' + notebook + u'/'}));
     QVERIFY(!column(*m_vault->notebooks(), "path").contains(notebook));
 
-    // A note too, which, open, is put away.
+    // A note too, which, open, is put away, what was typed saved first even with saving by hand.
     m_vault->setCurrent(u"Inbox/Groceries.md"_s);
+    m_settings->setAutosave(false);
+    m_vault->edit(m_vault->currentText() + u"- [ ] eggs\n"_s);
     QVERIFY(m_vault->ignoreNote(u"Inbox/Groceries.md"_s));
+    m_settings->setAutosave(true);
+    QVERIFY(readFile(m_root + u"/Inbox/Groceries.md"_s).contains(u"eggs"_s));
     QVERIFY(m_vault->ignorePatterns().contains(u"/Inbox/Groceries.md"_s));
     QVERIFY(!m_vault->index()->note(u"Inbox/Groceries.md"_s));
     QVERIFY(m_vault->current().isEmpty());
