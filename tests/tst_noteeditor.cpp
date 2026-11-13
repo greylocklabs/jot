@@ -81,7 +81,7 @@ private Q_SLOTS:
     void showsTabsOverTheNote();
     void countsTheNotesWords();
     void recordsUnderAMicrophone();
-    void keepsTheTitlesWordsWholeBesideDelete();
+    void keepsDeleteAwayFromTheTitle();
     void foldsFormattingThatDoesNotFitIntoAMenu();
     void fadesAllButTheParagraphInFocusMode();
     void keepsTheLineInTheMiddleForTypewriterScrolling();
@@ -782,7 +782,7 @@ void TestNoteEditor::recordsUnderAMicrophone()
     QTRY_VERIFY(drawn(record));
 }
 
-void TestNoteEditor::keepsTheTitlesWordsWholeBesideDelete()
+void TestNoteEditor::keepsDeleteAwayFromTheTitle()
 {
     QString error;
     QVERIFY(notefile::write(m_root + u"/Crossings.md"_s, u"Text.\n"_s, &error));
@@ -795,16 +795,22 @@ void TestNoteEditor::keepsTheTitlesWordsWholeBesideDelete()
     const qreal line = QFontMetricsF(title->property("font").value<QFont>()).height();
     auto *editor = qobject_cast<QQuickItem *>(m_editor.get());
 
-    // As narrow as the note gets, Delete is a trash can and the title stays on one line.
-    editor->setWidth(240);
-    QTRY_COMPARE(trash->property("glyph").toString(), u"trash"_s);
-    QCOMPARE(trash->property("text").toString(), QString());
-    QTRY_VERIFY2(title->property("contentHeight").toReal() < 1.5 * line,
-                 qPrintable(QString::number(title->property("contentHeight").toReal())));
-    // With room, it says Delete again.
-    editor->setWidth(900);
-    QTRY_COMPARE(trash->property("text").toString(), u"Delete"_s);
-    QCOMPARE(trash->property("glyph").toString(), QString());
+    // Delete is in the bar above the note, so the title has the whole line, even narrow.
+    for (const int width : {240, 900}) {
+        editor->setWidth(width);
+        QTRY_VERIFY(trash->isVisible());
+        QCOMPARE(trash->property("text").toString(), u"Delete"_s);
+        QTRY_VERIFY(trash->mapToScene({0, trash->height()}).y() <= title->mapToScene({0, 0}).y());
+        QTRY_VERIFY2(title->property("contentHeight").toReal() < 1.5 * line,
+                     qPrintable(QString::number(title->property("contentHeight").toReal())));
+    }
+    // Read shows the second row alone: the mode switch and Delete, with nothing to format.
+    m_settings->setReadMode(true);
+    QTRY_VERIFY(!find(u"formatButtons"_s)->isVisible());
+    QVERIFY(find(u"modes"_s)->isVisible());
+    QVERIFY(trash->isVisible());
+    m_settings->setReadMode(false);
+    QTRY_VERIFY(find(u"formatButtons"_s)->isVisible());
 }
 
 void TestNoteEditor::foldsFormattingThatDoesNotFitIntoAMenu()
@@ -1848,11 +1854,15 @@ void TestNoteEditor::editsDataFilesAsPlainText()
     // Switching fonts on the way in sends nothing of the last note into this one.
     QCOMPARE(m_vault->currentText(), u"[{\"name\": \"**Mara**\"}]\n"_s);
     QVERIFY(!m_vault->unsaved());
-    // Its text as it is, in the mono font, even in read mode, with no Markdown bar or styling.
+    // Its text as it is, in the mono font, even in read mode, with no Markdown buttons or
+    // styling; the bar keeps only its row with the mode switch and Delete.
     QQuickItem *body = find(u"body"_s);
     QVERIFY(body->isVisible());
     QVERIFY(!find(u"reader"_s)->isVisible());
-    QVERIFY(!find(u"formatBar"_s)->isVisible());
+    QVERIFY(find(u"formatBar"_s)->isVisible());
+    QVERIFY(!find(u"formatButtons"_s)->isVisible());
+    QVERIFY(find(u"viewSwitch"_s)->isVisible());
+    QVERIFY(find(u"trash"_s)->isVisible());
     QCOMPARE(body->property("text").toString(), u"[{\"name\": \"**Mara**\"}]\n"_s);
     QCOMPARE(body->property("font").value<QFont>().family(), u"monospace"_s);
     QVERIFY(!body->findChild<MarkdownStyler *>()->document());

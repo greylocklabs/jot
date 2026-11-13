@@ -473,7 +473,23 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>This can&apos;t be a table: %1.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Styled</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Edit the records as a table</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Edit the file&apos;s text</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Read the records as a table, without changing them</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -490,6 +506,14 @@
     </message>
     <message>
         <source>Show the note&apos;s headings beside it</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Move to trash?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -954,22 +978,6 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>This can&apos;t be a table: %1.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Styled</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Source</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Read</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>%1 (%2)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -988,30 +996,6 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>Choose a note, or press %1 to find one.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Edit the records as a table</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Edit the file&apos;s text</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Read the records as a table, without changing them</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Delete</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Move to trash?</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Click again to move to trash</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

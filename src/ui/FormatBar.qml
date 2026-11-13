@@ -3,8 +3,9 @@ import Jot.Ui
 import QtQuick
 import QtQuick.Controls
 
-/// The row over a note: Markdown formatting for the selection or the line the cursor is
-/// on, and on the right, how it shows, its outline, and whether the note is a task.
+/// The bar over a note, in two rows: Markdown formatting for the selection or the line the
+/// cursor is on; then how it shows, its outline, and at the end, deleting it. A data file, and a
+/// note being read, have only the second.
 Rectangle {
     id: root
 
@@ -22,18 +23,21 @@ Rectangle {
     /// Whether there is a microphone, and whether it is recording.
     property bool canRecord: false
     property bool recording: false
+    /// A data file shows as a table in Styled and Read, when it reads as one, and as its text in
+    /// Source; `whyNotTable` says why it cannot be a table.
+    property bool dataFile: false
+    property bool tableShown: false
+    property bool tableReady: false
+    property string whyNotTable
 
     signal formatRequested(string action)
+    /// A mode was picked in the switch, whether or not it changed.
+    signal modePicked
+    /// Delete was pressed twice, to move the note to the trash.
+    signal trashRequested
 
-    readonly property real trailingWidth: modesHolder.width + outlineToggle.implicitWidth
-                                          + trailing.spacing
-    /// Too narrow for a few formatting buttons beside the switches: the switches go below the
-    /// buttons, and wrap as they must.
-    readonly property bool stacked: row.visible && width - 2 * Theme.space5 - Theme.space3
-                                    - trailingWidth < 4 * more.implicitWidth
     /// The width the formatting buttons have, the more button included.
-    readonly property real room: width - 2 * Theme.space5 - (stacked ? 0 : trailingWidth
-                                                                       + Theme.space3)
+    readonly property real room: width - 2 * Theme.space5
     /// How many of the row's items, from the left, it shows; the rest are in the more menu.
     readonly property int fitting: {
         const items = row.children
@@ -64,8 +68,8 @@ Rectangle {
         return out
     }
 
-    implicitHeight: stacked ? row.height + trailing.height + 3 * Theme.space2 : Math.max(
-                                  row.visible ? row.height : 0, trailing.height) + 2 * Theme.space2
+    implicitHeight: (row.visible ? row.height + Theme.space2 : 0) + trailing.height + 2
+                    * Theme.space2
     Component.onCompleted: {
         for (let i = 0; i < row.children.length; ++i) {
             const at = i
@@ -89,10 +93,10 @@ Rectangle {
         id: row
 
         objectName: "formatButtons"
-        // Nothing to format while reading.
-        visible: !Settings.readMode
+        // Nothing to format while reading, in a data file, or in a vault only read.
+        visible: !Settings.readMode && !root.dataFile && Vault.writable
         x: Theme.space5
-        y: root.stacked ? Theme.space2 : (root.height - height) / 2
+        y: Theme.space2
         spacing: Theme.space1
 
         // One button for the three heading sizes, so the row has room for the rest.
@@ -248,63 +252,111 @@ Rectangle {
         }
     }
 
-    Flow {
+    // How the note shows and its outline, then deleting it, at the far end.
+    Item {
         id: trailing
 
         objectName: "formatTrailing"
-        x: root.width - Theme.space5 - width
-        y: root.stacked ? row.y + row.height + Theme.space2 : (root.height - height) / 2
-        width: Math.min(root.trailingWidth, root.width - 2 * Theme.space5)
-        spacing: Theme.space3
+        x: Theme.space5
+        y: row.visible ? row.y + row.height + Theme.space2 : Theme.space2
+        width: root.width - 2 * Theme.space5
+        height: Math.max(modes.implicitHeight, outlineToggle.implicitHeight, trash.implicitHeight)
 
-        // The note styled as it is typed, its Markdown as written, or drawn to read.
-        Item {
-            id: modesHolder
+        Row {
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Theme.space3
 
-            width: modes.implicitWidth
-            // As tall as the toggles beside it, so the line lines up.
-            height: Math.max(modes.implicitHeight, outlineToggle.implicitHeight)
-
+            // The note styled as it is typed, its Markdown as written, or drawn to read; for a
+            // data file, its records as a table to edit or read, or its text.
             ModeSwitch {
                 id: modes
 
-                objectName: "modes"
+                readonly property string notTable: qsTr("This can't be a table: %1.").arg(
+                                                       root.whyNotTable)
+
+                objectName: root.dataFile ? "viewSwitch" : "modes"
                 anchors.verticalCenter: parent.verticalCenter
-                options: [
-                    {
-                        "label": qsTr("Styled"),
-                        "tip": root.withKey(qsTr("Style the Markdown as you type"), "sourceMode")
-                    },
-                    {
-                        "label": qsTr("Source"),
-                        "tip": root.withKey(qsTr("Show the Markdown as written"), "sourceMode")
-                    },
-                    {
-                        "label": qsTr("Read"),
-                        "tip": root.withKey(qsTr("Read the note as it looks, with links to follow"),
-                                            "readMode")
-                    }
-                ]
-                current: Settings.readMode ? 2 : Settings.sourceMode ? 1 : 0
+                options: root.dataFile ? [
+                                             {
+                                                 "label": qsTr("Styled"),
+                                                 "tip": root.tableReady ? root.withKey(qsTr(
+                                                                                           "Edit the records as a table"),
+                                                                                       "sourceMode") :
+                                                                          notTable,
+                                                 "enabled": root.tableReady
+                                             },
+                                             {
+                                                 "label": qsTr("Source"),
+                                                 "tip": root.withKey(qsTr("Edit the file's text"),
+                                                                     "sourceMode")
+                                             },
+                                             {
+                                                 "label": qsTr("Read"),
+                                                 "tip": root.tableReady ? root.withKey(qsTr(
+                                                                                           "Read the records as a table, without changing them"),
+                                                                                       "readMode") :
+                                                                          notTable,
+                                                 "enabled": root.tableReady
+                                             }
+                                         ] : [
+                                             {
+                                                 "label": qsTr("Styled"),
+                                                 "tip": root.withKey(qsTr(
+                                                                         "Style the Markdown as you type"),
+                                                                     "sourceMode")
+                                             },
+                                             {
+                                                 "label": qsTr("Source"),
+                                                 "tip": root.withKey(qsTr(
+                                                                         "Show the Markdown as written"),
+                                                                     "sourceMode")
+                                             },
+                                             {
+                                                 "label": qsTr("Read"),
+                                                 "tip": root.withKey(qsTr(
+                                                                         "Read the note as it looks, with links to follow"),
+                                                                     "readMode")
+                                             }
+                                         ]
+                current: root.dataFile ? (!root.tableShown ? 1 : Settings.readMode ? 2 : 0) :
+                                         Settings.readMode ? 2 : Settings.sourceMode ? 1 : 0
                 onPicked: index => {
                     Settings.readMode = index === 2
                     if (index < 2)
                         Settings.sourceMode = index === 1
+                    root.modePicked()
                 }
+            }
+
+            // The note's headings down the side.
+            Toggle {
+                id: outlineToggle
+
+                objectName: "outlineToggle"
+                anchors.verticalCenter: parent.verticalCenter
+                visible: !root.dataFile
+                text: qsTr("Outline")
+                checked: Settings.outlineShown
+                focusPolicy: Qt.NoFocus
+                Accessible.description: root.withKey(qsTr("Show the note's headings beside it"),
+                                                     "outline")
+                onToggled: Settings.outlineShown = checked
             }
         }
 
-        // The note's headings down the side.
-        Toggle {
-            id: outlineToggle
+        DangerButton {
+            id: trash
 
-            objectName: "outlineToggle"
-            text: qsTr("Outline")
-            checked: Settings.outlineShown
-            focusPolicy: Qt.NoFocus
-            Accessible.description: root.withKey(qsTr("Show the note's headings beside it"),
-                                                 "outline")
-            onToggled: Settings.outlineShown = checked
+            objectName: "trash"
+            anchors {
+                right: parent.right
+                verticalCenter: parent.verticalCenter
+            }
+            visible: Vault.writable
+            label: qsTr("Delete")
+            armedLabel: qsTr("Move to trash?")
+            Accessible.name: armed ? qsTr("Move to trash?") : qsTr("Delete")
+            onConfirmed: root.trashRequested()
         }
     }
 
