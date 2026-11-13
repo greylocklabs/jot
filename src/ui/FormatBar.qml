@@ -26,6 +26,8 @@ Rectangle {
     /// A data file shows as a table in Styled and Read, when it reads as one, and as its text in
     /// Source; `whyNotTable` says why it cannot be a table.
     property bool dataFile: false
+    /// What is wrong with the note's front matter, as the styler gives it.
+    property var frontMatterProblems: []
     property bool tableShown: false
     property bool tableReady: false
     property string whyNotTable
@@ -35,6 +37,8 @@ Rectangle {
     signal modePicked
     /// Delete was pressed twice, to move the note to the trash.
     signal trashRequested
+    /// The warning about the front matter was pressed: the cursor goes to `line`, from 1.
+    signal problemPicked(int line)
 
     /// The width the formatting buttons have, the more button included.
     readonly property real room: width - 2 * Theme.space5
@@ -357,6 +361,24 @@ Rectangle {
             }
         }
 
+        // The front matter's problems, listed when hovered; pressed, it goes to the first.
+        StickerButton {
+            id: problems
+
+            objectName: "frontMatterProblems"
+            anchors {
+                right: trash.visible ? trash.left : parent.right
+                rightMargin: trash.visible ? Theme.space3 : 0
+                verticalCenter: parent.verticalCenter
+            }
+            visible: root.frontMatterProblems.length > 0 && !root.dataFile
+            destructive: true
+            text: root.frontMatterProblems.length === 1 ? qsTr("Front matter problem") : qsTr(
+                                                              "%1 front matter problems").arg(
+                                                              root.frontMatterProblems.length)
+            tip: root.frontMatterProblems.map(problem => problem.message).join("\n")
+            onClicked: root.problemPicked(root.frontMatterProblems[0].line)
+        }
         DangerButton {
             id: trash
 

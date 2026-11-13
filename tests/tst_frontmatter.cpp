@@ -25,6 +25,7 @@ private slots:
     void quotesOnlyWhatNeedsIt_data();
     void quotesOnlyWhatNeedsIt();
     void valuesSurviveARoundTrip();
+    void findsWhatIsWrong();
 };
 
 void TestFrontMatter::splits_data()
@@ -192,6 +193,33 @@ void TestFrontMatter::valuesSurviveARoundTrip()
         QCOMPARE(values.value(u"k%1"_s.arg(i)).toString(), awkward.at(i));
     QCOMPARE(values.value(u"list"_s).toStringList(), awkward);
     QCOMPARE(jot::splitFrontMatter(note).body.toString(), u"Body\n"_s);
+}
+
+void TestFrontMatter::findsWhatIsWrong()
+{
+    const auto lines = [](const QString &note) {
+        QList<int> found;
+        for (const jot::FrontMatterProblem &problem : jot::frontMatterProblems(note))
+            found.append(problem.line);
+        return found;
+    };
+    // Fine: none at all, unknown keys, lists, nested values and comments.
+    QVERIFY(jot::frontMatterProblems(u"Just a note.\n"_s).isEmpty());
+    QVERIFY(jot::frontMatterProblems(u"---\nmood: calm\ntags:\n  - a\n  - b\n# note\nplace:\n  "
+                                     u"city: Oslo\ntarget: 2000\ntasks: off\ncreated: "
+                                     u"2026-11-13T09:00:00Z\nlang: en_GB\n---\nBody\n"_s)
+                .isEmpty());
+    QVERIFY(jot::frontMatterProblems(u"---\ncreated: 2026-11-13\ntasks: Yes\n...\n"_s).isEmpty());
+
+    // Never closed: the first line says so.
+    QCOMPARE(lines(u"---\ntags: [a]\nBody\n"_s), QList<int>{1});
+    // A line that is no key: value, and values of the wrong kind, each on its own line.
+    QCOMPARE(lines(u"---\ntags: [a]\njust words\ntarget: lots\ntasks: maybe\ncreated: "
+                   u"yesterday\nlang: English please\n---\n"_s),
+             (QList<int>{3, 4, 5, 6, 7}));
+    QVERIFY(jot::frontMatterProblems(u"---\ntarget: lots\n---\n"_s)
+                .first()
+                .message.contains(u"lots"_s));
 }
 
 QTEST_GUILESS_MAIN(TestFrontMatter)
