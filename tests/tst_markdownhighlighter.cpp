@@ -327,6 +327,19 @@ void TestMarkdownHighlighter::saysWhatIsUnderAPosition()
     QCOMPARE(m_highlighter->hitAt(find(u"site"_s)).kind, MarkdownHighlighter::Hit::Url);
     QCOMPARE(m_highlighter->hitAt(find(u"call"_s)).kind, MarkdownHighlighter::Hit::None);
     QCOMPARE(m_highlighter->hitAt(find(u"NotALink"_s)).kind, MarkdownHighlighter::Hit::None);
+
+    // A reference link goes where its label's first definition says.
+    setText(u"Ask [her][Mara] or [the ferry][] or [nobody][x].\n\n[mara]: <Cast/Mara.md>\n"
+            u"[The  Ferry]: https://ferry.example\n[mara]: Other.md\n"_s);
+    hit = m_highlighter->hitAt(find(u"her"_s));
+    QCOMPARE(hit.kind, MarkdownHighlighter::Hit::Link);
+    QCOMPARE(hit.target, u"Cast/Mara.md"_s);
+    hit = m_highlighter->hitAt(find(u"the ferry"_s));
+    QCOMPARE(hit.kind, MarkdownHighlighter::Hit::Url);
+    QCOMPARE(hit.target, u"https://ferry.example"_s);
+    QCOMPARE(m_highlighter->hitAt(find(u"nobody"_s)).kind, MarkdownHighlighter::Hit::None);
+    QCOMPARE(formatAt(find(u"her"_s)).foreground().color(), m_look.accent);
+    QCOMPARE(formatAt(find(u"Cast/"_s)).foreground().color(), m_look.faint);
 }
 
 void TestMarkdownHighlighter::neverChangesTheText()

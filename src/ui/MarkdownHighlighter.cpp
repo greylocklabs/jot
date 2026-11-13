@@ -42,6 +42,28 @@ const QRegularExpression &linkPattern()
     return link;
 }
 
+/// A reference link, `[text][label]`, or `[label][]` when the words are the label.
+const QRegularExpression &referencePattern()
+{
+    static const QRegularExpression reference(
+        uR"((!?)\[((?:[^\[\]]|\[[^\[\]]*\])+)\]\[([^\[\]]*)\])"_s);
+    return reference;
+}
+
+/// A reference link's definition, `[label]: target "title"`, on a line of its own.
+const QRegularExpression &definitionPattern()
+{
+    static const QRegularExpression definition(
+        uR"(^ {0,3}\[([^\[\]]+)\]:[ \t]*(<[^>]*>|\S+)(?:[ \t]+(?:"[^"]*"|'[^']*'|\([^)]*\)))?[ \t]*$)"_s);
+    return definition;
+}
+
+/// A label as Markdown matches it: case and runs of spaces do not count.
+QString labelKey(const QString &label)
+{
+    return label.simplified().toCaseFolded();
+}
+
 const QRegularExpression &urlPattern()
 {
     static const QRegularExpression url(uR"(<?\b(https?://[^\s<>()]+[^\s<>().,;:!?'"])>?)"_s);
@@ -1013,6 +1035,14 @@ void MarkdownHighlighter::inlineStyles(const QString &text, int from)
         taken.append({int(m.capturedStart()), int(m.capturedEnd())});
     };
 
+    // A reference link's definition is the plumbing behind its uses, so it stays quiet.
+    if (from == 0 && definitionPattern().match(text).hasMatch()) {
+        QTextCharFormat quiet;
+        quiet.setForeground(m_look.faint);
+        merge(0, int(text.size()), quiet);
+        return;
+    }
+
     static const QRegularExpression span(uR"((`+)(.+?)\1)"_s);
     for (const QRegularExpressionMatch &m : span.globalMatch(text, from)) {
         if (!free(m))
@@ -1039,6 +1069,14 @@ void MarkdownHighlighter::inlineStyles(const QString &text, int from)
     link.setFontUnderline(true);
     for (const QRegularExpressionMatch &m : linkPattern().globalMatch(text, from)) {
         if (!free(m))
+            continue;
+        mark(int(m.capturedStart()), int(m.capturedStart(2) - m.capturedStart()));
+        merge(int(m.capturedStart(2)), int(m.capturedLength(2)), link);
+        mark(int(m.capturedEnd(2)), int(m.capturedEnd() - m.capturedEnd(2)));
+        take(m);
+    }
+    for (const QRegularExpressionMatch &m : referencePattern().globalMatch(text, from)) {
+        if (!free(m) || !m.captured(1).isEmpty())
             continue;
         mark(int(m.capturedStart()), int(m.capturedStart(2) - m.capturedStart()));
         merge(int(m.capturedStart(2)), int(m.capturedLength(2)), link);
@@ -1143,6 +1181,25 @@ MarkdownHighlighter::Hit MarkdownHighlighter::hitAt(int position) const
             target = target.mid(1, target.size() - 2);
         static const QRegularExpression scheme(u"^[A-Za-z][A-Za-z0-9+.-]*:"_s);
         return {scheme.match(target).hasMatch() ? Hit::Url : Hit::Link, target, -1};
+    }
+    for (const QRegularExpressionMatch &m : referencePattern().globalMatch(text)) {
+        if (!contains(m) || !m.captured(1).isEmpty())
+            continue;
+        const QString label = labelKey(m.captured(3).isEmpty() ? m.captured(2) : m.captured(3));
+        // The first definition of a label is the one Markdown follows.
+        for (QTextBlock line = document()->begin(); line.isValid(); line = line.next()) {
+            if (kindOf(line.userState()) != Normal)
+                continue;
+            const QRegularExpressionMatch definition = definitionPattern().match(line.text());
+            if (!definition.hasMatch() || labelKey(definition.captured(1)) != label)
+                continue;
+            QString target = definition.captured(2);
+            if (target.startsWith(u'<'))
+                target = target.mid(1, target.size() - 2);
+            static const QRegularExpression scheme(u"^[A-Za-z][A-Za-z0-9+.-]*:"_s);
+            return {scheme.match(target).hasMatch() ? Hit::Url : Hit::Link, target, -1};
+        }
+        return {};
     }
     for (const QRegularExpressionMatch &m : urlPattern().globalMatch(text)) {
         if (contains(m))

@@ -7,7 +7,7 @@ A flat-bottomed boat on a rope line, rebuilt three times. [Mara Vey](../Characte
 
 ![](The%20Ferry.assets/ferry.png)
 
-The rope is older than the boat.
+The rope is older than the boat, and older than the [route][] it runs.
 
 A crossing at dusk, from the far bank:
 
@@ -17,3 +17,5 @@ Before each crossing, a checklist rather than to-dos, so `tasks: off` keeps it o
 
 - [x] Check the rope
 - [ ] Light the lamp
+
+[route]: ../Route.md

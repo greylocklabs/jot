@@ -19,6 +19,7 @@ private Q_SLOTS:
     void findsMathAsPandocDoes();
     void findsEveryKindOfLink();
     void leavesUrlsAndAnchorsOut();
+    void findsReferenceLinksByTheirDefinitions();
     void findsNestedTagsButNotHeadingsOrNumbers();
     void skipsCode();
     void findsTasks();
@@ -46,6 +47,28 @@ void TestNoteScan::findsEveryKindOfLink()
         {u"/Ashfall/Soren.md"_s, u"link"_s, 3},
     };
     QCOMPARE(scan.links, expected);
+}
+
+void TestNoteScan::findsReferenceLinksByTheirDefinitions()
+{
+    const QString body = u"See [Mara][1] and [the ferry][].\n\n[1]: Mara.md\n"
+                         u"  [The Ferry]: <Places/The Ferry.md#dock> \"title\"\n"
+                         u"[site]: https://callieapp.org\n[up]: #top\n"_s;
+    const QList<NoteScan::Link> expected{
+        {u"Mara.md"_s, u"link"_s, 3},
+        {u"Places/The Ferry.md#dock"_s, u"link"_s, 4},
+    };
+    QCOMPARE(scanNote(body).links, expected);
+    // A # in a definition's target is no tag, in the index or when read.
+    QVERIFY(scanNote(body).tags.isEmpty());
+    QCOMPARE(readingMarkdown(u"[up]: #top\n"_s), u"[up]: #top\n"_s);
+    QCOMPARE(rewriteLinks(body,
+                          [](const QString &raw) -> std::optional<QString> {
+                              if (raw == u"Mara.md")
+                                  return u"Cast/Mara Vey.md"_s;
+                              return std::nullopt;
+                          }),
+             QString(body).replace(u"[1]: Mara.md"_s, u"[1]: Cast/Mara%20Vey.md"_s));
 }
 
 void TestNoteScan::leavesUrlsAndAnchorsOut()
