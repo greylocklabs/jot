@@ -118,6 +118,7 @@ private Q_SLOTS:
     void editsInViModes();
     void runsViCommands();
     void completesFrontMatter();
+    void hidesCountsButNotTargets();
     void savesByHandFromTheBar();
     void showsTheClosingFenceWithRoomBelow();
     void suggestsOnlyWhileTypingInVi();
@@ -2845,6 +2846,23 @@ void TestNoteEditor::savesByHandFromTheBar()
     QVERIFY(notefile::read(m_root + u"/Welcome.md"_s, &error)->endsWith(u"More.\n"_s));
     QTRY_VERIFY(!save->isEnabled());
     m_settings->setAutosave(true);
+}
+
+void TestNoteEditor::hidesCountsButNotTargets()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *counts = find(u"wordCount"_s);
+    QQuickItem *body = find(u"body"_s);
+    QTRY_VERIFY(counts->property("text").toString().contains(u"words"_s));
+    m_settings->setShowCounts(false);
+    QTRY_VERIFY(!counts->isVisible());
+    // A note's own target shows still.
+    body->setProperty("text", u"---\ntarget: 100\n---\nOne two three.\n"_s);
+    QTRY_VERIFY(counts->isVisible());
+    QVERIFY(counts->property("text").toString().contains(u"of 100"_s));
+    QVERIFY(!counts->property("text").toString().contains(u"characters"_s));
+    m_settings->setShowCounts(true);
+    QTRY_VERIFY(counts->property("text").toString().contains(u"characters"_s));
 }
 
 void TestNoteEditor::keepsOneCursorAcrossViModes()

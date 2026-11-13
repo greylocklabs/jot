@@ -55,6 +55,7 @@ const QString kSearchTrash = u"trash/search"_s;
 const QString kAutosave = u"editor/autosave"_s;
 const QString kSpellcheck = u"editor/spellcheck"_s;
 const QString kDailyWordGoal = u"writing/dailyGoal"_s;
+const QString kShowCounts = u"writing/counts"_s;
 const QString kComputerId = u"app/computerId"_s;
 // Each action's own shortcuts, as keys/<action>.
 const QString kKeysGroup = u"keys"_s;
@@ -138,6 +139,7 @@ Settings::Settings(const QString &path, QObject *parent)
     m_autosave = get(kAutosave, true).toBool();
     m_spellcheck = get(kSpellcheck, true).toBool();
     m_dailyWordGoal = std::max(0, get(kDailyWordGoal, 0).toInt());
+    m_showCounts = get(kShowCounts, true).toBool();
     m_store.beginGroup(kKeysGroup);
     // A value written by hand with a comma in it, as "Ctrl+,", reads as a list; joined, it is
     // the text as written.
@@ -573,6 +575,15 @@ void Settings::setSpellcheck(bool on)
     Q_EMIT spellcheckChanged();
 }
 
+void Settings::setShowCounts(bool shown)
+{
+    if (m_showCounts == shown)
+        return;
+    m_showCounts = shown;
+    put(kShowCounts, shown);
+    Q_EMIT writingChanged();
+}
+
 void Settings::setDailyWordGoal(int words)
 {
     words = std::max(0, words);
@@ -635,6 +646,7 @@ void Settings::reset()
     setAutosave(true);
     setSpellcheck(true);
     setDailyWordGoal(0);
+    setShowCounts(true);
 }
 
 } // namespace jot

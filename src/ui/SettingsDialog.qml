@@ -491,6 +491,13 @@ Popup {
                             onActivated: value => Settings.dailyWordGoal = value
                         }
                     }
+                    Toggle {
+                        objectName: "showCounts"
+                        width: parent.width
+                        text: qsTr("Show word counts under notes")
+                        checked: Settings.showCounts
+                        onToggled: Settings.showCounts = checked
+                    }
                     Text {
                         width: parent.width
                         wrapMode: Text.Wrap
@@ -1152,6 +1159,56 @@ Popup {
                         wrapMode: Text.Wrap
                         text: qsTr(
                                   "Once a day, Jot asks GitHub for its latest release. The app shows it in the ? menu, and the jot command after it runs.")
+                        color: Theme.textMuted
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.textSm
+                    }
+                }
+
+                Section {
+                    title: qsTr("Note lists")
+                    visible: root.tab === "general"
+
+                    Row {
+                        spacing: Theme.space3
+
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: qsTr("Sort notes")
+                            color: Theme.text
+                            font.family: Theme.fontFamily
+                            font.pixelSize: Theme.textMd
+                        }
+                        Dropdown {
+                            objectName: "defaultSort"
+                            anchors.verticalCenter: parent.verticalCenter
+                            minimumWidth: 200
+                            textRole: "name"
+                            valueRole: "id"
+                            model: [
+                                {
+                                    "id": "updated",
+                                    "name": qsTr("Recently changed")
+                                },
+                                {
+                                    "id": "created",
+                                    "name": qsTr("Recently made")
+                                },
+                                {
+                                    "id": "title",
+                                    "name": qsTr("By title")
+                                }
+                            ]
+                            currentValue: Settings.noteSort
+                            Accessible.name: qsTr("Default note sort")
+                            onActivated: value => Settings.noteSort = value
+                        }
+                    }
+                    Text {
+                        width: parent.width
+                        wrapMode: Text.Wrap
+                        text: qsTr(
+                                  "How note lists are sorted, unless a notebook keeps a sort of its own.")
                         color: Theme.textMuted
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.textSm

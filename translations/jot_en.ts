@@ -2484,6 +2484,10 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Show word counts under notes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Under each note, its words, those written today and the days in a row you met the goal, on any computer syncing these notes. A note&apos;s own target is a target key in its front matter, such as target: 2000.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2731,6 +2735,34 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>Once a day, Jot asks GitHub for its latest release. The app shows it in the ? menu, and the jot command after it runs.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Note lists</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sort notes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Recently changed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Recently made</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>By title</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Default note sort</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>How note lists are sorted, unless a notebook keeps a sort of its own.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
