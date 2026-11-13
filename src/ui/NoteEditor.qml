@@ -438,12 +438,7 @@ Rectangle {
         // Text kept as text is read again even when the mode was already set.
         onModePicked: root.readTable()
         // Other notes' links to its attachments are worth a question first.
-        onTrashRequested: {
-            if (Vault.notesUsingAttachments(Vault.current).length > 0)
-                trashConfirm.askForNote(Vault.current)
-            else
-                Vault.trashCurrent()
-        }
+        onTrashRequested: trashConfirm.askForNote(Vault.current)
     }
 
     Flickable {
@@ -2025,5 +2020,6 @@ Rectangle {
 
     TrashConfirm {
         id: trashConfirm
+        objectName: "trashConfirm"
     }
 }

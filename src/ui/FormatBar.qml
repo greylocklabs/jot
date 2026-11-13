@@ -361,25 +361,59 @@ Rectangle {
             }
         }
 
-        // The front matter's problems, listed when hovered; pressed, it goes to the first.
-        StickerButton {
+        // The front matter's problems: a warning sign, listing them below when hovered, and
+        // going to the first when pressed.
+        AbstractButton {
             id: problems
+
+            /// The problems, one to a line, as the list below it shows them.
+            readonly property string tip: root.frontMatterProblems.map(problem
+                                                                       => problem.message).join(
+                                              "\n")
 
             objectName: "frontMatterProblems"
             anchors {
                 right: trash.visible ? trash.left : parent.right
-                rightMargin: trash.visible ? Theme.space3 : 0
+                rightMargin: trash.visible ? Theme.space2 : 0
                 verticalCenter: parent.verticalCenter
             }
             visible: root.frontMatterProblems.length > 0 && !root.dataFile
-            destructive: true
-            text: root.frontMatterProblems.length === 1 ? qsTr("Front matter problem") : qsTr(
-                                                              "%1 front matter problems").arg(
-                                                              root.frontMatterProblems.length)
-            tip: root.frontMatterProblems.map(problem => problem.message).join("\n")
+            implicitWidth: 32
+            implicitHeight: 32
+            focusPolicy: Qt.NoFocus
+            Accessible.name: root.frontMatterProblems.length === 1 ? qsTr("Front matter problem") :
+                                                                     qsTr("%1 front matter problems").arg(
+                                                                         root.frontMatterProblems.length)
+            Accessible.description: tip
             onClicked: root.problemPicked(root.frontMatterProblems[0].line)
+
+            HoverHandler {
+                cursorShape: Qt.PointingHandCursor
+            }
+
+            contentItem: Text {
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                text: "\u26A0\uFE0F"
+                font.pixelSize: Theme.textLg
+            }
+            background: null
+
+            Loader {
+                active: problems.hovered
+
+                sourceComponent: Tip {
+                    parent: problems
+                    // Below the bar, clear of the buttons above.
+                    y: problems.height + Theme.space2
+                    text: problems.tip
+                    delay: Theme.durSlow
+                    closePolicy: Popup.NoAutoClose
+                }
+            }
         }
-        DangerButton {
+        // Delete, an icon like the bar's others; it asks in the trash dialog first.
+        AbstractButton {
             id: trash
 
             objectName: "trash"
@@ -388,10 +422,41 @@ Rectangle {
                 verticalCenter: parent.verticalCenter
             }
             visible: Vault.writable
-            label: qsTr("Delete")
-            armedLabel: qsTr("Move to trash?")
-            Accessible.name: armed ? qsTr("Move to trash?") : qsTr("Delete")
-            onConfirmed: root.trashRequested()
+            implicitWidth: 32
+            implicitHeight: 32
+            focusPolicy: Qt.NoFocus
+            Accessible.name: qsTr("Move to trash")
+            onClicked: root.trashRequested()
+
+            HoverHandler {
+                cursorShape: Qt.PointingHandCursor
+            }
+
+            background: Rectangle {
+                radius: Theme.radiusSm
+                color: trash.pressed ? Theme.tint(Theme.danger, 0.3) : trash.hovered ? Theme.tint(
+                                                                                           Theme.danger,
+                                                                                           0.15) : "transparent"
+            }
+            contentItem: Item {
+                Glyph {
+                    anchors.centerIn: parent
+                    name: "trash"
+                    color: Theme.danger
+                    stroke: Theme.fineGlyphStroke
+                }
+            }
+
+            Loader {
+                active: trash.hovered
+
+                sourceComponent: Tip {
+                    parent: trash
+                    text: qsTr("Move to trash")
+                    delay: Theme.durSlow * 2
+                    closePolicy: Popup.NoAutoClose
+                }
+            }
         }
     }
 
