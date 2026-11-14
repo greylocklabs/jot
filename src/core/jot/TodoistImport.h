@@ -82,9 +82,11 @@ inline const QString kTodoistTokenKey = QStringLiteral("import/todoist");
 inline const QUrl kTodoistSyncUrl = QUrl(QStringLiteral("https://api.todoist.com/api/v1/sync"));
 
 /// Asks Todoist for a full sync of the account `token` belongs to, at `api`, and waits for the
-/// reply. Nothing when it cannot be had, with `error` saying why in words for the user.
+/// reply. Nothing when it cannot be had, with `error` saying why in words for the user, and
+/// `refused`, when given, set when it was the token Todoist would not take.
 [[nodiscard]] std::optional<QByteArray> fetchTodoistSync(const QString &token, QString *error,
-                                                         const QUrl &api = kTodoistSyncUrl);
+                                                         const QUrl &api = kTodoistSyncUrl,
+                                                         bool *refused = nullptr);
 
 /// Reads the JSON of a full sync, `/api/v1/sync` with `sync_token=*`, leaving out what was
 /// deleted. Nothing when it is not one, with `error` set.

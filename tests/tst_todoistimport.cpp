@@ -155,10 +155,13 @@ void TestTodoistImport::saysWhyAFetchFailed()
     QVERIFY(!fetchTodoistSync({}, &error, server.url(u"/"_s)));
     QVERIFY(server.requests.isEmpty());
     server.respond(401, R"({"error": "Unauthorized"})");
-    QVERIFY(!fetchTodoistSync(u"wrong"_s, &error, server.url(u"/"_s)));
+    bool refused = false;
+    QVERIFY(!fetchTodoistSync(u"wrong"_s, &error, server.url(u"/"_s), &refused));
     QVERIFY2(error.contains(u"token"_s), qPrintable(error));
+    QVERIFY(refused);
     server.respond(503, {});
-    QVERIFY(!fetchTodoistSync(u"abc"_s, &error, server.url(u"/"_s)));
+    QVERIFY(!fetchTodoistSync(u"abc"_s, &error, server.url(u"/"_s), &refused));
+    QVERIFY(!refused);
     QVERIFY2(error.contains(u"503"_s), qPrintable(error));
 }
 

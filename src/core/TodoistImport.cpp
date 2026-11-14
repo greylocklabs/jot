@@ -295,8 +295,11 @@ private:
 
 } // namespace
 
-std::optional<QByteArray> fetchTodoistSync(const QString &token, QString *error, const QUrl &api)
+std::optional<QByteArray> fetchTodoistSync(const QString &token, QString *error, const QUrl &api,
+                                           bool *refused)
 {
+    if (refused)
+        *refused = false;
     if (token.trimmed().isEmpty()) {
         *error = QObject::tr("no Todoist API token");
         return std::nullopt;
@@ -320,6 +323,8 @@ std::optional<QByteArray> fetchTodoistSync(const QString &token, QString *error,
     const QString why = reply->errorString();
     reply->deleteLater();
     if (status == 401 || status == 403) {
+        if (refused)
+            *refused = true;
         *error = QObject::tr("Todoist did not take the API token; copy it again from Todoist's "
                              "Settings, Integrations, Developer");
         return std::nullopt;

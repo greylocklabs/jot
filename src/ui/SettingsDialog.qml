@@ -22,6 +22,7 @@ Popup {
     /// The user wants to edit the theme's colors, which needs the window in view.
     signal editColorsRequested
     signal joplinImportRequested
+    signal todoistImportRequested
 
     /// Which group of settings shows: "general", "writing", "tasks", "sync", "appearance",
     /// "keyboard" or "developer".
@@ -247,6 +248,12 @@ Popup {
                             enabled: Vault.writable
                             text: qsTr("Import from Joplin...")
                             onClicked: root.joplinImportRequested()
+                        }
+                        StickerButton {
+                            visible: Vault.isOpen
+                            enabled: Vault.writable
+                            text: qsTr("Import from Todoist...")
+                            onClicked: root.todoistImportRequested()
                         }
                     }
                     Text {

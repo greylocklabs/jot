@@ -12,6 +12,7 @@
 #include "jot/JoplinImport.h"
 #include "jot/Layout.h"
 #include "jot/NoteTrail.h"
+#include "jot/TodoistImport.h"
 #include "jot/Vault.h"
 #include "jot/VaultIndex.h"
 #include "jot/VaultWatcher.h"
@@ -148,6 +149,8 @@ class VaultController : public QObject
     /// Of the notes the import under way writes, how many are written so far.
     Q_PROPERTY(int joplinImportDone READ joplinImportDone NOTIFY joplinImportChanged)
     Q_PROPERTY(int joplinImportTotal READ joplinImportTotal NOTIFY joplinImportChanged)
+    /// A Todoist import, or a look at what one would do, is under way in the background.
+    Q_PROPERTY(bool importingTodoist READ importingTodoist NOTIFY todoistImportChanged)
 
 public:
     explicit VaultController(Settings &settings, QObject *parent = nullptr);
@@ -430,6 +433,16 @@ public:
     [[nodiscard]] bool importingJoplin() const { return m_joplinThread != nullptr; }
     [[nodiscard]] int joplinImportDone() const { return m_joplinDone; }
     [[nodiscard]] int joplinImportTotal() const { return m_joplinTotal; }
+    /// Imports the Todoist account `token` belongs to in the background, or with `dryRun` says
+    /// what it would do, ending with todoistImportFinished(). An empty `token` is the one kept in
+    /// the keyring; one given is kept there once Todoist takes it. The map has `ok` and `error`,
+    /// `needsToken` when there is no token or Todoist refused it, the counts `created`,
+    /// `updated`, `unchanged`, `notebooks`, `tasks` and `inboxTasks`, `inboxPath`, and the lists
+    /// `keptEdits`, `notBroughtBack` and `skipped`. Nothing while another is under way.
+    Q_INVOKABLE void startTodoistImport(const QString &token, bool dryRun);
+    /// Removes the Todoist token from the keyring.
+    Q_INVOKABLE bool forgetTodoistToken();
+    [[nodiscard]] bool importingTodoist() const { return m_todoistThread != nullptr; }
     /// What to offer for front matter being typed, as MarkdownStyler::frontMatterAt() gives
     /// it: for a key, the keys Jot reads and then those other notes use; for a value, the
     /// vault's tags, types, a switch's on and off, or today for `created`. Each is
@@ -567,10 +580,15 @@ Q_SIGNALS:
     void noteSortChanged();
     /// A startJoplinImport() finished, with the map importJoplin() gives.
     void joplinImportFinished(const QVariantMap &summary);
+    void todoistImportChanged();
+    /// A startTodoistImport() finished, with its map.
+    void todoistImportFinished(const QVariantMap &summary);
 
 private:
-    /// Why a Joplin import cannot start now, as a failed summary, or nothing.
-    std::optional<QVariantMap> joplinCannotStart(bool dryRun);
+    /// Why an import cannot start now, as a failed summary, or nothing.
+    std::optional<QVariantMap> importCannotStart(bool dryRun);
+    /// Shows what an import wrote: the lists, and the note shown if it changed.
+    void takeImportedFiles();
     /// Shows what an import into this vault wrote, unless another vault is open now, and says
     /// what it did.
     QVariantMap joplinFinished(const QString &file, bool dryRun, bool sameVault,
@@ -647,6 +665,7 @@ private:
     std::unique_ptr<VaultIndex> m_index;
     std::unique_ptr<VaultWatcher> m_watcher;
     QPointer<QThread> m_joplinThread;
+    QPointer<QThread> m_todoistThread;
     /// The front matter keys the vault's notes use, most used first; read when first wanted,
     /// once for each vault opened, so keys new since come with the next.
     std::optional<QStringList> m_frontMatterKeys;

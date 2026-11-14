@@ -12,6 +12,7 @@
 #include "jot/NoteScan.h"
 #include "jot/QuickAdd.h"
 #include "jot/Rename.h"
+#include "jot/Secrets.h"
 #include "jot/Settings.h"
 #include "jot/TaskLine.h"
 #include "jot/Templates.h"
@@ -107,6 +108,8 @@ VaultController::~VaultController()
     // An import under way finishes, so its files are whole; what it did goes unsaid.
     if (m_joplinThread)
         m_joplinThread->wait();
+    if (m_todoistThread)
+        m_todoistThread->wait();
     if (s_instance == this)
         s_instance = nullptr;
 }
@@ -2476,7 +2479,7 @@ QUrl VaultController::joplinProfile() const
 
 namespace {
 
-QVariantMap joplinFailed(const QString &why)
+QVariantMap importFailed(const QString &why)
 {
     return {{u"ok"_s, false}, {u"error"_s, why}};
 }
@@ -2493,16 +2496,16 @@ std::optional<JoplinImport> runJoplinImport(const Vault &vault, const QString &f
 
 } // namespace
 
-std::optional<QVariantMap> VaultController::joplinCannotStart(bool dryRun)
+std::optional<QVariantMap> VaultController::importCannotStart(bool dryRun)
 {
     if (!m_vault)
-        return joplinFailed(tr("No notes folder is open."));
+        return importFailed(tr("No notes folder is open."));
     // What is typed so far is saved first, so the import cannot pass it by; if it cannot be
     // saved, nothing is imported, as reading the note again afterwards would lose it.
     if (!dryRun) {
         saveNow();
         if (m_unsaved)
-            return joplinFailed(
+            return importFailed(
                 tr("Could not save the note being edited, so nothing was imported."));
     }
     return std::nullopt;
@@ -2584,7 +2587,7 @@ QVariantList VaultController::frontMatterSuggestions(const QString &kind, const 
 
 QVariantMap VaultController::importJoplin(const QUrl &file, const QString &folder, bool dryRun)
 {
-    if (const std::optional<QVariantMap> failed = joplinCannotStart(dryRun))
+    if (const std::optional<QVariantMap> failed = importCannotStart(dryRun))
         return *failed;
     QString error;
     const std::optional<JoplinImport> done =
@@ -2596,7 +2599,7 @@ void VaultController::startJoplinImport(const QUrl &file, const QString &folder,
 {
     if (m_joplinThread)
         return;
-    if (const std::optional<QVariantMap> failed = joplinCannotStart(dryRun)) {
+    if (const std::optional<QVariantMap> failed = importCannotStart(dryRun)) {
         Q_EMIT joplinImportFinished(*failed);
         return;
     }
@@ -2639,30 +2642,12 @@ QVariantMap VaultController::joplinFinished(const QString &file, bool dryRun, bo
                                             const std::optional<JoplinImport> &done,
                                             const QString &error)
 {
-    if (!dryRun && sameVault) {
-        // Even a failed import may have written some notes, which the lists should show.
-        m_index->refresh();
-        if (m_watcher)
-            m_watcher->start();
-        reloadModels();
-        // The watcher was restarted, so it will not report what the import wrote, even one that
-        // failed partway: if it changed the note shown, that is taken in as any outside edit is,
-        // merging with what was typed while it ran, or the next keystroke would save over it.
-        if (!m_current.isEmpty()) {
-            QString ignored;
-            if (const std::optional<QString> theirs =
-                    notefile::read(m_vault->absolute(m_current), &ignored);
-                theirs && *theirs != m_savedText) {
-                if (m_unsaved)
-                    takeOutsideEdit(*theirs);
-                else
-                    readCurrent();
-            }
-        }
-    }
+    // Even a failed import may have written some notes, which the lists should show.
+    if (!dryRun && sameVault)
+        takeImportedFiles();
     if (!done) {
         qCWarning(lcVault) << "could not import" << file << error;
-        return joplinFailed(error);
+        return importFailed(error);
     }
     QStringList keptEdits;
     QStringList notBroughtBack;
@@ -2686,6 +2671,120 @@ QVariantMap VaultController::joplinFinished(const QString &file, bool dryRun, bo
             {u"keptEdits"_s, keptEdits},
             {u"notBroughtBack"_s, notBroughtBack},
             {u"skipped"_s, done->skipped}};
+}
+
+void VaultController::takeImportedFiles()
+{
+    m_index->refresh();
+    if (m_watcher)
+        m_watcher->start();
+    reloadModels();
+    // The watcher was restarted, so it will not report what the import wrote, even one that
+    // failed partway: if it changed the note shown, that is taken in as any outside edit is,
+    // merging with what was typed while it ran, or the next keystroke would save over it.
+    if (!m_current.isEmpty()) {
+        QString ignored;
+        if (const std::optional<QString> theirs =
+                notefile::read(m_vault->absolute(m_current), &ignored);
+            theirs && *theirs != m_savedText) {
+            if (m_unsaved)
+                takeOutsideEdit(*theirs);
+            else
+                readCurrent();
+        }
+    }
+}
+
+void VaultController::startTodoistImport(const QString &token, bool dryRun)
+{
+    if (m_todoistThread)
+        return;
+    if (const std::optional<QVariantMap> failed = importCannotStart(dryRun)) {
+        Q_EMIT todoistImportFinished(*failed);
+        return;
+    }
+    const Vault vault = *m_vault;
+    // The keyring and Todoist are both waited on here, off the window's thread.
+    m_todoistThread = QThread::create([this, vault, token = token.trimmed(), dryRun] {
+        QVariantMap summary;
+        QString error;
+        QString use = token;
+        if (use.isEmpty())
+            use = secrets::read(kTodoistTokenKey, &error).value_or(QString());
+        bool refused = false;
+        std::optional<TodoistImport> done;
+        if (use.isEmpty()) {
+            summary = importFailed(tr("Paste your Todoist API token to import."));
+            summary.insert(u"needsToken"_s, true);
+        } else if (const std::optional<QByteArray> reply =
+                       fetchTodoistSync(use, &error, kTodoistSyncUrl, &refused);
+                   !reply) {
+            summary = importFailed(error);
+            summary.insert(u"needsToken"_s, refused);
+        } else {
+            // Kept once Todoist has taken it, so a mistyped one is never kept.
+            if (!token.isEmpty()) {
+                QString why;
+                if (!secrets::write(kTodoistTokenKey, token, &why))
+                    qCWarning(lcVault) << "could not keep the Todoist token:" << why;
+            }
+            if (const std::optional<TodoistData> from = readTodoistSync(*reply, &error))
+                done = importTodoist(vault, *from, dryRun, &error);
+            if (!done)
+                summary = importFailed(error);
+        }
+        QMetaObject::invokeMethod(
+            this,
+            [this, root = vault.root(), dryRun, done, summary]() mutable {
+                m_todoistThread->wait();
+                m_todoistThread = nullptr;
+                const bool sameVault = m_vault && m_vault->root() == root;
+                if (!dryRun && sameVault && done)
+                    takeImportedFiles();
+                if (done) {
+                    using Outcome = TodoistImport::Outcome;
+                    QStringList keptEdits;
+                    QStringList notBroughtBack;
+                    int tasks = 0;
+                    for (const auto &note : done->notes) {
+                        tasks += note.tasks;
+                        if (note.outcome == Outcome::ChangedInJot)
+                            keptEdits.append(note.path);
+                        else if (note.outcome == Outcome::Removed)
+                            notBroughtBack.append(note.path);
+                    }
+                    summary = {{u"ok"_s, true},
+                               {u"created"_s, done->count(Outcome::Created)},
+                               {u"updated"_s, done->count(Outcome::Updated)},
+                               {u"unchanged"_s, done->count(Outcome::Unchanged)},
+                               {u"notebooks"_s, int(done->notebooks.size())},
+                               {u"tasks"_s, tasks},
+                               {u"inboxTasks"_s, done->inboxTasks},
+                               {u"inboxPath"_s, done->inboxPath},
+                               {u"keptEdits"_s, keptEdits},
+                               {u"notBroughtBack"_s, notBroughtBack},
+                               {u"skipped"_s, done->skipped}};
+                } else {
+                    qCWarning(lcVault)
+                        << "could not import from Todoist" << summary.value(u"error"_s).toString();
+                }
+                Q_EMIT todoistImportChanged();
+                Q_EMIT todoistImportFinished(summary);
+            },
+            Qt::QueuedConnection);
+    });
+    connect(m_todoistThread, &QThread::finished, m_todoistThread, &QObject::deleteLater);
+    m_todoistThread->start(QThread::LowPriority);
+    Q_EMIT todoistImportChanged();
+}
+
+bool VaultController::forgetTodoistToken()
+{
+    QString why;
+    if (secrets::remove(kTodoistTokenKey, &why))
+        return true;
+    qCWarning(lcVault) << "could not forget the Todoist token:" << why;
+    return false;
 }
 
 void VaultController::updateSyncPending()

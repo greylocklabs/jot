@@ -132,6 +132,7 @@ qt_add_qml_module(jotui
         ReportDialog.qml
         TrashConfirm.qml
         JoplinImport.qml
+        TodoistImport.qml
         TaskList.qml
         TrashList.qml
         TrashPreview.qml
