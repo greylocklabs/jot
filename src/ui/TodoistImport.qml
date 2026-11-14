@@ -20,6 +20,8 @@ Popup {
     readonly property bool busy: looking || importing
     /// The token pasted here, until the keyring keeps it; empty uses the one kept.
     property string token
+    /// Why Forget token could not remove it, until the next look.
+    property string forgetError
 
     function start() {
         // One at a time: asking again shows the one under way.
@@ -32,6 +34,7 @@ Popup {
     }
 
     function preview() {
+        root.forgetError = ""
         root.imported = false
         root.summary = {}
         root.looking = true
@@ -193,6 +196,16 @@ Popup {
             }
         }
         Text {
+            objectName: "todoistForgetError"
+            visible: root.forgetError !== ""
+            width: parent.width
+            wrapMode: Text.Wrap
+            text: root.forgetError
+            color: Theme.danger
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.textSm
+        }
+        Text {
             visible: root.summary.ok === true && !root.imported
             width: parent.width
             wrapMode: Text.Wrap
@@ -246,7 +259,12 @@ Popup {
                 text: qsTr("Forget token")
                 tip: qsTr("Remove the Todoist token from your keyring")
                 onClicked: {
-                    Vault.forgetTodoistToken()
+                    // Said when the keyring would not let it go, rather than claimed gone.
+                    if (!Vault.forgetTodoistToken()) {
+                        root.forgetError = qsTr("Could not remove the token from your keyring.")
+                        return
+                    }
+                    root.forgetError = ""
                     root.summary = {
                         "needsToken": true,
                         "error": qsTr("Paste your Todoist API token to import.")
