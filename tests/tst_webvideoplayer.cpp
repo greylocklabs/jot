@@ -11,6 +11,8 @@
 #include <QTest>
 #include <QtWebEngineQuick/qtwebenginequickglobal.h>
 
+#include <unistd.h>
+
 Q_IMPORT_QML_PLUGIN(Jot_UiPlugin)
 
 using namespace Qt::StringLiterals;
@@ -109,6 +111,10 @@ void TestWebVideoPlayer::staysOnItsSiteAndKeepsNothing()
 
 int main(int argc, char *argv[])
 {
+    // CI runs tests as root, where Chromium starts only without its sandbox; the app never
+    // runs as root, so this is for the test alone.
+    if (::geteuid() == 0)
+        qputenv("QTWEBENGINE_DISABLE_SANDBOX", "1");
     // As the app does: before the application, for the player to work at all.
     QtWebEngineQuick::initialize();
     QGuiApplication app(argc, argv);
