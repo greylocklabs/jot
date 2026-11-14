@@ -910,11 +910,20 @@ void TestNoteEditor::keepsDeleteAwayFromTheTitle()
         QTRY_VERIFY2(title->property("contentHeight").toReal() < 1.5 * line,
                      qPrintable(QString::number(title->property("contentHeight").toReal())));
     }
-    // Read shows the second row alone: the mode switch and Delete, with nothing to format.
+    // The mode switch is above the formatting, and stays where it is as the mode changes; Read
+    // shows it alone, with Delete and nothing to format.
+    QQuickItem *modes = find(u"modes"_s);
+    QTRY_VERIFY(find(u"formatButtons"_s)->isVisible());
+    const QPointF where = modes->mapToScene({0, 0});
+    QVERIFY(where.y() < find(u"formatButtons"_s)->mapToScene({0, 0}).y());
+    m_settings->setSourceMode(true);
+    QTRY_COMPARE(modes->mapToScene({0, 0}), where);
+    m_settings->setSourceMode(false);
     m_settings->setReadMode(true);
     QTRY_VERIFY(!find(u"formatButtons"_s)->isVisible());
-    QVERIFY(find(u"modes"_s)->isVisible());
+    QVERIFY(modes->isVisible());
     QVERIFY(trash->isVisible());
+    QCOMPARE(modes->mapToScene({0, 0}), where);
     m_settings->setReadMode(false);
     QTRY_VERIFY(find(u"formatButtons"_s)->isVisible());
 
