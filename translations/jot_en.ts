@@ -2267,6 +2267,46 @@ Press %1 to make one.</source>
         <source>The front matter has no closing --- line</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Repeats %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Deadline %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Takes 1 day</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Takes %1 days</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Takes 1 minute</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Takes %1 minutes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Todoist&apos;s reply is not JSON: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Todoist&apos;s reply has no projects</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>1 archived project</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 archived projects</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>QuickAdd</name>
