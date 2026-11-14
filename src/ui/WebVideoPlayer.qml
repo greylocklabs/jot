@@ -1,4 +1,3 @@
-import Jot.Ui
 import QtQuick
 import QtWebEngine
 
@@ -10,8 +9,10 @@ import QtWebEngine
 Item {
     id: root
 
-    /// The card it plays in, which says what to play and is told when it fills the window.
-    property WebVideo card
+    /// The card it plays in, which says what to play and is told when it fills the window. Not
+    /// typed as WebVideo: Qt 6.8 compiles a property of a QML file's own type with Qt's private
+    /// API, which would tie the packages to one Qt build.
+    property var card
     readonly property url embed: card?.embed ?? ""
 
     // The card moves the player over the whole window while its fullscreen button asks.
@@ -19,7 +20,7 @@ Item {
         target: root.card
         property: "fullScreen"
         value: view.isFullScreen
-        when: root.card !== null
+        when: !!root.card
     }
 
     Connections {
