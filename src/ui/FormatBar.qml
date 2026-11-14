@@ -3,9 +3,9 @@ import Jot.Ui
 import QtQuick
 import QtQuick.Controls
 
-/// The bar over a note, in two rows: Markdown formatting for the selection or the line the
-/// cursor is on; then how it shows, its outline, and at the end, deleting it. A data file, and a
-/// note being read, have only the second.
+/// The bar over a note, in two rows: how it shows, its outline, and at the end, deleting it;
+/// then Markdown formatting for the selection or the line the cursor is on. A data file, and a
+/// note being read, have only the first, which stays where it is as the modes change.
 Rectangle {
     id: root
 
@@ -72,7 +72,7 @@ Rectangle {
         return out
     }
 
-    implicitHeight: (row.visible ? row.height + Theme.space2 : 0) + trailing.height + 2
+    implicitHeight: trailing.height + (row.visible ? row.height + Theme.space2 : 0) + 2
                     * Theme.space2
     Component.onCompleted: {
         for (let i = 0; i < row.children.length; ++i) {
@@ -100,7 +100,7 @@ Rectangle {
         // Nothing to format while reading, in a data file, or in a vault only read.
         visible: !Settings.readMode && !root.dataFile && Vault.writable
         x: Theme.space5
-        y: Theme.space2
+        y: trailing.y + trailing.height + Theme.space2
         spacing: Theme.space1
 
         // One button for the three heading sizes, so the row has room for the rest.
@@ -256,13 +256,14 @@ Rectangle {
         }
     }
 
-    // How the note shows and its outline, then deleting it, at the far end.
+    // How the note shows and its outline, then deleting it, at the far end: first, so it stays
+    // put as the formatting comes and goes with the mode.
     Item {
         id: trailing
 
         objectName: "formatTrailing"
         x: Theme.space5
-        y: row.visible ? row.y + row.height + Theme.space2 : Theme.space2
+        y: Theme.space2
         width: root.width - 2 * Theme.space5
         height: Math.max(modes.implicitHeight, outlineToggle.implicitHeight, trash.implicitHeight)
 

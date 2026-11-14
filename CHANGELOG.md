@@ -13,6 +13,11 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   note. Your API token stays in the keyring, and importing again brings what changed in Todoist
   while keeping what you changed in Jot.
 
+### Changed
+
+- The bar over a note shows the mode switch first, above the formatting, so it stays put as you
+  switch between Styled, Source and Read.
+
 ## 0.6.1 - 2026-11-13
 
 ### Changed
