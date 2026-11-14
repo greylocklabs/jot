@@ -38,6 +38,14 @@ Item {
         return String(url).split("/")[2] ?? ""
     }
 
+    /// Opens `url` in the browser when it is a web page; any other kind, as a file or a
+    /// program's own scheme, a player has no business opening, so it goes nowhere.
+    function openOutside(url) {
+        const text = String(url)
+        if (text.startsWith("https://") || text.startsWith("http://"))
+            Qt.openUrlExternally(url)
+    }
+
     /// `text` safe in an HTML attribute.
     function escaped(text) {
         return String(text).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;")
@@ -107,9 +115,9 @@ Item {
             }
             request.reject()
             if (request.navigationType === WebEngineNavigationRequest.LinkClickedNavigation)
-                Qt.openUrlExternally(request.url)
+                root.openOutside(request.url)
         }
-        onNewWindowRequested: request => Qt.openUrlExternally(request.requestedUrl)
+        onNewWindowRequested: request => root.openOutside(request.requestedUrl)
         onFullScreenRequested: request => request.accept()
         onPermissionRequested: permission => permission.deny()
     }

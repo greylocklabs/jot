@@ -44,9 +44,11 @@ void TestWebVideoPlayer::staysOnItsSiteAndKeepsNothing()
         FakeHttpServer::Reply reply;
         reply.contentType = "text/html";
         reply.body = request.target.startsWith("/embed")
-                         ? QByteArray("<html><body><a id='away' href='http://localhost:1/watch'>"
-                                      "watch</a><script>setTimeout(() => "
-                                      "document.getElementById('away').click(), 200)</script>"
+                         ? QByteArray("<html><body><a id='file' href='file:///etc/hosts'>f</a>"
+                                      "<a id='away' href='http://localhost:1/watch'>watch</a>"
+                                      "<script>setTimeout(() => {"
+                                      "document.getElementById('file').click();"
+                                      "document.getElementById('away').click() }, 200)</script>"
                                       "</body></html>")
                          : QByteArray("<html></html>");
         return reply;
@@ -54,9 +56,11 @@ void TestWebVideoPlayer::staysOnItsSiteAndKeepsNothing()
     Browser browser;
     QDesktopServices::setUrlHandler(u"http"_s, &browser, "open");
     QDesktopServices::setUrlHandler(u"https"_s, &browser, "open");
+    QDesktopServices::setUrlHandler(u"file"_s, &browser, "open");
     const auto unset = qScopeGuard([] {
         QDesktopServices::unsetUrlHandler(u"http"_s);
         QDesktopServices::unsetUrlHandler(u"https"_s);
+        QDesktopServices::unsetUrlHandler(u"file"_s);
     });
 
     QQuickWindow window;
@@ -94,9 +98,12 @@ void TestWebVideoPlayer::staysOnItsSiteAndKeepsNothing()
     // In a profile that keeps nothing.
     QVERIFY(web->property("profile").value<QObject *>()->property("offTheRecord").toBool());
 
-    // The link to another site opens in the browser, and the player stays.
+    // The link to another site opens in the browser, and the player stays; a link to a file
+    // goes nowhere.
     QTRY_COMPARE_WITH_TIMEOUT(browser.opened.size(), 1, 10000);
     QCOMPARE(browser.opened.first(), QUrl(u"http://localhost:1/watch"_s));
+    QTest::qWait(300);
+    QCOMPARE(browser.opened.size(), 1);
     QVERIFY(web->property("url").toUrl().toString().startsWith(u"http://jotwriter.org/"_s));
 }
 
