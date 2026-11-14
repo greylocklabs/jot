@@ -57,6 +57,8 @@ private Q_SLOTS:
     void writesEachProjectAsANote();
     void importingAgainKeepsJotsEdits();
     void aDryRunWritesNothing();
+    void leavesAnUnreadableInboxAlone();
+    void writesOnlyInsideTheVault();
 
 private:
     QString readFile(const QString &path) const;
@@ -219,6 +221,40 @@ void TestTodoistImport::aDryRunWritesNothing()
     // A note already at a planned name keeps it, and the project takes the next.
     writeFile(u"Task Lists/Money.md"_s, u"mine\n"_s);
     QCOMPARE(import(read(), true).notes.at(1).path, u"Task Lists/Money 2.md"_s);
+}
+
+void TestTodoistImport::leavesAnUnreadableInboxAlone()
+{
+    // Not UTF-8, so Jot will not read it, and must not write over it either.
+    QFile inbox(m_vault->absolute(u"Inbox.md"_s));
+    QVERIFY(inbox.open(QIODevice::WriteOnly));
+    inbox.write("\xff\xfe not text\n");
+    inbox.close();
+    TodoistData data = read();
+    TodoistData::Task later;
+    later.id = u"T12"_s;
+    later.projectId = u"P0"_s;
+    later.content = u"Book the hall"_s;
+    data.tasks.append(later);
+    QString error;
+    QVERIFY(!importTodoist(*m_vault, data, false, &error));
+    QVERIFY2(error.contains(u"Inbox.md"_s), qPrintable(error));
+    QVERIFY(inbox.open(QIODevice::ReadOnly));
+    QCOMPARE(inbox.readAll(), QByteArray("\xff\xfe not text\n"));
+}
+
+void TestTodoistImport::writesOnlyInsideTheVault()
+{
+    // A ledger edited to send a project's note outside the vault, or into Jot's own folder, is
+    // not followed: the project comes in as new, inside Task Lists.
+    writeFile(u".jot/todoist.yaml"_s, u"projects:\n  P1:\n    path: ../outside.md\n    sha: x\n"
+                                      u"  P2:\n    path: .jot/vault.yaml\n    sha: x\ninbox:\n"_s);
+    const TodoistImport result = import(read());
+    QCOMPARE(result.count(TodoistImport::Outcome::Created), 3);
+    QCOMPARE(result.notes.at(0).path, u"Task Lists/Arrangements.md"_s);
+    QCOMPARE(result.notes.at(1).path, u"Task Lists/Money.md"_s);
+    QVERIFY(!QFileInfo::exists(m_dir->filePath(u"outside.md"_s)));
+    QVERIFY(readFile(u".jot/vault.yaml"_s).contains(u"format"_s));
 }
 
 QTEST_GUILESS_MAIN(TestTodoistImport)

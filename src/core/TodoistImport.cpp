@@ -107,6 +107,15 @@ Ledger readLedger(const QString &path)
                 ledger.projects[id].sha = value;
         }
     }
+    // A path the file was edited to point outside the notes, or into Jot's own folder, is
+    // forgotten, so the project is imported as new rather than written there.
+    ledger.projects.removeIf([](const auto &entry) {
+        const QString &path = entry.value().path;
+        const QString clean = QDir::cleanPath(path);
+        return path.isEmpty() || QDir::isAbsolutePath(path) || clean != path ||
+               clean.startsWith(u"../"_s) || clean == u".."_s || clean.startsWith(u".jot/"_s) ||
+               !clean.endsWith(u".md"_s);
+    });
     return ledger;
 }
 
@@ -520,7 +529,17 @@ std::optional<TodoistImport> importTodoist(const Vault &vault, const TodoistData
         }
     }
     if (!added.isEmpty()) {
-        QString text = read(result.inboxPath);
+        // An inbox note that is there but cannot be read is left alone, rather than written
+        // over with only what this import adds.
+        QString text;
+        if (QFileInfo::exists(vault.absolute(result.inboxPath))) {
+            QString why;
+            const std::optional<QString> kept =
+                notefile::read(vault.absolute(result.inboxPath), &why);
+            if (!kept)
+                return fail(QObject::tr("could not read %1: %2").arg(result.inboxPath, why));
+            text = *kept;
+        }
         const QString newline = text.contains(u"\r\n"_s) ? u"\r\n"_s : u"\n"_s;
         if (!text.isEmpty() && !text.endsWith(u'\n'))
             text += newline;
