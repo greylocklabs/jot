@@ -3583,6 +3583,10 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Could not remove the token from your keyring.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Paste your Todoist API token to import.</source>
         <translation type="unfinished"></translation>
     </message>
