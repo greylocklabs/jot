@@ -3,6 +3,16 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## Unreleased
+
+### Added
+
+- Import from Todoist, in Settings, the Notebooks menu, the palette and as `jot import todoist`.
+  Each project becomes a task list note in a Task Lists notebook, with its sections, subtasks,
+  priorities, due days, repeats, labels, descriptions and comments; Inbox tasks go to your inbox
+  note. Your API token stays in the keyring, and importing again brings what changed in Todoist
+  while keeping what you changed in Jot.
+
 ## 0.6.1 - 2026-11-13
 
 ### Changed

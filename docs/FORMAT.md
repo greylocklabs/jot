@@ -15,6 +15,7 @@ My Notes/                    the vault: any folder
     layout.yaml              notebook emoji, sorts, word targets, favorite and hidden notes
     history/                 past versions of notes
     joplin.yaml              what imports from Joplin brought, once there has been one
+    todoist.yaml             what imports from Todoist brought, once there has been one
     trash/                   what was deleted, in Jot and by sync
     stats/                   words written each day, a file for each computer
   Inbox.md                   where quick add puts to-dos
@@ -463,3 +464,36 @@ held when imported. A later import of the same or an overlapping export then:
 - moves a notebook imported without its parent under that parent, once the parent is imported.
 
 Deleting `.jot/joplin.yaml` only makes the next import treat everything as new.
+
+## Importing from Todoist
+
+Jot asks Todoist's API for the account's open tasks with the account's API token, which the app
+keeps in the keyring and `jot import todoist` also takes from `TODOIST_TOKEN`. It maps them onto
+this format as follows:
+
+| Todoist                        | Jot                                                              |
+| ------------------------------ | ---------------------------------------------------------------- |
+| Project                        | A note in the `Task Lists` notebook, named for the project       |
+| Project inside another         | A note in a notebook named for its parent, under Task Lists      |
+| Inbox                          | Its tasks at the end of the vault's inbox note, each once        |
+| Section                        | A `##` heading; tasks in no section come before the first        |
+| Task                           | A checkbox line, `- [ ] content`                                 |
+| Subtask                        | A checkbox nested two spaces under its task                      |
+| Priority p1 to p4              | `@p1` to `@p4`                                                   |
+| Due day, or day and time       | `@due`, a time fixed in a time zone said as it is there          |
+| Repeat Jot can follow          | Its marker, such as `@daily` or `@every 2 weeks`                 |
+| Repeat Jot cannot follow       | `Repeats` and Todoist's words, on a line under the task          |
+| Label                          | `#tag`, its spaces and other characters a tag cannot hold as `-` |
+| Deadline, duration             | `Deadline` and `Takes`, on lines under the task                  |
+| Description, comments          | Lines under the task; a heading in them becomes bold words       |
+| Comment attachment             | A link to the file where Todoist keeps it                        |
+| Completed tasks                | Left out                                                         |
+| Archived projects and sections | Left out, archived projects counted in the import's summary      |
+
+Importing again is safe. `.jot/todoist.yaml` records which note each project became and what it
+held when imported, and which Inbox tasks were added to the inbox note. A later import then
+leaves alone task lists that are unchanged, brings up to date those changed in Todoist but not in
+Jot, leaves as they are those edited in Jot since and says so, does not bring back those removed
+in Jot, and adds only Inbox tasks it has not added before.
+
+Deleting `.jot/todoist.yaml` only makes the next import treat everything as new.
