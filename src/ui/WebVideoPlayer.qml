@@ -30,10 +30,8 @@ Item {
     }
 
     /// Where Jot's page with the player says it is, which the site sees as the page embedding
-    /// it. Nothing is fetched from there. Its scheme is the player's, as a page only names
-    /// itself to a player as secure as it is.
-    readonly property string page: (String(root.embed).startsWith("http:") ? "http" : "https")
-                                   + "://jotwriter.org/"
+    /// it, set as it is made. Nothing is fetched from there.
+    property string page
 
     /// The host of `url`, as www.youtube-nocookie.com.
     function hostOf(url) {
@@ -44,6 +42,23 @@ Item {
     function escaped(text) {
         return String(text).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;")
     }
+
+    /// The video the page was made for, so it is made once for each.
+    property url loaded
+
+    /// Makes Jot's page for the video, once the card has said which, as the card says so only
+    /// after loading the player.
+    function load() {
+        if (String(root.embed) === "" || root.embed === root.loaded || !view)
+            return
+        root.loaded = root.embed
+        // Its scheme is the player's, as a page only names itself to a player as secure as it.
+        root.page = (String(root.embed).startsWith("http:") ? "http" : "https")
+                + "://jotwriter.org/"
+        view.loadHtml(root.html(), root.page)
+    }
+
+    onEmbedChanged: load()
 
     /// Jot's page: the player filling it, starting at once, as play was just pressed.
     function html() {
@@ -78,7 +93,7 @@ Item {
         settings.pluginsEnabled: false
         settings.fullScreenSupportEnabled: true
 
-        Component.onCompleted: view.loadHtml(root.html(), root.page)
+        Component.onCompleted: root.load()
 
         onNavigationRequested: request => {
             // Jot's page, and the player's own pages inside it, stay; a link anywhere else
