@@ -36,6 +36,7 @@ jot_add_test(tst_drive)
 jot_add_test(tst_gitsync)
 jot_add_test(tst_taskline)
 jot_add_test(tst_todos)
+jot_add_test(tst_webvideo)
 jot_add_test(tst_todoistimport)
 target_compile_definitions(tst_todoistimport PRIVATE
     JOT_TODOIST_SYNC="${CMAKE_CURRENT_SOURCE_DIR}/data/todoist-sync.json")

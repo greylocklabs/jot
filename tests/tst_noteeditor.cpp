@@ -92,6 +92,7 @@ private Q_SLOTS:
     void underlinesMisspelledWords();
     void playsSoundsWhereTheyAreEmbedded();
     void playsVideosWhereTheyAreEmbedded();
+    void showsWebVideosAsCardsToPlay();
     void drawsMath();
     void readsMathAtHalfItsDrawnSize();
     void switchingAwayFromAPictureLeavesNoStalePlace();
@@ -1258,6 +1259,52 @@ void TestNoteEditor::playsVideosWhereTheyAreEmbedded()
     QTRY_VERIFY(find(u"reader"_s)->isVisible());
     QTRY_COMPARE(players(u"readVideoPlayer"_s).size(), 1);
     QVERIFY(players(u"readAudioPlayer"_s).isEmpty());
+    m_settings->setReadMode(false);
+}
+
+void TestNoteEditor::showsWebVideosAsCardsToPlay()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    body->forceActiveFocus();
+    body->setProperty("text", u"Before\n\n![](https://youtu.be/dQw4w9WgXcQ?t=30)\n\n"
+                              u"![](https://example.com/clip.mp4)\n\nAfter\n"_s);
+    body->setProperty("cursorPosition", 1);
+    const auto cards = [this](const QString &name) {
+        QList<QQuickItem *> found;
+        const std::function<void(QQuickItem *)> look = [&](QQuickItem *item) {
+            if (item->objectName() == name && item->isVisible())
+                found.append(item);
+            for (QQuickItem *child : item->childItems())
+                look(child);
+        };
+        look(qobject_cast<QQuickItem *>(m_editor.get()));
+        return found;
+    };
+    // A YouTube link gets a card at a 16:9 picture's size, naming the site, and nothing else
+    // becomes one.
+    QTRY_COMPARE(cards(u"webVideo"_s).size(), 1);
+    QQuickItem *card = cards(u"webVideo"_s).first();
+    QTRY_VERIFY2(card->width() > 0 && qAbs(card->height() - card->width() * 9 / 16) <= 1,
+                 qPrintable(u"%1x%2"_s.arg(card->width()).arg(card->height())));
+    QCOMPARE(card->property("site").toString(), u"YouTube"_s);
+    QCOMPARE(card->property("embed").toUrl(),
+             QUrl(u"https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=30"_s));
+    // On its own line, the link shows to be edited; in source mode, as written.
+    body->setProperty("cursorPosition", int(u"Before\n\n![]"_s.size()));
+    QTRY_COMPARE(cards(u"webVideo"_s).size(), 0);
+    body->setProperty("cursorPosition", 1);
+    QTRY_COMPARE(cards(u"webVideo"_s).size(), 1);
+    m_settings->setSourceMode(true);
+    QTRY_COMPARE(cards(u"webVideo"_s).size(), 0);
+    m_settings->setSourceMode(false);
+
+    // Read, it is a card too.
+    m_settings->setReadMode(true);
+    QTRY_VERIFY(find(u"reader"_s)->isVisible());
+    QTRY_COMPARE(cards(u"readWebVideo"_s).size(), 1);
+    QCOMPARE(cards(u"readWebVideo"_s).first()->property("site").toString(), u"YouTube"_s);
+    QVERIFY(cards(u"readAudioPlayer"_s).isEmpty());
     m_settings->setReadMode(false);
 }
 

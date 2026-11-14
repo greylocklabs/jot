@@ -3,6 +3,7 @@
 
 #include <QLocale>
 #include <QTest>
+#include <QUrl>
 
 using namespace jot;
 using namespace Qt::StringLiterals;
@@ -237,6 +238,13 @@ void TestNoteScan::readsAsMarkdownWithLinks()
              u"- [ ] Call 🔁 every 2 weeks 📅 %1\n"_s.arg(
                  QLocale().toString(QDate(2000, 1, 5), u"MMM d, yyyy"_s) + u", "_s +
                  QLocale().toString(QTime(14, 0), QLocale::ShortFormat)));
+    // A YouTube or Vimeo video is a link the reader draws as a card; another web image is a link.
+    const QString card = readingMarkdown(u"![](https://vimeo.com/76979871)\n"_s);
+    QVERIFY2(card.startsWith(u"[Vimeo](jot-web-video:"_s), qPrintable(card));
+    QCOMPARE(QUrl::fromPercentEncoding(card.section(u"jot-web-video:"_s, 1).chopped(2).toUtf8()),
+             u"https://vimeo.com/76979871"_s);
+    QCOMPARE(readingMarkdown(u"![](https://example.com/a.png)\n"_s),
+             u"[](https://example.com/a.png)\n"_s);
     // Wikilinks are words, as other Markdown tools read them.
     QCOMPARE(readingMarkdown(u"See [[Mara Vey]] and ![[map.png]].\n"_s),
              u"See [[Mara Vey]] and ![[map.png]].\n"_s);

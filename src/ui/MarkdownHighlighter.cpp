@@ -189,6 +189,19 @@ bool MarkdownHighlighter::imageLine(const QString &text)
     QString target = m.captured(2);
     if (target.startsWith(u'<'))
         target = target.mid(1, target.size() - 2);
+    // A YouTube or Vimeo video gets its player's room, a 16:9 picture as wide as an image can
+    // be, where a card shows until it is played.
+    if (const std::optional<WebVideo> web = webVideo(target)) {
+        if (m_cursorHere)
+            return false;
+        const int picture = std::min(m_look.imageWidth * 9 / 16, m_look.imageHeight);
+        auto *image = new Image;
+        image->size = QSize(picture * 16 / 9, picture);
+        image->web = web;
+        setCurrentBlockUserData(image);
+        reserve(text, int(m.capturedLength(1)), image->size.height());
+        return true;
+    }
     QString path = m_resolved.value(target);
     if (path.isEmpty()) {
         path = m_resolver(target);

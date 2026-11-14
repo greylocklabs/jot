@@ -92,6 +92,8 @@ add_library(jotcore STATIC
     ToDos.cpp
     jot/TodoistImport.h
     TodoistImport.cpp
+    jot/WebVideo.h
+    WebVideo.cpp
     jot/QuickAdd.h
     QuickAdd.cpp
     jot/Rename.h
