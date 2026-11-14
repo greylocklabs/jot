@@ -7,6 +7,7 @@
 #include <QQmlExtensionPlugin>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QScopeGuard>
 #include <QTest>
 #include <QtWebEngineQuick/qtwebenginequickglobal.h>
 
@@ -36,21 +37,27 @@ private Q_SLOTS:
 
 void TestWebVideoPlayer::staysOnItsSiteAndKeepsNothing()
 {
-    // A stand-in for the site's player, with a link to another site, as to the video's page.
+    // A stand-in for the site's player, which follows a link to another site, as a click on
+    // its link to the video's page would.
     FakeHttpServer site;
     site.replier = [](const FakeHttpServer::Request &request) {
         FakeHttpServer::Reply reply;
         reply.contentType = "text/html";
         reply.body = request.target.startsWith("/embed")
                          ? QByteArray("<html><body><a id='away' href='http://localhost:1/watch'>"
-                                      "watch</a><script>document.title='ready'</script></body>"
-                                      "</html>")
+                                      "watch</a><script>setTimeout(() => "
+                                      "document.getElementById('away').click(), 200)</script>"
+                                      "</body></html>")
                          : QByteArray("<html></html>");
         return reply;
     };
     Browser browser;
     QDesktopServices::setUrlHandler(u"http"_s, &browser, "open");
     QDesktopServices::setUrlHandler(u"https"_s, &browser, "open");
+    const auto unset = qScopeGuard([] {
+        QDesktopServices::unsetUrlHandler(u"http"_s);
+        QDesktopServices::unsetUrlHandler(u"https"_s);
+    });
 
     QQuickWindow window;
     window.resize(640, 360);
@@ -70,27 +77,26 @@ void TestWebVideoPlayer::staysOnItsSiteAndKeepsNothing()
     auto *player = qobject_cast<QQuickItem *>(made.get());
     player->setParentItem(window.contentItem());
     player->setSize({640, 360});
-
     QObject *web = nullptr;
     for (QObject *child : player->children()) {
         if (child->inherits("QQuickWebEngineView"))
             web = child;
     }
     QVERIFY(web);
-    // It asks the site to play at once, in a profile that keeps nothing.
-    QTRY_COMPARE_WITH_TIMEOUT(web->property("title").toString(), u"ready"_s, 20000);
-    QVERIFY(web->property("url").toUrl().query().contains(u"autoplay=1"_s));
-    auto *profile = web->property("profile").value<QObject *>();
-    QVERIFY(profile->property("offTheRecord").toBool());
 
-    // A link to another site opens in the browser, and the player stays.
-    QVERIFY(QMetaObject::invokeMethod(
-        web, "runJavaScript", Q_ARG(QString, u"document.getElementById('away').click()"_s)));
+    // The site is asked to play at once, by a page it can name, as YouTube wants.
+    QTRY_VERIFY_WITH_TIMEOUT(!site.requests.isEmpty(), 20000);
+    const FakeHttpServer::Request &asked = site.requests.first();
+    QVERIFY2(asked.target.contains("autoplay=1"), asked.target.constData());
+    QVERIFY2(asked.headers.value("referer").startsWith("http://jotwriter.org/"),
+             asked.headers.value("referer").constData());
+    // In a profile that keeps nothing.
+    QVERIFY(web->property("profile").value<QObject *>()->property("offTheRecord").toBool());
+
+    // The link to another site opens in the browser, and the player stays.
     QTRY_COMPARE_WITH_TIMEOUT(browser.opened.size(), 1, 10000);
     QCOMPARE(browser.opened.first(), QUrl(u"http://localhost:1/watch"_s));
-    QVERIFY(web->property("url").toUrl().path().startsWith(u"/embed"_s));
-    QDesktopServices::unsetUrlHandler(u"http"_s);
-    QDesktopServices::unsetUrlHandler(u"https"_s);
+    QVERIFY(web->property("url").toUrl().toString().startsWith(u"http://jotwriter.org/"_s));
 }
 
 int main(int argc, char *argv[])

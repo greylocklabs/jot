@@ -5,6 +5,8 @@ import QtWebEngine
 /// A web video's own player, from its site, as WebVideo loads it once play is pressed. It runs
 /// in a private profile that keeps no cookies, cache or storage, is refused every permission,
 /// and stays on its site: a link followed from it, as to the video's page, opens in the browser.
+/// The player sits in a page of Jot's own, as on a web page, since YouTube plays an embed only
+/// for a page it can name.
 Item {
     id: root
 
@@ -27,9 +29,32 @@ Item {
         }
     }
 
+    /// Where Jot's page with the player says it is, which the site sees as the page embedding
+    /// it. Nothing is fetched from there. Its scheme is the player's, as a page only names
+    /// itself to a player as secure as it is.
+    readonly property string page: (String(root.embed).startsWith("http:") ? "http" : "https")
+                                   + "://jotwriter.org/"
+
     /// The host of `url`, as www.youtube-nocookie.com.
     function hostOf(url) {
         return String(url).split("/")[2] ?? ""
+    }
+
+    /// `text` safe in an HTML attribute.
+    function escaped(text) {
+        return String(text).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;")
+    }
+
+    /// Jot's page: the player filling it, starting at once, as play was just pressed.
+    function html() {
+        const embed = String(root.embed)
+        const source = embed + (embed.includes("?") ? "&" : "?") + "autoplay=1"
+        return "<!doctype html><html><head><meta charset=\"utf-8\"><style>"
+                + "html,body{margin:0;height:100%;background:#000;overflow:hidden}"
+                + "iframe{border:0;width:100%;height:100%}</style></head><body>" + "<iframe src=\""
+                + escaped(source) + "\" allow=\"autoplay; encrypted-media; "
+                + "fullscreen; picture-in-picture\" allowfullscreen "
+                + "referrerpolicy=\"strict-origin-when-cross-origin\"></iframe></body></html>"
     }
 
     WebEngineProfile {
@@ -45,8 +70,6 @@ Item {
 
         anchors.fill: parent
         profile: privateProfile
-        // Play was just pressed, so it starts at once.
-        url: String(root.embed) + (String(root.embed).includes("?") ? "&" : "?") + "autoplay=1"
         backgroundColor: "black"
         settings.playbackRequiresUserGesture: false
         settings.javascriptCanOpenWindows: false
@@ -55,15 +78,21 @@ Item {
         settings.pluginsEnabled: false
         settings.fullScreenSupportEnabled: true
 
+        Component.onCompleted: view.loadHtml(root.html(), root.page)
+
         onNavigationRequested: request => {
-            // The player's own pages, and what it loads inside itself, stay; the rest opens
-            // in the browser.
-            if (!request.isMainFrame || root.hostOf(request.url) === root.hostOf(root.embed)) {
+            // Jot's page, and the player's own pages inside it, stay; a link anywhere else
+            // opens in the browser, and nothing else goes anywhere.
+            const url = String(request.url)
+            const ours = request.isMainFrame ? url.startsWith(root.page) || url.startsWith("data:") :
+                                               root.hostOf(url) === root.hostOf(root.embed)
+            if (ours || url.startsWith("about:")) {
                 request.accept()
                 return
             }
             request.reject()
-            Qt.openUrlExternally(request.url)
+            if (request.navigationType === WebEngineNavigationRequest.LinkClickedNavigation)
+                Qt.openUrlExternally(request.url)
         }
         onNewWindowRequested: request => Qt.openUrlExternally(request.requestedUrl)
         onFullScreenRequested: request => request.accept()
