@@ -4151,6 +4151,10 @@ Press %1 to make one.</source>
         <source>Play on %1</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Open on %1</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>Welcome</name>

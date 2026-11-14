@@ -1,3 +1,9 @@
+# The player for web videos needs Qt WebEngine, so it is in the module only when that is built.
+set(jot_web_video_qml)
+if(JOT_HAS_WEB_VIDEO)
+    set(jot_web_video_qml WebVideoPlayer.qml)
+endif()
+
 # The QML files sit at this module's root, which is what Qt expects. Keeping
 # them in a subdirectory would require a hand-written qmldir (policy QTP0004).
 qt_add_qml_module(jotui
@@ -98,6 +104,7 @@ qt_add_qml_module(jotui
         CodeBackdrops.qml
         VideoPlayer.qml
         WebVideo.qml
+        ${jot_web_video_qml}
         SeekBar.qml
         FormRow.qml
         Glyph.qml
@@ -177,6 +184,10 @@ target_include_directories(jotui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_link_libraries(jotui PUBLIC Qt6::Quick Qt6::QuickControls2 Qt6::DBus Qt6::Multimedia jotcore)
 target_link_libraries(jotui PRIVATE KF6::SyntaxHighlighting KF6::SonnetCore microtex)
+if(JOT_HAS_WEB_VIDEO)
+    target_link_libraries(jotui PUBLIC Qt6::WebEngineQuick)
+    target_compile_definitions(jotui PUBLIC JOT_WEB_VIDEO=1)
+endif()
 
 # MicroTeX's fonts, unpacked to the cache the first time math is drawn.
 file(GLOB_RECURSE microtex_res RELATIVE "${PROJECT_SOURCE_DIR}/third_party/microtex/res"

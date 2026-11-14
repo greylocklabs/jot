@@ -40,6 +40,20 @@ find_package(KF6SyntaxHighlighting 6.13 REQUIRED)
 find_package(KF6Sonnet 6.13 REQUIRED)
 # Keeps sync's keys in the desktop's keyring.
 find_package(Qt6Keychain REQUIRED)
+# Plays YouTube and Vimeo videos inside notes. Without it, a web video's card opens the browser.
+set(JOT_WEB_VIDEO AUTO CACHE STRING
+    "Play web videos in notes with Qt WebEngine: ON, OFF, or AUTO for when it is found")
+set_property(CACHE JOT_WEB_VIDEO PROPERTY STRINGS AUTO ON OFF)
+if(JOT_WEB_VIDEO STREQUAL "ON")
+    find_package(Qt6 REQUIRED COMPONENTS WebEngineQuick)
+    set(JOT_HAS_WEB_VIDEO ON)
+elseif(JOT_WEB_VIDEO STREQUAL "AUTO")
+    find_package(Qt6 QUIET COMPONENTS WebEngineQuick)
+    set(JOT_HAS_WEB_VIDEO ${Qt6WebEngineQuick_FOUND})
+else()
+    set(JOT_HAS_WEB_VIDEO OFF)
+endif()
+message(STATUS "Web videos in notes: ${JOT_HAS_WEB_VIDEO}")
 # Reads YAML data files, with where each value sits, so edits can keep the rest as written.
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-0.1)
