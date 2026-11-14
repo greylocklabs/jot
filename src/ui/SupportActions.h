@@ -12,9 +12,20 @@ class SupportActions : public QObject
     Q_OBJECT
     QML_NAMED_ELEMENT(Support)
     QML_SINGLETON
+    /// Whether web videos play in the note, as built with Qt WebEngine; else in the browser.
+    Q_PROPERTY(bool webVideo READ webVideo CONSTANT)
 
 public:
     using QObject::QObject;
+
+    [[nodiscard]] static bool webVideo()
+    {
+#if JOT_WEB_VIDEO
+        return true;
+#else
+        return false;
+#endif
+    }
 
     /// Puts the `jot doctor` report on the clipboard, then emits copied().
     Q_INVOKABLE void copyDebugInfo();

@@ -29,11 +29,19 @@
 #include <QTextStream>
 #include <QTimer>
 
+#if JOT_WEB_VIDEO
+#include <QtWebEngineQuick/qtwebenginequickglobal.h>
+#endif
+
 using namespace Qt::StringLiterals;
 
 int main(int argc, char *argv[])
 {
     greylock::desktop::useDesktopFileDialogs();
+#if JOT_WEB_VIDEO
+    // Before the application exists, as Qt WebEngine asks, for the player web videos play in.
+    QtWebEngineQuick::initialize();
+#endif
     QGuiApplication app(argc, argv);
     greylock::installTranslations(app);
     // The identity's folder name keeps Qt's own config and data folders apart for a

@@ -76,6 +76,10 @@ jot_add_test(tst_todoreminders)
 target_link_libraries(tst_todoreminders PRIVATE jotui)
 target_compile_definitions(tst_vaultcontroller PRIVATE
     JOT_SAMPLE_VAULT="${CMAKE_CURRENT_SOURCE_DIR}/data/sample-vault")
+if(JOT_HAS_WEB_VIDEO)
+    jot_add_test(tst_webvideoplayer)
+    target_link_libraries(tst_webvideoplayer PRIVATE jotui jotuiplugin Qt6::WebEngineQuick)
+endif()
 jot_add_test(tst_noteeditor)
 target_link_libraries(tst_noteeditor PRIVATE jotui jotuiplugin Qt6::QuickControls2 KF6::SonnetCore)
 target_compile_definitions(tst_noteeditor PRIVATE

@@ -4,7 +4,9 @@ import QtQuick.Controls
 
 /// A video on the web, in the room its line keeps: a card with its site, its link and a play
 /// button. Nothing is fetched from the site until play is pressed, so reading a note never
-/// reaches the web by itself.
+/// reaches the web by itself. Pressed, the site's player loads in its place, when Jot is built
+/// with Qt WebEngine, or the video opens in the browser. It plays on while the note is scrolled
+/// or edited, and goes back to its card when another note is shown.
 Rectangle {
     id: root
 
@@ -14,10 +16,33 @@ Rectangle {
     property url link
     /// The site's player for it.
     property url embed
+    /// The site's player is loaded, in place of the card.
+    property bool playing: false
+    /// The player fills the window, as its fullscreen button asks; the player sets it.
+    property bool fullScreen: false
 
-    /// Plays the video: in the browser.
+    /// Asks the player to leave the whole window, as Escape does.
+    signal exitFullScreenRequested
+
     function play() {
-        Qt.openUrlExternally(root.link)
+        if (Support.webVideo)
+            root.playing = true
+        else
+            Qt.openUrlExternally(root.link)
+    }
+
+    function stop() {
+        root.playing = false
+    }
+
+    // Another video on the same line, as after an edit, starts from its card.
+    onEmbedChanged: stop()
+
+    Connections {
+        target: Vault
+        function onCurrentChanged() {
+            root.stop()
+        }
     }
 
     radius: Theme.radiusLg
@@ -29,6 +54,7 @@ Rectangle {
         anchors.centerIn: parent
         width: parent.width - 2 * Theme.space6
         spacing: Theme.space3
+        visible: !root.playing
 
         StickerButton {
             objectName: "webVideoPlay"
@@ -36,7 +62,7 @@ Rectangle {
             accent: true
             glyph: "play"
             Accessible.name: qsTr("Play on %1").arg(root.site)
-            tip: Accessible.name
+            tip: Support.webVideo ? Accessible.name : qsTr("Open on %1").arg(root.site)
             onClicked: root.play()
         }
         Text {
@@ -60,5 +86,26 @@ Rectangle {
             font.family: Theme.fontFamily
             font.pixelSize: Theme.textSm
         }
+    }
+
+    Loader {
+        id: player
+
+        objectName: "webVideoPlayer"
+        // In its line's room, or over the whole window when its fullscreen button asks.
+        parent: root.fullScreen && root.Window.window ? root.Window.window.contentItem : root
+        anchors.fill: parent
+        z: root.fullScreen ? 1000 : 0
+        active: root.playing && Support.webVideo
+        // In the module only when built with Qt WebEngine, so loaded by name and told of the
+        // card rather than read from.
+        source: "WebVideoPlayer.qml"
+        onLoaded: item.card = root
+    }
+
+    Shortcut {
+        sequence: "Esc"
+        enabled: root.fullScreen
+        onActivated: root.exitFullScreenRequested()
     }
 }
