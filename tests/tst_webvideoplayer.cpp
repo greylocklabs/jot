@@ -71,9 +71,10 @@ void TestWebVideoPlayer::staysOnItsSiteAndKeepsNothing()
     std::unique_ptr<QObject> card(
         cardComponent.createWithInitialProperties({{u"embed"_s, site.url(u"/embed/abc"_s)}}));
     QVERIFY2(card, qPrintable(cardComponent.errorString()));
-    std::unique_ptr<QObject> made(
-        component.createWithInitialProperties({{u"card"_s, QVariant::fromValue(card.get())}}));
+    // Told of its card once made, as the card's Loader does.
+    std::unique_ptr<QObject> made(component.create());
     QVERIFY2(made, qPrintable(component.errorString()));
+    made->setProperty("card", QVariant::fromValue(card.get()));
     auto *player = qobject_cast<QQuickItem *>(made.get());
     player->setParentItem(window.contentItem());
     player->setSize({640, 360});
