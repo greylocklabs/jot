@@ -3,7 +3,7 @@
 %global _lto_cflags %{nil}
 
 Name:           jot
-Version:        0.6.1
+Version:        0.7.0
 Release:        1%{?dist}
 Summary:        Plain-file notes for Linux
 
@@ -98,6 +98,9 @@ appstream-util validate-relax --nonet \
 %{_datadir}/jot/
 
 %changelog
+* Sat Nov 14 2026 Lara Kelley <hello@greylocklabs.org> - 0.7.0-1
+- Update to 0.7.0
+
 * Fri Nov 13 2026 Lara Kelley <hello@greylocklabs.org> - 0.6.1-1
 - Update to 0.6.1
 

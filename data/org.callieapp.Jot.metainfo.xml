@@ -36,6 +36,15 @@
   </categories>
 
   <releases>
+    <release version="0.7.0" date="2026-11-14">
+      <description>
+        <ul>
+          <li>Import from Todoist, in Settings, the Notebooks menu, the palette and as jot import todoist. Each project becomes a task list note in a Task Lists notebook, with its sections, subtasks, priorities, due days, repeats, labels, descriptions and comments; Inbox tasks go to your inbox note. Your API token stays in the keyring, and importing again brings what changed in Todoist while keeping what you changed in Jot.</li>
+          <li>YouTube and Vimeo videos play inside the note: put the link on a line of its own as an image, !. Until you press play it is a card, and nothing is fetched from the site; then its player plays in place, privately, and its fullscreen button fills the window.</li>
+          <li>The bar over a note shows the mode switch first, above the formatting, so it stays put as you switch between Styled, Source and Read.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.6.1" date="2026-11-13">
       <description>
         <ul>
