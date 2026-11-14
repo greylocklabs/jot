@@ -65,8 +65,7 @@ const QList<std::pair<QString, QString>> kCommands = {
     {u"sync"_s, u"Sync the vault once with where the app syncs it to"_s},
     {u"check"_s,
      u"Check data files, and each against its <name>.schema.json: jot check data/*.json"_s},
-    {u"import"_s,
-     u"Bring notes in from Joplin, its database or an export; --dry-run first to see"_s},
+    {u"import"_s, u"Bring notes in from Joplin, or tasks from Todoist; --dry-run first to see"_s},
     {u"logs"_s, u"Show, follow (-f) or open (--open) the log files"_s},
     {u"doctor"_s, u"Details for a bug report; --report opens a new issue"_s},
     {u"donate"_s, u"Support Jot on Ko-fi: opens the page, or --print prints its link"_s},
@@ -398,7 +397,7 @@ int main(int argc, char *argv[])
             if (positional.size() == 1 && command == u"ls")
                 return notebooks();
             if (positional.size() == 1 && command == u"import")
-                return cli::Completion::plain({u"joplin"_s});
+                return cli::Completion::plain({u"joplin"_s, u"todoist"_s});
             if (positional.size() == 1 && (command == u"show" || command == u"open"))
                 return titles();
             return QList<cli::Candidate>();
@@ -481,9 +480,12 @@ int main(int argc, char *argv[])
             return commands.sync(Settings(Settings::defaultPath()).syncRemote(open->vault->root()),
                                  json);
         if (command == u"import") {
+            if (args.size() == 2 && args.at(1) == u"todoist")
+                return commands.importTodoist(parser.isSet(dryRunOption), json);
             if (args.size() < 2 || args.size() > 3 || args.at(1) != u"joplin") {
                 err << QObject::tr("usage: jot import joplin [export.jex | database.sqlite | "
-                                   "profile folder] [--notebook name] [--dry-run]")
+                                   "profile folder] [--notebook name] [--dry-run]\n"
+                                   "       jot import todoist [--dry-run]")
                     << "\n";
                 return 2;
             }

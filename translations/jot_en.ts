@@ -2172,7 +2172,8 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>usage: jot import joplin [export.jex | database.sqlite | profile folder] [--notebook name] [--dry-run]</source>
+        <source>usage: jot import joplin [export.jex | database.sqlite | profile folder] [--notebook name] [--dry-run]
+       jot import todoist [--dry-run]</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2289,6 +2290,22 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>Takes %1 minutes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>no Todoist API token</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Todoist did not take the API token; copy it again from Todoist&apos;s Settings, Integrations, Developer</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>could not reach Todoist: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Todoist answered with error %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -3884,6 +3901,46 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>Nothing was written; run it again without --dry-run to import.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>jot: no Todoist API token; set TODOIST_TOKEN, or paste it once in the app&apos;s Import from Todoist</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Would import from Todoist</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Imported from Todoist</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>1 new task list</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 new task lists</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>1 task for %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 tasks for %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>1 task list unchanged since the last import</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 task lists unchanged since the last import</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Not brought back, as it was removed: %1</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

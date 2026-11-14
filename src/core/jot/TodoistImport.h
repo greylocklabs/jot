@@ -4,6 +4,7 @@
 #include <QList>
 #include <QString>
 #include <QStringList>
+#include <QUrl>
 
 #include <optional>
 
@@ -73,6 +74,17 @@ struct TodoistData
     QList<Task> tasks;
     QList<Comment> comments;
 };
+
+/// The keyring key Todoist's API token is kept under.
+inline const QString kTodoistTokenKey = QStringLiteral("import/todoist");
+
+/// Where Todoist's sync API is.
+inline const QUrl kTodoistSyncUrl = QUrl(QStringLiteral("https://api.todoist.com/api/v1/sync"));
+
+/// Asks Todoist for a full sync of the account `token` belongs to, at `api`, and waits for the
+/// reply. Nothing when it cannot be had, with `error` saying why in words for the user.
+[[nodiscard]] std::optional<QByteArray> fetchTodoistSync(const QString &token, QString *error,
+                                                         const QUrl &api = kTodoistSyncUrl);
 
 /// Reads the JSON of a full sync, `/api/v1/sync` with `sync_token=*`, leaving out what was
 /// deleted. Nothing when it is not one, with `error` set.

@@ -43,6 +43,9 @@ public:
     int listTags(bool json);
     /// Imports the Joplin JEX export at `file` under `notebook`, or says what it would do.
     int importJoplin(const QString &file, const QString &notebook, bool dryRun, bool json);
+    /// Imports the Todoist account whose API token is `TODOIST_TOKEN`, or the one kept in the
+    /// keyring, or says what it would do.
+    int importTodoist(bool dryRun, bool json);
     /// Syncs the vault once with `remote`, as the app's sync setting writes it.
     int sync(const QString &remote, bool json);
     /// Starts `program`, as the app, with these arguments; says whether it started.

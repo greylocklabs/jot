@@ -1,3 +1,5 @@
+#include "FakeHttpServer.h"
+
 #include "jot/TodoistImport.h"
 #include "jot/Vault.h"
 
@@ -9,6 +11,7 @@
 #include <QJsonObject>
 #include <QTemporaryDir>
 #include <QTest>
+#include <QUrlQuery>
 
 using namespace jot;
 using namespace Qt::StringLiterals;
@@ -54,6 +57,8 @@ private Q_SLOTS:
 
     void readsAFullSync();
     void refusesWhatIsNotOne();
+    void fetchesEverythingWithTheToken();
+    void saysWhyAFetchFailed();
     void writesEachProjectAsANote();
     void importingAgainKeepsJotsEdits();
     void aDryRunWritesNothing();
@@ -122,6 +127,39 @@ void TestTodoistImport::refusesWhatIsNotOne()
     QVERIFY(!readTodoistSync("not json", &error));
     QVERIFY(!error.isEmpty());
     QVERIFY(!readTodoistSync(R"({"error": "Unauthorized"})", &error));
+}
+
+void TestTodoistImport::fetchesEverythingWithTheToken()
+{
+    FakeHttpServer server;
+    server.respond(200, account());
+    QString error;
+    const std::optional<QByteArray> reply =
+        fetchTodoistSync(u" abc123 "_s, &error, server.url(u"/api/v1/sync"_s));
+    QVERIFY2(reply, qPrintable(error));
+    QCOMPARE(*reply, account());
+    QCOMPARE(server.requests.size(), 1);
+    const FakeHttpServer::Request &request = server.requests.first();
+    QCOMPARE(request.method, QByteArray("POST"));
+    QCOMPARE(request.target, QByteArray("/api/v1/sync"));
+    QCOMPARE(request.headers.value("authorization"), QByteArray("Bearer abc123"));
+    const QUrlQuery form(QString::fromUtf8(request.body));
+    QCOMPARE(form.queryItemValue(u"sync_token"_s, QUrl::FullyDecoded), u"*"_s);
+    QVERIFY(form.queryItemValue(u"resource_types"_s, QUrl::FullyDecoded).contains(u"items"_s));
+}
+
+void TestTodoistImport::saysWhyAFetchFailed()
+{
+    FakeHttpServer server;
+    QString error;
+    QVERIFY(!fetchTodoistSync({}, &error, server.url(u"/"_s)));
+    QVERIFY(server.requests.isEmpty());
+    server.respond(401, R"({"error": "Unauthorized"})");
+    QVERIFY(!fetchTodoistSync(u"wrong"_s, &error, server.url(u"/"_s)));
+    QVERIFY2(error.contains(u"token"_s), qPrintable(error));
+    server.respond(503, {});
+    QVERIFY(!fetchTodoistSync(u"abc"_s, &error, server.url(u"/"_s)));
+    QVERIFY2(error.contains(u"503"_s), qPrintable(error));
 }
 
 void TestTodoistImport::writesEachProjectAsANote()

@@ -55,6 +55,7 @@ jot add "call Soren tomorrow 3pm p1 #calls"  # a to-do in the inbox, as you woul
 jot tags                         # every tag, and how many notes have it
 jot import joplin --dry-run      # what importing the Joplin app on this computer would do
 jot import joplin notes.jex      # or a Joplin export
+jot import todoist --dry-run     # what importing your Todoist tasks would do
 ```
 
 `--json` gives scripts the same, and the shell completions know your notebooks and notes.
