@@ -2712,6 +2712,8 @@ void VaultController::startTodoistImport(const QString &token, bool dryRun)
         if (use.isEmpty())
             use = secrets::read(kTodoistTokenKey, &error).value_or(QString());
         bool refused = false;
+        // Whether the token is in the keyring now: one read from it is, one pasted once kept.
+        bool kept = token.isEmpty();
         std::optional<TodoistImport> done;
         if (use.isEmpty()) {
             summary = importFailed(tr("Paste your Todoist API token to import."));
@@ -2725,7 +2727,8 @@ void VaultController::startTodoistImport(const QString &token, bool dryRun)
             // Kept once Todoist has taken it, so a mistyped one is never kept.
             if (!token.isEmpty()) {
                 QString why;
-                if (!secrets::write(kTodoistTokenKey, token, &why))
+                kept = secrets::write(kTodoistTokenKey, token, &why);
+                if (!kept)
                     qCWarning(lcVault) << "could not keep the Todoist token:" << why;
             }
             if (const std::optional<TodoistData> from = readTodoistSync(*reply, &error))
@@ -2735,7 +2738,7 @@ void VaultController::startTodoistImport(const QString &token, bool dryRun)
         }
         QMetaObject::invokeMethod(
             this,
-            [this, root = vault.root(), dryRun, done, summary]() mutable {
+            [this, root = vault.root(), dryRun, done, summary, kept]() mutable {
                 m_todoistThread->wait();
                 m_todoistThread = nullptr;
                 const bool sameVault = m_vault && m_vault->root() == root;
@@ -2763,7 +2766,8 @@ void VaultController::startTodoistImport(const QString &token, bool dryRun)
                                {u"inboxPath"_s, done->inboxPath},
                                {u"keptEdits"_s, keptEdits},
                                {u"notBroughtBack"_s, notBroughtBack},
-                               {u"skipped"_s, done->skipped}};
+                               {u"skipped"_s, done->skipped},
+                               {u"tokenKept"_s, kept}};
                 } else {
                     qCWarning(lcVault)
                         << "could not import from Todoist" << summary.value(u"error"_s).toString();

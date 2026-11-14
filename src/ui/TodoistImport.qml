@@ -70,8 +70,9 @@ Popup {
             root.imported = root.importing && summary.ok === true
             root.looking = false
             root.importing = false
-            // Kept in the keyring once Todoist took it.
-            if (summary.ok === true)
+            // Kept in the keyring once Todoist took it; when the keyring would not, the token
+            // pasted is still used for Import.
+            if (summary.ok === true && summary.tokenKept === true)
                 root.token = ""
             root.open()
         }

@@ -437,8 +437,9 @@ public:
     /// what it would do, ending with todoistImportFinished(). An empty `token` is the one kept in
     /// the keyring; one given is kept there once Todoist takes it. The map has `ok` and `error`,
     /// `needsToken` when there is no token or Todoist refused it, the counts `created`,
-    /// `updated`, `unchanged`, `notebooks`, `tasks` and `inboxTasks`, `inboxPath`, and the lists
-    /// `keptEdits`, `notBroughtBack` and `skipped`. Nothing while another is under way.
+    /// `updated`, `unchanged`, `notebooks`, `tasks` and `inboxTasks`, `inboxPath`, the lists
+    /// `keptEdits`, `notBroughtBack` and `skipped`, and `tokenKept`, false when the keyring could
+    /// not keep a token given. Nothing while another is under way.
     Q_INVOKABLE void startTodoistImport(const QString &token, bool dryRun);
     /// Removes the Todoist token from the keyring.
     Q_INVOKABLE bool forgetTodoistToken();
