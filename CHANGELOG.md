@@ -12,6 +12,9 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   priorities, due days, repeats, labels, descriptions and comments; Inbox tasks go to your inbox
   note. Your API token stays in the keyring, and importing again brings what changed in Todoist
   while keeping what you changed in Jot.
+- YouTube and Vimeo videos play inside the note: put the link on a line of its own as an image,
+  `![](https://youtu.be/...)`. Until you press play it is a card, and nothing is fetched from the
+  site; then its player plays in place, privately, and its fullscreen button fills the window.
 
 ### Changed
 

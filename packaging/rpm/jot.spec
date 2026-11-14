@@ -33,6 +33,7 @@ BuildRequires:  cmake(tomlplusplus)
 BuildRequires:  cmake(KF6SyntaxHighlighting)
 BuildRequires:  cmake(KF6Sonnet)
 BuildRequires:  cmake(Qt6Multimedia)
+BuildRequires:  cmake(Qt6WebEngineQuick)
 BuildRequires:  cmake(Qt6LinguistTools)
 BuildRequires:  pkgconfig(tinyxml2)
 BuildRequires:  cmake(Qt6Keychain)
@@ -47,6 +48,8 @@ Requires:       hicolor-icon-theme
 Requires:       qt6-qtsvg
 # Recording and playing sounds, from QML too.
 Requires:       qt6-qtmultimedia
+# Plays web videos inside notes.
+Requires:       qt6-qtwebengine
 # Syncing with a git repository runs git, and Git LFS for large files.
 Requires:       git-core
 Requires:       git-lfs
@@ -65,7 +68,7 @@ included.
 %autosetup
 
 %build
-%cmake -GNinja
+%cmake -GNinja -DJOT_WEB_VIDEO=ON
 %cmake_build
 
 %install

@@ -13,6 +13,10 @@ A crossing at dusk, from the far bank:
 
 ![](The%20Ferry.assets/crossing.mp4)
 
+Mara keeps a film of another ferry's crossing, to show passengers what to expect:
+
+![](https://www.youtube.com/watch?v=aqz-KE-bpKQ)
+
 Before each crossing, a checklist rather than to-dos, so `tasks: off` keeps it out of Tasks:
 
 - [x] Check the rope
