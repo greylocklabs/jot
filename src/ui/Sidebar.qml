@@ -16,6 +16,7 @@ Rectangle {
     signal noteMade
     /// Import from Joplin was chosen for the notebook at `folder`.
     signal joplinImportRequested(string folder)
+    signal todoistImportRequested
     /// A notebook, tag, Tasks or Trash opened from the keyboard, so its list takes the keys.
     signal entered
 
@@ -833,6 +834,14 @@ Rectangle {
                                                  "Import from Joplin into here...")
             enabled: Vault.writable
             onTriggered: root.joplinImportRequested(notebookMenu.path)
+        }
+        MenuEntry {
+            // Todoist's projects always go to Task Lists, so only from the top.
+            visible: notebookMenu.path === ""
+            height: visible ? implicitHeight : 0
+            text: qsTr("Import from Todoist...")
+            enabled: Vault.writable
+            onTriggered: root.todoistImportRequested()
         }
         MenuEntry {
             text: qsTr("Show in Files")

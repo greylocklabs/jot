@@ -2513,6 +2513,10 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Import from Todoist...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Hidden</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3246,6 +3250,10 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Import from Todoist...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Show in Files</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3461,6 +3469,121 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>%1 color</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>TodoistImport</name>
+    <message>
+        <source>Imported from Todoist</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Import from Todoist?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not import from Todoist</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>1 new task list</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 new task lists</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 updated</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>1 task</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 tasks</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>1 for %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 for %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Looking at your Todoist tasks...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Find it in Todoist under Settings, Integrations, Developer. Jot keeps it in your keyring.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>API token</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>1 task list unchanged since the last import</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 task lists unchanged since the last import</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Keeps your edits to %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Does not bring back %1, removed since</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Leaves out %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Completed tasks are left out. You can import again later; a task list you edited in Jot is left as it is.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Continue</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Importing...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Import</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Forget token</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remove the Todoist token from your keyring</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Paste your Todoist API token to import.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -4314,6 +4437,10 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Import from Todoist...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Vi mode on or off</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5141,6 +5268,10 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>From %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Paste your Todoist API token to import.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

@@ -108,6 +108,13 @@ void TestDialogs::opensCleanly_data()
         << uR"(JoplinImport { summary: ({ ok: true, created: 3, updated: 1, unchanged: 2, notebooks: 1,
               attachments: 1, keptEdits: ["Stories/Mara.md"], notBroughtBack: ["Old.md"],
               skipped: ["1 note in Joplin's trash"] }) })"_s;
+    QTest::newRow("import from todoist")
+        << uR"(TodoistImport { summary: ({ ok: true, created: 4, updated: 1, unchanged: 1, tasks: 168,
+              inboxTasks: 2, inboxPath: "Inbox.md", keptEdits: ["Task Lists/Money.md"],
+              notBroughtBack: [], skipped: ["1 archived project"] }) })"_s;
+    QTest::newRow("import from todoist, asking for the token")
+        << uR"(TodoistImport { summary: ({ needsToken: true,
+              error: "Todoist did not take the API token" }) })"_s;
 }
 
 void TestDialogs::opensCleanly()
@@ -163,8 +170,8 @@ void TestDialogs::everyModalHasAClose_data()
          {u"SettingsDialog {}"_s, u"KeyHelp { actions: [] }"_s, u"AboutDialog {}"_s,
           u"WhatsNewDialog {}"_s, u"UpdateDialog {}"_s, u"ThemeEditor {}"_s, u"TrashConfirm {}"_s,
           u"QuickSwitcher {}"_s, u"CommandPalette {}"_s, u"EmojiPicker {}"_s, u"QuickAdd {}"_s,
-          u"JoplinImport {}"_s, u"HistoryDialog {}"_s, u"NotebookTarget {}"_s, u"SyntaxGuide {}"_s,
-          u"CommitDialog {}"_s})
+          u"JoplinImport {}"_s, u"TodoistImport {}"_s, u"HistoryDialog {}"_s,
+          u"NotebookTarget {}"_s, u"SyntaxGuide {}"_s, u"CommitDialog {}"_s})
         QTest::newRow(qPrintable(dialog)) << dialog;
 }
 

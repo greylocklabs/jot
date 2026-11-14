@@ -150,6 +150,7 @@ QList<KeyAction> KeyRouter::actions()
         act(u"toggleFavorite"_s, tr("Add the note to favorites, or remove it"), window, {}),
         act(u"hideNote"_s, tr("Hide the note, keeping it out of the lists"), window, {}),
         act(u"importJoplin"_s, tr("Import from Joplin..."), window, {}),
+        act(u"importTodoist"_s, tr("Import from Todoist..."), window, {}),
         act(u"viMode"_s, tr("Vi mode on or off"), window, {}),
         act(u"editColors"_s, tr("Edit the theme's colors"), window, {}),
         act(u"update"_s, tr("Update Jot..."), window, {}),

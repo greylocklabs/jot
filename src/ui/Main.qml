@@ -637,6 +637,7 @@ ApplicationWindow {
                 objectName: "sidebar"
                 onNoteMade: editor.editTitle()
                 onJoplinImportRequested: folder => joplinImport.start(folder)
+                onTodoistImportRequested: todoistImport.start()
                 onEntered: window.focusShownList()
                 visible: Vault.isOpen && columns.showSidebar
                 anchors {
@@ -828,6 +829,9 @@ ApplicationWindow {
     JoplinImport {
         id: joplinImport
     }
+    TodoistImport {
+        id: todoistImport
+    }
 
     LazyPopup {
         id: settingsDialog
@@ -839,6 +843,10 @@ ApplicationWindow {
             onJoplinImportRequested: {
                 close()
                 joplinImport.start("")
+            }
+            onTodoistImportRequested: {
+                close()
+                todoistImport.start()
             }
         }
     }
@@ -984,6 +992,7 @@ ApplicationWindow {
             return Vault.isOpen && Vault.writable
         case "quickAdd":
         case "importJoplin":
+        case "importTodoist":
             return Vault.isOpen && Vault.writable
         case "goTo":
         case "search":
@@ -1250,6 +1259,9 @@ ApplicationWindow {
             break
         case "importJoplin":
             joplinImport.start("")
+            break
+        case "importTodoist":
+            todoistImport.start()
             break
         case "viMode":
             Settings.viMode = !Settings.viMode
