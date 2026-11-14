@@ -8,16 +8,21 @@
 #include <QCryptographicHash>
 #include <QDateTime>
 #include <QDir>
+#include <QEventLoop>
 #include <QFile>
 #include <QFileInfo>
 #include <QHash>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
 #include <QObject>
 #include <QRegularExpression>
 #include <QSet>
 #include <QTimeZone>
+#include <QUrlQuery>
 
 #include <algorithm>
 #include <functional>
@@ -289,6 +294,46 @@ private:
 };
 
 } // namespace
+
+std::optional<QByteArray> fetchTodoistSync(const QString &token, QString *error, const QUrl &api)
+{
+    if (token.trimmed().isEmpty()) {
+        *error = QObject::tr("no Todoist API token");
+        return std::nullopt;
+    }
+    QNetworkAccessManager network;
+    QNetworkRequest request(api);
+    // A large account answers slowly, but one that never answers should not hang the import.
+    request.setTransferTimeout(120 * 1000);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
+    request.setRawHeader("Authorization", "Bearer " + token.trimmed().toUtf8());
+    QUrlQuery form;
+    form.addQueryItem(u"sync_token"_s, u"*"_s);
+    form.addQueryItem(u"resource_types"_s, uR"(["projects","sections","items","notes"])"_s);
+    QNetworkReply *reply = network.post(request, form.query(QUrl::FullyEncoded).toUtf8());
+    QEventLoop loop;
+    QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    loop.exec();
+    const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    const QByteArray body = reply->readAll();
+    const QNetworkReply::NetworkError failure = reply->error();
+    const QString why = reply->errorString();
+    reply->deleteLater();
+    if (status == 401 || status == 403) {
+        *error = QObject::tr("Todoist did not take the API token; copy it again from Todoist's "
+                             "Settings, Integrations, Developer");
+        return std::nullopt;
+    }
+    if (status == 0 || (failure != QNetworkReply::NoError && status < 400)) {
+        *error = QObject::tr("could not reach Todoist: %1").arg(why);
+        return std::nullopt;
+    }
+    if (status != 200) {
+        *error = QObject::tr("Todoist answered with error %1").arg(status);
+        return std::nullopt;
+    }
+    return body;
+}
 
 std::optional<TodoistData> readTodoistSync(const QByteArray &json, QString *error)
 {
