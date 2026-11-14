@@ -259,6 +259,9 @@ Rectangle {
             Vault.follow(decodeURIComponent(link.slice("jot-sound:".length)))
         } else if (link.startsWith("jot-video:")) {
             Vault.follow(decodeURIComponent(link.slice("jot-video:".length)))
+        } else if (link.startsWith("jot-web-video:")) {
+            // Where no card could be drawn, as in a table, the video opens in the browser.
+            Qt.openUrlExternally(decodeURIComponent(link.slice("jot-web-video:".length)))
         } else if (link.startsWith("jot-heading:")) {
             // A table of contents entry scrolls its heading to the top.
             goToHeading(Number(link.slice("jot-heading:".length)))
@@ -772,7 +775,8 @@ Rectangle {
                 Repeater {
                     id: readPlayers
 
-                    readonly property var sounds: reading.sounds.filter(each => !each.video)
+                    readonly property var sounds: reading.sounds.filter(each => !each.video &&
+                                                                                !each.web)
 
                     model: sounds.length
 
@@ -818,6 +822,34 @@ Rectangle {
                         width: video.width ?? 0
                         height: video.height ?? 0
                         source: video.source ?? ""
+                    }
+                }
+                // A video on the web too, as a card until played.
+                Repeater {
+                    id: readWebVideos
+
+                    readonly property var videos: reading.sounds.filter(each => each.web)
+
+                    model: videos.length
+
+                    WebVideo {
+                        required property int index
+                        readonly property var video: readWebVideos.videos[index] ?? ({})
+                        readonly property rect line: {
+                            reader.width
+                            reader.contentHeight
+                            return reader.positionToRectangle(Math.min(video.position ?? 0,
+                                                                       reader.length))
+                        }
+
+                        objectName: "readWebVideo"
+                        x: line.x
+                        y: line.y + (line.height - height) / 2
+                        width: video.width ?? 0
+                        height: video.height ?? 0
+                        site: video.site ?? ""
+                        link: video.link ?? ""
+                        embed: video.embed ?? ""
                     }
                 }
                 // A click on a checkbox, left of its text, ticks it in the note.
@@ -1449,7 +1481,7 @@ Rectangle {
                 }
 
                 Repeater {
-                    model: styler.images.filter(each => !each.audio && !each.video)
+                    model: styler.images.filter(each => !each.audio && !each.video && !each.web)
 
                     Image {
                         required property var modelData
@@ -1528,6 +1560,35 @@ Rectangle {
                         width: video.width ?? 0
                         height: video.height ?? 0
                         source: video.source ?? ""
+                    }
+                }
+
+                // A YouTube or Vimeo video embedded on a line of its own, as a card until played.
+                Repeater {
+                    id: webVideos
+
+                    readonly property var videos: styler.images.filter(each => each.web)
+
+                    model: videos.length
+
+                    WebVideo {
+                        required property int index
+                        readonly property var video: webVideos.videos[index] ?? ({})
+
+                        readonly property rect line: {
+                            body.layoutTick
+                            return body.positionToRectangle(Math.min(video.position ?? 0,
+                                                                     body.length))
+                        }
+
+                        objectName: "webVideo"
+                        x: body.leftPadding
+                        y: line.y
+                        width: video.width ?? 0
+                        height: video.height ?? 0
+                        site: video.site ?? ""
+                        link: video.link ?? ""
+                        embed: video.embed ?? ""
                     }
                 }
 

@@ -2,6 +2,7 @@
 
 #include "jot/TaskLine.h"
 #include "jot/Vault.h"
+#include "jot/WebVideo.h"
 
 #include <QLocale>
 #include <QRegularExpression>
@@ -434,6 +435,11 @@ QString readingMarkdown(QStringView original,
                 const QString scheme = Vault::isVideoFile(bare) ? u"jot-video"_s : u"jot-sound"_s;
                 changes.append({m.capturedStart(), m.capturedLength(),
                                 u"[%1](%2:%3)"_s.arg(label, scheme, encode(bare))});
+            } else if (const std::optional<WebVideo> web =
+                           m.captured(1).isEmpty() ? std::nullopt : webVideo(bare)) {
+                // A YouTube or Vimeo video is a link the reader shows as a card to play.
+                changes.append({m.capturedStart(), m.capturedLength(),
+                                u"[%1](jot-web-video:%2)"_s.arg(web->site, encode(bare))});
             } else if (!m.captured(1).isEmpty() &&
                        isUrl(target.startsWith(u'<') ? target.mid(1) : target) &&
                        !target.contains(u"file:"_s)) {

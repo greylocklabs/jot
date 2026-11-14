@@ -662,7 +662,16 @@ QVariantList MarkdownStyler::images() const
         return images;
     for (QTextBlock block = m_document->textDocument()->begin(); block.isValid();
          block = block.next()) {
-        if (const auto *image = dynamic_cast<const MarkdownHighlighter::Image *>(block.userData()))
+        if (const auto *image = dynamic_cast<const MarkdownHighlighter::Image *>(block.userData());
+            image && image->web)
+            images.append(QVariantMap{{u"position"_s, block.position()},
+                                      {u"width"_s, image->size.width()},
+                                      {u"height"_s, image->size.height()},
+                                      {u"web"_s, true},
+                                      {u"site"_s, image->web->site},
+                                      {u"link"_s, image->web->link},
+                                      {u"embed"_s, image->web->embed}});
+        else if (image)
             images.append(QVariantMap{{u"position"_s, block.position()},
                                       {u"source"_s, QUrl::fromLocalFile(image->path)},
                                       {u"width"_s, image->size.width()},

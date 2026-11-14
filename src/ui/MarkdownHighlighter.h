@@ -14,6 +14,8 @@
 #include <QTextCharFormat>
 #include <QTextCursor>
 
+#include "jot/WebVideo.h"
+
 #include <functional>
 #include <memory>
 #include <utility>
@@ -72,6 +74,8 @@ public:
         bool audio = false;
         /// A video, drawn as a player showing its picture.
         bool video = false;
+        /// A video on the web, drawn as a card until played; `path` is then empty.
+        std::optional<WebVideo> web;
     };
 
     /// A table of contents shown in place of a `${toc}` line: room for `rows` headings,

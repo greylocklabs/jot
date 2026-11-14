@@ -8,6 +8,7 @@
 #include "jot/Diagram.h"
 #include "jot/FrontMatter.h"
 #include "jot/NoteScan.h"
+#include "jot/WebVideo.h"
 
 #include <QClipboard>
 #include <QFileInfo>
@@ -509,17 +510,25 @@ void NoteReader::placeSounds()
                 alone = false;
         }
         const bool video = href.startsWith(u"jot-video:"_s);
+        const bool onWeb = href.startsWith(u"jot-web-video:"_s);
         // A table cell has no room for a player, so the sound or video stays a link there.
-        if (!alone || !(video || href.startsWith(u"jot-sound:"_s)) || !vault ||
+        if (!alone || !(video || onWeb || href.startsWith(u"jot-sound:"_s)) || !vault ||
             QTextCursor(block).currentTable())
             continue;
-        const QSize room = video ? videoRoom : soundRoom;
         const QString target = QUrl::fromPercentEncoding(href.section(u':', 1).toUtf8());
+        // A video on the web takes its picture's room, its site's player bringing controls.
+        const std::optional<WebVideo> web = onWeb ? webVideo(target) : std::nullopt;
+        if (onWeb && !web)
+            continue;
+        const QSize room = web     ? QSize(videoWidth, videoWidth * 9 / 16)
+                           : video ? videoRoom
+                                   : soundRoom;
         const QUrl beside = doc->baseUrl().resolved(QUrl(target));
-        const QString path = beside.isLocalFile() && QFileInfo::exists(beside.toLocalFile())
+        const QString path = web ? QString()
+                             : beside.isLocalFile() && QFileInfo::exists(beside.toLocalFile())
                                  ? beside.toLocalFile()
                                  : vault->attachmentPath(target);
-        if (path.isEmpty())
+        if (path.isEmpty() && !web)
             continue;
         // The line keeps the player's room with a clear picture in place of the link.
         const QString name = u"jot-sound-room:%1x%2"_s.arg(room.width()).arg(room.height());
@@ -535,11 +544,20 @@ void NoteReader::placeSounds()
         format.setWidth(room.width());
         format.setHeight(room.height());
         line.insertImage(format);
-        sounds.append(QVariantMap{{u"position"_s, block.position()},
-                                  {u"source"_s, QUrl::fromLocalFile(path)},
-                                  {u"width"_s, room.width()},
-                                  {u"height"_s, room.height()},
-                                  {u"video"_s, video}});
+        if (web)
+            sounds.append(QVariantMap{{u"position"_s, block.position()},
+                                      {u"width"_s, room.width()},
+                                      {u"height"_s, room.height()},
+                                      {u"web"_s, true},
+                                      {u"site"_s, web->site},
+                                      {u"link"_s, web->link},
+                                      {u"embed"_s, web->embed}});
+        else
+            sounds.append(QVariantMap{{u"position"_s, block.position()},
+                                      {u"source"_s, QUrl::fromLocalFile(path)},
+                                      {u"width"_s, room.width()},
+                                      {u"height"_s, room.height()},
+                                      {u"video"_s, video}});
     }
     if (sounds != m_sounds) {
         m_sounds = sounds;

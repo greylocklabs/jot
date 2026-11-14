@@ -4146,6 +4146,13 @@ Press %1 to make one.</source>
     </message>
 </context>
 <context>
+    <name>WebVideo</name>
+    <message>
+        <source>Play on %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>Welcome</name>
     <message>
         <source>Choose a folder for your notes</source>
