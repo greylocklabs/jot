@@ -437,9 +437,14 @@ QString readingMarkdown(QStringView original,
                                 u"[%1](%2:%3)"_s.arg(label, scheme, encode(bare))});
             } else if (const std::optional<WebVideo> web =
                            m.captured(1).isEmpty() ? std::nullopt : webVideo(bare)) {
-                // A YouTube or Vimeo video is a link the reader shows as a card to play.
+                // A YouTube or Vimeo video is a link the reader shows as a card to play, its
+                // words kept for where no card fits, the site's name when it has none.
+                static const QRegularExpression words(uR"(^!\[((?:[^\[\]]|\[[^\[\]]*\])*)\])"_s);
+                QString label = words.match(m.captured()).captured(1);
+                if (label.trimmed().isEmpty())
+                    label = web->site;
                 changes.append({m.capturedStart(), m.capturedLength(),
-                                u"[%1](jot-web-video:%2)"_s.arg(web->site, encode(bare))});
+                                u"[%1](jot-web-video:%2)"_s.arg(label, encode(bare))});
             } else if (!m.captured(1).isEmpty() &&
                        isUrl(target.startsWith(u'<') ? target.mid(1) : target) &&
                        !target.contains(u"file:"_s)) {

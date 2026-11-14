@@ -243,6 +243,9 @@ void TestNoteScan::readsAsMarkdownWithLinks()
     QVERIFY2(card.startsWith(u"[Vimeo](jot-web-video:"_s), qPrintable(card));
     QCOMPARE(QUrl::fromPercentEncoding(card.section(u"jot-web-video:"_s, 1).chopped(2).toUtf8()),
              u"https://vimeo.com/76979871"_s);
+    // Its words are kept, for where no card fits, as in a table.
+    QVERIFY(readingMarkdown(u"![The crossing](https://youtu.be/dQw4w9WgXcQ)\n"_s)
+                .startsWith(u"[The crossing](jot-web-video:"_s));
     QCOMPARE(readingMarkdown(u"![](https://example.com/a.png)\n"_s),
              u"[](https://example.com/a.png)\n"_s);
     // Wikilinks are words, as other Markdown tools read them.
