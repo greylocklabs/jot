@@ -139,6 +139,10 @@ CommonMark with the GitHub extensions (tables, task lists, strikethrough, autoli
   as `$$...$$` on one.
 - CriticMarkup on one line: `{++added++}`, `{--deleted--}`, `{~~old~>new~~}`,
   `{==highlighted==}` and `{>>comments<<}`, shown as edits, and comments as notes in the margin.
+- a YouTube or Vimeo video, written as an image on a line of its own:
+  `![](https://www.youtube.com/watch?v=...)`, `youtu.be`, Shorts and `vimeo.com` links among them.
+  Jot draws a card in its place and fetches nothing until play is pressed, then plays the site's
+  own player there, from `youtube-nocookie.com` for YouTube. Other images from the web are links.
 
 Jot keeps any other Markdown as written, footnotes among them, and does not draw those yet.
 Wikilinks, such as `[[Note]]`, are words to Jot, as they are to other Markdown tools.
@@ -191,7 +195,8 @@ Mara.assets/
   Jot then asks, and keeps the folder unless told to trash it as well.
 - Pasted images are named `Pasted <yyyy-MM-dd HHmmss>.<ext>`, with "Pasted" in the app's language.
 - A name already in the folder gets a number: `sketch 2.png`. Jot never overwrites an attachment.
-- Any file can be an attachment. Images are drawn in the reading view; other files are links.
+- Any file can be an attachment. Embedded, images are drawn, and sounds and videos get a player
+  in the note; other files are links.
 - Jot follows a link to an attachment wherever it is, so attachments kept in other folders, as
   other apps keep them, work too.
 
