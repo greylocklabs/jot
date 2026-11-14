@@ -90,6 +90,8 @@ add_library(jotcore STATIC
     TaskLine.cpp
     jot/ToDos.h
     ToDos.cpp
+    jot/TodoistImport.h
+    TodoistImport.cpp
     jot/QuickAdd.h
     QuickAdd.cpp
     jot/Rename.h

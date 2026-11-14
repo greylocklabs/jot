@@ -1,0 +1,45 @@
+{
+  "full_sync": true,
+  "projects": [
+    {"id": "P0", "name": "Inbox", "inbox_project": true, "child_order": 0},
+    {"id": "P1", "name": "Arrangements", "parent_id": null, "child_order": 0},
+    {"id": "P2", "name": "Money", "child_order": 1},
+    {"id": "P3", "name": "Clients", "parent_id": "P2", "child_order": 0},
+    {"id": "P4", "name": "Old", "child_order": 2, "is_archived": true},
+    {"id": "P5", "name": "Gone", "child_order": 3, "is_deleted": true}
+  ],
+  "sections": [
+    {"id": "S1", "project_id": "P1", "name": "Brass in a Box", "section_order": 2},
+    {"id": "S2", "project_id": "P1", "name": "Compositions", "section_order": 1},
+    {"id": "S3", "project_id": "P1", "name": "Shelved", "section_order": 3, "is_archived": true}
+  ],
+  "items": [
+    {"id": "T1", "project_id": "P1", "section_id": null, "content": "Loose task", "priority": 1,
+     "labels": [], "child_order": 1},
+    {"id": "T2", "project_id": "P1", "section_id": "S1", "content": "Arrange Perdido",
+     "priority": 4, "labels": ["hours"], "due": {"date": "2026-11-20", "is_recurring": false},
+     "description": "### **Feedback**\n\n1. Horns\n- [ ] sub-list\n", "child_order": 1},
+    {"id": "T3", "project_id": "P1", "section_id": "S1", "parent_id": "T2", "content": "Bass line",
+     "priority": 2, "due": {"date": "2026-11-21T14:30:00"}, "child_order": 1},
+    {"id": "T4", "project_id": "P1", "section_id": "S2", "content": "Practice", "priority": 3,
+     "labels": ["day long"], "child_order": 1,
+     "due": {"date": "2026-11-14", "string": "every day", "is_recurring": true}},
+    {"id": "T5", "project_id": "P1", "section_id": "S2", "content": "Voice", "child_order": 2,
+     "due": {"date": "2026-11-14", "string": "every day ending 2026-11-24", "is_recurring": true},
+     "deadline": {"date": "2026-11-30"}, "duration": {"amount": 30, "unit": "minute"}},
+    {"id": "T6", "project_id": "P1", "section_id": "S2", "content": "Done one", "checked": true,
+     "child_order": 3},
+    {"id": "T7", "project_id": "P1", "section_id": "S3", "content": "Shelved task", "child_order": 1},
+    {"id": "T8", "project_id": "P1", "section_id": "S1", "content": "Deleted", "is_deleted": true},
+    {"id": "T9", "project_id": "P0", "content": "Call the vet", "priority": 1, "child_order": 1},
+    {"id": "T10", "project_id": "P3", "content": "Invoice", "child_order": 1,
+     "due": {"date": "2026-11-20T19:00:00Z", "timezone": "America/New_York"}},
+    {"id": "T11", "project_id": "P2", "content": "Budget", "child_order": 1}
+  ],
+  "notes": [
+    {"id": "N1", "item_id": "T4", "content": "Use the straw"},
+    {"id": "N2", "item_id": "T4", "content": "",
+     "file_attachment": {"file_name": "sheet.pdf", "file_url": "https://files.example/sheet.pdf"}},
+    {"id": "N3", "item_id": "T4", "content": "Taken back", "is_deleted": true}
+  ]
+}
