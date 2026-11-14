@@ -539,6 +539,9 @@ int VaultCommands::importTodoist(bool dryRun, bool json)
         m_err << tr("jot: no Todoist API token; set TODOIST_TOKEN, or paste it once in the app's "
                     "Import from Todoist")
               << "\n";
+        // Whether it is not kept or the keyring could not be asked, its own words say which.
+        if (!error.isEmpty())
+            m_err << tr("jot: the keyring said: %1").arg(error) << "\n";
         return 2;
     }
     const std::optional<QByteArray> reply = fetchTodoistSync(token, &error);

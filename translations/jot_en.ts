@@ -3908,6 +3908,10 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>jot: the keyring said: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Would import from Todoist</source>
         <translation type="unfinished"></translation>
     </message>
