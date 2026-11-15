@@ -1047,6 +1047,9 @@ ApplicationWindow {
         case "history":
         case "foldAll":
         case "unfoldAll":
+        case "zoomIn":
+        case "zoomOut":
+        case "zoomReset":
             return note
         case "rename":
         case "toggleFavorite":
@@ -1203,6 +1206,15 @@ ApplicationWindow {
         case "foldAll":
         case "unfoldAll":
             editor.foldAll(id === "foldAll")
+            break
+        case "zoomIn":
+            Settings.noteZoom += 10
+            break
+        case "zoomOut":
+            Settings.noteZoom -= 10
+            break
+        case "zoomReset":
+            Settings.noteZoom = 100
             break
         case "sourceMode":
             // Out of reading too, as the switch does, since the source is only seen writing.

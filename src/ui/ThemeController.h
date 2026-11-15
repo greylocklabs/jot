@@ -11,6 +11,8 @@
 #include <QStringList>
 #include <QVariantList>
 
+#include <cmath>
+
 class QFileSystemWatcher;
 
 namespace jot {
@@ -82,19 +84,22 @@ class ThemeController : public QObject
     Q_PROPERTY(int space6 READ space6 CONSTANT)
     Q_PROPERTY(int space7 READ space7 CONSTANT)
 
-    Q_PROPERTY(int textXs READ textXs CONSTANT)
-    Q_PROPERTY(int textSm READ textSm CONSTANT)
-    Q_PROPERTY(int textMd READ textMd CONSTANT)
-    Q_PROPERTY(int textBase READ textBase CONSTANT)
-    Q_PROPERTY(int textLg READ textLg CONSTANT)
-    Q_PROPERTY(int textXl READ textXl CONSTANT)
-    Q_PROPERTY(int textDisplay READ textDisplay CONSTANT)
+    /// How much larger than the theme's own its text is drawn: the desktop's text size times
+    /// the Text size setting. The text sizes below follow it.
+    Q_PROPERTY(qreal textScale READ textScale NOTIFY textScaleChanged)
+    Q_PROPERTY(int textXs READ textXs NOTIFY textScaleChanged)
+    Q_PROPERTY(int textSm READ textSm NOTIFY textScaleChanged)
+    Q_PROPERTY(int textMd READ textMd NOTIFY textScaleChanged)
+    Q_PROPERTY(int textBase READ textBase NOTIFY textScaleChanged)
+    Q_PROPERTY(int textLg READ textLg NOTIFY textScaleChanged)
+    Q_PROPERTY(int textXl READ textXl NOTIFY textScaleChanged)
+    Q_PROPERTY(int textDisplay READ textDisplay NOTIFY textScaleChanged)
     /// An emoji beside a row's name: a little larger than the name, as at the name's size Qt's
     /// scaling of color emoji drops an edge of some at fractional scales.
-    Q_PROPERTY(int emojiSize READ emojiSize CONSTANT)
+    Q_PROPERTY(int emojiSize READ emojiSize NOTIFY textScaleChanged)
     /// The room an emoji at emojiSize is given, so names after different ones line up.
-    Q_PROPERTY(int emojiBox READ emojiBox CONSTANT)
-    Q_PROPERTY(int text2xl READ text2xl CONSTANT)
+    Q_PROPERTY(int emojiBox READ emojiBox NOTIFY textScaleChanged)
+    Q_PROPERTY(int text2xl READ text2xl NOTIFY textScaleChanged)
 
     /// A destructive button armed for its second click: filled with danger,
     /// on an edge of it, with ink that reads on it.
@@ -231,16 +236,21 @@ public:
     int space6() const { return 24; }
     int space7() const { return 32; }
 
-    int textXs() const { return 11; }
-    int textSm() const { return 12; }
-    int textMd() const { return 13; }
-    int textBase() const { return 14; }
-    int textLg() const { return 15; }
-    int textXl() const { return 20; }
-    int textDisplay() const { return 22; }
-    int emojiSize() const { return 16; }
-    int emojiBox() const { return 20; }
-    int text2xl() const { return 28; }
+    qreal textScale() const { return m_desktopTextScale * m_userTextScale; }
+    /// The desktop's text size, 1 for its usual.
+    void setDesktopTextScale(qreal scale);
+    /// The Text size setting, 1 for the theme's own.
+    void setUserTextScale(qreal scale);
+    int textXs() const { return scaled(11); }
+    int textSm() const { return scaled(12); }
+    int textMd() const { return scaled(13); }
+    int textBase() const { return scaled(14); }
+    int textLg() const { return scaled(15); }
+    int textXl() const { return scaled(20); }
+    int textDisplay() const { return scaled(22); }
+    int emojiSize() const { return scaled(16); }
+    int emojiBox() const { return scaled(20); }
+    int text2xl() const { return scaled(28); }
 
     QColor dangerEdge() const;
     QColor dangerText() const;
@@ -290,9 +300,13 @@ public:
 
 Q_SIGNALS:
     void changed();
+    void textScaleChanged();
 
 private:
     explicit ThemeController(QObject *parent = nullptr);
+    [[nodiscard]] int scaled(int pixels) const { return int(std::lround(pixels * textScale())); }
+    qreal m_desktopTextScale = 1;
+    qreal m_userTextScale = 1;
     static constexpr double kInsertHue = 155;
     static constexpr double kVisualHue = 75;
     enum class Part { Fill, Ink, Edge };

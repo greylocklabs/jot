@@ -271,6 +271,10 @@ Rectangle {
 
     /// The note drawn to read, rather than its text to write in.
     readonly property bool readShown: Settings.readMode && !dataFile
+    /// The note's text size: the theme's, zoomed as Settings says.
+    readonly property int noteSize: Math.round((dataFile ? Theme.textBase : Theme.textLg) * Settings.noteZoom
+                                               / 100)
+
     readonly property bool tableShown: dataFile && (Settings.readMode || !Settings.sourceMode) &&
                                        !keptAsText && tableModel.table
     /// A data file, such as JSON or CSV, is edited as plain text, without Markdown's styling.
@@ -887,7 +891,7 @@ Rectangle {
                 selectionColor: Theme.tint(Theme.accent, 0.4)
                 selectedTextColor: Theme.text
                 font.family: root.noteFamily
-                font.pixelSize: Theme.textLg
+                font.pixelSize: root.noteSize
                 selectByMouse: true
                 // Read, not written: the keys select, and nothing they type changes the note.
                 selectByKeyboard: true
@@ -1088,7 +1092,7 @@ Rectangle {
                 selectionColor: Theme.tint(Theme.accent, 0.4)
                 selectedTextColor: Theme.text
                 font.family: root.dataFile ? root.monoFamily : root.noteFamily
-                font.pixelSize: root.dataFile ? Theme.textBase : Theme.textLg
+                font.pixelSize: root.noteSize
 
                 selectByMouse: true
                 persistentSelection: true
@@ -2345,6 +2349,43 @@ Rectangle {
             if (Vault.streak > 1)
                 parts.push(qsTr("%1 days in a row").arg(Vault.streak))
             return parts.join(", ")
+        }
+    }
+
+    // How far the note is zoomed, for a moment after it changes.
+    Rectangle {
+        objectName: "zoomLabel"
+        anchors {
+            horizontalCenter: flick.horizontalCenter
+            bottom: flick.bottom
+            bottomMargin: Theme.space6
+        }
+        z: 3
+        visible: zoomShown.running
+        width: zoomText.implicitWidth + 2 * Theme.space4
+        height: zoomText.implicitHeight + 2 * Theme.space2
+        radius: height / 2
+        color: Theme.surface
+        border.color: Theme.border
+
+        Text {
+            id: zoomText
+            anchors.centerIn: parent
+            text: qsTr("%1%").arg(Settings.noteZoom)
+            color: Theme.text
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.textSm
+            font.weight: Theme.weightBold
+        }
+        Timer {
+            id: zoomShown
+            interval: Theme.durSlow * 4
+        }
+        Connections {
+            target: Settings
+            function onNoteZoomChanged() {
+                zoomShown.restart()
+            }
         }
     }
 

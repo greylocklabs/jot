@@ -12,6 +12,9 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   it again. Folds are kept for each note in the vault's `.jot/layout.yaml`, never in the note,
   and the cursor, a search or the outline going into a fold opens it. Fold all and show all are
   in the command palette and the outline, and vi mode has `za`, `zM` and `zR`.
+- Jot's text follows the text size your desktop sets, such as GNOME's Large Text or KDE's font
+  size, and Settings, Appearance, Text size makes it all larger or smaller on top of that.
+  Ctrl+= and Ctrl+- zoom only the note's text, and Ctrl+0 puts it back; the zoom is kept.
 
 ### Changed
 

@@ -1217,6 +1217,10 @@ Press %1 to make one.</source>
         <source>%1 days in a row</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>%1%</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>NoteList</name>
@@ -3070,6 +3074,18 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Text size</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1%</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>All of Jot&apos;s text, on top of the text size your desktop sets, which Jot follows. Ctrl+= and Ctrl+- zoom only the note, and Ctrl+0 puts it back.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Note text</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4348,6 +4364,18 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>Show what is under every heading</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Zoom the note in</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Zoom the note out</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The note&apos;s text at its usual size</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
