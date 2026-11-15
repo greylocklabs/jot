@@ -36,6 +36,21 @@
   </categories>
 
   <releases>
+    <release version="0.7.1" date="2026-11-15">
+      <description>
+        <ul>
+          <li>Fold a heading away: the arrow by a heading in Styled and Read modes hides everything under it, down to the next heading of its level, and a click on the arrow or on the mark after it shows it again. Folds are kept for each note in the vault's .jot/layout.yaml, never in the note, and the cursor, a search or the outline going into a fold opens it. Fold all and show all are in the command palette and the outline, and vi mode has za, zM and zR.</li>
+          <li>Jot's text follows the text size your desktop sets, such as GNOME's Large Text or KDE's font size, and Settings, Appearance, Text size makes it all larger or smaller on top of that. Ctrl+= and Ctrl+- zoom only the note's text, and Ctrl+0 puts it back; the zoom is kept.</li>
+          <li>Read mode shows the arrow pointer over a note rather than the text cursor, and the hand over links and checkboxes, which a click acts on.</li>
+          <li>Quotes in Read mode sit a small step in from the text around them, with a bar down the left of each level, rather than far to the right.</li>
+          <li>Read mode keeps reading when you find in a note: Ctrl+F searches the note as it is drawn and marks what it finds, without the replace row. Text can be selected with the keys, Shift and the arrows or Ctrl+A, and copied, or from a right-click; nothing typed changes the note. With vi mode on, j and k scroll, gg and G go to the start and end, / finds, Return goes back to the note, n and N step through the matches, y copies and Escape leaves.</li>
+          <li>Shift+Tab takes an indent off the line, or off every line selected, anywhere in a note, not only in lists, and Tab indents every line of a selection rather than typing over it. In vi mode, &gt;&gt; and &lt;&lt; do the same for the line, and &gt; and &lt; for the lines selected.</li>
+          <li>Settings, Writing, Indents chooses what Tab puts in and Shift+Tab takes off: a tab, as before, or 2 or 4 spaces. List items still nest under the item above. A tab now shows as wide as four spaces, or two with 2 spaces chosen.</li>
+          <li>Finding in a note selects the whole match as you type, not all but its last letter.</li>
+          <li>In vi mode, scrolling a note with the mouse keeps the cursor on a line in view, as in vi, so i after a scroll types where the note is shown instead of at a cursor left out of sight.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.7.0" date="2026-11-14">
       <description>
         <ul>
