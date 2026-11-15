@@ -155,9 +155,9 @@ void TestKeyRouter::everyKeyMeansOneThing()
     for (const KeyAction &action : KeyRouter::actions()) {
         QVERIFY2(!ids.contains(action.id), qPrintable(action.id));
         ids.insert(action.id);
-        QVERIFY2(
-            QStringList({u"window"_s, u"list"_s, u"note"_s, u"visual"_s}).contains(action.scope),
-            qPrintable(action.id));
+        QVERIFY2(QStringList({u"window"_s, u"list"_s, u"note"_s, u"visual"_s, u"read"_s})
+                     .contains(action.scope),
+                 qPrintable(action.id));
         // Each scope's vi keys are its own; a key may mean another thing elsewhere.
         if (!action.vi.isEmpty()) {
             QVERIFY2(!vi[action.scope].contains(action.vi), qPrintable(action.vi));

@@ -14,6 +14,8 @@ Rectangle {
     required property var body
     /// Whether the note can be changed, and so replaced in.
     property bool writable: true
+    /// Return goes back to the note, on the match, rather than on to the next, as after vi's /.
+    property bool backOnReturn: false
     /// Whether the replace row shows.
     property bool replacing: false
     property bool matchCase: false
@@ -21,7 +23,6 @@ Rectangle {
     /// The starts of the matches, in order, and the index of the one selected.
     property var starts: []
     property int current: -1
-    readonly property int length: findField.text.length
 
     /// Shows the bar, with the replace row when `replace`, and the selection to find when there
     /// is one on a single line.
@@ -58,7 +59,7 @@ Rectangle {
             if (current < 0)
                 current = 0
         }
-        styler.setFound(starts, length, current)
+        styler.setFound(starts, findField.text.length, current)
         if (fromCursor)
             select()
     }
@@ -68,21 +69,29 @@ Rectangle {
         if (starts.length === 0)
             return
         current = (current + (back ? -1 : 1) + starts.length) % starts.length
-        styler.setFound(starts, length, current)
+        styler.setFound(starts, findField.text.length, current)
         select()
     }
 
     function select() {
         if (current < 0)
             return
-        body.select(starts[current], starts[current] + length)
+        body.select(starts[current], starts[current] + findField.text.length)
+    }
+
+    /// Return in the find field: the next match, or the previous when `back`, or back to the note.
+    function enter(back) {
+        if (backOnReturn)
+            body.forceActiveFocus()
+        else
+            step(back)
     }
 
     function replaceOne() {
         if (current < 0 || !writable)
             return
         const at = starts[current]
-        styler.replace(at, at + length, replaceField.text)
+        styler.replace(at, at + findField.text.length, replaceField.text)
         body.cursorPosition = at + replaceField.text.length
         refresh(true)
     }
@@ -90,7 +99,7 @@ Rectangle {
     function replaceEvery() {
         if (starts.length === 0 || !writable)
             return
-        styler.replaceAll(starts, length, replaceField.text)
+        styler.replaceAll(starts, findField.text.length, replaceField.text)
         refresh(true)
     }
 
@@ -139,8 +148,8 @@ Rectangle {
                 placeholderText: qsTr("Find in the note")
                 Accessible.name: qsTr("Find")
                 onTextChanged: root.refresh(true)
-                Keys.onReturnPressed: event => root.step(event.modifiers & Qt.ShiftModifier)
-                Keys.onEnterPressed: event => root.step(event.modifiers & Qt.ShiftModifier)
+                Keys.onReturnPressed: event => root.enter(event.modifiers & Qt.ShiftModifier)
+                Keys.onEnterPressed: event => root.enter(event.modifiers & Qt.ShiftModifier)
                 Keys.onEscapePressed: root.close()
             }
             Text {

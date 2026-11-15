@@ -36,6 +36,9 @@ class NoteReader : public QObject
     /// draw a bar down its left; each level's text starts `quoteIndent` further in.
     Q_PROPERTY(QVariantList quoteRuns READ quoteRuns NOTIFY quoteRunsChanged)
     Q_PROPERTY(qreal quoteIndent READ quoteIndent CONSTANT)
+    /// What a search found, `{start, end, current}` as positions in the document, for the view
+    /// to mark behind the text, the one it is on more strongly.
+    Q_PROPERTY(QVariantList found READ found NOTIFY foundChanged)
 
 public:
     explicit NoteReader(QObject *parent = nullptr);
@@ -55,6 +58,12 @@ public:
     [[nodiscard]] qreal codePadding() const { return m_pixelSize * 0.6; }
     [[nodiscard]] QVariantList quoteRuns() const { return m_quoteRuns; }
     [[nodiscard]] static qreal quoteIndent();
+    [[nodiscard]] QVariantList found() const { return m_found; }
+
+    /// Where `needle` is in the note as drawn, as each match's start, as the find bar asks.
+    Q_INVOKABLE QVariantList findAll(const QString &needle, bool matchCase, bool wholeWords) const;
+    /// Marks the matches at `starts`, each `length` long, the one at `current` more strongly.
+    Q_INVOKABLE void setFound(const QVariantList &starts, int length, int current);
 
     /// The checkbox task drawn at `position`: `{line, done, text, textStart}`, with its line in
     /// the note's file and where its text starts after the box, or empty when there is none there.
@@ -71,6 +80,7 @@ Q_SIGNALS:
     void soundsChanged();
     void codeRunsChanged();
     void quoteRunsChanged();
+    void foundChanged();
 
 private:
     void schedule();
@@ -98,6 +108,7 @@ private:
     QVariantList m_sounds;
     QVariantList m_codeRuns;
     QVariantList m_quoteRuns;
+    QVariantList m_found;
 };
 
 } // namespace jot
