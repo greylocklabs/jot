@@ -78,6 +78,11 @@ public:
     /// Hides the note or notebook at `path`, or shows it again.
     void setHidden(const QString &path, bool hidden);
 
+    /// The headings folded away in the note at `path`, as headingKeys() names them.
+    [[nodiscard]] QStringList folded(const QString &path) const { return m_folded.value(path); }
+    /// Folds away the note's headings named `headings`, or none when it is empty.
+    void setFolded(const QString &path, const QStringList &headings);
+
     /// The same move as follow(), on this layout alone.
     void move(const QString &from, const QString &to);
     /// The file's text.
@@ -97,6 +102,8 @@ private:
     /// Sections Jot does not know, kept as written.
     QStringList m_other;
     QStringList m_favorites;
+    /// Each note's folded headings, by vault path.
+    QMap<QString, QStringList> m_folded;
     struct View
     {
         /// As the file gives it, even empty; nothing when it says nothing.

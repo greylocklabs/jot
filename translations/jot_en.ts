@@ -391,6 +391,17 @@
     </message>
 </context>
 <context>
+    <name>FoldArrows</name>
+    <message>
+        <source>Show what is under %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Fold away what is under %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>FormatBar</name>
     <message>
         <source>Heading</source>
@@ -1384,6 +1395,22 @@ Press %1 to make one.</source>
     <name>Outline</name>
     <message>
         <source>Outline</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Fold all</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show all</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Fold away what is under every heading</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show what is under every heading</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -4296,6 +4323,14 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Fold away what is under every heading</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show what is under every heading</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Commands</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4701,6 +4736,10 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>Normal mode, then out to the note list</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Fold or show what is under the cursor&apos;s heading</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

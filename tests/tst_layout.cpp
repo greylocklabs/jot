@@ -27,6 +27,7 @@ private Q_SLOTS:
     void keepsHiddenNotesAndNotebooks();
     void keepsTheViewsEmojis();
     void keepsNotebookTargets();
+    void keepsFoldedHeadings();
 
 private:
     void write(const QString &path, const QString &text);
@@ -341,6 +342,27 @@ void TestLayout::keepsTheViewsEmojis()
     inline_.setViewEmoji(u"trash"_s, u"z"_s);
     QVERIFY(!inline_.text().contains(u"{emoji: x}"_s));
     QVERIFY(inline_.text().contains(u"trash:\n  emoji: z\n"_s));
+}
+
+void TestLayout::keepsFoldedHeadings()
+{
+    Layout layout;
+    layout.setFolded(u"Ashfall/Chapters/Prologue.md"_s, {u"Dawn"_s, u"Notes: draft"_s});
+    layout.setFolded(u"Gone.md"_s, {u"Lost"_s});
+    layout.setFolded(u"Ashfall/Chapters/Ch 2.md"_s, {u"Night"_s});
+    layout.setFolded(u"Ashfall/Chapters/Ch 2.md"_s, {});
+    QString error;
+    QVERIFY(layout.write(*m_vault, &error));
+    QCOMPARE(read(Layout::kPath), u"folded:\n  Ashfall/Chapters/Prologue.md:\n    - Dawn\n"
+                                  "    - \"Notes: draft\"\n"_s);
+    const Layout again = Layout::read(*m_vault).value();
+    QCOMPARE(again.folded(u"Ashfall/Chapters/Prologue.md"_s),
+             (QStringList{u"Dawn"_s, u"Notes: draft"_s}));
+    QCOMPARE(again.folded(u"Ashfall/Chapters/Ch 2.md"_s), QStringList());
+    // They go with the note's notebook when it moves.
+    QVERIFY(m_vault->moveFolder(u"Ashfall"_s, u"Saga"_s, &error));
+    QVERIFY(Layout::follow(*m_vault, u"Ashfall"_s, u"Saga"_s, &error));
+    QCOMPARE(Layout::read(*m_vault).value().folded(u"Saga/Chapters/Prologue.md"_s).size(), 2);
 }
 
 QTEST_GUILESS_MAIN(TestLayout)

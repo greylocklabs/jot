@@ -120,6 +120,10 @@ Rectangle {
             if (findBar.visible)
                 findBar.step(found.id === "readPrevious")
             break
+        case "readFoldAll":
+        case "readUnfoldAll":
+            root.foldAll(found.id === "readFoldAll")
+            break
         case "readCopy":
             if (reader.selectedText !== "")
                 reading.copy(reader.selectionStart, reader.selectionEnd)
@@ -212,6 +216,48 @@ Rectangle {
     /// not a table when it opens, or when a mode is picked, stays text while it is typed into,
     /// until a mode that shows a table is picked again.
     property bool keptAsText: false
+    /// The headings folded away in the note shown, as headingKeys() names them.
+    property var folded: []
+
+    /// `items`, each with a `position` in the note, without those in a folded section.
+    function unfolded(items) {
+        styler.folds
+        return items.filter(each => !styler.isFolded(each.position))
+    }
+
+    /// Folds the heading named `key` away, or shows what is under it again, and keeps that.
+    function setFold(key, fold) {
+        if (folded.includes(key) === fold)
+            return
+        folded = fold ? folded.concat([key]) : folded.filter(each => each !== key)
+        Vault.setFolds(Vault.current, folded)
+    }
+
+    /// Folds every heading with something under it, or none.
+    function foldAll(fold) {
+        folded = fold ? styler.folds.map(each => each.key) : []
+        Vault.setFolds(Vault.current, folded)
+    }
+
+    /// The heading the cursor is under, as `{key, folded}`, or nothing, for vi's za.
+    function foldAtCursor() {
+        const at = root.readShown ? -1 : body.cursorPosition
+        let found = null
+        for (const each of styler.folds) {
+            if (each.position <= at)
+                found = each
+        }
+        return found
+    }
+
+    /// Shows any folded section `position`, in the text, is in.
+    function unfoldAt(position) {
+        // Outermost first: a section folded inside another shows up once that one opens.
+        for (let key = styler.foldAt(position); key !== "" && folded.includes(key); key = styler.foldAt(
+                 position))
+            setFold(key, false)
+    }
+
     /// The note drawn to read, rather than its text to write in.
     readonly property bool readShown: Settings.readMode && !dataFile
     readonly property bool tableShown: dataFile && (Settings.readMode || !Settings.sourceMode) &&
@@ -305,8 +351,13 @@ Rectangle {
     function goToHeading(index) {
         if (Settings.readMode) {
             const position = reading.headingPosition(index)
-            if (position >= 0)
+            if (position >= 0) {
                 scrollTo(reader.y + reader.positionToRectangle(Math.min(position, reader.length)).y)
+            } else if (styler.headings[index] && styler.isFolded(styler.headings[index].position)) {
+                // Folded away: shown again first, and gone to once the note is drawn again.
+                root.headingAfterUnfold = index
+                root.unfoldAt(styler.headings[index].position)
+            }
             return
         }
         const heading = styler.headings[index]
@@ -315,6 +366,19 @@ Rectangle {
         body.forceActiveFocus()
         body.cursorPosition = heading.position
         scrollTo(body.y + body.positionToRectangle(Math.min(heading.position, body.length)).y)
+    }
+
+    /// A heading to go to once Read mode has drawn the note with it unfolded, or -1.
+    property int headingAfterUnfold: -1
+
+    Connections {
+        target: reading
+        function onFoldsChanged() {
+            const index = root.headingAfterUnfold
+            root.headingAfterUnfold = -1
+            if (index >= 0)
+                root.goToHeading(index)
+        }
     }
 
     /// Scrolls so `y`, in the page, is near the top.
@@ -349,6 +413,8 @@ Rectangle {
         // reloaded, stays where it was.
         const another = fresh
         fresh = false
+        if (another)
+            root.folded = Vault.foldsOf(Vault.current)
         const cursor = another ? Vault.openingCursor : Vault.movedCursor(body.text,
                                                                          body.cursorPosition)
 
@@ -838,6 +904,7 @@ Rectangle {
                 NoteReader {
                     id: reading
                     objectName: "reading"
+                    folded: root.folded
 
                     document: reader.textDocument
                     text: Settings.readMode && !root.dataFile ? Vault.currentText : ""
@@ -873,6 +940,11 @@ Rectangle {
                 FoundMarks {
                     view: reader
                     matches: reading.found
+                }
+                FoldArrows {
+                    view: reader
+                    folds: reading.folds
+                    onToggled: (key, fold) => root.setFold(key, fold)
                 }
                 // A sound embedded on a line of its own plays there, as in the editor.
                 Repeater {
@@ -1261,6 +1333,9 @@ Rectangle {
                 }
 
                 onCursorPositionChanged: {
+                    // Nothing typed or gone to stays out of sight.
+                    if (!root.readShown)
+                        root.unfoldAt(cursorPosition)
                     tidyLeftLine()
                     if (!root.loading)
                         Vault.cursorPosition = cursorPosition
@@ -1360,6 +1435,15 @@ Rectangle {
                     enabled: Settings.viMode
                     busy: linkPopup.visible
                     onLeaveRequested: root.leftNote()
+                    onFoldRequested: id => {
+                        if (id === "toggleFold") {
+                            const fold = root.foldAtCursor()
+                            if (fold)
+                                root.setFold(fold.key, !fold.folded)
+                        } else {
+                            root.foldAll(id === "noteFoldAll")
+                        }
+                    }
                     onYanked: (start, end) => styler.flash(start, end)
                     onMatchesChanged: styler.setMatches(matches)
                     onCommandLineRequested: statusLine.openCommand()
@@ -1567,6 +1651,7 @@ Rectangle {
                 MarkdownStyler {
                     id: styler
                     objectName: "styler"
+                    folded: root.folded
 
                     sourceMode: Settings.sourceMode
                     focusMode: Settings.focusMode
@@ -1604,8 +1689,18 @@ Rectangle {
                     font.pixelSize: Math.max(body.font.pixelSize - 2, 8)
                 }
 
+                // Styled, not Source, where everything shows.
+                FoldArrows {
+                    view: body
+                    folds: !root.dataFile && !Settings.sourceMode ? styler.folds : []
+                    inset: gutter.visible ? gutter.width + Theme.space4 + Theme.space2 :
+                                            Theme.space2
+
+                    onToggled: (key, fold) => root.setFold(key, fold)
+                }
                 Repeater {
-                    model: styler.images.filter(each => !each.audio && !each.video && !each.web)
+                    model: root.unfolded(styler.images).filter(each => !each.audio && !each.video
+                                                                       && !each.web)
 
                     Image {
                         required property var modelData
@@ -1637,7 +1732,8 @@ Rectangle {
 
                     /// The sounds, a fresh list after every edit. The players are counted from it
                     /// rather than made from it, so typing elsewhere leaves one playing as it is.
-                    readonly property var sounds: styler.images.filter(each => each.audio)
+                    readonly property var sounds: root.unfolded(styler.images).filter(each
+                                                                                      => each.audio)
 
                     model: sounds.length
 
@@ -1664,7 +1760,8 @@ Rectangle {
                 Repeater {
                     id: videoPlayers
 
-                    readonly property var videos: styler.images.filter(each => each.video)
+                    readonly property var videos: root.unfolded(styler.images).filter(each
+                                                                                      => each.video)
 
                     model: videos.length
 
@@ -1691,7 +1788,8 @@ Rectangle {
                 Repeater {
                     id: webVideos
 
-                    readonly property var videos: styler.images.filter(each => each.web)
+                    readonly property var videos: root.unfolded(styler.images).filter(each
+                                                                                      => each.web)
 
                     model: videos.length
 
@@ -1731,7 +1829,7 @@ Rectangle {
                             return []
                         const out = []
                         let below = -Infinity
-                        for (const comment of styler.comments) {
+                        for (const comment of root.unfolded(styler.comments)) {
                             const line = body.positionToRectangle(Math.min(comment.position,
                                                                            body.length))
                             const lines = Math.min(3, Math.max(1, Math.ceil(noteMetrics.advanceWidth(
@@ -1810,7 +1908,7 @@ Rectangle {
 
                 // Each table of contents, in the room its marker line keeps.
                 Repeater {
-                    model: styler.contents
+                    model: root.unfolded(styler.contents)
 
                     Column {
                         id: contents
@@ -2306,6 +2404,8 @@ Rectangle {
         headings: visible ? styler.headings : []
         current: Settings.readMode || !body.activeFocus ? -1 : styler.headingAt(headings,
                                                                                 body.cursorPosition)
+        foldable: styler.folds.length > 0
+        onFoldAllRequested: fold => root.foldAll(fold)
         onChosen: index => {
             root.goToHeading(index)
             // Lying over the note, it gets out of the way of the heading it went to.

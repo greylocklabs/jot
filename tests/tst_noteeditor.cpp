@@ -83,6 +83,7 @@ private Q_SLOTS:
     void readingIndentsQuotesAStepWithABar();
     void readingFindsSelectsAndCopies();
     void readingTakesViKeys();
+    void foldsHeadingsAway();
     void outlinesTheNoteBesideIt();
     void aTagLinkOpensTheTagsView();
     void showsTabsOverTheNote();
@@ -902,6 +903,105 @@ void TestNoteEditor::readingTakesViKeys()
     QTest::keyClick(m_window.get(), Qt::Key_Escape);
     QCOMPARE(left.size(), 1);
     m_settings->setReadMode(false);
+    m_settings->setViMode(false);
+}
+
+void TestNoteEditor::foldsHeadingsAway()
+{
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Folds.md"_s,
+                            u"# One\nIntro line.\n\n## Sub\nSub line.\n\n# Two\nTwo line.\n"_s,
+                            &error));
+    m_vault->setCurrent(u"Folds.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    QTRY_VERIFY(body->property("text").toString().contains(u"Two line"_s));
+    auto *styler = m_editor->findChild<QObject *>(u"styler"_s);
+    QTRY_COMPARE(styler->property("folds").toList().size(), 3);
+    const QString text = body->property("text").toString();
+    const auto top = [&](const QString &words) {
+        QRectF place;
+        QMetaObject::invokeMethod(body, "positionToRectangle", Q_RETURN_ARG(QRectF, place),
+                                  Q_ARG(int, int(text.indexOf(words))));
+        return place.y();
+    };
+    const auto folded = [this] { return m_editor->property("folded").toStringList(); };
+    const auto arrows = [body] {
+        QList<QQuickItem *> found;
+        const std::function<void(QQuickItem *)> look = [&](QQuickItem *item) {
+            if (item->objectName() == u"foldArrow"_s)
+                found.append(item);
+            for (QQuickItem *child : item->childItems())
+                look(child);
+        };
+        look(body);
+        std::sort(found.begin(), found.end(), [](QQuickItem *a, QQuickItem *b) {
+            return a->mapToScene({}).y() < b->mapToScene({}).y();
+        });
+        return found;
+    };
+    const qreal height = body->property("contentHeight").toReal();
+    const qreal two = top(u"# Two"_s);
+    m_settings->setSourceMode(true);
+    QTRY_VERIFY(body->property("contentHeight").toReal() != height);
+    const qreal sourceHeight = body->property("contentHeight").toReal();
+    m_settings->setSourceMode(false);
+    QTRY_COMPARE(body->property("contentHeight").toReal(), height);
+
+    // The arrow by a heading folds what is under it, down to the next of its level, away.
+    QTRY_COMPARE(arrows().size(), 3);
+    QQuickItem *arrow = arrows().first();
+    QTest::mouseClick(m_window.get(), Qt::LeftButton, {},
+                      arrow->mapToScene({arrow->width() / 2, arrow->height() / 2}).toPoint());
+    QTRY_COMPARE(folded(), QStringList{u"One"_s});
+    QTRY_VERIFY(body->property("contentHeight").toReal() < height);
+    QVERIFY(top(u"# Two"_s) < two);
+    QVERIFY(styler->property("folds").toList().first().toMap().value(u"folded"_s).toBool());
+    bool hidden = false;
+    QMetaObject::invokeMethod(styler, "isFolded", Q_RETURN_ARG(bool, hidden),
+                              Q_ARG(int, int(text.indexOf(u"Sub line"_s))));
+    QVERIFY(hidden);
+    // The note is unchanged; the fold is kept in the vault's layout, for next time.
+    QCOMPARE(m_vault->currentText(), text);
+    QCOMPARE(m_vault->foldsOf(u"Folds.md"_s), QStringList{u"One"_s});
+    m_vault->setCurrent(u"Welcome.md"_s);
+    m_vault->setCurrent(u"Folds.md"_s);
+    QTRY_COMPARE(folded(), QStringList{u"One"_s});
+
+    // Source mode shows everything, and so does Read mode leave the fold's text out.
+    m_settings->setSourceMode(true);
+    QTRY_COMPARE(body->property("contentHeight").toReal(), sourceHeight);
+    m_settings->setSourceMode(false);
+    QTRY_VERIFY(body->property("contentHeight").toReal() < height);
+    m_settings->setReadMode(true);
+    QQuickItem *reader = find(u"reader"_s);
+    QTRY_VERIFY(reader->property("text").toString().contains(u"Two line"_s));
+    QVERIFY(!reader->property("text").toString().contains(u"Intro line"_s));
+    m_settings->setReadMode(false);
+
+    // The cursor going into a fold shows it again.
+    body->forceActiveFocus();
+    body->setProperty("cursorPosition", int(text.indexOf(u"Intro"_s)));
+    QTRY_COMPARE(folded(), QStringList());
+    QTRY_COMPARE(body->property("contentHeight").toReal(), height);
+
+    // Vi's za folds the cursor's heading, zM every one and zR none.
+    m_settings->setViMode(true);
+    body->setProperty("cursorPosition", int(text.indexOf(u"Two line"_s)));
+    QTest::keyClick(m_window.get(), Qt::Key_Escape);
+    body->forceActiveFocus();
+    const auto type = [this](const QString &keys) {
+        for (const QChar c : keys)
+            QTest::keyClick(m_window.get(), c.toLatin1(),
+                            c.isUpper() ? Qt::ShiftModifier : Qt::NoModifier);
+    };
+    body->setProperty("cursorPosition", int(text.indexOf(u"# Two"_s)));
+    type(u"za"_s);
+    QTRY_COMPARE(folded(), QStringList{u"Two"_s});
+    type(u"zR"_s);
+    QTRY_COMPARE(folded(), QStringList());
+    type(u"zM"_s);
+    QTRY_COMPARE(folded().size(), 3);
+    type(u"zR"_s);
     m_settings->setViMode(false);
 }
 

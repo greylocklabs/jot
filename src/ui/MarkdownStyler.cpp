@@ -129,6 +129,8 @@ void MarkdownStyler::setDocument(QQuickTextDocument *document)
         connect(document->textDocument(), &QTextDocument::contentsChanged, this,
                 &MarkdownStyler::readFrontMatter);
     }
+    m_folds.clear();
+    m_foldRanges.clear();
     Q_EMIT documentChanged();
     // At once rather than scheduled: the images' places belong to the old text, and asking
     // the new text for them, as the editor would before the update came, reaches past it.
@@ -484,6 +486,7 @@ void MarkdownStyler::setSourceMode(bool source)
     if (m_highlighter)
         m_highlighter->setSourceMode(source);
     Q_EMIT sourceModeChanged();
+    applyFolds();
     // Images come and go with the styling.
     scheduleImages();
 }
@@ -586,8 +589,74 @@ void MarkdownStyler::scheduleImages()
                 m_highlighter->refreshContents();
             }
         }
+        applyFolds();
         Q_EMIT imagesChanged();
     });
+}
+
+void MarkdownStyler::setFolded(const QStringList &folded)
+{
+    if (m_folded == folded)
+        return;
+    m_folded = folded;
+    applyFolds();
+}
+
+void MarkdownStyler::applyFolds()
+{
+    QTextDocument *doc = m_document ? m_document->textDocument() : nullptr;
+    QVariantList folds;
+    QList<std::tuple<QString, int, int>> ranges;
+    if (doc && m_highlighter) {
+        const QString note = doc->toPlainText();
+        const QStringView body = splitFrontMatter(note).body;
+        const int offset = int(body.data() - note.data());
+        const QList<Heading> headings = headingsOf(body);
+        const QStringList keys = headingKeys(headings);
+        for (qsizetype i = 0; i < headings.size(); ++i) {
+            const auto [start, end] = sectionOf(body, headings, i);
+            if (start == end)
+                continue;
+            const bool folded = !m_sourceMode && m_folded.contains(keys.at(i));
+            const int line = offset + int(headings.at(i).position);
+            folds.append(QVariantMap{
+                {u"key"_s, keys.at(i)},
+                {u"position"_s, line},
+                {u"end"_s, doc->findBlock(line).position() + doc->findBlock(line).length() - 1},
+                {u"folded"_s, folded}});
+            // A folded section inside one folded further out is hidden already.
+            if (folded && (ranges.isEmpty() || offset + start >= std::get<2>(ranges.last())))
+                ranges.append({keys.at(i), offset + int(start), offset + int(end)});
+        }
+        // Whole lines go, so a section's last line break stays with the line after it.
+        QList<QTextBlock> changed;
+        for (QTextBlock block = doc->begin(); block.isValid(); block = block.next()) {
+            const bool hidden = std::ranges::any_of(ranges, [&](const auto &range) {
+                return block.position() >= std::get<1>(range) &&
+                       block.position() < std::get<2>(range);
+            });
+            if (block.isVisible() == hidden) {
+                block.setVisible(!hidden);
+                changed.append(block);
+            }
+        }
+        for (const QTextBlock &block : std::as_const(changed))
+            m_highlighter->rehighlightBlock(block);
+    }
+    if (folds == m_folds && ranges == m_foldRanges)
+        return;
+    m_folds = folds;
+    m_foldRanges = ranges;
+    Q_EMIT foldsChanged();
+}
+
+QString MarkdownStyler::foldAt(int position) const
+{
+    for (const auto &[key, start, end] : m_foldRanges) {
+        if (position >= start && position < end)
+            return key;
+    }
+    return {};
 }
 
 int MarkdownStyler::headingAt(const QVariantList &headings, int position)

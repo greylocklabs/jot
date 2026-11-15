@@ -191,12 +191,46 @@ void NoteReader::render()
         return;
     const NoteParts parts = splitFrontMatter(m_text);
     const ThemeController &theme = *ThemeController::instance();
-    QString markdown =
-        readingMarkdown(parts.body, [this, &theme](const QString &tex, bool display) {
-            const MathRenderer::Drawn drawn =
-                MathRenderer::instance().draw(tex, display, m_pixelSize, theme.text());
-            return drawn.ok() ? QUrl::fromLocalFile(drawn.path).toString() : QString();
-        });
+    const int firstLine = bodyFirstLine(m_text, parts.body);
+    // Folded sections are left out, outermost first, as are the to-dos in them.
+    const QList<Heading> headings = headingsOf(parts.body);
+    const QStringList keys = headingKeys(headings);
+    QList<std::pair<qsizetype, qsizetype>> cut;
+    QList<std::pair<int, int>> cutLines;
+    QVariantList foldable;
+    m_hiddenHeadings = QList<bool>(headings.size(), false);
+    for (qsizetype i = 0; i < headings.size(); ++i) {
+        const qsizetype at = headings.at(i).position;
+        if (!cut.isEmpty() && at >= cut.last().first && at < cut.last().second) {
+            m_hiddenHeadings[i] = true;
+            continue;
+        }
+        const auto [start, end] = sectionOf(parts.body, headings, i);
+        if (start == end)
+            continue;
+        const bool folded = m_folded.contains(keys.at(i));
+        foldable.append(
+            QVariantMap{{u"key"_s, keys.at(i)}, {u"index"_s, int(i)}, {u"folded"_s, folded}});
+        if (folded) {
+            cut.append({start, end});
+            const auto lineAt = [&](qsizetype position) {
+                return firstLine + int(parts.body.first(position).count(u'\n'));
+            };
+            cutLines.append({lineAt(start), lineAt(end)});
+        }
+    }
+    m_shown.clear();
+    qsizetype from = 0;
+    for (const auto &[start, end] : std::as_const(cut)) {
+        m_shown += parts.body.sliced(from, start - from);
+        from = end;
+    }
+    m_shown += parts.body.sliced(from);
+    QString markdown = readingMarkdown(m_shown, [this, &theme](const QString &tex, bool display) {
+        const MathRenderer::Drawn drawn =
+            MathRenderer::instance().draw(tex, display, m_pixelSize, theme.text());
+        return drawn.ok() ? QUrl::fromLocalFile(drawn.path).toString() : QString();
+    });
     markdown = drawDiagrams(markdown, theme.diagramStyle(m_fontFamily, m_pixelSize));
     doc->setUndoRedoEnabled(false);
     // Image names resolve beside the note, as files, rather than inside the app's resources,
@@ -206,8 +240,12 @@ void NoteReader::render()
     doc->setMarkdown(markdown, QTextDocument::MarkdownDialectGitHub);
 
     m_tasks.clear();
-    for (const NoteScan::Task &task : scanNote(parts.body, bodyFirstLine(m_text, parts.body)).tasks)
-        m_tasks.append({task.line, task.text});
+    for (const NoteScan::Task &task : scanNote(parts.body, firstLine).tasks) {
+        if (std::ranges::none_of(cutLines, [&](const auto &lines) {
+                return task.line >= lines.first && task.line < lines.second;
+            }))
+            m_tasks.append({task.line, task.text});
+    }
     m_taskBlocks.clear();
     for (QTextBlock block = doc->begin(); block.isValid(); block = block.next()) {
         if (isTask(block))
@@ -221,6 +259,29 @@ void NoteReader::render()
     style();
     placeImages();
     placeSounds();
+
+    for (QVariant &fold : foldable) {
+        QVariantMap map = fold.toMap();
+        const int position = headingPosition(map.value(u"index"_s).toInt());
+        const QTextBlock line = doc->findBlock(std::max(position, 0));
+        map.insert(u"position"_s, position);
+        map.insert(u"end"_s, line.position() + line.length() - 1);
+        fold = map;
+    }
+    foldable.removeIf(
+        [](const QVariant &fold) { return fold.toMap().value(u"position"_s).toInt() < 0; });
+    if (foldable != m_folds) {
+        m_folds = foldable;
+        Q_EMIT foldsChanged();
+    }
+}
+
+void NoteReader::setFolded(const QStringList &folded)
+{
+    if (m_folded == folded)
+        return;
+    m_folded = folded;
+    schedule();
 }
 
 int NoteReader::headingPosition(int index) const
@@ -228,10 +289,16 @@ int NoteReader::headingPosition(int index) const
     const QTextDocument *doc = m_document ? m_document->textDocument() : nullptr;
     if (!doc || index < 0)
         return -1;
+    // A heading folded away with another is not drawn; those after it are one place earlier.
+    if (index < m_hiddenHeadings.size() && m_hiddenHeadings.at(index))
+        return -1;
+    index -= int(std::count(
+        m_hiddenHeadings.cbegin(),
+        m_hiddenHeadings.cbegin() + std::min<qsizetype>(index, m_hiddenHeadings.size()), true));
     // Its place among every heading drawn, nested ones in quotes and lists too.
     int drawn = -1;
     int listed = -1;
-    const QList<Heading> all = allHeadingsOf(splitFrontMatter(m_text).body);
+    const QList<Heading> all = allHeadingsOf(m_shown);
     for (int i = 0; i < all.size() && drawn < 0; ++i) {
         if (!all.at(i).nested && ++listed == index)
             drawn = i;

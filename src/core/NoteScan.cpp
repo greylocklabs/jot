@@ -4,6 +4,7 @@
 #include "jot/Vault.h"
 #include "jot/WebVideo.h"
 
+#include <QHash>
 #include <QLocale>
 #include <QRegularExpression>
 #include <QUrl>
@@ -216,6 +217,48 @@ QList<Heading> headingsOf(QStringView body)
     QList<Heading> found = allHeadingsOf(body);
     found.removeIf([](const Heading &heading) { return heading.nested; });
     return found;
+}
+
+QStringList headingKeys(const QList<Heading> &headings)
+{
+    QStringList keys;
+    QHash<QString, int> seen;
+    for (const Heading &heading : headings) {
+        const int count = ++seen[heading.text];
+        keys.append(count == 1 ? heading.text : u"%1 (%2)"_s.arg(heading.text).arg(count));
+    }
+    return keys;
+}
+
+std::pair<qsizetype, qsizetype> sectionOf(QStringView body, const QList<Heading> &headings,
+                                          qsizetype index)
+{
+    const Heading &heading = headings.at(index);
+    const auto lineAfter = [body](qsizetype at) {
+        const qsizetype end = body.indexOf(u'\n', at);
+        return end < 0 ? body.size() : end + 1;
+    };
+    qsizetype start = lineAfter(heading.position);
+    // A heading underlined with = or - keeps its underline.
+    if (!body.sliced(heading.position).trimmed().startsWith(u'#'))
+        start = lineAfter(start);
+    qsizetype end = body.size();
+    for (qsizetype i = index + 1; i < headings.size(); ++i) {
+        if (headings.at(i).level <= heading.level) {
+            end = headings.at(i).position;
+            break;
+        }
+    }
+    // Blank lines at its end stay, to keep the space before what comes next.
+    while (end > start && body.at(end - 1).isSpace()) {
+        const qsizetype line = body.lastIndexOf(u'\n', end - 2);
+        if (!body.sliced(line + 1, end - line - 1).trimmed().isEmpty())
+            break;
+        end = line + 1;
+    }
+    if (body.sliced(start, std::max<qsizetype>(end - start, 0)).trimmed().isEmpty())
+        end = start;
+    return {start, std::max(start, end)};
 }
 
 QList<std::pair<qsizetype, qsizetype>> inlineMath(QStringView line)

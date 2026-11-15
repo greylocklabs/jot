@@ -471,6 +471,8 @@ bool ViEditor::run(const QString &id)
         setCursor(start);
     } else if (id == u"endVisual") {
         setMode(kNormal);
+    } else if (id == u"toggleFold" || id == u"noteFoldAll" || id == u"noteUnfoldAll") {
+        Q_EMIT foldRequested(id);
     } else {
         return false;
     }
