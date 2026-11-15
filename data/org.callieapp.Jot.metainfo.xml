@@ -36,6 +36,13 @@
   </categories>
 
   <releases>
+    <release version="0.7.2" date="2026-11-15">
+      <description>
+        <ul>
+          <li>A note opened from Tasks no longer sometimes shows a blank page with only its last line drawn until another note is opened.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.7.1" date="2026-11-15">
       <description>
         <ul>
