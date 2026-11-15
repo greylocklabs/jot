@@ -128,6 +128,11 @@ void MarkdownStyler::setDocument(QQuickTextDocument *document)
                 &MarkdownStyler::scheduleImages);
         connect(document->textDocument(), &QTextDocument::contentsChanged, this,
                 &MarkdownStyler::readFrontMatter);
+        // Swapping a note in can leave the TextEdit's record of what it drew wrong, so that it
+        // draws little or none of the new text; it starts that record over once the swap is done.
+        QObject *edit = document->parent();
+        if (edit && edit->metaObject()->indexOfMethod("q_invalidate()") >= 0)
+            QMetaObject::invokeMethod(edit, "q_invalidate", Qt::QueuedConnection);
     }
     m_folds.clear();
     m_foldRanges.clear();

@@ -3,6 +3,13 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## Unreleased
+
+### Fixed
+
+- A note opened from Tasks no longer sometimes shows a blank page with only its last line drawn
+  until another note is opened.
+
 ## 0.7.1 - 2026-11-15
 
 ### Added
