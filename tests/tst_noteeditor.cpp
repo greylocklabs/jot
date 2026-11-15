@@ -3028,6 +3028,23 @@ void TestNoteEditor::viKeepsTheCursorInViewOnScroll()
     // Scrolled back up, it comes onto the last line in view.
     scroll->setProperty("contentY", 200.0);
     QTRY_VERIFY(inView());
+
+    // A note opened at its saved place keeps it, though opening it scrolls the view to the top
+    // first.
+    QVERIFY(notefile::write(m_root + u"/Longer.md"_s, lines, &error));
+    const QString text = body->property("text").toString();
+    const int saved = int(text.indexOf(u"Line 100 "_s));
+    body->setProperty("cursorPosition", saved);
+    QTRY_VERIFY(scroll->property("contentY").toReal() > 1000);
+    m_vault->setCurrent(u"Longer.md"_s);
+    QTRY_VERIFY(body->property("text").toString().contains(u"Line 119"_s));
+    body->forceActiveFocus();
+    body->setProperty("cursorPosition", saved);
+    QTRY_VERIFY(scroll->property("contentY").toReal() > 1000);
+    QVERIFY(m_vault->goBack());
+    QTRY_COMPARE(m_vault->current(), u"Long.md"_s);
+    QTRY_COMPARE(body->property("cursorPosition").toInt(), saved);
+    QTRY_VERIFY(inView());
     m_settings->setViMode(false);
 }
 

@@ -84,7 +84,8 @@ void ViEditor::setViewport(QQuickItem *viewport)
 void ViEditor::keepCursorInView()
 {
     // A selection in visual mode is the user's to move; outside vi, the cursor stays put.
-    if (!m_enabled || m_mode == kVisual || !m_target || !m_viewport || !m_target->hasActiveFocus())
+    if (!m_enabled || m_holding || m_mode == kVisual || !m_target || !m_viewport ||
+        !m_target->hasActiveFocus())
         return;
     const QRectF view = m_viewport->mapRectToItem(
         m_target, QRectF(0, 0, m_viewport->width(), m_viewport->height()));
