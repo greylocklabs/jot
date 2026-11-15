@@ -44,6 +44,8 @@ const QString kTypewriter = u"editor/typewriter"_s;
 const QString kLineNumbers = u"editor/lineNumbers"_s;
 const QString kNoteFont = u"editor/font"_s;
 const QString kIndent = u"editor/indent"_s;
+const QString kTextScale = u"appearance/textScale"_s;
+const QString kNoteZoom = u"editor/zoom"_s;
 const QString kSidebarWidth = u"layout/sidebarWidth"_s;
 const QString kNoteListWidth = u"layout/noteListWidth"_s;
 const QString kViMode = u"keyboard/viMode"_s;
@@ -132,6 +134,10 @@ Settings::Settings(const QString &path, QObject *parent)
     m_indent = get(kIndent, u"tab"_s).toString();
     if (!indents().contains(m_indent))
         m_indent = u"tab"_s;
+    m_textScale = get(kTextScale, 100).toInt();
+    if (!textScales().contains(m_textScale))
+        m_textScale = 100;
+    m_noteZoom = std::clamp(get(kNoteZoom, 100).toInt(), kMinNoteZoom, kMaxNoteZoom);
     m_viMode = get(kViMode, false).toBool();
     m_developerMode = get(kDeveloperMode, false).toBool();
     m_verboseLogging = get(kVerboseLogging, false).toBool();
@@ -423,6 +429,30 @@ void Settings::setNoteFont(const QString &font)
     Q_EMIT noteFontChanged();
 }
 
+QList<int> Settings::textScales()
+{
+    return {90, 100, 110, 125, 150};
+}
+
+void Settings::setTextScale(int percent)
+{
+    if (m_textScale == percent || !textScales().contains(percent))
+        return;
+    m_textScale = percent;
+    put(kTextScale, percent);
+    Q_EMIT textScaleChanged();
+}
+
+void Settings::setNoteZoom(int percent)
+{
+    percent = std::clamp(percent, kMinNoteZoom, kMaxNoteZoom);
+    if (m_noteZoom == percent)
+        return;
+    m_noteZoom = percent;
+    put(kNoteZoom, percent);
+    Q_EMIT noteZoomChanged();
+}
+
 QStringList Settings::indents()
 {
     return {u"tab"_s, u"2"_s, u"4"_s};
@@ -665,6 +695,8 @@ void Settings::reset()
     setReminderTime(u"09:00"_s);
     setNoteFont({});
     setIndent(u"tab"_s);
+    setTextScale(100);
+    setNoteZoom(100);
     resetSidebarWidth();
     resetNoteListWidth();
     setViMode(false);

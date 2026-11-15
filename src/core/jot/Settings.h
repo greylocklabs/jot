@@ -44,6 +44,11 @@ class Settings : public QObject
     Q_PROPERTY(int minNoteListWidth READ minNoteListWidth CONSTANT)
     /// The font notes are written in: "" for the theme's, "serif" or "mono".
     Q_PROPERTY(QString noteFont READ noteFont WRITE setNoteFont NOTIFY noteFontChanged)
+    /// How large Jot's text is drawn, in percent of the theme's own, on top of the desktop's
+    /// text size: one of textScales().
+    Q_PROPERTY(int textScale READ textScale WRITE setTextScale NOTIFY textScaleChanged)
+    /// How large the note's text is zoomed, in percent, from kMinNoteZoom to kMaxNoteZoom.
+    Q_PROPERTY(int noteZoom READ noteZoom WRITE setNoteZoom NOTIFY noteZoomChanged)
     /// What Tab indents with, and Shift+Tab takes off: "tab", "2" or "4" spaces.
     Q_PROPERTY(QString indent READ indent WRITE setIndent NOTIFY indentChanged)
     /// The text of one indent, as `indent` chooses it.
@@ -146,6 +151,13 @@ public:
     [[nodiscard]] static QStringList noteFonts();
     [[nodiscard]] QString noteFont() const { return m_noteFont; }
     void setNoteFont(const QString &font);
+    [[nodiscard]] static QList<int> textScales();
+    [[nodiscard]] int textScale() const { return m_textScale; }
+    void setTextScale(int percent);
+    static constexpr int kMinNoteZoom = 50;
+    static constexpr int kMaxNoteZoom = 300;
+    [[nodiscard]] int noteZoom() const { return m_noteZoom; }
+    void setNoteZoom(int percent);
     [[nodiscard]] static QStringList indents();
     [[nodiscard]] QString indent() const { return m_indent; }
     void setIndent(const QString &indent);
@@ -239,6 +251,8 @@ Q_SIGNALS:
     void checkForUpdatesChanged();
     void noteFontChanged();
     void indentChanged();
+    void textScaleChanged();
+    void noteZoomChanged();
     void sidebarWidthChanged();
     void noteListWidthChanged();
     void sourceModeChanged();
@@ -276,6 +290,8 @@ private:
     bool m_checkForUpdates = true;
     QString m_noteFont;
     QString m_indent = QStringLiteral("tab");
+    int m_textScale = 100;
+    int m_noteZoom = 100;
     int m_sidebarWidth = 0;
     int m_noteListWidth = 0;
     bool m_sourceMode = false;

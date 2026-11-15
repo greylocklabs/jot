@@ -38,6 +38,7 @@ private Q_SLOTS:
     void themesInTheFolderTravelWithIt();
     void keepsChosenShortcutsWithThePreferences();
     void keepsTheIndent();
+    void keepsTextSizes();
 };
 
 void TestSettings::startsWithDefaults()
@@ -485,6 +486,28 @@ void TestSettings::keepsTheIndent()
     QCOMPARE(Settings(path).indent(), u"2"_s);
     settings.reset();
     QCOMPARE(settings.indent(), u"tab"_s);
+}
+
+void TestSettings::keepsTextSizes()
+{
+    QTemporaryDir dir;
+    const QString path = dir.filePath(u"settings.ini"_s);
+    Settings settings(path);
+    QCOMPARE(settings.textScale(), 100);
+    QCOMPARE(settings.noteZoom(), 100);
+    settings.setTextScale(125);
+    settings.setTextScale(133);
+    settings.setNoteZoom(1000);
+    QCOMPARE(settings.textScale(), 125);
+    QCOMPARE(settings.noteZoom(), Settings::kMaxNoteZoom);
+    settings.setNoteZoom(10);
+    QCOMPARE(settings.noteZoom(), Settings::kMinNoteZoom);
+    const Settings again(path);
+    QCOMPARE(again.textScale(), 125);
+    QCOMPARE(again.noteZoom(), Settings::kMinNoteZoom);
+    settings.reset();
+    QCOMPARE(settings.textScale(), 100);
+    QCOMPARE(settings.noteZoom(), 100);
 }
 
 QTEST_GUILESS_MAIN(TestSettings)

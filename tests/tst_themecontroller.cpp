@@ -1,3 +1,4 @@
+#include "DesktopTextScale.h"
 #include "ThemeController.h"
 
 #include "greylock/Color.h"
@@ -35,6 +36,8 @@ class TestThemeController : public QObject
 
 private Q_SLOTS:
     void noteFontsFallBackToGenericFamilies();
+    void scalesItsTextAsTheDesktopAndSettingsSay();
+    void readsTheDesktopsTextSize();
     void startsWithDefaultTheme();
     void loadsAFileAndReloadsOnEdit();
     void brokenEditKeepsLastGoodTheme();
@@ -154,6 +157,38 @@ void TestThemeController::noteFontsFallBackToGenericFamilies()
     QCOMPARE(theme.noteFontFamily({}), theme.editorFontFamily());
     QVERIFY(theme.load(u"callie"_s).isEmpty());
     QCOMPARE(theme.noteFontFamily(u"serif"_s), theme.displayFontFamily());
+}
+
+void TestThemeController::scalesItsTextAsTheDesktopAndSettingsSay()
+{
+    ThemeController *theme = ThemeController::instance();
+    QCOMPARE(theme->textLg(), 15);
+    QSignalSpy changed(theme, &ThemeController::textScaleChanged);
+    theme->setDesktopTextScale(1.25);
+    theme->setUserTextScale(1.2);
+    QCOMPARE(changed.size(), 2);
+    QCOMPARE(theme->textScale(), 1.5);
+    QCOMPARE(theme->textLg(), 23);
+    QCOMPARE(theme->textSm(), 18);
+    // Spacing stays as it is.
+    QCOMPARE(theme->space4(), 12);
+    theme->setUserTextScale(1.2);
+    QCOMPARE(changed.size(), 2);
+    theme->setDesktopTextScale(1);
+    theme->setUserTextScale(1);
+    QCOMPARE(theme->textLg(), 15);
+}
+
+void TestThemeController::readsTheDesktopsTextSize()
+{
+    QCOMPARE(DesktopTextScale::scaleFrom(std::nullopt, QString()), 1.0);
+    // GNOME's Large Text, KDE's font a size up, and both.
+    QCOMPARE(DesktopTextScale::scaleFrom(1.25, QString()), 1.25);
+    QCOMPARE(DesktopTextScale::scaleFrom(1.0, u"Noto Sans,12,-1,5,50,0,0,0,0,0"_s), 1.2);
+    QCOMPARE(DesktopTextScale::scaleFrom(1.25, u"Noto Sans,12"_s), 1.5);
+    // What makes no sense is the usual size, and the scale stays in bounds.
+    QCOMPARE(DesktopTextScale::scaleFrom(0.0, u"Noto Sans"_s), 1.0);
+    QCOMPARE(DesktopTextScale::scaleFrom(5.0, QString()), 3.0);
 }
 
 QTEST_MAIN(TestThemeController)

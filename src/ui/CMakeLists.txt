@@ -18,6 +18,8 @@ qt_add_qml_module(jotui
     SOURCES
         ThemeController.h
         ThemeController.cpp
+        DesktopTextScale.h
+        DesktopTextScale.cpp
         WindowButtons.h
         WindowButtons.cpp
         LiveQml.h

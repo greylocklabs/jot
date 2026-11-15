@@ -1536,6 +1536,37 @@ Popup {
                 }
 
                 Section {
+                    title: qsTr("Text size")
+                    visible: root.tab === "appearance"
+
+                    Row {
+                        spacing: Theme.space2
+
+                        Repeater {
+                            model: [90, 100, 110, 125, 150]
+
+                            PillButton {
+                                id: sizeChoice
+                                required property int modelData
+                                objectName: "textScale-" + sizeChoice.modelData
+                                label: qsTr("%1%").arg(sizeChoice.modelData)
+                                selected: Settings.textScale === sizeChoice.modelData
+                                onClicked: Settings.textScale = sizeChoice.modelData
+                            }
+                        }
+                    }
+                    Text {
+                        width: parent.width
+                        wrapMode: Text.Wrap
+                        text: qsTr(
+                                  "All of Jot's text, on top of the text size your desktop sets, which Jot follows. Ctrl+= and Ctrl+- zoom only the note, and Ctrl+0 puts it back.")
+                        color: Theme.textMuted
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.textSm
+                    }
+                }
+
+                Section {
                     title: qsTr("Note text")
                     visible: root.tab === "appearance"
 

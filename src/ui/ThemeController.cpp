@@ -13,6 +13,7 @@
 #include <QTextBoundaryFinder>
 #include <QTimer>
 
+#include <algorithm>
 #include <cmath>
 
 namespace jot {
@@ -33,6 +34,24 @@ ThemeController::ThemeController(QObject *parent)
         // removes the watched path, so reload a moment later and re-watch.
         QTimer::singleShot(100, this, &ThemeController::reloadWatchedFile);
     });
+}
+
+void ThemeController::setDesktopTextScale(qreal scale)
+{
+    scale = std::clamp(scale, 0.5, 3.0);
+    if (qFuzzyCompare(scale, m_desktopTextScale))
+        return;
+    m_desktopTextScale = scale;
+    Q_EMIT textScaleChanged();
+}
+
+void ThemeController::setUserTextScale(qreal scale)
+{
+    scale = std::clamp(scale, 0.5, 3.0);
+    if (qFuzzyCompare(scale, m_userTextScale))
+        return;
+    m_userTextScale = scale;
+    Q_EMIT textScaleChanged();
 }
 
 ThemeController *ThemeController::instance()

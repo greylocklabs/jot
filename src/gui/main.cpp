@@ -1,3 +1,4 @@
+#include "DesktopTextScale.h"
 #include "LiveQml.h"
 #include "QuickCapture.h"
 #include "ReleaseInfo.h"
@@ -144,6 +145,20 @@ int main(int argc, char *argv[])
     for (const QString &warning : jot::ThemeController::instance()->warnings())
         err << "jot-gui: theme: " << warning << "\n";
     err.flush();
+
+    // Text as large as the desktop draws its own, and the Text size setting on top. A run for
+    // screenshots keeps the theme's own, so they look the same on any desktop.
+    jot::ThemeController *theme = jot::ThemeController::instance();
+    const auto userTextScale = [&settings, theme] {
+        theme->setUserTextScale(settings.textScale() / 100.0);
+    };
+    userTextScale();
+    QObject::connect(&settings, &jot::Settings::textScaleChanged, theme, userTextScale);
+    jot::DesktopTextScale desktopText;
+    QObject::connect(&desktopText, &jot::DesktopTextScale::scaleChanged, theme,
+                     &jot::ThemeController::setDesktopTextScale);
+    if (!parser.isSet(vaultOption))
+        desktopText.start();
 
     if (parser.isSet(vaultOption)) {
         if (!vault.openPath(parser.value(vaultOption))) {

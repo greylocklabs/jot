@@ -108,6 +108,7 @@ private Q_SLOTS:
     void continuesAndNestsLists();
     void indentsAndUnindentsLines();
     void indentsWithTheChosenUnit();
+    void zoomsTheNote();
     void fillsInTablesWithTheKeys();
     void completesLinkTargetsFromTheKeyboard();
     void putsInEmojiTypedAfterAColon();
@@ -1923,6 +1924,22 @@ void TestNoteEditor::setsAToDosDayAndRepeat()
     QTest::keyClick(m_window.get(), Qt::Key_Backspace);
     QTest::keyClick(m_window.get(), Qt::Key_Return);
     QTRY_COMPARE(text(), u"- [ ] "_s);
+}
+
+void TestNoteEditor::zoomsTheNote()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    const auto size = [body] { return body->property("font").value<QFont>().pixelSize(); };
+    const int usual = size();
+    m_settings->setNoteZoom(150);
+    QTRY_COMPARE(size(), qRound(usual * 1.5));
+    QTRY_VERIFY(find(u"zoomLabel"_s)->isVisible());
+    m_settings->setReadMode(true);
+    QTRY_COMPARE(find(u"reader"_s)->property("font").value<QFont>().pixelSize(), size());
+    m_settings->setReadMode(false);
+    m_settings->setNoteZoom(100);
+    QTRY_COMPARE(size(), usual);
 }
 
 void TestNoteEditor::indentsWithTheChosenUnit()
