@@ -231,12 +231,23 @@ Rectangle {
             return
         folded = fold ? folded.concat([key]) : folded.filter(each => each !== key)
         Vault.setFolds(Vault.current, folded)
+        keepCursorShown()
     }
 
     /// Folds every heading with something under it, or none.
     function foldAll(fold) {
         folded = fold ? styler.folds.map(each => each.key) : []
         Vault.setFolds(Vault.current, folded)
+        keepCursorShown()
+    }
+
+    /// Moves the cursor out of a fold that just hid it, to the folded heading's line, as vi does,
+    /// so the fold is not opened again by the cursor that is still in it.
+    function keepCursorShown() {
+        const key = styler.foldAt(body.cursorPosition)
+        const heading = styler.folds.find(each => each.key === key)
+        if (heading)
+            body.cursorPosition = heading.position
     }
 
     /// The heading the cursor is under, as `{key, folded}`, or nothing, for vi's za.

@@ -614,11 +614,14 @@ void MarkdownStyler::applyFolds()
         const QList<Heading> headings = headingsOf(body);
         const QStringList keys = headingKeys(headings);
         for (qsizetype i = 0; i < headings.size(); ++i) {
+            const int line = offset + int(headings.at(i).position);
+            // A heading folded away with another has no arrow of its own, as the reader draws.
+            if (!ranges.isEmpty() && line < std::get<2>(ranges.last()))
+                continue;
             const auto [start, end] = sectionOf(body, headings, i);
             if (start == end)
                 continue;
             const bool folded = !m_sourceMode && m_folded.contains(keys.at(i));
-            const int line = offset + int(headings.at(i).position);
             folds.append(QVariantMap{
                 {u"key"_s, keys.at(i)},
                 {u"position"_s, line},

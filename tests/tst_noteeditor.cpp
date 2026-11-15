@@ -978,6 +978,27 @@ void TestNoteEditor::foldsHeadingsAway()
     QVERIFY(!reader->property("text").toString().contains(u"Intro line"_s));
     m_settings->setReadMode(false);
 
+    // Folding with the cursor inside puts the cursor on the heading, so the fold stays.
+    body->forceActiveFocus();
+    body->setProperty("cursorPosition", int(text.indexOf(u"Two line"_s)));
+    QMetaObject::invokeMethod(m_editor.get(), "setFold", Q_ARG(QVariant, u"Two"_s),
+                              Q_ARG(QVariant, true));
+    QCOMPARE(body->property("cursorPosition").toInt(), int(text.indexOf(u"# Two"_s)));
+    m_vault->setCurrent(u"Welcome.md"_s);
+    m_vault->setCurrent(u"Folds.md"_s);
+    QTRY_COMPARE(folded(), (QStringList{u"One"_s, u"Two"_s}));
+    QMetaObject::invokeMethod(m_editor.get(), "setFold", Q_ARG(QVariant, u"Two"_s),
+                              Q_ARG(QVariant, false));
+
+    // A heading folded away with another has no arrow of its own.
+    QTRY_COMPARE(arrows().size(), 2);
+    const auto onLine = [&](QQuickItem *arrow, const QString &heading) {
+        const qreal y = arrow->mapToScene({0, arrow->height() / 2}).y() - body->mapToScene({}).y();
+        return y > top(heading) && y < top(heading) + 2 * arrow->height() + 20;
+    };
+    QVERIFY(onLine(arrows().first(), u"# One"_s));
+    QVERIFY(onLine(arrows().last(), u"# Two"_s));
+
     // The cursor going into a fold shows it again.
     body->forceActiveFocus();
     body->setProperty("cursorPosition", int(text.indexOf(u"Intro"_s)));
