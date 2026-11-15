@@ -774,6 +774,14 @@ void TestNoteEditor::readingIndentsQuotesAStepWithABar()
     QCOMPARE(bars.last()->x() - bars.first()->x(), step);
     QVERIFY(bars.first()->height() > bars.last()->height());
     QVERIFY(bars.first()->x() + bars.first()->width() <= left(u"Quoted line."_s));
+
+    // Code in a quote keeps its indent; code straight after it, out of the quote, does not.
+    m_settings->setReadMode(false);
+    find(u"body"_s)->setProperty(
+        "text", u"Plain line.\n\n> ```\n> quoted code\n> ```\n\n```\nplain code\n```\n"_s);
+    m_settings->setReadMode(true);
+    QTRY_VERIFY(doc->toPlainText().contains(u"plain code"_s));
+    QTRY_COMPARE(left(u"quoted code"_s) - left(u"plain code"_s), step);
     m_settings->setReadMode(false);
 }
 

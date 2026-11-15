@@ -335,7 +335,9 @@ void NoteReader::style()
         if (!isCode(block))
             continue;
         QTextBlock first = block;
-        while (block.next().isValid() && isCode(block.next()))
+        // A run ends where the next code is in another quote, or out of one.
+        while (block.next().isValid() && isCode(block.next()) &&
+               quoteLevel(block.next()) == quoteLevel(first))
             block = block.next();
         for (QTextBlock each = first;; each = each.next()) {
             QTextBlockFormat room;
