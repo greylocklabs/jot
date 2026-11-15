@@ -1453,6 +1453,7 @@ Rectangle {
                     objectName: "vi"
                     target: body
                     viewport: flick
+                    holding: root.loading
                     router: root.router
                     enabled: Settings.viMode
                     busy: linkPopup.visible
