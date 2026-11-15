@@ -763,8 +763,20 @@ Rectangle {
                     pixelSize: reader.font.pixelSize
                     width: reader.width
                 }
+                /// Whether `point`, in the reader, is on a to-do's checkbox, left of its text.
+                function onCheckbox(point) {
+                    const task = reading.taskAt(positionAt(point.x, point.y))
+                    return task.line !== undefined && point.x < positionToRectangle(Math.min(task.textStart,
+                                                                                             length)).x
+                }
+
+                // Reading is not typing: the arrow, and the hand over what a click acts on.
                 HoverHandler {
-                    cursorShape: reader.hoveredLink !== "" ? Qt.PointingHandCursor : Qt.IBeamCursor
+                    id: readHover
+                    objectName: "readHover"
+                    cursorShape: reader.hoveredLink !== "" || (Vault.writable && reader.onCheckbox(
+                                                                   readHover.point.position))
+                                 ? Qt.PointingHandCursor : Qt.ArrowCursor
                 }
                 CodeBackdrops {
                     view: reader
@@ -856,12 +868,10 @@ Rectangle {
                 TapHandler {
                     enabled: Vault.writable
                     onTapped: point => {
-                        const position = reader.positionAt(point.position.x, point.position.y)
-                        const task = reading.taskAt(position)
-                        if (task.line === undefined || point.position.x
-                                >= reader.positionToRectangle(Math.min(task.textStart,
-                                                                       reader.length)).x)
+                        if (!reader.onCheckbox(point.position))
                             return
+                        const task = reading.taskAt(reader.positionAt(point.position.x,
+                                                                      point.position.y))
                         Vault.setTaskDone(Vault.current, task.line, !task.done, task.text)
                     }
                 }

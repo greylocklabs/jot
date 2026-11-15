@@ -3,6 +3,13 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## Unreleased
+
+### Changed
+
+- Read mode shows the arrow pointer over a note rather than the text cursor, and the hand over
+  links and checkboxes, which a click acts on.
+
 ## 0.7.0 - 2026-11-14
 
 ### Added
