@@ -346,6 +346,10 @@ QQuickItem *TestNoteEditor::find(const QString &name, QQuickItem *from) const
 
 void TestNoteEditor::drawsTheNoteAndKeepsDrawingItAcrossSwitches()
 {
+    // The styler has the TextEdit start its drawing over after a switch, through this slot.
+    QQuickItem *body = find(u"body"_s);
+    QVERIFY(body);
+    QVERIFY(body->metaObject()->indexOfMethod("q_invalidate()") >= 0);
     QTRY_VERIFY_WITH_TIMEOUT(inkBelowTitle() > 500, 3000);
     m_vault->setCurrent(u"Ashfall/Pitch.md"_s);
     QTRY_VERIFY_WITH_TIMEOUT(inkBelowTitle() > 200, 3000);
