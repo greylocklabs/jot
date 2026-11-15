@@ -69,6 +69,37 @@ ViEditor::ViEditor(QObject *parent) : QObject(parent)
     connect(&m_timeout, &QTimer::timeout, this, [this] { setPending({}); });
 }
 
+void ViEditor::setViewport(QQuickItem *viewport)
+{
+    if (m_viewport == viewport)
+        return;
+    if (m_viewport)
+        disconnect(m_viewport, nullptr, this, nullptr);
+    m_viewport = viewport;
+    if (m_viewport)
+        connect(m_viewport, SIGNAL(contentYChanged()), this, SLOT(keepCursorInView()));
+    Q_EMIT viewportChanged();
+}
+
+void ViEditor::keepCursorInView()
+{
+    // A selection in visual mode is the user's to move; outside vi, the cursor stays put.
+    if (!m_enabled || m_mode == kVisual || !m_target || !m_viewport || !m_target->hasActiveFocus())
+        return;
+    const QRectF view = m_viewport->mapRectToItem(
+        m_target, QRectF(0, 0, m_viewport->width(), m_viewport->height()));
+    const QRectF at = m_target->property("cursorRectangle").toRectF();
+    if (view.isEmpty() || (at.top() >= view.top() && at.bottom() <= view.bottom()))
+        return;
+    // The first whole line in view when scrolled down past the cursor, the last when up.
+    const qreal y = at.top() < view.top() ? view.top() + at.height() / 2 + 1
+                                          : view.bottom() - at.height() / 2 - 1;
+    int position = cursor();
+    QMetaObject::invokeMethod(m_target, "positionAt", Q_RETURN_ARG(int, position),
+                              Q_ARG(qreal, at.x()), Q_ARG(qreal, y));
+    setCursor(position);
+}
+
 void ViEditor::setTarget(QQuickItem *target)
 {
     if (m_target == target)

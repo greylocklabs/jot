@@ -21,6 +21,9 @@ class ViEditor : public QObject
     QML_ELEMENT
     Q_PROPERTY(QQuickItem *target READ target WRITE setTarget NOTIFY targetChanged)
     Q_PROPERTY(jot::KeyRouter *router MEMBER m_router NOTIFY routerChanged)
+    /// The Flickable the TextEdit scrolls in. As in vi, scrolling it keeps the cursor on a line in
+    /// view, so a key after a scroll acts where the note is shown.
+    Q_PROPERTY(QQuickItem *viewport READ viewport WRITE setViewport NOTIFY viewportChanged)
     /// Off, every key goes to the TextEdit as usual.
     Q_PROPERTY(bool enabled READ enabled WRITE setEnabled NOTIFY enabledChanged)
     /// While true, as when notes are offered for a wikilink, insert mode leaves every key,
@@ -46,6 +49,8 @@ public:
 
     [[nodiscard]] QQuickItem *target() const { return m_target; }
     void setTarget(QQuickItem *target);
+    [[nodiscard]] QQuickItem *viewport() const { return m_viewport; }
+    void setViewport(QQuickItem *viewport);
     [[nodiscard]] bool enabled() const { return m_enabled; }
     void setEnabled(bool enabled);
     [[nodiscard]] QString mode() const { return m_mode; }
@@ -77,6 +82,7 @@ Q_SIGNALS:
     /// `:noh`: find highlights are to go.
     void highlightsCleared();
     void targetChanged();
+    void viewportChanged();
     void routerChanged();
     void enabledChanged();
     void busyChanged();
@@ -91,6 +97,8 @@ protected:
 private Q_SLOTS:
     /// Hides a find's matches once the cursor moves some other way.
     void dropMatches();
+    /// Moves the cursor onto the nearest line in view after a scroll left it out of view.
+    void keepCursorInView();
 
 private:
     /// Handles a key in normal or visual mode; says whether it was used.
@@ -122,6 +130,7 @@ private:
     void paste(bool after);
 
     QPointer<QQuickItem> m_target;
+    QPointer<QQuickItem> m_viewport;
     KeyRouter *m_router = nullptr;
     bool m_enabled = false;
     bool m_busy = false;

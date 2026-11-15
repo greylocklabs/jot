@@ -1452,6 +1452,7 @@ Rectangle {
 
                     objectName: "vi"
                     target: body
+                    viewport: flick
                     router: root.router
                     enabled: Settings.viMode
                     busy: linkPopup.visible

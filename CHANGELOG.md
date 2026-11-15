@@ -37,6 +37,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 ### Fixed
 
 - Finding in a note selects the whole match as you type, not all but its last letter.
+- In vi mode, scrolling a note with the mouse keeps the cursor on a line in view, as in vi, so
+  `i` after a scroll types where the note is shown instead of at a cursor left out of sight.
 
 ## 0.7.0 - 2026-11-14
 
