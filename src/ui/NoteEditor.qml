@@ -1092,7 +1092,8 @@ Rectangle {
 
                 selectByMouse: true
                 persistentSelection: true
-                tabStopDistance: 4 * Theme.space5
+                // As wide as the indent Settings chooses, in the note's own spaces.
+                tabStopDistance: noteSpaces.advanceWidth(" ") * Settings.indentWidth
                 Accessible.name: qsTr("Note")
                 /// The text as last heard of. Restyling, as when the spelling dictionary
                 /// arrives, says the text changed too, though none of it did.
@@ -1437,6 +1438,11 @@ Rectangle {
                     event.accepted = true
                 }
 
+                FontMetrics {
+                    id: noteSpaces
+                    font: body.font
+                }
+
                 ViEditor {
                     id: vi
 
@@ -1672,6 +1678,7 @@ Rectangle {
                     id: styler
                     objectName: "styler"
                     folded: root.folded
+                    indentUnit: Settings.indentText
 
                     sourceMode: Settings.sourceMode
                     focusMode: Settings.focusMode

@@ -107,6 +107,7 @@ private Q_SLOTS:
     void setsAToDosDayAndRepeat();
     void continuesAndNestsLists();
     void indentsAndUnindentsLines();
+    void indentsWithTheChosenUnit();
     void fillsInTablesWithTheKeys();
     void completesLinkTargetsFromTheKeyboard();
     void putsInEmojiTypedAfterAColon();
@@ -1922,6 +1923,39 @@ void TestNoteEditor::setsAToDosDayAndRepeat()
     QTest::keyClick(m_window.get(), Qt::Key_Backspace);
     QTest::keyClick(m_window.get(), Qt::Key_Return);
     QTRY_COMPARE(text(), u"- [ ] "_s);
+}
+
+void TestNoteEditor::indentsWithTheChosenUnit()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    body->forceActiveFocus();
+    const auto text = [body] { return body->property("text").toString(); };
+    const qreal tab = body->property("tabStopDistance").toReal();
+    QVERIFY(tab > 0);
+
+    // Two spaces: Tab puts them in at the cursor, Shift+Tab takes them off, and a tab shows
+    // half as wide as before.
+    m_settings->setIndent(u"2"_s);
+    // Within a pixel, which the editor rounds to.
+    QTRY_VERIFY(qAbs(body->property("tabStopDistance").toReal() - tab / 2) <= 1);
+    body->setProperty("text", u"code\n- a\n- b\n1. c\n2. d"_s);
+    body->setProperty("cursorPosition", 0);
+    QTest::keyClick(m_window.get(), Qt::Key_Tab);
+    QCOMPARE(text(), u"  code\n- a\n- b\n1. c\n2. d"_s);
+    QCOMPARE(body->property("cursorPosition").toInt(), 2);
+    QTest::keyClick(m_window.get(), Qt::Key_Backtab, Qt::ShiftModifier);
+    QCOMPARE(text(), u"code\n- a\n- b\n1. c\n2. d"_s);
+
+    // List items still nest under the item above, whatever the indent.
+    m_settings->setIndent(u"4"_s);
+    body->setProperty("cursorPosition", int(text().indexOf(u"- b"_s)));
+    QTest::keyClick(m_window.get(), Qt::Key_Tab);
+    body->setProperty("cursorPosition", int(text().indexOf(u"2. d"_s)));
+    QTest::keyClick(m_window.get(), Qt::Key_Tab);
+    QCOMPARE(text(), u"code\n- a\n  - b\n1. c\n   2. d"_s);
+    m_settings->setIndent(u"tab"_s);
+    QTRY_COMPARE(body->property("tabStopDistance").toReal(), tab);
 }
 
 void TestNoteEditor::indentsAndUnindentsLines()

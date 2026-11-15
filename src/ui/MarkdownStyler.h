@@ -56,6 +56,8 @@ class MarkdownStyler : public QObject
     Q_PROPERTY(QVariantList folds READ folds NOTIFY foldsChanged)
     /// The note's words and characters, front matter left out, as `{words, characters}`.
     Q_PROPERTY(QVariantMap count READ count NOTIFY imagesChanged)
+    /// What Tab indents a line with, and Shift+Tab takes off: a tab or spaces.
+    Q_PROPERTY(QString indentUnit MEMBER m_indentUnit NOTIFY indentUnitChanged)
     /// The Markdown shown as written, without live preview.
     Q_PROPERTY(bool sourceMode READ sourceMode WRITE setSourceMode NOTIFY sourceModeChanged)
     /// Everything but the paragraph the cursor is in faded.
@@ -201,6 +203,7 @@ Q_SIGNALS:
     void focusModeChanged();
     void foldCommentsChanged();
     void foldsChanged();
+    void indentUnitChanged();
     void spellingChanged();
 
 private:
@@ -234,6 +237,7 @@ private:
     QVariantList m_folds;
     /// Each folded section, as `{key, start, end}` positions in the document.
     QList<std::tuple<QString, int, int>> m_foldRanges;
+    QString m_indentUnit = QStringLiteral("\t");
     bool m_spellcheck = false;
     QString m_language;
     std::unique_ptr<Sonnet::Speller> m_speller;

@@ -2608,6 +2608,26 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Indents</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Tab</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>2 spaces</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>4 spaces</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>What Tab puts in, and Shift+Tab takes off, on a line or in code. List items still nest under the item above. A tab shows as wide as four spaces.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Daily word goal</source>
         <translation type="unfinished"></translation>
     </message>

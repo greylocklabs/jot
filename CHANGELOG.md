@@ -27,6 +27,9 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 - Shift+Tab takes an indent off the line, or off every line selected, anywhere in a note, not
   only in lists, and Tab indents every line of a selection rather than typing over it. In vi
   mode, `>>` and `<<` do the same for the line, and `>` and `<` for the lines selected.
+- Settings, Writing, Indents chooses what Tab puts in and Shift+Tab takes off: a tab, as before,
+  or 2 or 4 spaces. List items still nest under the item above. A tab now shows as wide as four
+  spaces, or two with 2 spaces chosen.
 
 ### Fixed
 
