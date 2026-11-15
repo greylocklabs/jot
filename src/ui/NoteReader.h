@@ -32,6 +32,10 @@ class NoteReader : public QObject
     /// view to draw the raised surface behind them, `pad` around the text.
     Q_PROPERTY(QVariantList codeRuns READ codeRuns NOTIFY codeRunsChanged)
     Q_PROPERTY(qreal codePadding READ codePadding NOTIFY changed)
+    /// Where each quote is, `{start, end, level}` for every level it nests to, for the view to
+    /// draw a bar down its left; each level's text starts `quoteIndent` further in.
+    Q_PROPERTY(QVariantList quoteRuns READ quoteRuns NOTIFY quoteRunsChanged)
+    Q_PROPERTY(qreal quoteIndent READ quoteIndent CONSTANT)
 
 public:
     explicit NoteReader(QObject *parent = nullptr);
@@ -49,6 +53,8 @@ public:
     [[nodiscard]] QVariantList sounds() const { return m_sounds; }
     [[nodiscard]] QVariantList codeRuns() const { return m_codeRuns; }
     [[nodiscard]] qreal codePadding() const { return m_pixelSize * 0.6; }
+    [[nodiscard]] QVariantList quoteRuns() const { return m_quoteRuns; }
+    [[nodiscard]] static qreal quoteIndent();
 
     /// The checkbox task drawn at `position`: `{line, done, text, textStart}`, with its line in
     /// the note's file and where its text starts after the box, or empty when there is none there.
@@ -64,6 +70,7 @@ Q_SIGNALS:
     void changed();
     void soundsChanged();
     void codeRunsChanged();
+    void quoteRunsChanged();
 
 private:
     void schedule();
@@ -90,6 +97,7 @@ private:
     QList<int> m_taskBlocks;
     QVariantList m_sounds;
     QVariantList m_codeRuns;
+    QVariantList m_quoteRuns;
 };
 
 } // namespace jot

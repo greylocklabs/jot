@@ -9,6 +9,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 - Read mode shows the arrow pointer over a note rather than the text cursor, and the hand over
   links and checkboxes, which a click acts on.
+- Quotes in Read mode sit a small step in from the text around them, with a bar down the left of
+  each level, rather than far to the right.
 
 ## 0.7.0 - 2026-11-14
 

@@ -79,6 +79,7 @@ private Q_SLOTS:
     void listsHeadingsInPlaceOfAContentsMarker();
     void readingFindsTheHeadingAContentsEntryNames();
     void readingShowsTheArrowAndAHandForClicks();
+    void readingIndentsQuotesAStepWithABar();
     void outlinesTheNoteBesideIt();
     void aTagLinkOpensTheTagsView();
     void showsTabsOverTheNote();
@@ -735,6 +736,44 @@ void TestNoteEditor::readingShowsTheArrowAndAHandForClicks()
     QTRY_COMPARE(shape(at(u"the site"_s, 2)), Qt::PointingHandCursor);
     QTRY_COMPARE(shape(at(u"Buy milk"_s, -12)), Qt::PointingHandCursor);
     QTRY_COMPARE(shape(at(u"Buy milk"_s, 4)), Qt::ArrowCursor);
+    m_settings->setReadMode(false);
+}
+
+void TestNoteEditor::readingIndentsQuotesAStepWithABar()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    find(u"body"_s)->setProperty(
+        "text", u"Plain line.\n\n> Quoted line.\n>\n> > Nested line.\n\nAfter.\n"_s);
+    m_settings->setReadMode(true);
+    QQuickItem *reader = find(u"reader"_s);
+    QTRY_VERIFY(reader->isVisible());
+    auto *doc = reader->property("textDocument").value<QQuickTextDocument *>()->textDocument();
+    QTRY_VERIFY(doc->toPlainText().contains(u"Nested line."_s));
+    const auto left = [&](const QString &words) {
+        QRectF place;
+        QMetaObject::invokeMethod(reader, "positionToRectangle", Q_RETURN_ARG(QRectF, place),
+                                  Q_ARG(int, int(doc->toPlainText().indexOf(words))));
+        return place.x();
+    };
+    const qreal step = ThemeController::instance()->space5();
+
+    // A step in for each level, not Qt's wide indent.
+    QCOMPARE(left(u"Quoted line."_s) - left(u"Plain line."_s), step);
+    QCOMPARE(left(u"Nested line."_s) - left(u"Plain line."_s), 2 * step);
+    QCOMPARE(left(u"After."_s), left(u"Plain line."_s));
+
+    // A bar down each level: the outer one over both quoted lines, the inner over the nested.
+    QList<QQuickItem *> bars;
+    for (QQuickItem *child : reader->childItems()) {
+        if (child->objectName() == u"quoteBar"_s)
+            bars.append(child);
+    }
+    QTRY_COMPARE(bars.size(), 2);
+    std::sort(bars.begin(), bars.end(),
+              [](QQuickItem *a, QQuickItem *b) { return a->x() < b->x(); });
+    QCOMPARE(bars.last()->x() - bars.first()->x(), step);
+    QVERIFY(bars.first()->height() > bars.last()->height());
+    QVERIFY(bars.first()->x() + bars.first()->width() <= left(u"Quoted line."_s));
     m_settings->setReadMode(false);
 }
 
