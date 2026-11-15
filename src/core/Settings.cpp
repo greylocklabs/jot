@@ -43,6 +43,7 @@ const QString kFocusMode = u"editor/focusMode"_s;
 const QString kTypewriter = u"editor/typewriter"_s;
 const QString kLineNumbers = u"editor/lineNumbers"_s;
 const QString kNoteFont = u"editor/font"_s;
+const QString kIndent = u"editor/indent"_s;
 const QString kSidebarWidth = u"layout/sidebarWidth"_s;
 const QString kNoteListWidth = u"layout/noteListWidth"_s;
 const QString kViMode = u"keyboard/viMode"_s;
@@ -128,6 +129,9 @@ Settings::Settings(const QString &path, QObject *parent)
     m_noteListWidth = bounded(get(kNoteListWidth, 0).toInt(), kMinNoteListWidth, kMaxNoteListWidth);
     if (!noteFonts().contains(m_noteFont))
         m_noteFont.clear();
+    m_indent = get(kIndent, u"tab"_s).toString();
+    if (!indents().contains(m_indent))
+        m_indent = u"tab"_s;
     m_viMode = get(kViMode, false).toBool();
     m_developerMode = get(kDeveloperMode, false).toBool();
     m_verboseLogging = get(kVerboseLogging, false).toBool();
@@ -419,6 +423,30 @@ void Settings::setNoteFont(const QString &font)
     Q_EMIT noteFontChanged();
 }
 
+QStringList Settings::indents()
+{
+    return {u"tab"_s, u"2"_s, u"4"_s};
+}
+
+void Settings::setIndent(const QString &indent)
+{
+    if (m_indent == indent || !indents().contains(indent))
+        return;
+    m_indent = indent;
+    put(kIndent, indent);
+    Q_EMIT indentChanged();
+}
+
+QString Settings::indentText() const
+{
+    return m_indent == u"tab" ? u"\t"_s : QString(m_indent.toInt(), u' ');
+}
+
+int Settings::indentWidth() const
+{
+    return m_indent == u"tab" ? 4 : m_indent.toInt();
+}
+
 void Settings::setColumnsHidden(bool hidden)
 {
     if (m_columnsHidden == hidden)
@@ -636,6 +664,7 @@ void Settings::reset()
     setQuickCaptureKey(false);
     setReminderTime(u"09:00"_s);
     setNoteFont({});
+    setIndent(u"tab"_s);
     resetSidebarWidth();
     resetNoteListWidth();
     setViMode(false);

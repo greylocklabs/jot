@@ -435,6 +435,50 @@ Popup {
                 }
 
                 Section {
+                    title: qsTr("Indents")
+                    visible: root.tab === "writing"
+
+                    Row {
+                        spacing: Theme.space2
+
+                        Repeater {
+                            model: [
+                                {
+                                    "id": "tab",
+                                    "label": qsTr("Tab")
+                                },
+                                {
+                                    "id": "2",
+                                    "label": qsTr("2 spaces")
+                                },
+                                {
+                                    "id": "4",
+                                    "label": qsTr("4 spaces")
+                                }
+                            ]
+
+                            PillButton {
+                                id: indentChoice
+                                required property var modelData
+                                objectName: "indent-" + indentChoice.modelData.id
+                                label: indentChoice.modelData.label
+                                selected: Settings.indent === indentChoice.modelData.id
+                                onClicked: Settings.indent = indentChoice.modelData.id
+                            }
+                        }
+                    }
+                    Text {
+                        width: parent.width
+                        wrapMode: Text.Wrap
+                        text: qsTr(
+                                  "What Tab puts in, and Shift+Tab takes off, on a line or in code. List items still nest under the item above. A tab shows as wide as four spaces.")
+                        color: Theme.textMuted
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.textSm
+                    }
+                }
+
+                Section {
                     title: qsTr("Writing")
                     visible: root.tab === "writing"
 

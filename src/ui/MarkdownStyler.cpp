@@ -447,7 +447,13 @@ QVariantMap MarkdownStyler::format(const QString &action, int from, int to, cons
                                         : indentList(working, from, to, outdent);
         // Then any lines: Tab indents a selection of them, Shift+Tab takes an indent off.
         if (!edit && action != u"newline")
-            edit = indentLines(working, from, to, outdent, u"\t"_s, false);
+            edit = indentLines(working, from, to, outdent, m_indentUnit, false);
+        // On one line, Tab puts the indent in at the cursor, as typing it would.
+        if (!edit && action == u"indent") {
+            const QString typed = working.left(from) + m_indentUnit + working.mid(to);
+            edit =
+                difference(working, typed, from + m_indentUnit.size(), from + m_indentUnit.size());
+        }
         if (!edit)
             return {};
         step(*edit);
@@ -456,7 +462,7 @@ QVariantMap MarkdownStyler::format(const QString &action, int from, int to, cons
         const bool outdent = action == u"shiftLeft";
         std::optional<Edit> edit = indentList(working, from, to, outdent);
         if (!edit)
-            edit = indentLines(working, from, to, outdent, u"\t"_s, true);
+            edit = indentLines(working, from, to, outdent, m_indentUnit, true);
         step(*edit);
     } else if (action == u"linkTarget") {
         const std::optional<Edit> edit = completeLinkTarget(

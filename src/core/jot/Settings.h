@@ -44,6 +44,12 @@ class Settings : public QObject
     Q_PROPERTY(int minNoteListWidth READ minNoteListWidth CONSTANT)
     /// The font notes are written in: "" for the theme's, "serif" or "mono".
     Q_PROPERTY(QString noteFont READ noteFont WRITE setNoteFont NOTIFY noteFontChanged)
+    /// What Tab indents with, and Shift+Tab takes off: "tab", "2" or "4" spaces.
+    Q_PROPERTY(QString indent READ indent WRITE setIndent NOTIFY indentChanged)
+    /// The text of one indent, as `indent` chooses it.
+    Q_PROPERTY(QString indentText READ indentText NOTIFY indentChanged)
+    /// How many spaces wide one indent, a tab included, is shown.
+    Q_PROPERTY(int indentWidth READ indentWidth NOTIFY indentChanged)
     /// Notes show their Markdown as written rather than styled.
     Q_PROPERTY(bool sourceMode READ sourceMode WRITE setSourceMode NOTIFY sourceModeChanged)
     /// Notes are shown rendered, to read, rather than to write in.
@@ -140,6 +146,11 @@ public:
     [[nodiscard]] static QStringList noteFonts();
     [[nodiscard]] QString noteFont() const { return m_noteFont; }
     void setNoteFont(const QString &font);
+    [[nodiscard]] static QStringList indents();
+    [[nodiscard]] QString indent() const { return m_indent; }
+    void setIndent(const QString &indent);
+    [[nodiscard]] QString indentText() const;
+    [[nodiscard]] int indentWidth() const;
     [[nodiscard]] bool sourceMode() const { return m_sourceMode; }
     void setSourceMode(bool source);
     [[nodiscard]] bool readMode() const { return m_readMode; }
@@ -227,6 +238,7 @@ Q_SIGNALS:
     void tasksSortChanged();
     void checkForUpdatesChanged();
     void noteFontChanged();
+    void indentChanged();
     void sidebarWidthChanged();
     void noteListWidthChanged();
     void sourceModeChanged();
@@ -263,6 +275,7 @@ private:
     bool m_tasksSortDescending = false;
     bool m_checkForUpdates = true;
     QString m_noteFont;
+    QString m_indent = QStringLiteral("tab");
     int m_sidebarWidth = 0;
     int m_noteListWidth = 0;
     bool m_sourceMode = false;

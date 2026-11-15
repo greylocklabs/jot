@@ -37,6 +37,7 @@ private Q_SLOTS:
     void machineSettingsStayOutOfSettingsIni();
     void themesInTheFolderTravelWithIt();
     void keepsChosenShortcutsWithThePreferences();
+    void keepsTheIndent();
 };
 
 void TestSettings::startsWithDefaults()
@@ -467,6 +468,23 @@ void TestSettings::keepsChosenShortcutsWithThePreferences()
     QCOMPARE(edited.keys().value(u"settings"_s).toString(), u"Ctrl+,; F12"_s);
     QCOMPARE(edited.keys().value(u"newNote"_s).toString(), u"Ctrl+,"_s);
     QCOMPARE(edited.keys().value(u"bold"_s).toString(), u"Ctrl+J"_s);
+}
+
+void TestSettings::keepsTheIndent()
+{
+    QTemporaryDir dir;
+    const QString path = dir.filePath(u"settings.ini"_s);
+    Settings settings(path);
+    QCOMPARE(settings.indent(), u"tab"_s);
+    QCOMPARE(settings.indentText(), u"\t"_s);
+    QCOMPARE(settings.indentWidth(), 4);
+    settings.setIndent(u"2"_s);
+    settings.setIndent(u"3"_s);
+    QCOMPARE(settings.indentText(), u"  "_s);
+    QCOMPARE(settings.indentWidth(), 2);
+    QCOMPARE(Settings(path).indent(), u"2"_s);
+    settings.reset();
+    QCOMPARE(settings.indent(), u"tab"_s);
 }
 
 QTEST_GUILESS_MAIN(TestSettings)
