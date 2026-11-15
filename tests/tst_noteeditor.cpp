@@ -78,6 +78,7 @@ private Q_SLOTS:
     void drawsDiagramsInPlaceOfTheirText();
     void listsHeadingsInPlaceOfAContentsMarker();
     void readingFindsTheHeadingAContentsEntryNames();
+    void readingShowsTheArrowAndAHandForClicks();
     void outlinesTheNoteBesideIt();
     void aTagLinkOpensTheTagsView();
     void showsTabsOverTheNote();
@@ -702,6 +703,39 @@ void TestNoteEditor::listsHeadingsInPlaceOfAContentsMarker()
     // On the cursor's line it is the marker again, to edit.
     body->setProperty("cursorPosition", 1);
     QTRY_COMPARE(styler->property("contents").toList().size(), 0);
+}
+
+void TestNoteEditor::readingShowsTheArrowAndAHandForClicks()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    find(u"body"_s)->setProperty(
+        "text",
+        u"Plain words to read.\n\n- [ ] Buy milk\n\nSee [the site](https://example.com).\n"_s);
+    m_settings->setReadMode(true);
+    QQuickItem *reader = find(u"reader"_s);
+    QTRY_VERIFY(reader->isVisible());
+    auto *hover = reader->findChild<QObject *>(u"readHover"_s);
+    QVERIFY(hover);
+    auto *doc = reader->property("textDocument").value<QQuickTextDocument *>()->textDocument();
+    QTRY_VERIFY(doc->toPlainText().contains(u"Buy milk"_s));
+    const auto at = [&](const QString &words, qreal dx) {
+        QRectF place;
+        QMetaObject::invokeMethod(reader, "positionToRectangle", Q_RETURN_ARG(QRectF, place),
+                                  Q_ARG(int, int(doc->toPlainText().indexOf(words))));
+        return reader->mapToScene(place.center() + QPointF(dx, 0)).toPoint();
+    };
+    const auto shape = [&](const QPoint &point) {
+        QTest::mouseMove(m_window.get(), point);
+        return Qt::CursorShape(hover->property("cursorShape").toInt());
+    };
+
+    // Text to read takes the arrow, not the text cursor.
+    QTRY_COMPARE(shape(at(u"words"_s, 0)), Qt::ArrowCursor);
+    // What a click acts on takes the hand: a link, and a to-do's box left of its text.
+    QTRY_COMPARE(shape(at(u"the site"_s, 2)), Qt::PointingHandCursor);
+    QTRY_COMPARE(shape(at(u"Buy milk"_s, -12)), Qt::PointingHandCursor);
+    QTRY_COMPARE(shape(at(u"Buy milk"_s, 4)), Qt::ArrowCursor);
+    m_settings->setReadMode(false);
 }
 
 void TestNoteEditor::readingFindsTheHeadingAContentsEntryNames()
