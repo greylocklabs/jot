@@ -77,6 +77,11 @@ bool isCode(const QTextBlock &block)
     return format.hasProperty(QTextFormat::BlockCodeFence) || format.nonBreakableLines();
 }
 
+int quoteLevel(const QTextBlock &block)
+{
+    return block.blockFormat().intProperty(QTextFormat::BlockQuoteLevel);
+}
+
 bool isTask(const QTextBlock &block)
 {
     const auto marker = block.blockFormat().marker();
@@ -245,6 +250,11 @@ int NoteReader::headingPosition(int index) const
     return -1;
 }
 
+qreal NoteReader::quoteIndent()
+{
+    return ThemeController::instance()->space5();
+}
+
 void NoteReader::style()
 {
     QTextDocument *doc = m_document->textDocument();
@@ -309,6 +319,14 @@ void NoteReader::style()
             span.mergeCharFormat(run);
         }
     }
+    // Quotes a step in for each level, past the bar the view draws, rather than Qt's wide indent.
+    for (QTextBlock block = doc->begin(); block.isValid(); block = block.next()) {
+        if (const int level = quoteLevel(block); level > 0 && !isCode(block)) {
+            QTextBlockFormat in;
+            in.setLeftMargin(level * quoteIndent());
+            QTextCursor(block).mergeBlockFormat(in);
+        }
+    }
     // Code blocks on the raised surface, which the view draws behind them: in frames of their
     // own, Qt's partial redraws drew their text again and again, bolder, around a selection.
     QVariantList runs;
@@ -321,7 +339,7 @@ void NoteReader::style()
             block = block.next();
         for (QTextBlock each = first;; each = each.next()) {
             QTextBlockFormat room;
-            room.setLeftMargin(pad);
+            room.setLeftMargin(pad + quoteLevel(first) * quoteIndent());
             room.setRightMargin(pad);
             // As far from what is around it as a paragraph, beyond the surface's own room.
             room.setTopMargin(each == first ? pad + m_pixelSize * 0.7 : 0);
@@ -331,11 +349,33 @@ void NoteReader::style()
                 break;
         }
         runs.append(QVariantMap{{u"start"_s, first.position()},
-                                {u"end"_s, block.position() + block.length() - 1}});
+                                {u"end"_s, block.position() + block.length() - 1},
+                                {u"left"_s, quoteLevel(first) * quoteIndent()}});
     }
     if (runs != m_codeRuns) {
         m_codeRuns = runs;
         Q_EMIT codeRunsChanged();
+    }
+    // Every level of a quote, over the lines that go at least that deep, for its bar.
+    QVariantList quotes;
+    int deepest = 0;
+    for (QTextBlock block = doc->begin(); block.isValid(); block = block.next())
+        deepest = std::max(deepest, quoteLevel(block));
+    for (int level = 1; level <= deepest; ++level) {
+        for (QTextBlock block = doc->begin(); block.isValid(); block = block.next()) {
+            if (quoteLevel(block) < level)
+                continue;
+            const QTextBlock first = block;
+            while (block.next().isValid() && quoteLevel(block.next()) >= level)
+                block = block.next();
+            quotes.append(QVariantMap{{u"start"_s, first.position()},
+                                      {u"end"_s, block.position() + block.length() - 1},
+                                      {u"level"_s, level}});
+        }
+    }
+    if (quotes != m_quoteRuns) {
+        m_quoteRuns = quotes;
+        Q_EMIT quoteRunsChanged();
     }
     // Tables in the theme's borders, close around their cells.
     for (QTextFrame *frame : doc->rootFrame()->childFrames()) {

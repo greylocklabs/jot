@@ -9,7 +9,7 @@ Repeater {
 
     /// The TextEdit the reader draws into.
     required property TextEdit view
-    /// The reader's `codeRuns`.
+    /// The reader's `codeRuns`, each `left` of the view's padding.
     required property var runs
     /// The room the reader leaves around the code.
     required property real padding
@@ -33,9 +33,10 @@ Repeater {
 
         objectName: "codeBackdrop"
         z: -1
-        x: root.view.leftPadding
+        // Inside a quote, in from its bars.
+        x: root.view.leftPadding + (run.left ?? 0)
         y: firstLine.y - root.padding
-        width: root.view.width - root.view.leftPadding - root.view.rightPadding
+        width: root.view.width - root.view.leftPadding - root.view.rightPadding - (run.left ?? 0)
         height: lastLine.y + lastLine.height + root.padding - y
         color: Theme.surfaceAlt
     }

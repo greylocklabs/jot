@@ -783,6 +783,11 @@ Rectangle {
                     runs: reading.codeRuns
                     padding: reading.codePadding
                 }
+                QuoteBars {
+                    view: reader
+                    runs: reading.quoteRuns
+                    indent: reading.quoteIndent
+                }
                 // A sound embedded on a line of its own plays there, as in the editor.
                 Repeater {
                     id: readPlayers
