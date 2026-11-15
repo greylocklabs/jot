@@ -53,6 +53,13 @@ enum class LineStyle { Bullet, Numbered, Task, Quote, Heading1, Heading2, Headin
 [[nodiscard]] std::optional<Edit> indentList(const QString &text, qsizetype from, qsizetype to,
                                              bool outdent);
 
+/// Indents each line the selection touches by `unit`, or takes one indent off the start of each
+/// with `outdent`: a tab, or up to a tab stop of spaces, four for a tab. Blank lines are left as
+/// they are. Indenting needs a selection over more than one line unless `always`, so Tab on a
+/// line types a tab as usual; taking off always answers, so Shift+Tab never leaves the note.
+[[nodiscard]] std::optional<Edit> indentLines(const QString &text, qsizetype from, qsizetype to,
+                                              bool outdent, const QString &unit, bool always);
+
 /// Lines up the table the selection starts in, padding cells so the pipes align, keeping
 /// the selection in its cells. Nothing outside a table.
 [[nodiscard]] std::optional<Edit> formatTable(const QString &text, qsizetype from, qsizetype to);

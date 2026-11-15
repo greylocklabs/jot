@@ -445,8 +445,18 @@ QVariantMap MarkdownStyler::format(const QString &action, int from, int to, cons
         if (!edit)
             edit = action == u"newline" ? continueList(working, from, to)
                                         : indentList(working, from, to, outdent);
+        // Then any lines: Tab indents a selection of them, Shift+Tab takes an indent off.
+        if (!edit && action != u"newline")
+            edit = indentLines(working, from, to, outdent, u"\t"_s, false);
         if (!edit)
             return {};
+        step(*edit);
+    } else if (action == u"shiftRight" || action == u"shiftLeft") {
+        // Vi's >> and <<: a list item nests, any other line takes or loses an indent.
+        const bool outdent = action == u"shiftLeft";
+        std::optional<Edit> edit = indentList(working, from, to, outdent);
+        if (!edit)
+            edit = indentLines(working, from, to, outdent, u"\t"_s, true);
         step(*edit);
     } else if (action == u"linkTarget") {
         const std::optional<Edit> edit = completeLinkTarget(

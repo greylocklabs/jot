@@ -24,6 +24,9 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   the arrows or Ctrl+A, and copied, or from a right-click; nothing typed changes the note. With
   vi mode on, j and k scroll, gg and G go to the start and end, / finds, Return goes back to the
   note, n and N step through the matches, y copies and Escape leaves.
+- Shift+Tab takes an indent off the line, or off every line selected, anywhere in a note, not
+  only in lists, and Tab indents every line of a selection rather than typing over it. In vi
+  mode, `>>` and `<<` do the same for the line, and `>` and `<` for the lines selected.
 
 ### Fixed
 

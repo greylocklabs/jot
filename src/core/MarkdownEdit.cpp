@@ -718,6 +718,56 @@ std::optional<Edit> indentList(const QString &text, qsizetype from, qsizetype to
     return difference(text, changed, start, map(to));
 }
 
+std::optional<Edit> indentLines(const QString &text, qsizetype from, qsizetype to, bool outdent,
+                                const QString &unit, bool always)
+{
+    from = std::clamp<qsizetype>(from, 0, text.size());
+    to = std::clamp<qsizetype>(to, 0, text.size());
+    if (from > to)
+        std::swap(from, to);
+    const qsizetype last = to > from && to == lineStartOf(text, to) ? to - 1 : to;
+    const qsizetype first = lineStartOf(text, from);
+    const qsizetype end = lineEndOf(text, last);
+    if (!outdent && !always && lineStartOf(text, last) == first)
+        return std::nullopt;
+    const qsizetype stop = unit == u"\t" ? 4 : std::max<qsizetype>(unit.size(), 1);
+
+    QStringList out;
+    QList<qsizetype> starts, shifts;
+    qsizetype at = first;
+    for (QString line : text.mid(first, end - first).split(u'\n')) {
+        const qsizetype before = line.size();
+        if (!outdent) {
+            if (!line.trimmed().isEmpty())
+                line.prepend(unit);
+        } else if (line.startsWith(u'\t')) {
+            line.remove(0, 1);
+        } else {
+            qsizetype spaces = 0;
+            while (spaces < std::min(stop, line.size()) && line.at(spaces) == u' ')
+                ++spaces;
+            line.remove(0, spaces);
+        }
+        starts.append(at);
+        shifts.append(line.size() - before);
+        at += before + 1;
+        out.append(line);
+    }
+    const QString changed = text.left(first) + out.join(u'\n') + text.mid(end);
+    const auto map = [&](qsizetype position) {
+        qsizetype i = starts.size() - 1;
+        while (i > 0 && starts[i] > position)
+            --i;
+        qsizetype moved = 0;
+        for (qsizetype j = 0; j < i; ++j)
+            moved += shifts[j];
+        const qsizetype shift = shifts[i];
+        return position + moved + (shift >= 0 ? shift : std::max(shift, starts[i] - position));
+    };
+    const qsizetype start = from < to && from == first ? from : map(from);
+    return difference(text, changed, start, map(to));
+}
+
 std::optional<Edit> formatTable(const QString &text, qsizetype from, qsizetype to)
 {
     from = std::clamp<qsizetype>(from, 0, text.size());
