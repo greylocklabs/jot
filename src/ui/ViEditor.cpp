@@ -475,7 +475,15 @@ bool ViEditor::run(const QString &id)
         Q_EMIT foldRequested(id);
     } else if (id == u"shiftRight" || id == u"shiftLeft" || id == u"shiftSelectionRight" ||
                id == u"shiftSelectionLeft") {
-        Q_EMIT shiftRequested(id.endsWith(u"Left"));
+        int start = cursor();
+        int end = start;
+        if (id.startsWith(u"shiftSelection")) {
+            const QTextDocument *doc = document();
+            start = m_target->property("selectionStart").toInt();
+            end = std::min(m_target->property("selectionEnd").toInt() + 1,
+                           doc ? doc->characterCount() - 1 : start);
+        }
+        Q_EMIT shiftRequested(id.endsWith(u"Left"), start, end);
     } else {
         return false;
     }
