@@ -2,14 +2,6 @@
 add_library(jotcli STATIC
     Completion.h
     Completion.cpp
-    Paint.h
-    Paint.cpp
-    Palette.h
-    Palette.cpp
-    UpdateHint.h
-    UpdateHint.cpp
-    Upgrade.h
-    Upgrade.cpp
     VaultCommands.h
     VaultCommands.cpp
 )

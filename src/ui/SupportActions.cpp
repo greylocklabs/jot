@@ -2,10 +2,10 @@
 
 #include "VaultController.h"
 
+#include "greylock/LogFile.h"
+#include "greylock/ProblemReport.h"
 #include "greylock/UpdateCheck.h"
 #include "jot/Diagnostics.h"
-#include "jot/LogFile.h"
-#include "jot/ProblemReport.h"
 #include "jot/Settings.h"
 
 #include <QClipboard>
@@ -34,7 +34,7 @@ void SupportActions::copyDebugInfo()
 
 void SupportActions::openLogs()
 {
-    QDesktopServices::openUrl(QUrl::fromLocalFile(logfile::defaultDirectory()));
+    QDesktopServices::openUrl(QUrl::fromLocalFile(greylock::logfile::defaultDirectory()));
 }
 
 void SupportActions::openFolder(const QString &which)
@@ -58,7 +58,8 @@ void SupportActions::copyText(const QString &text)
 void SupportActions::reportOnGitHub(bool idea, const QString &summary, const QString &note,
                                     const QString &diagnostics)
 {
-    QDesktopServices::openUrl(problemreport::issueUrl({idea, summary, note, diagnostics}));
+    QDesktopServices::openUrl(
+        greylock::problemreport::issueUrl({idea, summary, note, diagnostics}));
 }
 
 void SupportActions::gatherDiagnostics()
@@ -69,15 +70,16 @@ void SupportActions::gatherDiagnostics()
 void SupportActions::sendReport(bool idea, const QString &summary, const QString &note,
                                 const QString &diagnostics)
 {
-    problemreport::send(m_network, problemreport::serviceUrl(), {idea, summary, note, diagnostics},
-                        [self = QPointer(this)](const QUrl &issue, const QString &error) {
-                            if (!self)
-                                return;
-                            if (error.isEmpty())
-                                Q_EMIT self->reportSent(issue);
-                            else
-                                Q_EMIT self->reportFailed(error);
-                        });
+    greylock::problemreport::send(m_network, greylock::problemreport::serviceUrl(),
+                                  {idea, summary, note, diagnostics},
+                                  [self = QPointer(this)](const QUrl &issue, const QString &error) {
+                                      if (!self)
+                                          return;
+                                      if (error.isEmpty())
+                                          Q_EMIT self->reportSent(issue);
+                                      else
+                                          Q_EMIT self->reportFailed(error);
+                                  });
 }
 
 QString SupportActions::syntaxGuide()

@@ -1,9 +1,8 @@
 #include "greylock/Identity.h"
-#include "jot/LogFile.h"
+#include "greylock/LogFile.h"
 
 #include <QTest>
 
-using namespace jot;
 using namespace Qt::StringLiterals;
 
 class TestIdentity : public QObject
@@ -32,8 +31,8 @@ void TestIdentity::thisBuildIsWhatCMakeSays()
 {
     QCOMPARE(greylock::identity::isDevel(), bool(JOT_EXPECT_DEVEL));
     QCOMPARE(greylock::identity::appId(), greylock::identity::namesFor(JOT_EXPECT_DEVEL).appId);
-    QVERIFY(
-        logfile::defaultDirectory().endsWith(u'/' + greylock::identity::dirName() + u"/logs"_s));
+    QVERIFY(greylock::logfile::defaultDirectory().endsWith(u'/' + greylock::identity::dirName() +
+                                                           u"/logs"_s));
 }
 
 QTEST_GUILESS_MAIN(TestIdentity)

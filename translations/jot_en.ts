@@ -2155,10 +2155,6 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>jot: Jot %1 is out, and this is %2. Update with: jot upgrade</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>jot check: %1 is not JSON, YAML, CSV or TSV</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2357,6 +2353,10 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>%1 archived projects</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1: %2 %3 is out, and this is %4. Update with: %1 upgrade</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -4303,6 +4303,121 @@ Press %1 to make one.</source>
     </message>
 </context>
 <context>
+    <name>greylock::cli::Upgrade</name>
+    <message>
+        <source>this is a development build; update it with git pull and make</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 came from Flathub; update it with: flatpak update %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1, so there is no package to install.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 is not installed from a package here.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Install it with:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>the releases</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>the latest release</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>there is no release older than %1.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GitHub has no such release.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 %2 is installed and up to date.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 is newer than the installed %2; run: %3 upgrade %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 is older than the installed %2; run: %3 downgrade %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 %2 is installed, newer than the latest release, %3.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>release %1 has no package for %2.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GitHub gave no checksum for %1, so it cannot be checked.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Installing %1 %2 again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Going back from %1 %2 to %3.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Updating %1 %2 to %3.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Would download %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>check it against sha256 %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>and run: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Downloading %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 does not match its checksum, so it was not installed.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>could not save %1: %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>this did not work: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 %2 is installed. If the app is open, quit it and open it again to use it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GitHub has no %1.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>could not get %1 from GitHub: %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>jot::DataTableModel</name>
     <message>
         <source>%1 is not a %2</source>
@@ -4836,21 +4951,6 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>Close the find bar, then out to the note list</source>
-        <translation type="unfinished"></translation>
-    </message>
-</context>
-<context>
-    <name>jot::LiveQml</name>
-    <message>
-        <source>could not create a temporary folder</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>could not create %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>could not copy %1</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -5453,113 +5553,6 @@ Press %1 to make one.</source>
             <numerusform></numerusform>
             <numerusform></numerusform>
         </translation>
-    </message>
-</context>
-<context>
-    <name>jot::cli::Upgrade</name>
-    <message>
-        <source>jot: this is a development build; update it with git pull and make</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>jot: %1, so there is no package to install.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>jot: Jot is not installed from a package here. Install it with:</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>the releases</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>the latest release</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>jot: there is no release older than %1.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>jot: GitHub has no such release.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Jot %1 is installed and up to date.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>jot: %1 is newer than the installed %2; run: jot upgrade %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>jot: %1 is older than the installed %2; run: jot downgrade %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Jot %1 is installed, newer than the latest release, %2.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>jot: release %1 has no package for %2.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>jot: GitHub gave no checksum for %1, so it cannot be checked.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Installing Jot %1 again.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Going back from Jot %1 to %2.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Updating Jot %1 to %2.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Would download %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>check it against sha256 %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>and run: %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Downloading %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>jot: %1 does not match its checksum, so it was not installed.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>jot: could not save %1: %2</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>jot: this did not work: %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Jot %1 is installed. If the app is open, quit it and open it again to use it.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>jot: GitHub has no %1.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>jot: could not get %1 from GitHub: %2</source>
-        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>

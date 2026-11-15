@@ -1,5 +1,4 @@
 #include "DesktopTextScale.h"
-#include "LiveQml.h"
 #include "QuickCapture.h"
 #include "ReleaseInfo.h"
 #include "SettingsForeign.h"
@@ -11,13 +10,14 @@
 #include "greylock/Autostart.h"
 #include "greylock/Desktop.h"
 #include "greylock/Identity.h"
+#include "greylock/LogFile.h"
 #include "greylock/Notifications.h"
 #include "greylock/SingleInstance.h"
 #include "greylock/StartAtLogin.h"
 #include "greylock/Translations.h"
 #include "greylock/Tray.h"
 #include "greylock/UpdateCheck.h"
-#include "jot/LogFile.h"
+#include "greylock/ui/LiveQml.h"
 #include "jot/Settings.h"
 
 #include <QCommandLineParser>
@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
             return 2;
         }
     }
-    jot::logfile::install(u"jot-gui"_s);
+    greylock::logfile::install(u"jot-gui"_s);
 
     // A vault given for one run, as for screenshots, runs beside the Jot already open; anything
     // else hands over to that one, so reminders never come twice.
@@ -124,9 +124,9 @@ int main(int argc, char *argv[])
                                                      : jot::Settings::defaultPath());
     jot::SettingsForeign::s_instance = &settings;
     // Debug lines on request, from the developer settings.
-    jot::logfile::setDebug(settings.verboseLogging());
+    greylock::logfile::setDebug(settings.verboseLogging());
     QObject::connect(&settings, &jot::Settings::developerChanged, &settings,
-                     [&settings] { jot::logfile::setDebug(settings.verboseLogging()); });
+                     [&settings] { greylock::logfile::setDebug(settings.verboseLogging()); });
     jot::QuickCapture capture;
     jot::QuickCapture::s_instance = &capture;
     jot::VaultController vault(settings);
@@ -205,10 +205,10 @@ int main(int argc, char *argv[])
     bool live = false;
 #ifdef JOT_LIVE_QML
     // A QML mistake while editing should wait for the fix, not end the session.
-    jot::LiveQml liveQml(engine,
-                         {{u"Jot.Ui"_s, QStringLiteral(JOT_SOURCE_DIR "/src/ui"),
-                           QStringLiteral(JOT_BINARY_DIR "/Jot/Ui")}},
-                         [&engine] { engine.loadFromModule("Jot.Ui", "Main"); });
+    greylock::LiveQml liveQml(engine,
+                              {{u"Jot.Ui"_s, QStringLiteral(JOT_SOURCE_DIR "/src/ui"),
+                                QStringLiteral(JOT_BINARY_DIR "/Jot/Ui")}},
+                              [&engine] { engine.loadFromModule("Jot.Ui", "Main"); });
     if (parser.isSet(liveOption)) {
         live = liveQml.start();
         if (!live)

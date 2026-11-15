@@ -7,11 +7,11 @@ Files: *
 Copyright: 2026 Lara Kelley
 License: MIT
 
-Files: data/fonts/Nunito-*
+Files: core/fonts/Nunito-*
 Copyright: 2014 The Nunito Project Authors (https://github.com/googlefonts/nunito)
 License: OFL-1.1
 
-Files: data/fonts/Fraunces-*
+Files: core/fonts/Fraunces-*
 Copyright: 2018 The Fraunces Project Authors (https://github.com/undercasetype/Fraunces)
 License: OFL-1.1
 

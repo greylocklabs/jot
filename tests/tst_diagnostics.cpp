@@ -1,5 +1,5 @@
+#include "greylock/LogFile.h"
 #include "jot/Diagnostics.h"
-#include "jot/LogFile.h"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -20,8 +20,6 @@ private Q_SLOTS:
 
     void emailsAreNumberedConsistently();
     void homeFolderIsHidden();
-    void issueUrlCarriesShortenedReport();
-    void shortReportIsUntouched();
     void reportCoversVersionsAndLogsAndHidesEmails();
 
 private:
@@ -50,38 +48,11 @@ void TestDiagnostics::homeFolderIsHidden()
     QCOMPARE(diagnostics::redact(text), u"~/.local/state/jot/logs"_s);
 }
 
-void TestDiagnostics::issueUrlCarriesShortenedReport()
-{
-    // Spaces and newlines triple when encoded, as in a real log tail.
-    QString report;
-    for (int i = 0; i < 400; ++i)
-        report += u"2026-10-05 14:30:21 jot.sync info: synced note number "_s + QString::number(i) +
-                  u"\n"_s;
-
-    const QUrl url = diagnostics::issueUrl(report);
-
-    QVERIFY(url.toString(QUrl::FullyEncoded).size() <= 8000);
-    QVERIFY(url.toString(QUrl::FullyEncoded).size() > 7000);
-    const QUrlQuery query(url);
-    QCOMPARE(url.host(), u"github.com"_s);
-    QCOMPARE(query.queryItemValue(u"template"_s), u"bug_report.yml"_s);
-    const QString body = query.queryItemValue(u"diagnostics"_s, QUrl::FullyDecoded);
-    QVERIFY(body.startsWith(u"2026-10-05 14:30:21 jot.sync info: synced note number 0\n"_s));
-    QVERIFY(body.endsWith(u"run `jot doctor` for the rest]"_s));
-}
-
-void TestDiagnostics::shortReportIsUntouched()
-{
-    const QUrl url = diagnostics::issueUrl(u"Jot 0.1.0\nQt 6.11"_s);
-    QCOMPARE(QUrlQuery(url).queryItemValue(u"diagnostics"_s, QUrl::FullyDecoded),
-             u"Jot 0.1.0\nQt 6.11"_s);
-}
-
 void TestDiagnostics::reportCoversVersionsAndLogsAndHidesEmails()
 {
     QCoreApplication::setApplicationVersion(u"0.1.0"_s);
-    QVERIFY(QDir().mkpath(logfile::defaultDirectory()));
-    QFile log(QDir(logfile::defaultDirectory()).filePath(u"jot.log"_s));
+    QVERIFY(QDir().mkpath(greylock::logfile::defaultDirectory()));
+    QFile log(QDir(greylock::logfile::defaultDirectory()).filePath(u"jot.log"_s));
     QVERIFY(log.open(QIODevice::WriteOnly));
     log.write("2026-10-14 12:00:00 jot.sync info: signed in as me@example.com\n");
     log.close();
