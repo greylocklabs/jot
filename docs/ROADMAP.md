@@ -17,6 +17,8 @@ Background research lives in [docs/research/](research/):
 - [commercial-apps.md](research/commercial-apps.md): Obsidian, Notion, Bear, iA Writer, Typora, Capacities, Tana
 - [writers-and-worldbuilding.md](research/writers-and-worldbuilding.md): Scrivener, novelWriter, Fountain, articy, Ink
 - [technical.md](research/technical.md): sync engine, backend APIs, Markdown editing in QML, search, packaging
+- [silverbullet.md](research/silverbullet.md): SilverBullet, its queries, outlines and linked tasks
+- [logseq.md](research/logseq.md): Logseq, its move to a database, supertags and views
 
 ## Positioning
 
