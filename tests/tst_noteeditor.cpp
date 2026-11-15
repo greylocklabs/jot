@@ -126,6 +126,7 @@ private Q_SLOTS:
     void readsDiagramsAsPictures();
     void tickingARepeatingToDoWritesTheNext();
     void editsInViModes();
+    void viKeepsTheCursorInViewOnScroll();
     void runsViCommands();
     void viStatusLineGivesWayAsItNarrows();
     void completesFrontMatter();
@@ -2986,6 +2987,48 @@ void TestNoteEditor::checksATableAgainstItsSchema()
     QVERIFY2(records->schemaSummary().startsWith(u"cast.schema.json is not JSON"_s),
              qPrintable(records->schemaSummary()));
     QTRY_VERIFY(find(u"schemaLine"_s)->isVisible());
+}
+
+void TestNoteEditor::viKeepsTheCursorInViewOnScroll()
+{
+    QString lines;
+    for (int i = 0; i < 120; ++i)
+        lines += u"Line %1 of a long note.\n\n"_s.arg(i);
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Long.md"_s, lines, &error));
+    m_vault->setCurrent(u"Long.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    QTRY_VERIFY(body->property("text").toString().contains(u"Line 119"_s));
+    QQuickItem *scroll = find(u"scroll"_s);
+    body->forceActiveFocus();
+    body->setProperty("cursorPosition", 0);
+    const auto inView = [&] {
+        const QRectF at = body->mapRectToItem(scroll, body->property("cursorRectangle").toRectF());
+        return at.top() >= 0 && at.bottom() <= scroll->height();
+    };
+
+    // Outside vi mode, scrolling leaves the cursor where it was.
+    scroll->setProperty("contentY", 1500.0);
+    QCOMPARE(body->property("cursorPosition").toInt(), 0);
+    scroll->setProperty("contentY", 0.0);
+
+    // In vi mode, as in vi, it comes onto the first line in view, so i types where the note is
+    // shown rather than off out of sight.
+    m_settings->setViMode(true);
+    body->forceActiveFocus();
+    scroll->setProperty("contentY", 1500.0);
+    QTRY_VERIFY(inView());
+    QTest::keyClick(m_window.get(), Qt::Key_I);
+    QTest::keyClick(m_window.get(), Qt::Key_X);
+    QVERIFY(inView());
+    QCOMPARE(scroll->property("contentY").toReal(), 1500.0);
+    QVERIFY(!body->property("text").toString().startsWith(u"x"_s));
+    QTest::keyClick(m_window.get(), Qt::Key_Escape);
+
+    // Scrolled back up, it comes onto the last line in view.
+    scroll->setProperty("contentY", 200.0);
+    QTRY_VERIFY(inView());
+    m_settings->setViMode(false);
 }
 
 void TestNoteEditor::editsInViModes()
