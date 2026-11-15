@@ -27,6 +27,7 @@
 #include <QStyleHints>
 
 #include <QClipboard>
+#include <QGuiApplication>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QTextBlock>
@@ -80,6 +81,8 @@ private Q_SLOTS:
     void readingFindsTheHeadingAContentsEntryNames();
     void readingShowsTheArrowAndAHandForClicks();
     void readingIndentsQuotesAStepWithABar();
+    void readingFindsSelectsAndCopies();
+    void readingTakesViKeys();
     void outlinesTheNoteBesideIt();
     void aTagLinkOpensTheTagsView();
     void showsTabsOverTheNote();
@@ -416,6 +419,8 @@ void TestNoteEditor::findsAndReplacesInTheNote()
     QTRY_COMPARE(bar->property("starts").toList().size(), 3);
     QCOMPARE(find(u"findCount"_s)->property("text").toString(), u"1 of 3"_s);
     QCOMPARE(body->property("selectionStart").toInt(), 4);
+    // The whole match, though the bar searched as the last letter was typed.
+    QCOMPARE(body->property("selectedText").toString(), u"ferry"_s);
 
     // Return and Shift+Return go round the matches.
     QTest::keyClick(m_window.get(), Qt::Key_Return);
@@ -783,6 +788,121 @@ void TestNoteEditor::readingIndentsQuotesAStepWithABar()
     QTRY_VERIFY(doc->toPlainText().contains(u"plain code"_s));
     QTRY_COMPARE(left(u"quoted code"_s) - left(u"plain code"_s), step);
     m_settings->setReadMode(false);
+}
+
+void TestNoteEditor::readingFindsSelectsAndCopies()
+{
+    QString error;
+    QVERIFY(notefile::write(
+        m_root + u"/Orchard.md"_s,
+        u"An apple and a [pear](https://example.com/apple).\nAnother apple.\n"_s, &error));
+    m_vault->setCurrent(u"Orchard.md"_s);
+    m_settings->setReadMode(true);
+    QQuickItem *reader = find(u"reader"_s);
+    QTRY_VERIFY(reader->isVisible());
+    QTRY_VERIFY(reader->property("text").toString().contains(u"Another"_s));
+
+    // Ctrl+F finds without leaving Read mode, in the note as drawn: not a link's address, and
+    // nothing to replace.
+    QMetaObject::invokeMethod(m_editor.get(), "find", Q_ARG(QVariant, true));
+    QQuickItem *bar = find(u"findBar"_s);
+    QTRY_VERIFY(bar->isVisible());
+    QVERIFY(m_settings->readMode());
+    QVERIFY(!bar->property("replacing").toBool());
+    QTRY_VERIFY(find(u"findField"_s)->hasActiveFocus());
+    for (const char c : "apple")
+        if (c != 0)
+            QTest::keyClick(m_window.get(), c);
+    QTRY_COMPARE(bar->property("starts").toList().size(), 2);
+    QCOMPARE(reader->property("selectedText").toString(), u"apple"_s);
+    const auto marks = [reader] {
+        int count = 0;
+        for (QQuickItem *child : reader->childItems())
+            count += child->objectName() == u"foundMark"_s && child->isVisible();
+        return count;
+    };
+    QTRY_COMPARE(marks(), 2);
+    QTest::keyClick(m_window.get(), Qt::Key_Escape);
+    QTRY_VERIFY(!bar->isVisible());
+    QTRY_COMPARE(marks(), 0);
+    QVERIFY(m_settings->readMode());
+
+    // The keys select and copy; typing changes nothing.
+    reader->forceActiveFocus();
+    QTest::keyClick(m_window.get(), Qt::Key_A, Qt::ControlModifier);
+    QVERIFY(reader->property("selectedText").toString().startsWith(u"An apple"_s));
+    QTest::keyClick(m_window.get(), Qt::Key_C, Qt::ControlModifier);
+    QVERIFY(QGuiApplication::clipboard()->text().contains(u"Another apple."_s));
+    QTest::keyClick(m_window.get(), Qt::Key_X);
+    QTest::keyClick(m_window.get(), Qt::Key_Delete);
+    QVERIFY(m_vault->currentText().startsWith(u"An apple"_s));
+    QVERIFY(reader->property("text").toString().startsWith(u"An apple"_s));
+    m_settings->setReadMode(false);
+}
+
+void TestNoteEditor::readingTakesViKeys()
+{
+    QString lines;
+    for (int i = 0; i < 120; ++i)
+        lines += u"Line %1 of the long note.\n\n"_s.arg(i);
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Long.md"_s, lines + u"The last word.\n"_s, &error));
+    m_vault->setCurrent(u"Long.md"_s);
+    m_settings->setViMode(true);
+    m_settings->setReadMode(true);
+    QQuickItem *reader = find(u"reader"_s);
+    QTRY_VERIFY(reader->isVisible());
+    QTRY_VERIFY(reader->property("text").toString().contains(u"last word"_s));
+    QQuickItem *scroll = find(u"scroll"_s);
+    reader->forceActiveFocus();
+    const auto type = [this](const QString &keys) {
+        for (const QChar c : keys)
+            QTest::keyClick(m_window.get(), c.toLatin1());
+    };
+
+    // j and k scroll; G and gg go to the end and the start.
+    type(u"j"_s);
+    QTRY_VERIFY(scroll->property("contentY").toReal() > 0);
+    type(u"G"_s);
+    const qreal end = scroll->property("contentY").toReal();
+    QVERIFY(end > 1000);
+    type(u"k"_s);
+    QVERIFY(scroll->property("contentY").toReal() < end);
+    type(u"gg"_s);
+    QCOMPARE(scroll->property("contentY").toReal(), 0.0);
+
+    // / finds, Return goes back to the note on the match, and n and N step through them.
+    type(u"/"_s);
+    QQuickItem *bar = find(u"findBar"_s);
+    QTRY_VERIFY(bar->isVisible());
+    type(u"last"_s);
+    QTRY_COMPARE(bar->property("starts").toList().size(), 1);
+    QTest::keyClick(m_window.get(), Qt::Key_Backspace);
+    QTest::keyClick(m_window.get(), Qt::Key_Backspace);
+    QTest::keyClick(m_window.get(), Qt::Key_Backspace);
+    QTest::keyClick(m_window.get(), Qt::Key_Backspace);
+    type(u"Line 1"_s);
+    QTRY_VERIFY(bar->property("starts").toList().size() > 2);
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    QTRY_VERIFY(reader->hasActiveFocus());
+    QCOMPARE(bar->property("current").toInt(), 0);
+    type(u"nn"_s);
+    QCOMPARE(bar->property("current").toInt(), 2);
+    type(u"N"_s);
+    QCOMPARE(bar->property("current").toInt(), 1);
+    QVERIFY(scroll->property("contentY").toReal() > 0);
+
+    // y copies what is selected; Escape closes the bar, then leaves the note.
+    type(u"y"_s);
+    QCOMPARE(QGuiApplication::clipboard()->text(), u"Line 1"_s);
+    QSignalSpy left(m_editor.get(), SIGNAL(leftNote()));
+    QTest::keyClick(m_window.get(), Qt::Key_Escape);
+    QTRY_VERIFY(!bar->isVisible());
+    QCOMPARE(left.size(), 0);
+    QTest::keyClick(m_window.get(), Qt::Key_Escape);
+    QCOMPARE(left.size(), 1);
+    m_settings->setReadMode(false);
+    m_settings->setViMode(false);
 }
 
 void TestNoteEditor::readingFindsTheHeadingAContentsEntryNames()

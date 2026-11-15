@@ -107,6 +107,7 @@ qt_add_qml_module(jotui
         ${jot_web_video_qml}
         SeekBar.qml
         FormRow.qml
+        FoundMarks.qml
         Glyph.qml
         KeyCap.qml
         KeyHelp.qml

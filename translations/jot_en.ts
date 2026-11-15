@@ -861,6 +861,10 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>In Read mode</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>After the leader (%1)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4709,6 +4713,26 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>Back to normal mode</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Scroll down</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Scroll up</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Next match</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Previous match</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Close the find bar, then out to the note list</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

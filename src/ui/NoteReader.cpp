@@ -8,6 +8,7 @@
 #include "jot/Diagram.h"
 #include "jot/FrontMatter.h"
 #include "jot/NoteScan.h"
+#include "jot/TextFind.h"
 #include "jot/WebVideo.h"
 
 #include <QClipboard>
@@ -248,6 +249,31 @@ int NoteReader::headingPosition(int index) const
             return block.position();
     }
     return -1;
+}
+
+QVariantList NoteReader::findAll(const QString &needle, bool matchCase, bool wholeWords) const
+{
+    QVariantList starts;
+    QTextDocument *doc = m_document ? m_document->textDocument() : nullptr;
+    if (!doc)
+        return starts;
+    for (const qsizetype start : jot::findAll(doc->toPlainText(), needle, matchCase, wholeWords))
+        starts.append(int(start));
+    return starts;
+}
+
+void NoteReader::setFound(const QVariantList &starts, int length, int current)
+{
+    QVariantList found;
+    for (qsizetype i = 0; i < starts.size(); ++i) {
+        const int start = starts.at(i).toInt();
+        found.append(QVariantMap{
+            {u"start"_s, start}, {u"end"_s, start + length}, {u"current"_s, i == current}});
+    }
+    if (found == m_found)
+        return;
+    m_found = found;
+    Q_EMIT foundChanged();
 }
 
 qreal NoteReader::quoteIndent()

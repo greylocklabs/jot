@@ -71,6 +71,9 @@ public:
     /// The window's actions for the command palette, as actionList() gives them, best match
     /// for `query` first, leaving out those in `unavailable` and the palette itself.
     Q_INVOKABLE static QVariantList commands(const QString &query, const QStringList &unavailable);
+    /// Vi mode's action in Read mode for `keys`, as `{id, partial}`: its id or empty, and
+    /// whether `keys` begins a longer one.
+    Q_INVOKABLE static QVariantMap readAction(const QString &keys);
     /// The action in `scope` whose vi keys are `keys`, or empty. `partial` says whether
     /// `keys` begins a longer one.
     [[nodiscard]] static QString viAction(const QString &scope, const QString &keys,

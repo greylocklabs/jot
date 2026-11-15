@@ -11,6 +11,15 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   links and checkboxes, which a click acts on.
 - Quotes in Read mode sit a small step in from the text around them, with a bar down the left of
   each level, rather than far to the right.
+- Read mode keeps reading when you find in a note: Ctrl+F searches the note as it is drawn and
+  marks what it finds, without the replace row. Text can be selected with the keys, Shift and
+  the arrows or Ctrl+A, and copied, or from a right-click; nothing typed changes the note. With
+  vi mode on, j and k scroll, gg and G go to the start and end, / finds, Return goes back to the
+  note, n and N step through the matches, y copies and Escape leaves.
+
+### Fixed
+
+- Finding in a note selects the whole match as you type, not all but its last letter.
 
 ## 0.7.0 - 2026-11-14
 

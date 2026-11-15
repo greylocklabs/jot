@@ -63,10 +63,81 @@ Rectangle {
     /// Shows the find bar over the note, with the replace row when `replace`. A table is shown as
     /// its text, which is what is searched.
     function find(replace) {
-        Settings.readMode = false
-        if (root.tableShown)
-            root.keptAsText = true
-        findBar.show(replace && Vault.writable)
+        // Read mode finds in the note as drawn, and replaces nothing.
+        if (!root.readShown) {
+            Settings.readMode = false
+            if (root.tableShown)
+                root.keptAsText = true
+        }
+        findBar.show(replace && Vault.writable && !root.readShown)
+    }
+
+    /// The start of a longer vi key typed in Read mode, such as "g" before "gg".
+    property string readPending: ""
+
+    /// Vi mode's keys in Read mode; says whether `event` was one of them.
+    function readKey(event) {
+        if (event.modifiers & ~(Qt.ShiftModifier | Qt.KeypadModifier))
+            return false
+        const name = event.key === Qt.Key_Escape ? "Esc" : event.text
+        if (name === "")
+            return false
+        if (root.router && root.readPending === "" && (root.router.pending === "leader" || name
+                                                       === root.router.leaderKey)) {
+            root.router.press(name)
+            return true
+        }
+        const found = shortcuts.readAction(root.readPending + name)
+        if (found.id === "" && found.partial) {
+            root.readPending += name
+            readPendingTimer.restart()
+            return true
+        }
+        const wasPending = root.readPending !== ""
+        root.readPending = ""
+        if (found.id === "")
+            return wasPending && root.readKey(event)
+        const step = reader.font.pixelSize * 3
+        switch (found.id) {
+        case "readDown":
+            flick.contentY = Math.min(flick.contentY + step, Math.max(0, flick.contentHeight
+                                                                      - flick.height))
+            break
+        case "readUp":
+            flick.contentY = Math.max(0, flick.contentY - step)
+            break
+        case "readTop":
+            flick.contentY = 0
+            break
+        case "readEnd":
+            flick.contentY = Math.max(0, flick.contentHeight - flick.height)
+            break
+        case "readFind":
+            root.find(false)
+            break
+        case "readNext":
+        case "readPrevious":
+            if (findBar.visible)
+                findBar.step(found.id === "readPrevious")
+            break
+        case "readCopy":
+            if (reader.selectedText !== "")
+                reading.copy(reader.selectionStart, reader.selectionEnd)
+            break
+        case "readLeave":
+            if (findBar.visible)
+                findBar.close()
+            else
+                root.leftNote()
+            break
+        }
+        return true
+    }
+
+    Timer {
+        id: readPendingTimer
+        interval: 1000
+        onTriggered: root.readPending = ""
     }
 
     /// Puts the cursor back in the body where it was, to type, out of reading.
@@ -141,6 +212,8 @@ Rectangle {
     /// not a table when it opens, or when a mode is picked, stays text while it is typed into,
     /// until a mode that shows a table is picked again.
     property bool keptAsText: false
+    /// The note drawn to read, rather than its text to write in.
+    readonly property bool readShown: Settings.readMode && !dataFile
     readonly property bool tableShown: dataFile && (Settings.readMode || !Settings.sourceMode) &&
                                        !keptAsText && tableModel.table
     /// A data file, such as JSON or CSV, is edited as plain text, without Markdown's styling.
@@ -481,11 +554,11 @@ Rectangle {
             else
                 reveal(rect)
         }
-        /// Scrolls so `rect`, in the body, is in view.
-        function reveal(rect) {
+        /// Scrolls so `rect`, in `item` or else the body, is in view.
+        function reveal(rect, item) {
             if (height <= 0)
                 return
-            const top = page.y + body.y + rect.y
+            const top = page.y + (item ?? body).y + rect.y
             const bottom = top + rect.height
             if (top < contentY)
                 contentY = Math.max(0, top - Theme.space6)
@@ -739,8 +812,15 @@ Rectangle {
                 font.family: root.noteFamily
                 font.pixelSize: Theme.textLg
                 selectByMouse: true
+                // Read, not written: the keys select, and nothing they type changes the note.
+                selectByKeyboard: true
                 Accessible.name: qsTr("Note, to read")
                 onLinkActivated: link => root.openLink(link)
+                // A match found, or a selection moved by the keys, is scrolled to.
+                onCursorRectangleChanged: {
+                    if (visible)
+                        flick.reveal(cursorRectangle, reader)
+                }
                 // Ctrl+/ goes back to writing, in the mode it switches to, as it does there.
                 Keys.onPressed: event => {
                     if (event.key === Qt.Key_Slash && event.modifiers === Qt.ControlModifier) {
@@ -749,6 +829,8 @@ Rectangle {
                     } else if (event.matches(StandardKey.Copy) && reader.selectedText !== "") {
                         // Without the characters standing in for task boxes and pictures.
                         reading.copy(reader.selectionStart, reader.selectionEnd)
+                        event.accepted = true
+                    } else if (Settings.viMode && root.readKey(event)) {
                         event.accepted = true
                     }
                 }
@@ -787,6 +869,10 @@ Rectangle {
                     view: reader
                     runs: reading.quoteRuns
                     indent: reading.quoteIndent
+                }
+                FoundMarks {
+                    view: reader
+                    matches: reading.found
                 }
                 // A sound embedded on a line of its own plays there, as in the editor.
                 Repeater {
@@ -878,6 +964,29 @@ Rectangle {
                         const task = reading.taskAt(reader.positionAt(point.position.x,
                                                                       point.position.y))
                         Vault.setTaskDone(Vault.current, task.line, !task.done, task.text)
+                    }
+                }
+                // A right click offers what reading allows: copying.
+                TapHandler {
+                    acceptedButtons: Qt.RightButton
+                    onTapped: point => readMenu.popup(reader, point.position.x, point.position.y)
+                }
+                MenuCard {
+                    id: readMenu
+
+                    objectName: "readMenu"
+                    minimumWidth: 200
+
+                    MenuEntry {
+                        objectName: "readCopy"
+                        text: qsTr("Copy")
+                        enabled: reader.selectedText !== ""
+                        onTriggered: reading.copy(reader.selectionStart, reader.selectionEnd)
+                    }
+                    MenuEntry {
+                        objectName: "readSelectAll"
+                        text: qsTr("Select all")
+                        onTriggered: reader.selectAll()
                     }
                 }
             }
@@ -2123,14 +2232,24 @@ Rectangle {
             margins: Theme.space4
         }
         z: 2
-        styler: styler
-        body: body
-        writable: Vault.writable
+        // In Read mode it finds in the note as drawn.
+        styler: root.readShown ? reading : styler
+        body: root.readShown ? reader : body
+        writable: Vault.writable && !root.readShown
+        backOnReturn: root.readShown && Settings.viMode
 
         // Another note, or none, ends the search.
         Connections {
             target: Vault
             function onCurrentChanged() {
+                if (findBar.visible)
+                    findBar.close()
+            }
+        }
+        // As does going between reading and writing, which searches another text.
+        Connections {
+            target: root
+            function onReadShownChanged() {
                 if (findBar.visible)
                     findBar.close()
             }

@@ -295,6 +295,11 @@ Popup {
                 }
                 Table {
                     visible: root.tab === "vi"
+                    title: qsTr("In Read mode")
+                    rows: root.rows("read", "vi")
+                }
+                Table {
+                    visible: root.tab === "vi"
                     title: qsTr("After the leader (%1)").arg(Settings.leaderKey === " " ? qsTr(
                                                                                               "Space") :
                                                                                           Settings.leaderKey)

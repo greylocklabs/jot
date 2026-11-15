@@ -90,6 +90,7 @@ QList<KeyAction> KeyRouter::actions()
     const QString list = u"list"_s;
     const QString note = u"note"_s;
     const QString visual = u"visual"_s;
+    const QString read = u"read"_s;
     return {
         act(u"newNote"_s, tr("New note"), window, {int(K::New)}, {}, u"n"_s),
         act(u"newNotebook"_s, tr("New notebook"), window, {u"Ctrl+Shift+N"_s}),
@@ -227,6 +228,17 @@ QList<KeyAction> KeyRouter::actions()
         act(u"copySelection"_s, tr("Copy the selection"), visual, {}, u"y"_s),
         act(u"cutSelection"_s, tr("Cut the selection"), visual, {}, u"d"_s),
         act(u"endVisual"_s, tr("Back to normal mode"), visual, {}, u"Esc"_s),
+
+        act(u"readDown"_s, tr("Scroll down"), read, {}, u"j"_s),
+        act(u"readUp"_s, tr("Scroll up"), read, {}, u"k"_s),
+        act(u"readTop"_s, tr("Start of the note"), read, {}, u"gg"_s),
+        act(u"readEnd"_s, tr("End of the note"), read, {}, u"G"_s),
+        act(u"readFind"_s, tr("Find in the note"), read, {}, u"/"_s),
+        act(u"readNext"_s, tr("Next match"), read, {}, u"n"_s),
+        act(u"readPrevious"_s, tr("Previous match"), read, {}, u"N"_s),
+        act(u"readCopy"_s, tr("Copy the selection"), read, {}, u"y"_s),
+        act(u"readLeave"_s, tr("Close the find bar, then out to the note list"), read, {},
+            u"Esc"_s),
     };
 }
 
@@ -388,6 +400,13 @@ QVariantList KeyRouter::toList(const QList<KeyAction> &actions)
                             {u"leader"_s, action.leader}};
     }
     return list;
+}
+
+QVariantMap KeyRouter::readAction(const QString &keys)
+{
+    bool partial = false;
+    const QString id = viAction(u"read"_s, keys, &partial);
+    return {{u"id"_s, id}, {u"partial"_s, partial}};
 }
 
 QString KeyRouter::viAction(const QString &scope, const QString &keys, bool *partial)
