@@ -70,9 +70,10 @@ Q_SIGNALS:
     void commandLineRequested();
     /// za, zM or zR: fold `id` as KeyRouter names it, which the view does.
     void foldRequested(const QString &id);
-    /// >>, <<, > or <: the line, or the selected lines, should take an indent, or lose one with
-    /// `left`, which the view does.
-    void shiftRequested(bool left);
+    /// >>, <<, > or <: the lines from `start` to `end` should take an indent, or lose one with
+    /// `left`, which the view does. In visual mode the range takes in the character under the
+    /// cursor, and so its line, as vi's selection does.
+    void shiftRequested(bool left, int start, int end);
     /// `:noh`: find highlights are to go.
     void highlightsCleared();
     void targetChanged();
