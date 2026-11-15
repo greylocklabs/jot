@@ -473,6 +473,9 @@ bool ViEditor::run(const QString &id)
         setMode(kNormal);
     } else if (id == u"toggleFold" || id == u"noteFoldAll" || id == u"noteUnfoldAll") {
         Q_EMIT foldRequested(id);
+    } else if (id == u"shiftRight" || id == u"shiftLeft" || id == u"shiftSelectionRight" ||
+               id == u"shiftSelectionLeft") {
+        Q_EMIT shiftRequested(id.endsWith(u"Left"));
     } else {
         return false;
     }

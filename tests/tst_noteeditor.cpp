@@ -106,6 +106,7 @@ private Q_SLOTS:
     void formatsFromTheKeyboard();
     void setsAToDosDayAndRepeat();
     void continuesAndNestsLists();
+    void indentsAndUnindentsLines();
     void fillsInTablesWithTheKeys();
     void completesLinkTargetsFromTheKeyboard();
     void putsInEmojiTypedAfterAColon();
@@ -1921,6 +1922,52 @@ void TestNoteEditor::setsAToDosDayAndRepeat()
     QTest::keyClick(m_window.get(), Qt::Key_Backspace);
     QTest::keyClick(m_window.get(), Qt::Key_Return);
     QTRY_COMPARE(text(), u"- [ ] "_s);
+}
+
+void TestNoteEditor::indentsAndUnindentsLines()
+{
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    body->forceActiveFocus();
+    body->setProperty("text", u"\tone\n\ttwo\nthree"_s);
+    const auto text = [body] { return body->property("text").toString(); };
+
+    // Shift+Tab takes an indent off the cursor's line, and keeps the keys in the note.
+    body->setProperty("cursorPosition", 3);
+    QTest::keyClick(m_window.get(), Qt::Key_Backtab, Qt::ShiftModifier);
+    QCOMPARE(text(), u"one\n\ttwo\nthree"_s);
+    QVERIFY(body->hasActiveFocus());
+    QTest::keyClick(m_window.get(), Qt::Key_Backtab, Qt::ShiftModifier);
+    QCOMPARE(text(), u"one\n\ttwo\nthree"_s);
+    QVERIFY(body->hasActiveFocus());
+
+    // Over a selection, Tab indents every line and Shift+Tab takes it off again.
+    QMetaObject::invokeMethod(body, "select", Q_ARG(int, 0), Q_ARG(int, int(text().size())));
+    QTest::keyClick(m_window.get(), Qt::Key_Tab);
+    QCOMPARE(text(), u"\tone\n\t\ttwo\n\tthree"_s);
+    QTest::keyClick(m_window.get(), Qt::Key_Backtab, Qt::ShiftModifier);
+    QTest::keyClick(m_window.get(), Qt::Key_Backtab, Qt::ShiftModifier);
+    QCOMPARE(text(), u"one\ntwo\nthree"_s);
+
+    // Vi's >> and << do the line; > and < the lines visual mode selects.
+    m_settings->setViMode(true);
+    body->setProperty("cursorPosition", 5);
+    QTest::keyClick(m_window.get(), Qt::Key_Escape);
+    body->forceActiveFocus();
+    const auto type = [this](const QString &keys) {
+        for (const QChar c : keys)
+            QTest::keyClick(m_window.get(), c.toLatin1(), Qt::NoModifier);
+    };
+    body->setProperty("cursorPosition", 5);
+    type(u">>"_s);
+    QCOMPARE(text(), u"one\n\ttwo\nthree"_s);
+    type(u"<<"_s);
+    QCOMPARE(text(), u"one\ntwo\nthree"_s);
+    body->setProperty("cursorPosition", 0);
+    type(u"vj>"_s);
+    QCOMPARE(text(), u"\tone\n\ttwo\nthree"_s);
+    QCOMPARE(m_editor->findChild<QObject *>(u"vi"_s)->property("mode").toString(), u"normal"_s);
+    m_settings->setViMode(false);
 }
 
 void TestNoteEditor::continuesAndNestsLists()

@@ -24,6 +24,8 @@ private Q_SLOTS:
     void continuesLists();
     void indentsLists_data();
     void indentsLists();
+    void indentsLines_data();
+    void indentsLines();
     void linesUpTables_data();
     void linesUpTables();
     void linesUpASelectionAcrossRows();
@@ -264,6 +266,45 @@ void TestMarkdownEdit::indentsLists()
     QFETCH(QString, after);
     const Marked in = unmark(before);
     const std::optional<Edit> edit = indentList(in.text, in.from, in.to, outdent);
+    QCOMPARE(edit ? applied(in.text, *edit) : QString(), after);
+}
+
+void TestMarkdownEdit::indentsLines_data()
+{
+    QTest::addColumn<bool>("outdent");
+    QTest::addColumn<QString>("unit");
+    QTest::addColumn<bool>("always");
+    QTest::addColumn<QString>("before");
+    QTest::addColumn<QString>("after");
+    const QString tab = u"\t"_s;
+    QTest::newRow("several lines")
+        << false << tab << false << u"[one\ntwo]"_s << u"[\tone\n\ttwo]"_s;
+    QTest::newRow("blank lines stay")
+        << false << u"  "_s << false << u"[one\n\ntwo]"_s << u"[  one\n\n  two]"_s;
+    QTest::newRow("one line types a tab") << false << tab << false << u"on|e"_s << QString();
+    QTest::newRow("one line when asked") << false << tab << true << u"on|e"_s << u"\ton|e"_s;
+    QTest::newRow("off a tab") << true << tab << false << u"\tone|"_s << u"one|"_s;
+    QTest::newRow("off a tab stop of spaces")
+        << true << tab << false << u"      one|"_s << u"  one|"_s;
+    QTest::newRow("off the unit's spaces")
+        << true << u"  "_s << false << u"    one|"_s << u"  one|"_s;
+    QTest::newRow("off every line")
+        << true << tab << false << u"[\tone\n  two\nthree]"_s << u"[one\ntwo\nthree]"_s;
+    QTest::newRow("nothing to take off still answers")
+        << true << tab << false << u"one|"_s << u"one|"_s;
+    QTest::newRow("in code") << false << u"    "_s << true << u"```\nco|de\n```"_s
+                             << u"```\n    co|de\n```"_s;
+}
+
+void TestMarkdownEdit::indentsLines()
+{
+    QFETCH(bool, outdent);
+    QFETCH(QString, unit);
+    QFETCH(bool, always);
+    QFETCH(QString, before);
+    QFETCH(QString, after);
+    const Marked in = unmark(before);
+    const std::optional<Edit> edit = indentLines(in.text, in.from, in.to, outdent, unit, always);
     QCOMPARE(edit ? applied(in.text, *edit) : QString(), after);
 }
 

@@ -1455,6 +1455,18 @@ Rectangle {
                             root.foldAll(id === "noteFoldAll")
                         }
                     }
+                    onShiftRequested: left => {
+                        const visual = vi.mode === "visual"
+                        // Vi's selection takes in the character under the cursor, and its line.
+                        if (visual)
+                            body.select(body.selectionStart, Math.min(body.selectionEnd + 1,
+                                                                      body.length))
+                        root.format(left ? "shiftLeft" : "shiftRight", "")
+                        // The cursor at the start of what moved, out of visual mode, as in vi.
+                        body.cursorPosition = body.selectionStart
+                        if (visual)
+                            vi.mode = "normal"
+                    }
                     onYanked: (start, end) => styler.flash(start, end)
                     onMatchesChanged: styler.setMatches(matches)
                     onCommandLineRequested: statusLine.openCommand()

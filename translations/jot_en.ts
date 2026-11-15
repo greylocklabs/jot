@@ -4583,7 +4583,7 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Nest or unnest list items</source>
+        <source>Nest list items or indent the selected lines, or the other way</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -4743,11 +4743,27 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Indent the line, or nest a list item</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Take an indent off the line, or unnest a list item</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Copy the selection</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Cut the selection</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Indent the selected lines</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Take an indent off the selected lines</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
