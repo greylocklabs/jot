@@ -1,7 +1,7 @@
-#include "LiveQml.h"
 #include "ThemeController.h"
 
-#include "jot/LogFile.h"
+#include "greylock/LogFile.h"
+#include "greylock/ui/LiveQml.h"
 
 #include <QCommandLineParser>
 #include <QGuiApplication>
@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
     parser.addOption(liveOption);
 #endif
     parser.process(app);
-    jot::logfile::install(QStringLiteral("jot-gallery"));
+    greylock::logfile::install(QStringLiteral("jot-gallery"));
 
     if (const QString theme = parser.value(themeOption); !theme.isEmpty()) {
         const QStringList errors = jot::ThemeController::instance()->load(theme);
@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
     bool live = false;
 #ifdef JOT_LIVE_QML
     // A QML mistake while editing should wait for the fix, not end the session.
-    jot::LiveQml liveQml(
+    greylock::LiveQml liveQml(
         engine,
         {{QStringLiteral("Jot.Ui"), QStringLiteral(JOT_SOURCE_DIR "/src/ui"),
           QStringLiteral(JOT_BINARY_DIR "/Jot/Ui")},

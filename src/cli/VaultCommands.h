@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Paint.h"
+#include "greylock/cli/Paint.h"
 
 #include "jot/Vault.h"
 #include "jot/VaultIndex.h"
@@ -23,7 +23,7 @@ public:
     VaultCommands(const Vault &vault, VaultIndex &index, QTextStream &out, QTextStream &err);
 
     /// Colors for a terminal; output is plain without them.
-    void setPaint(const Paint &paint) { m_paint = paint; }
+    void setPaint(const greylock::cli::Paint &paint) { m_paint = paint; }
 
     int status(const QString &indexPath, bool json);
     /// Notes in `notebook` and those inside it, every note when it is empty.
@@ -61,7 +61,7 @@ private:
     VaultIndex &m_index;
     QTextStream &m_out;
     QTextStream &m_err;
-    Paint m_paint;
+    greylock::cli::Paint m_paint;
 };
 
 } // namespace jot::cli

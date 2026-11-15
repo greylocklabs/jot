@@ -81,7 +81,7 @@ appstream-util validate-relax --nonet \
     %{buildroot}%{_datadir}/metainfo/org.callieapp.Jot.metainfo.xml
 
 %files
-%license LICENSE data/fonts/Nunito-OFL.txt data/fonts/Fraunces-OFL.txt
+%license LICENSE core/fonts/Nunito-OFL.txt core/fonts/Fraunces-OFL.txt
 %license third_party/pele/LICENSE
 %license third_party/microtex/LICENSE third_party/microtex/res/fonts/licences/*
 %doc README.md

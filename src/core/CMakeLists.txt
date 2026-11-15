@@ -118,14 +118,10 @@ add_library(jotcore STATIC
     VaultIndex.cpp
     jot/Logging.h
     Logging.cpp
-    jot/LogFile.h
-    LogFile.cpp
     jot/CodeColors.h
     CodeColors.cpp
     jot/Diagnostics.h
     Diagnostics.cpp
-    jot/ProblemReport.h
-    ProblemReport.cpp
     jot/Diagram.h
     Diagram.cpp
 )
@@ -141,10 +137,10 @@ qt_add_resources(jotcore "jot_changelog"
 # Both are under the SIL Open Font License; the license files sit beside them.
 qt_add_resources(jotcore "jot_fonts"
     PREFIX "/jot/fonts"
-    BASE "${PROJECT_SOURCE_DIR}/data/fonts"
+    BASE "${PROJECT_SOURCE_DIR}/core/fonts"
     FILES
-        "${PROJECT_SOURCE_DIR}/data/fonts/Nunito-Variable.ttf"
-        "${PROJECT_SOURCE_DIR}/data/fonts/Fraunces-Variable.ttf"
+        "${PROJECT_SOURCE_DIR}/core/fonts/Nunito-Variable.ttf"
+        "${PROJECT_SOURCE_DIR}/core/fonts/Fraunces-Variable.ttf"
 )
 
 # Pele, built for Qt's JavaScript engine by tools/vendor-pele.mjs; MIT, its license beside it.

@@ -1,18 +1,19 @@
 #include "Completion.h"
-#include "Paint.h"
-#include "Palette.h"
-#include "UpdateHint.h"
-#include "Upgrade.h"
 #include "VaultCommands.h"
 
 #include "greylock/Identity.h"
+#include "greylock/Issues.h"
+#include "greylock/LogFile.h"
 #include "greylock/Releases.h"
 #include "greylock/Translations.h"
 #include "greylock/UpdateCheck.h"
+#include "greylock/cli/Paint.h"
+#include "greylock/cli/Palette.h"
+#include "greylock/cli/UpdateHint.h"
+#include "greylock/cli/Upgrade.h"
 #include "jot/Diagnostics.h"
 #include "jot/JsonSchema.h"
 #include "jot/Layout.h"
-#include "jot/LogFile.h"
 #include "jot/Settings.h"
 
 #include <QCommandLineParser>
@@ -40,13 +41,14 @@ QTextStream out(stdout);
 QTextStream err(stderr);
 
 /// Colors from $JOT_THEME, or the default theme, when the output is a terminal.
-const cli::Paint &paintFor(int fd)
+const greylock::cli::Paint &paintFor(int fd)
 {
-    static const cli::Paint paint = [fd] {
-        const cli::Paint::Depth depth = cli::Paint::detect(fd);
-        if (depth == cli::Paint::Depth::None)
-            return cli::Paint();
-        return cli::Paint(depth, cli::Palette::forTheme(qEnvironmentVariable("JOT_THEME")));
+    static const greylock::cli::Paint paint = [fd] {
+        const greylock::cli::Paint::Depth depth = greylock::cli::Paint::detect(fd);
+        if (depth == greylock::cli::Paint::Depth::None)
+            return greylock::cli::Paint();
+        return greylock::cli::Paint(
+            depth, greylock::cli::Palette::forTheme(qEnvironmentVariable("JOT_THEME")));
     }();
     return paint;
 }
@@ -88,7 +90,7 @@ public:
     ~HintAfterwards()
     {
         greylock::UpdateCheck check;
-        const cli::UpdateHint hint = cli::UpdateHint::after(
+        const greylock::cli::UpdateHint hint = greylock::cli::UpdateHint::after(
             m_command, false, ::isatty(STDERR_FILENO), true, check,
             QVersionNumber::fromString(QCoreApplication::applicationVersion()));
         if (!hint.line.isEmpty())
@@ -154,7 +156,7 @@ int runDoctor(bool report)
     const QString text = diagnostics::collect();
     out << text << "\n" << Qt::flush;
     if (report) {
-        const QString url = diagnostics::issueUrl(text).toString(QUrl::FullyEncoded);
+        const QString url = greylock::issues::newBug(text).toString(QUrl::FullyEncoded);
         // Over SSH or without a desktop nothing opens, so the link is always shown.
         if (QProcess::startDetached(u"xdg-open"_s, {url}))
             err << QObject::tr("Opening a new issue in your browser. If it does not open, visit:")
@@ -183,7 +185,7 @@ int runDonate(bool print)
 /// The log files, one path per line, newest first; or follows or opens them.
 int runLogs(bool follow, bool open)
 {
-    const QString directory = logfile::defaultDirectory();
+    const QString directory = greylock::logfile::defaultDirectory();
     if (open)
         return QProcess::execute(u"xdg-open"_s, {directory}) == 0 ? 0 : 1;
 
@@ -419,9 +421,9 @@ int main(int argc, char *argv[])
     }
 
     parser.process(app);
-    logfile::install(u"jot"_s);
-    logfile::setVerboseTerminal(parser.isSet(verboseOption) ||
-                                !qEnvironmentVariableIsEmpty("QT_LOGGING_RULES"));
+    greylock::logfile::install(u"jot"_s);
+    greylock::logfile::setVerboseTerminal(parser.isSet(verboseOption) ||
+                                          !qEnvironmentVariableIsEmpty("QT_LOGGING_RULES"));
 
     const QStringList args = parser.positionalArguments();
     if (args.isEmpty())
@@ -513,8 +515,9 @@ int main(int argc, char *argv[])
     if (command == u"logs" && args.size() == 1)
         return runLogs(parser.isSet(followOption), parser.isSet(openOption));
     if ((command == u"upgrade" || command == u"downgrade") && args.size() <= 2) {
-        cli::Upgrade upgrade(out, err);
-        cli::Upgrade::Options upgradeOptions;
+        greylock::cli::Upgrade upgrade(out, err);
+        upgrade.setInstallCommand(u"curl -fsSL https://jotwriter.org/install.sh | sh"_s);
+        greylock::cli::Upgrade::Options upgradeOptions;
         upgradeOptions.downgrade = command == u"downgrade";
         if (args.size() == 2)
             upgradeOptions.version = args.at(1);
