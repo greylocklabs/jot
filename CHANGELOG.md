@@ -5,6 +5,14 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ## Unreleased
 
+### Added
+
+- Fold a heading away: the arrow by a heading in Styled and Read modes hides everything under it,
+  down to the next heading of its level, and a click on the arrow or on the mark after it shows
+  it again. Folds are kept for each note in the vault's `.jot/layout.yaml`, never in the note,
+  and the cursor, a search or the outline going into a fold opens it. Fold all and show all are
+  in the command palette and the outline, and vi mode has `za`, `zM` and `zR`.
+
 ### Changed
 
 - Read mode shows the arrow pointer over a note rather than the text cursor, and the hand over

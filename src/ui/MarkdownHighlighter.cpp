@@ -573,7 +573,16 @@ void MarkdownHighlighter::mark(int start, int length)
 
 void MarkdownHighlighter::highlightBlock(const QString &text)
 {
+    // Styled even when folded away, for what it tells the lines after it, such as an open fence.
     styleBlock(text);
+    // A folded line takes no room, but the editor still draws its text, so it is clear.
+    if (!currentBlock().isVisible()) {
+        QTextCharFormat clear;
+        clear.setForeground(Qt::transparent);
+        clear.setBackground(Qt::transparent);
+        setFormat(0, int(text.size()), clear);
+        return;
+    }
     // A yank's flash, over whatever the line is styled as.
     if (!m_flashStart.isNull() && m_flashEnd.position() > m_flashStart.position()) {
         const int at = currentBlock().position();

@@ -62,6 +62,17 @@ struct Heading
 /// Code is left alone, and so are headings in quotes and lists.
 [[nodiscard]] QList<Heading> headingsOf(QStringView body);
 
+/// A name for each of `headings` that tells apart those with the same text, for remembering
+/// which are folded: the text, then " (2)", " (3)" and on for later ones with the same text.
+[[nodiscard]] QStringList headingKeys(const QList<Heading> &headings);
+
+/// What folding heading `index` of `headings`, as headingsOf() finds them in `body`, hides: from
+/// the line after it, or after its underline, to the next heading at its level or above, or the
+/// end, less the blank lines before that. Empty, starting where it would, when there is nothing
+/// there but blank lines.
+[[nodiscard]] std::pair<qsizetype, qsizetype>
+sectionOf(QStringView body, const QList<Heading> &headings, qsizetype index);
+
 /// The `$...$` math in a line of prose, as Pandoc reads it: each span's start and end, its
 /// dollar signs included. The first has a character other than a space after it, the second
 /// one before it and no digit after it, so prices stay text; `\$` is a dollar sign, and

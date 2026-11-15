@@ -140,7 +140,7 @@ std::optional<Layout> Layout::read(const Vault &vault, QString *error)
             continue;
         }
         if (section != u"order"_s && section != u"folders"_s && section != u"hidden"_s &&
-            !kViews.contains(section)) {
+            section != u"folded"_s && !kViews.contains(section)) {
             layout.m_other.append(raw);
             continue;
         }
@@ -157,6 +157,8 @@ std::optional<Layout> Layout::read(const Vault &vault, QString *error)
             const QString item = readYamlScalar(QStringView(line).sliced(1));
             if (section == u"order"_s && !entry.isEmpty())
                 layout.m_order[entry].append(item);
+            else if (section == u"folded"_s && !entry.isEmpty())
+                layout.m_folded[entry].append(item);
             else if (section == u"hidden"_s && !layout.m_hidden.contains(item))
                 layout.m_hidden.append(item);
             continue;
@@ -222,6 +224,14 @@ QString Layout::text() const
                 out += u"    %1: %2\n"_s.arg(yamlScalar(key.key()), yamlScalar(key.value()));
             for (const QString &line : m_folderLines.value(folder))
                 out += u"    "_s + line + u'\n';
+        }
+    }
+    if (!m_folded.isEmpty()) {
+        out += u"folded:\n"_s;
+        for (auto it = m_folded.cbegin(); it != m_folded.cend(); ++it) {
+            out += u"  %1:\n"_s.arg(yamlScalar(it.key()));
+            for (const QString &heading : it.value())
+                out += u"    - %1\n"_s.arg(yamlScalar(heading));
         }
     }
     if (!m_hidden.isEmpty()) {
@@ -291,6 +301,10 @@ bool Layout::write(const Vault &vault, QString *error) const
         if (QFileInfo::exists(vault.absolute(path)))
             kept.m_hidden.append(path);
     }
+    for (auto it = m_folded.cbegin(); it != m_folded.cend(); ++it) {
+        if (QFileInfo(vault.absolute(it.key())).isFile() && !it->isEmpty())
+            kept.m_folded.insert(it.key(), it.value());
+    }
 
     const QString path = vault.absolute(kPath);
     QString ignored;
@@ -341,6 +355,18 @@ void Layout::move(const QString &from, const QString &to)
         if (under(path, from))
             path = moved(path);
     }
+    for (const QString &key : m_folded.keys()) {
+        if (under(key, from))
+            m_folded.insert(moved(key), m_folded.take(key));
+    }
+}
+
+void Layout::setFolded(const QString &path, const QStringList &headings)
+{
+    if (headings.isEmpty())
+        m_folded.remove(path);
+    else
+        m_folded.insert(path, headings);
 }
 
 void Layout::setHidden(const QString &path, bool hidden)

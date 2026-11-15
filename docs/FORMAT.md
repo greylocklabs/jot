@@ -273,6 +273,9 @@ favorites:
   emoji: ⭐
   notes:
     - Recipes/Pancakes.md
+folded:
+  Ashfall/Pitch.md:
+    - Themes
 hidden:
   - Archive
 trash:
@@ -289,6 +292,9 @@ trash:
 - `favorites` lists the favorite notes under `notes`, in the order Favorites in the sidebar
   shows them, and its `emoji`, ⭐ when unset. It replaced the `pinned` list of earlier versions,
   which Jot no longer reads.
+- `folded` lists, under a note's path, the headings folded away in it by their text. A later
+  heading with the same text is named with its count after it, as `Notes (2)`. Folding never
+  changes the note.
 - `hidden` notes and notebooks, and everything in a hidden notebook, stay out of the note list,
   quick open, search, Tasks and tags, in Jot and in `jot`. Links to them still work. Unlike
   ignored files, Jot still reads them.

@@ -8,6 +8,7 @@
 #include <QVariantMap>
 
 #include <memory>
+#include <tuple>
 
 class QTimer;
 
@@ -48,6 +49,11 @@ class MarkdownStyler : public QObject
     /// The note's `#` headings, as `{text, level, position}` like a table of contents has
     /// them, for the outline.
     Q_PROPERTY(QVariantList headings READ headings NOTIFY imagesChanged)
+    /// The headings folded away, as headingKeys() names them. Source mode shows everything.
+    Q_PROPERTY(QStringList folded READ folded WRITE setFolded NOTIFY foldsChanged)
+    /// The headings that have something under them to fold, as `{key, position, end, folded}`:
+    /// the name to fold it by, where its line starts and ends, and whether it is folded.
+    Q_PROPERTY(QVariantList folds READ folds NOTIFY foldsChanged)
     /// The note's words and characters, front matter left out, as `{words, characters}`.
     Q_PROPERTY(QVariantMap count READ count NOTIFY imagesChanged)
     /// The Markdown shown as written, without live preview.
@@ -92,6 +98,13 @@ public:
     /// Which of `headings`, as headings() gives them, `position` is under: the last starting at
     /// or before it, or -1.
     Q_INVOKABLE static int headingAt(const QVariantList &headings, int position);
+    [[nodiscard]] QStringList folded() const { return m_folded; }
+    void setFolded(const QStringList &folded);
+    [[nodiscard]] QVariantList folds() const { return m_folds; }
+    /// The heading whose folded section `position` is in, by its key, or empty.
+    Q_INVOKABLE QString foldAt(int position) const;
+    /// Whether `position` is folded away, for what is drawn over the note there.
+    Q_INVOKABLE bool isFolded(int position) const { return !foldAt(position).isEmpty(); }
     [[nodiscard]] QVariantMap count() const;
     /// The words and characters in `text`, as `count` has them.
     Q_INVOKABLE static QVariantMap countOf(const QString &text);
@@ -187,6 +200,7 @@ Q_SIGNALS:
     void sourceModeChanged();
     void focusModeChanged();
     void foldCommentsChanged();
+    void foldsChanged();
     void spellingChanged();
 
 private:
@@ -195,6 +209,8 @@ private:
     /// the event loop is back, after the highlighter has had its turn.
     void scheduleImages();
     void readFrontMatter();
+    /// Hides the lines of the folded sections, and shows the rest, as the text now stands.
+    void applyFolds();
 
     QPointer<QQuickTextDocument> m_document;
     MarkdownHighlighter *m_highlighter = nullptr;
@@ -214,6 +230,10 @@ private:
     bool m_sourceMode = false;
     bool m_focusMode = false;
     bool m_foldComments = false;
+    QStringList m_folded;
+    QVariantList m_folds;
+    /// Each folded section, as `{key, start, end}` positions in the document.
+    QList<std::tuple<QString, int, int>> m_foldRanges;
     bool m_spellcheck = false;
     QString m_language;
     std::unique_ptr<Sonnet::Speller> m_speller;

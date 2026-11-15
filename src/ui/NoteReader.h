@@ -36,6 +36,11 @@ class NoteReader : public QObject
     /// draw a bar down its left; each level's text starts `quoteIndent` further in.
     Q_PROPERTY(QVariantList quoteRuns READ quoteRuns NOTIFY quoteRunsChanged)
     Q_PROPERTY(qreal quoteIndent READ quoteIndent CONSTANT)
+    /// The headings folded away, as headingKeys() names them, which are left out of the drawing.
+    Q_PROPERTY(QStringList folded READ folded WRITE setFolded NOTIFY foldsChanged)
+    /// The drawn headings that have something under them to fold, as `{key, position, end,
+    /// folded}`: the name to fold it by, where its line starts and ends, and whether it is.
+    Q_PROPERTY(QVariantList folds READ folds NOTIFY foldsChanged)
     /// What a search found, `{start, end, current}` as positions in the document, for the view
     /// to mark behind the text, the one it is on more strongly.
     Q_PROPERTY(QVariantList found READ found NOTIFY foundChanged)
@@ -59,6 +64,9 @@ public:
     [[nodiscard]] QVariantList quoteRuns() const { return m_quoteRuns; }
     [[nodiscard]] static qreal quoteIndent();
     [[nodiscard]] QVariantList found() const { return m_found; }
+    [[nodiscard]] QStringList folded() const { return m_folded; }
+    void setFolded(const QStringList &folded);
+    [[nodiscard]] QVariantList folds() const { return m_folds; }
 
     /// Where `needle` is in the note as drawn, as each match's start, as the find bar asks.
     Q_INVOKABLE QVariantList findAll(const QString &needle, bool matchCase, bool wholeWords) const;
@@ -81,6 +89,7 @@ Q_SIGNALS:
     void codeRunsChanged();
     void quoteRunsChanged();
     void foundChanged();
+    void foldsChanged();
 
 private:
     void schedule();
@@ -109,6 +118,12 @@ private:
     QVariantList m_codeRuns;
     QVariantList m_quoteRuns;
     QVariantList m_found;
+    QStringList m_folded;
+    QVariantList m_folds;
+    /// The body as drawn, folded sections left out, and for each of its headings as
+    /// headingsOf() finds them in the whole body, whether it was left out with one.
+    QString m_shown;
+    QList<bool> m_hiddenHeadings;
 };
 
 } // namespace jot

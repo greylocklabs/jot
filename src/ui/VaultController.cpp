@@ -1215,6 +1215,32 @@ bool VaultController::setFavorite(const QString &path, bool favorite)
     return true;
 }
 
+QStringList VaultController::foldsOf(const QString &path) const
+{
+    if (!m_vault || path.isEmpty())
+        return {};
+    const std::optional<Layout> layout = Layout::read(*m_vault);
+    return layout ? layout->folded(path) : QStringList();
+}
+
+bool VaultController::setFolds(const QString &path, const QStringList &headings)
+{
+    if (!m_vault || !m_vault->writable() || path.isEmpty())
+        return false;
+    QString error;
+    std::optional<Layout> layout = Layout::read(*m_vault, &error);
+    if (layout && layout->folded(path) == headings)
+        return true;
+    if (layout)
+        layout->setFolded(path, headings);
+    // Folds are only how the note is shown, so failing to keep them is not worth a problem.
+    if (!layout || !layout->write(*m_vault, &error)) {
+        qCWarning(lcVault) << "could not keep the folds of" << path << error;
+        return false;
+    }
+    return true;
+}
+
 bool VaultController::writeHidden(const QString &path, bool hidden)
 {
     if (!m_vault || !m_vault->writable() || path.isEmpty())

@@ -13,7 +13,12 @@ Item {
     /// The heading the cursor is under, or -1.
     property int current: -1
 
+    /// Whether any heading has something under it to fold, which the title row offers.
+    property bool foldable: false
+
     signal chosen(int index)
+    /// Fold away what is under every heading, or show it all again.
+    signal foldAllRequested(bool fold)
 
     implicitWidth: 240
 
@@ -36,6 +41,53 @@ Item {
         font.weight: Theme.weightBold
         font.capitalization: Font.AllUppercase
         font.letterSpacing: 0.6
+    }
+
+    Row {
+        objectName: "outlineFolds"
+        anchors {
+            right: parent.right
+            rightMargin: Theme.space4
+            verticalCenter: title.verticalCenter
+        }
+        visible: root.foldable
+        spacing: Theme.space3
+
+        Repeater {
+            model: [
+                {
+                    "fold": true,
+                    "label": qsTr("Fold all")
+                },
+                {
+                    "fold": false,
+                    "label": qsTr("Show all")
+                }
+            ]
+
+            Text {
+                id: foldChoice
+
+                required property var modelData
+
+                text: modelData.label
+                color: foldHover.hovered ? Theme.text : Theme.textFaint
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.textXs
+                font.weight: Theme.weightBold
+                Accessible.role: Accessible.Button
+                Accessible.name: modelData.fold ? qsTr("Fold away what is under every heading") :
+                                                  qsTr("Show what is under every heading")
+
+                HoverHandler {
+                    id: foldHover
+                    cursorShape: Qt.PointingHandCursor
+                }
+                TapHandler {
+                    onTapped: root.foldAllRequested(foldChoice.modelData.fold)
+                }
+            }
+        }
     }
 
     Text {

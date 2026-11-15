@@ -287,6 +287,11 @@ public:
     Q_INVOKABLE QString notebookOf(const QString &path) const { return Vault::notebookOf(path); }
     /// Makes the note at `path` a favorite, last in Favorites, or not. Undoable.
     Q_INVOKABLE bool setFavorite(const QString &path, bool favorite);
+    /// The headings folded away in the note at `path`, as headingKeys() names them.
+    Q_INVOKABLE QStringList foldsOf(const QString &path) const;
+    /// Keeps which of the note's headings are folded, for the next time it opens; says whether
+    /// they were kept.
+    Q_INVOKABLE bool setFolds(const QString &path, const QStringList &headings);
     Q_INVOKABLE bool isFavorite(const QString &path) const { return m_favorites.contains(path); }
     /// Moves the favorite at `path` to `at` in Favorites' order, as dragging it does.
     Q_INVOKABLE bool moveFavorite(const QString &path, int at);

@@ -68,6 +68,8 @@ Q_SIGNALS:
     void yanked(int start, int end);
     /// `:` in normal mode, or Space when `:` is the leader: a command is to be typed.
     void commandLineRequested();
+    /// za, zM or zR: fold `id` as KeyRouter names it, which the view does.
+    void foldRequested(const QString &id);
     /// `:noh`: find highlights are to go.
     void highlightsCleared();
     void targetChanged();

@@ -16,6 +16,7 @@ private Q_SLOTS:
     void tickingARepeatingTaskWritesTheNext();
     void readsAsMarkdownWithLinks();
     void findsHeadingsForAContentsList();
+    void foldsAHeadingsSection();
     void readsCriticMarkupWithItsEditsMade();
     void findsMathAsPandocDoes();
     void findsEveryKindOfLink();
@@ -383,6 +384,29 @@ void TestNoteScan::tickingARepeatingTaskWritesTheNext()
     QCOMPARE(*setTaskDone(*ticked, 4, false, {}, QDate(2026, 10, 28)),
              u"# Chores\n\n- [ ] Water @weekly @due 2026-11-04\n"
              "- [ ] Water @weekly @due 2026-10-28\n- [ ] Sweep\n"_s);
+}
+
+void TestNoteScan::foldsAHeadingsSection()
+{
+    const QString body = u"# One\nIntro.\n\n## Sub\nUnder sub.\n\n# Two\nUnder two.\n\n"
+                         "## Empty\n\n## Notes\nText.\n\nPart\n----\nPart text.\n\n# Notes\n"_s;
+    const QList<Heading> headings = headingsOf(body);
+    QCOMPARE(headingKeys(headings), (QStringList{u"One"_s, u"Sub"_s, u"Two"_s, u"Empty"_s,
+                                                 u"Notes"_s, u"Part"_s, u"Notes (2)"_s}));
+    const auto hidden = [&](qsizetype index) {
+        const auto [start, end] = sectionOf(body, headings, index);
+        return body.sliced(start, end - start);
+    };
+    // To the next heading at its level or above, its own subheadings included.
+    QCOMPARE(hidden(0), u"Intro.\n\n## Sub\nUnder sub.\n"_s);
+    QCOMPARE(hidden(1), u"Under sub.\n"_s);
+    QCOMPARE(hidden(2).left(11), u"Under two.\n"_s);
+    QVERIFY(hidden(2).endsWith(u"Part text.\n"_s));
+    // Blank lines alone fold nothing; an underlined heading keeps its underline; the last runs
+    // to the end.
+    QCOMPARE(hidden(3), QString());
+    QCOMPARE(hidden(5), u"Part text.\n"_s);
+    QCOMPARE(hidden(6), QString());
 }
 
 QTEST_GUILESS_MAIN(TestNoteScan)

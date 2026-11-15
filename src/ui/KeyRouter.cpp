@@ -98,6 +98,8 @@ QList<KeyAction> KeyRouter::actions()
         act(u"dailyNote"_s, tr("Today's note"), window, {}, {}, u"j"_s),
         act(u"quickAdd"_s, tr("Add a to-do to the inbox"), window, {u"Ctrl+Shift+A"_s}, {}, u"a"_s),
         act(u"goTo"_s, tr("Go to a note"), window, {u"Ctrl+P"_s}, {}, u"p"_s),
+        act(u"foldAll"_s, tr("Fold away what is under every heading"), window, {}),
+        act(u"unfoldAll"_s, tr("Show what is under every heading"), window, {}),
         act(u"commands"_s, tr("Commands"), window, {u"Ctrl+Shift+P"_s}, {}, u"c"_s),
         act(u"search"_s, tr("Search notes"), window, {u"Ctrl+Shift+F"_s}, u"/"_s),
         act(u"find"_s, tr("Find in the note"), window, {int(K::Find)}),
@@ -225,10 +227,17 @@ QList<KeyAction> KeyRouter::actions()
         act(u"visual"_s, tr("Select, moving as in normal mode"), note, {}, u"v"_s),
         act(u"leave"_s, tr("Normal mode, then out to the note list"), note, {}, u"Esc"_s),
 
+        act(u"toggleFold"_s, tr("Fold or show what is under the cursor's heading"), note, {},
+            u"za"_s),
+        act(u"noteFoldAll"_s, tr("Fold away what is under every heading"), note, {}, u"zM"_s),
+        act(u"noteUnfoldAll"_s, tr("Show what is under every heading"), note, {}, u"zR"_s),
+
         act(u"copySelection"_s, tr("Copy the selection"), visual, {}, u"y"_s),
         act(u"cutSelection"_s, tr("Cut the selection"), visual, {}, u"d"_s),
         act(u"endVisual"_s, tr("Back to normal mode"), visual, {}, u"Esc"_s),
 
+        act(u"readFoldAll"_s, tr("Fold away what is under every heading"), read, {}, u"zM"_s),
+        act(u"readUnfoldAll"_s, tr("Show what is under every heading"), read, {}, u"zR"_s),
         act(u"readDown"_s, tr("Scroll down"), read, {}, u"j"_s),
         act(u"readUp"_s, tr("Scroll up"), read, {}, u"k"_s),
         act(u"readTop"_s, tr("Start of the note"), read, {}, u"gg"_s),

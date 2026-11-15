@@ -1045,6 +1045,8 @@ ApplicationWindow {
         case "copyLink":
         case "showInFiles":
         case "history":
+        case "foldAll":
+        case "unfoldAll":
             return note
         case "rename":
         case "toggleFavorite":
@@ -1197,6 +1199,10 @@ ApplicationWindow {
             break
         case "trash":
             noteList.askToTrash(Vault.current)
+            break
+        case "foldAll":
+        case "unfoldAll":
+            editor.foldAll(id === "foldAll")
             break
         case "sourceMode":
             // Out of reading too, as the switch does, since the source is only seen writing.
