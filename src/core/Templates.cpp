@@ -141,4 +141,33 @@ QString noteFromTemplate(const QString &made, const QString &filled)
            theirs.body.toString();
 }
 
+QString withTemplateKeys(const QString &note, const QString &filled, const QStringList &skip)
+{
+    const NoteParts mine = splitFrontMatter(note);
+    const NoteParts theirs = splitFrontMatter(filled);
+    if (!theirs.hasFrontMatter)
+        return note;
+    QStringList taken = skip;
+    for (const QString &line : mine.frontMatter.toString().split(u'\n')) {
+        if (const QString key = keyOf(line); !key.isEmpty())
+            taken << key;
+    }
+    // Each key's own line and those under it, as a list's items are.
+    QStringList added;
+    bool skipping = false;
+    for (const QString &line : theirs.frontMatter.toString().split(u'\n')) {
+        if (const QString key = keyOf(line); !key.isEmpty())
+            skipping = taken.contains(key);
+        if (!skipping && !line.isEmpty())
+            added << line;
+    }
+    if (added.isEmpty())
+        return note;
+    const QString lines = added.join(u'\n') + u'\n';
+    if (!mine.hasFrontMatter)
+        return u"---\n"_s + lines + u"---\n"_s + note;
+    const qsizetype end = mine.frontMatter.data() - note.data() + mine.frontMatter.size();
+    return note.first(end) + lines + note.sliced(end);
+}
+
 } // namespace jot
