@@ -356,6 +356,11 @@ void TestNoteTypes::ordersANotesProperties()
     QCOMPARE(linkValue(u" Ash Court "_s), u"[[Ash Court]]"_s);
     QCOMPARE(linkValue(u"[[Ash Court]]"_s), u"[[Ash Court]]"_s);
     QCOMPARE(linkValue(QString()), QString());
+    // A list shown as text and read back is the same list, commas in items and all.
+    const QStringList items{u"[[Smith, John]]"_s, u"Vey, Mara"_s, u"plain"_s};
+    QCOMPARE(listText(items), u"[[Smith, John]], \"Vey, Mara\", plain"_s);
+    QCOMPARE(listItems(listText(items)), items);
+    QCOMPARE(listItems(u" a ,, b,"_s), (QStringList{u"a"_s, u"b"_s}));
     QCOMPARE(linkValueText(u"[[Ash Court#History|the Court]]"_s), u"Ash Court#History|the Court"_s);
     QCOMPARE(linkValue(linkValueText(u"[[Ash Court#History|the Court]]"_s)),
              u"[[Ash Court#History|the Court]]"_s);
