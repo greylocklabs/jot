@@ -211,8 +211,10 @@ void MarkdownStyler::readFrontMatter()
 QVariantMap MarkdownStyler::propertyMap(const PropertyRow &row)
 {
     const auto shown = [&row](const QString &item) {
-        return row.property && row.property->kind == TypeProperty::Kind::Link ? linkValueText(item)
-                                                                              : item;
+        // A link with a comma keeps its brackets, so the list's commas stay apart from it.
+        if (row.property && row.property->kind == TypeProperty::Kind::Link && !item.contains(u','))
+            return linkValueText(item);
+        return item;
     };
     QString kind = u"text"_s;
     QString value;
@@ -220,7 +222,7 @@ QVariantMap MarkdownStyler::propertyMap(const PropertyRow &row)
         QStringList items;
         for (const QString &item : row.value.toStringList())
             items.append(shown(item));
-        value = items.join(u", "_s);
+        value = listText(items);
         kind = u"list"_s;
     } else {
         value = shown(row.value.toString());

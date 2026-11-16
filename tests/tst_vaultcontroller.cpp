@@ -731,6 +731,14 @@ void TestVaultController::setsPropertiesAsTheirKindsWriteThem()
     m_vault->setNoteProperty(u"groups"_s, u"Smiths|the guild, Ash Court#Origins, Ferry"_s);
     QVERIFY(m_vault->currentText().contains(
         u"groups: [\"[[Smiths|the guild]]\", \"[[Ash Court#Origins]]\", \"[[Ferry]]\"]\n"_s));
+    // A comma in a title or an item stays inside it.
+    m_vault->setNoteProperty(u"groups"_s, u"[[Smith, John]], Ferry"_s);
+    QVERIFY(m_vault->currentText().contains(u"groups: [\"[[Smith, John]]\", \"[[Ferry]]\"]\n"_s));
+    m_vault->setNoteProperty(u"aliases"_s, u"\"Vey, Mara\", M"_s);
+    QCOMPARE(readFrontMatter(splitFrontMatter(m_vault->currentText()).frontMatter)
+                 .value(u"aliases"_s)
+                 .toStringList(),
+             (QStringList{u"Vey, Mara"_s, u"M"_s}));
     // Empty takes the key away, and the note is saved as each changes.
     m_vault->setNoteProperty(u"born"_s, QString());
     QVERIFY(!m_vault->currentText().contains(u"born"_s));
