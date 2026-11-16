@@ -739,6 +739,47 @@ QString linkValueText(const QString &value)
     return trimmed;
 }
 
+QString listText(const QStringList &items)
+{
+    QStringList shown;
+    for (const QString &item : items) {
+        const bool link = item.startsWith(u"[[") && item.endsWith(u"]]");
+        shown.append(!item.contains(u',') || link ? item : u'"' + item + u'"');
+    }
+    return shown.join(u", "_s);
+}
+
+QStringList listItems(QStringView text)
+{
+    QStringList items;
+    QString item;
+    bool quoted = false;
+    int brackets = 0;
+    const auto finish = [&] {
+        QString trimmed = item.trimmed();
+        if (trimmed.size() >= 2 && trimmed.startsWith(u'"') && trimmed.endsWith(u'"'))
+            trimmed = trimmed.mid(1, trimmed.size() - 2);
+        if (!trimmed.isEmpty())
+            items.append(trimmed);
+        item.clear();
+    };
+    for (qsizetype i = 0; i < text.size(); ++i) {
+        const QChar c = text.at(i);
+        if (c == u'"' && brackets == 0)
+            quoted = !quoted;
+        else if (!quoted && text.sliced(i).startsWith(u"[["))
+            ++brackets;
+        else if (!quoted && brackets > 0 && text.sliced(i).startsWith(u"]]"))
+            --brackets;
+        if (c == u',' && !quoted && brackets == 0)
+            finish();
+        else
+            item += c;
+    }
+    finish();
+    return items;
+}
+
 QString linkValue(const QString &value)
 {
     const QString trimmed = value.trimmed();

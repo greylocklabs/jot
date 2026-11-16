@@ -3126,10 +3126,8 @@ void VaultController::setNoteProperty(const QString &key, const QVariant &value)
         written = value;
     } else if (property ? property->list : keys.value(key).typeId() == QMetaType::QStringList) {
         QStringList items;
-        for (const QString &item : value.toString().split(u',')) {
-            if (!item.trimmed().isEmpty())
-                items.append(link ? linkValue(item) : item.trimmed());
-        }
+        for (const QString &item : listItems(value.toString()))
+            items.append(link ? linkValue(item) : item);
         if (!items.isEmpty())
             written = items;
     } else if (const QString text = value.toString().trimmed(); !text.isEmpty()) {
