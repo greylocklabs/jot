@@ -106,13 +106,14 @@ void NoteListModel::refill()
         if (!m_query.trimmed().isEmpty()) {
             for (const SearchHit &hit : m_index->search(scopedQuery(m_query, m_notebook, m_tag))) {
                 if (!m_showFavorites || m_favorites.contains(hit.path))
-                    m_rows.append({hit.path, hit.title, hit.modified, hit.snippet});
+                    m_rows.append({hit.path, hit.title, hit.modified, hit.snippet,
+                                   m_index->note(hit.path).value_or(NoteInfo()).type});
             }
         } else if (m_showFavorites) {
             // In the order given, of those still there.
             for (const QString &path : std::as_const(m_favorites)) {
                 if (const std::optional<NoteInfo> note = m_index->note(path))
-                    m_rows.append({note->path, note->title, note->modified, {}});
+                    m_rows.append({note->path, note->title, note->modified, {}, note->type});
             }
         } else {
             QList<NoteInfo> notes;
@@ -128,7 +129,7 @@ void NoteListModel::refill()
             }
             sortNotes(notes, m_order);
             for (const NoteInfo &note : std::as_const(notes))
-                m_rows.append({note.path, note.title, note.modified, {}});
+                m_rows.append({note.path, note.title, note.modified, {}, note.type});
         }
     }
     endResetModel();
@@ -166,17 +167,15 @@ QVariant NoteListModel::data(const QModelIndex &index, int role) const
     case NotebookRole: return notebookOf(row.path);
     case ModifiedRole: return QDateTime::fromMSecsSinceEpoch(row.modified / 1000000);
     case SnippetRole: return row.snippet;
+    case TypeRole: return row.type;
     }
     return {};
 }
 
 QHash<int, QByteArray> NoteListModel::roleNames() const
 {
-    return {{PathRole, "path"},
-            {TitleRole, "title"},
-            {NotebookRole, "notebook"},
-            {ModifiedRole, "modified"},
-            {SnippetRole, "snippet"}};
+    return {{PathRole, "path"},         {TitleRole, "title"},     {NotebookRole, "notebook"},
+            {ModifiedRole, "modified"}, {SnippetRole, "snippet"}, {TypeRole, "type"}};
 }
 
 } // namespace jot

@@ -15,19 +15,47 @@ MenuItem {
     property bool current: false
     /// Keeps room for that check, so entries line up whichever is current.
     property bool marks: false
+    /// An icon before the text, as a Glyph names it, or none.
+    property string glyph
+    property color glyphColor: Theme.textMuted
 
     implicitHeight: 30
     leftPadding: Theme.space4
     rightPadding: Theme.space4 + (root.marks ? 14 + Theme.space2 : 0)
 
-    contentItem: Text {
-        text: root.text
-        color: Theme.text
-        font.family: Theme.fontFamily
-        font.pixelSize: Theme.textSm
-        font.weight: root.current ? Theme.weightBold : Font.Normal
-        elide: Text.ElideRight
-        verticalAlignment: Text.AlignVCenter
+    contentItem: Item {
+        implicitWidth: (root.glyph !== "" ? icon.width + Theme.space2 : 0) + label.implicitWidth
+        implicitHeight: label.implicitHeight
+
+        Glyph {
+            id: icon
+
+            anchors.verticalCenter: parent.verticalCenter
+            visible: root.glyph !== ""
+            name: root.glyph
+            color: root.glyphColor
+            stroke: Theme.smallGlyphStroke
+            implicitWidth: Theme.smallGlyphSize
+            implicitHeight: Theme.smallGlyphSize
+        }
+        Text {
+            id: label
+
+            anchors {
+                left: parent.left
+                leftMargin: root.glyph !== "" ? icon.width + Theme.space2 : 0
+                right: parent.right
+                top: parent.top
+                bottom: parent.bottom
+            }
+            text: root.text
+            color: Theme.text
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.textSm
+            font.weight: root.current ? Theme.weightBold : Font.Normal
+            elide: Text.ElideRight
+            verticalAlignment: Text.AlignVCenter
+        }
     }
 
     // A submenu's entry points to where it opens.

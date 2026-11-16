@@ -6,7 +6,7 @@ import QtQuick
 /// take the text color: chevron-left, chevron-right, chevron-down, minimize, maximize,
 /// restore, close, check, plus, refresh, bell, search, settings, menu, video, more,
 /// list-bullet, list-number, task, quote, table, pin, trash, note, braces, clock, mic, stop, play,
-/// pause, sound, muted, sidebar or flag.
+/// pause, sound, muted, sidebar, flag, person, people or box.
 Item {
     id: root
 
@@ -75,6 +75,11 @@ Item {
             return [[0.44, 0, 0.5, 0.1], [0.36, 90, 0.36, 0.3], [0.36, 90, 0.64, 0.3], [0.8, 0, 0.5,
                                                                                         0.5], [0.4,
                                                                                                90, 0.5, 0.74]]
+        case "box":
+            // A crate: its lid, its sides and floor, and a slot for a label.
+            return [[0.9, 0, 0.5, 0.18], [0.66, 90, 0.14, 0.56], [0.66, 90, 0.86, 0.56], [0.72, 0, 0.5,
+                                                                                          0.9], [0.3,
+                                                                                                 0, 0.5, 0.42]]
         case "note":
             // A page with its corner turned down, and two lines of writing.
             return [[0.84, 90, 0.22, 0.5], [0.56, 0, 0.5, 0.92], [0.62, 90, 0.78, 0.61], [0.36, 0,
@@ -132,9 +137,53 @@ Item {
                               "sound": mediaShape,
                               "muted": mediaShape,
                               "flag": flagShape,
+                              "person": figureShape,
+                              "people": figureShape,
                               "maximize": frameShape,
                               "restore": frameShape
                           })[root.name] ?? null
+    }
+
+    // A person: a head over the curve of the shoulders, with a second behind for people.
+    Component {
+        id: figureShape
+
+        Canvas {
+            id: figure
+            antialiasing: true
+            onPaint: {
+                const ctx = getContext("2d")
+                ctx.reset()
+                const w = width, h = height, s = root.stroke
+                ctx.strokeStyle = root.color
+                ctx.lineWidth = s
+                ctx.lineCap = "round"
+                const draw = (x, scale) => {
+                    ctx.beginPath()
+                    ctx.arc(w * x, h * (0.08 + 0.22 * scale), w * 0.2 * scale, 0, 2 * Math.PI)
+                    ctx.stroke()
+                    ctx.beginPath()
+                    ctx.arc(w * x, h * 0.98, w * 0.36 * scale, Math.PI, 0)
+                    ctx.stroke()
+                }
+                if (root.name === "people") {
+                    draw(0.27, 0.72)
+                    draw(0.73, 0.72)
+                } else {
+                    draw(0.5, 1)
+                }
+            }
+
+            Connections {
+                target: root
+                function onColorChanged() {
+                    figure.requestPaint()
+                }
+                function onNameChanged() {
+                    figure.requestPaint()
+                }
+            }
+        }
     }
 
     // A bell: a dome flaring to a rim, with the clapper below.

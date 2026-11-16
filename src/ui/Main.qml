@@ -892,6 +892,67 @@ ApplicationWindow {
         id: reportDialog
         sourceComponent: ReportDialog {}
     }
+    // The vault's types, for a new note of one.
+    MenuCard {
+        id: newTypeMenu
+
+        objectName: "newTypeMenu"
+        minimumWidth: 200
+
+        Repeater {
+            model: Vault.noteTypes
+
+            MenuEntry {
+                required property var modelData
+                text: modelData.name
+                glyph: modelData.icon || "note"
+                glyphColor: Theme.typeColor(modelData.color)
+                onTriggered: {
+                    Vault.showingTasks = false
+                    if (Vault.newNoteOfType(modelData.name) !== "")
+                        editor.editTitle()
+                }
+            }
+        }
+        MenuEntry {
+            visible: Vault.noteTypes.length === 0
+            height: visible ? implicitHeight : 0
+            enabled: false
+            text: qsTr("No types yet: make one in Settings, Types")
+        }
+    }
+    // The type for the note shown, or none.
+    MenuCard {
+        id: setTypeMenu
+
+        objectName: "setTypeMenu"
+        minimumWidth: 200
+
+        MenuEntry {
+            text: qsTr("No type")
+            marks: true
+            current: editor.noteType === ""
+            onTriggered: Vault.setType("")
+        }
+        MenuSeparator {}
+        Repeater {
+            model: Vault.noteTypes
+
+            MenuEntry {
+                required property var modelData
+                text: modelData.name
+                glyph: modelData.icon || "note"
+                glyphColor: Theme.typeColor(modelData.color)
+                marks: true
+                current: editor.noteType.toLowerCase() === modelData.name.toLowerCase()
+                         || editor.noteType.toLowerCase() === modelData.id.toLowerCase()
+                onTriggered: {
+                    if (Vault.setType(modelData.name).offerTemplate)
+                        editor.offerTypeTemplate()
+                }
+            }
+        }
+    }
     // The vault's templates, for a new note made from one.
     MenuCard {
         id: templateMenu
@@ -987,6 +1048,15 @@ ApplicationWindow {
         case "newNote":
         case "newFromTemplate":
             return Vault.isOpen && Vault.writable && !Vault.showingTrash
+        case "newOfType":
+            return Vault.isOpen && Vault.writable && !Vault.showingTrash && Vault.noteTypes.length
+                    > 0
+        case "setType":
+            return note && Vault.writable && !editor.dataFile && !Vault.showingTasks &&
+                    !Vault.showingTrash
+
+        case "noteTypes":
+            return Vault.isOpen
         case "dailyNote":
         case "newNotebook":
             return Vault.isOpen && Vault.writable
@@ -1086,6 +1156,17 @@ ApplicationWindow {
         case "newFromTemplate":
             templateMenu.templates = Vault.templates()
             templateMenu.popup(newButton, 0, newButton.height + Theme.space1)
+            break
+        case "newOfType":
+            newTypeMenu.popup(newButton, 0, newButton.height + Theme.space1)
+            break
+        case "setType":
+            setTypeMenu.popup(editor, Theme.space6, Theme.space6)
+            break
+        case "noteTypes":
+            settingsDialog.open()
+            const settings = settingsDialog.popup as SettingsDialog
+            settings.tab = "types"
             break
         case "dailyNote":
             Vault.showingTasks = false

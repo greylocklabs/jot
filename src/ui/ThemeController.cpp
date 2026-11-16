@@ -16,6 +16,8 @@
 #include <algorithm>
 #include <cmath>
 
+using namespace Qt::StringLiterals;
+
 namespace jot {
 
 ThemeController::ThemeController(QObject *parent)
@@ -244,6 +246,22 @@ QColor ThemeController::priorityColor(int priority) const
     case 4: return textMuted();
     default: return Qt::transparent;
     }
+}
+
+QColor ThemeController::typeColor(const QString &color) const
+{
+    static const QHash<QString, int> hues{{u"red"_s, 2},      {u"orange"_s, 28}, {u"yellow"_s, 48},
+                                          {u"green"_s, 130},  {u"teal"_s, 172},  {u"blue"_s, 212},
+                                          {u"purple"_s, 268}, {u"pink"_s, 328}};
+    const QString name = color.trimmed().toLower();
+    if (const auto hue = hues.find(name); hue != hues.end()) {
+        const QColor base = accent().toHsl();
+        return QColor::fromHslF(float(hue.value()) / 360.0f, std::max(base.hslSaturationF(), 0.45f),
+                                base.lightnessF());
+    }
+    if (name.startsWith(u'#') && QColor::isValidColorName(name))
+        return QColor::fromString(name);
+    return textMuted();
 }
 
 } // namespace jot

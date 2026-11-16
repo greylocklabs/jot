@@ -172,6 +172,9 @@ public:
     /// What a to-do's priority is flagged in: red for 1, urgent, then the theme's own orange and
     /// blue for 2 and 3, and muted text for 4, low. Clear for none.
     Q_INVOKABLE QColor priorityColor(int priority) const;
+    /// What a note type's `color` is drawn in: a named hue at the accent's own lightness, so it
+    /// suits the theme, a `#rrggbb` color as it is, or muted text for none.
+    Q_INVOKABLE QColor typeColor(const QString &color) const;
     /// The widest stretch of `text` in `font` that a line cannot break inside, by the same
     /// rules text wraps by: a word, or a single character of text written without spaces.
     Q_INVOKABLE qreal widestUnbreakable(const QString &text, const QFont &font) const;

@@ -66,6 +66,7 @@ private Q_SLOTS:
     void holdingBackListsTheNotesBefore();
     void changesAShortcutByPressingIt();
     void aChosenShortcutWorksInTheWindow();
+    void givesANoteATypeFromTheWindow();
 
 private:
     QTemporaryDir m_dir;
@@ -703,6 +704,84 @@ void TestDialogs::aChosenShortcutWorksInTheWindow()
     QTest::keyClick(window, Qt::Key_G, Qt::ControlModifier | Qt::ShiftModifier);
     QTRY_VERIFY(switcher->property("opened").toBool());
     m_settings->resetKeys(u"goTo"_s);
+}
+
+void TestDialogs::givesANoteATypeFromTheWindow()
+{
+    QQmlEngine engine;
+    QQmlComponent component(&engine);
+    component.loadFromModule("Jot.Ui", "Main");
+    std::unique_ptr<QObject> main(component.create());
+    QVERIFY2(main, qPrintable(component.errorString()));
+    auto *window = qobject_cast<QQuickWindow *>(main.get());
+    QVERIFY(QTest::qWaitForWindowExposed(window));
+    window->resize(1200, 700);
+    // Popups sit in the window's overlay, which is in its content item.
+    const std::function<QList<QQuickItem *>(QQuickItem *, const QString &)> all =
+        [&all](QQuickItem *at, const QString &name) {
+            QList<QQuickItem *> found;
+            for (QQuickItem *child : at->childItems()) {
+                if (child->objectName() == name)
+                    found.append(child);
+                found += all(child, name);
+            }
+            return found;
+        };
+    const std::function<QQuickItem *(QQuickItem *, const QString &)> entry =
+        [&entry](QQuickItem *at, const QString &text) -> QQuickItem * {
+        for (QQuickItem *child : at->childItems()) {
+            if (child->inherits("QQuickMenuItem") && child->property("text").toString() == text)
+                return child;
+            if (QQuickItem *found = entry(child, text))
+                return found;
+        }
+        return nullptr;
+    };
+    QQuickItem *root = window->contentItem();
+
+    QFile note(m_vault->root() + u"/Typed.md"_s);
+    QVERIFY(note.open(QIODevice::WriteOnly));
+    note.write("Words of its own.\n");
+    note.close();
+    QFile pattern(m_vault->root() + u"/Templates/Rune.md"_s);
+    QVERIFY(QDir().mkpath(m_vault->root() + u"/Templates"_s));
+    QVERIFY(pattern.open(QIODevice::WriteOnly));
+    pattern.write("## Carving\n");
+    pattern.close();
+    QFile rune(m_vault->root() + u"/.jot/types/rune.yaml"_s);
+    QVERIFY(rune.open(QIODevice::WriteOnly));
+    rune.write("name: Rune\nicon: box\ncolor: blue\ntemplate: Templates/Rune.md\n");
+    rune.close();
+    QTRY_VERIFY(m_vault->types().find(u"rune"_s));
+    QTRY_VERIFY(m_vault->index()->note(u"Typed.md"_s));
+    m_vault->setCurrent(u"Typed.md"_s);
+
+    // The palette's Set type offers the vault's types; one picked is written in.
+    QMetaObject::invokeMethod(window, "run", Q_ARG(QVariant, u"setType"_s));
+    QQuickItem *pick = nullptr;
+    QTRY_VERIFY((pick = entry(root, u"Rune"_s)) && pick->isVisible());
+    QMetaObject::invokeMethod(pick, "triggered");
+    QTRY_VERIFY(m_vault->currentText().startsWith(u"---\ntype: Rune\n---\n"_s));
+
+    // The note has words, so the template's sections are offered rather than added.
+    QQuickItem *offer = all(root, u"templateOffer"_s).value(0);
+    QVERIFY(offer);
+    QTRY_VERIFY(offer->isVisible());
+    QMetaObject::invokeMethod(all(root, u"addTemplateSections"_s).value(0), "clicked");
+    QTRY_VERIFY(m_vault->currentText().endsWith(u"Words of its own.\n\n## Carving\n"_s));
+    QTRY_VERIFY(!offer->isVisible());
+
+    // The note list shows the type's icon by the note.
+    QTRY_VERIFY(std::ranges::any_of(all(root, u"noteTypeGlyph"_s), [](QQuickItem *glyph) {
+        return glyph->isVisible() && glyph->property("name").toString() == u"box"_s;
+    }));
+
+    // Note types in the palette opens Settings on the vault's types.
+    QMetaObject::invokeMethod(window, "run", Q_ARG(QVariant, u"noteTypes"_s));
+    QTRY_VERIFY(all(root, u"typeRow"_s).size() == m_vault->types().all().size());
+    QTRY_VERIFY(all(root, u"typesSection"_s).value(0)->isVisible());
+    QVERIFY(QFile::remove(rune.fileName()));
+    QTRY_VERIFY(!m_vault->types().find(u"rune"_s));
 }
 
 QTEST_MAIN(TestDialogs)

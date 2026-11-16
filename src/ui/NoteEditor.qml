@@ -279,6 +279,8 @@ Rectangle {
                                        !keptAsText && tableModel.table
     /// A data file, such as JSON or CSV, is edited as plain text, without Markdown's styling.
     readonly property bool dataFile: Vault.currentKind !== "markdown"
+    /// The note's `type:` as written, or empty.
+    readonly property string noteType: dataFile ? "" : (styler.frontMatter.type ?? "")
 
     // The editor holds the text; the vault hears of each change and saves it shortly after.
     // A note loaded from disk replaces the text without counting as an edit.
@@ -420,6 +422,11 @@ Rectangle {
         } else {
             Vault.follow(link)
         }
+    }
+
+    /// Offers to add the template sections of the type the note shown was just given.
+    function offerTypeTemplate() {
+        templateOffer.note = Vault.current
     }
 
     function load() {
@@ -822,6 +829,66 @@ Rectangle {
                         anchors.verticalCenter: parent.verticalCenter
                         text: qsTr("Compare...")
                         onClicked: resolver.openFor(conflictBanner.first)
+                    }
+                }
+            }
+
+            // The type just given to a note that has text of its own offers its template's
+            // sections, rather than adding them unasked.
+            Rectangle {
+                id: templateOffer
+
+                /// The note it was offered for, so it goes when another is shown.
+                property string note
+
+                objectName: "templateOffer"
+                width: parent.width - parent.leftPadding - parent.rightPadding
+                height: offerRow.implicitHeight + 2 * Theme.space3
+                visible: note !== "" && note === Vault.current && root.noteType !== ""
+                radius: Theme.radiusMd
+                color: Theme.tint(Theme.accent, 0.15)
+                border.color: Theme.accent
+
+                Row {
+                    id: offerRow
+
+                    anchors {
+                        left: parent.left
+                        right: parent.right
+                        verticalCenter: parent.verticalCenter
+                        margins: Theme.space3
+                    }
+                    spacing: Theme.space3
+
+                    Text {
+                        width: parent.width - addSections.width - notNow.width - 2 * parent.spacing
+                        anchors.verticalCenter: parent.verticalCenter
+                        wrapMode: Text.Wrap
+                        text: qsTr("%1 has a template with sections this note could take.").arg(
+                                  root.noteType)
+                        textFormat: Text.PlainText
+                        color: Theme.text
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.textSm
+                    }
+                    StickerButton {
+                        id: addSections
+
+                        objectName: "addTemplateSections"
+                        anchors.verticalCenter: parent.verticalCenter
+                        accent: true
+                        text: qsTr("Add the sections")
+                        onClicked: {
+                            templateOffer.note = ""
+                            Vault.applyTypeTemplate()
+                        }
+                    }
+                    StickerButton {
+                        id: notNow
+
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: qsTr("Not now")
+                        onClicked: templateOffer.note = ""
                     }
                 }
             }

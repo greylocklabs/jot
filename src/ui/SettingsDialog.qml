@@ -130,6 +130,10 @@ Popup {
                         "label": qsTr("Tasks")
                     },
                     {
+                        "id": "types",
+                        "label": qsTr("Types")
+                    },
+                    {
                         "id": "sync",
                         "label": qsTr("Sync")
                     },
@@ -262,6 +266,151 @@ Popup {
                         text: Vault.error
                         wrapMode: Text.Wrap
                         color: Theme.danger
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.textSm
+                    }
+                }
+
+                // The vault's note types, each with how many notes have it and what is wrong.
+                Section {
+                    id: typesSection
+
+                    /// How many notes have each type and break it, read when the tab is shown.
+                    readonly property var use: root.tab === "types" && Vault.noteTypes ? Vault.typeUse(
+                                                                                             ) : ({})
+
+                    objectName: "typesSection"
+                    title: qsTr("Note types")
+                    visible: root.tab === "types" && Vault.isOpen
+
+                    Text {
+                        width: parent.width
+                        wrapMode: Text.Wrap
+                        text: qsTr(
+                                  "A note's type gives it an icon, a template and properties of its own, as type: in its front matter names it. Each type is a file in .jot/types.")
+                        color: Theme.textMuted
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.textSm
+                    }
+                    Repeater {
+                        model: Vault.noteTypes
+
+                        Row {
+                            id: typeRow
+
+                            required property var modelData
+                            readonly property var counts: typesSection.use[modelData.id] ?? ({})
+                            property bool confirming: false
+
+                            objectName: "typeRow"
+                            spacing: Theme.space3
+
+                            Glyph {
+                                anchors.verticalCenter: parent.verticalCenter
+                                name: typeRow.modelData.icon || "note"
+                                color: Theme.typeColor(typeRow.modelData.color)
+                            }
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 140
+                                text: typeRow.modelData.name
+                                textFormat: Text.PlainText
+                                elide: Text.ElideRight
+                                color: Theme.text
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.textMd
+                            }
+                            Text {
+                                objectName: "typeCounts"
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 200
+                                text: {
+                                    const parts = [qsTr("%n note(s)", "", typeRow.counts.notes
+                                                        ?? 0)]
+
+                                    if (typeRow.counts.breaking > 0)
+                                        parts.push(qsTr("%n with problems", "",
+                                                        typeRow.counts.breaking))
+                                    if (typeRow.modelData.problems > 0)
+                                        parts.push(qsTr("%n in its file", "",
+                                                        typeRow.modelData.problems))
+                                    return parts.join(", ")
+                                }
+                                color: typeRow.counts.breaking > 0 || typeRow.modelData.problems
+                                       > 0 ? Theme.danger : Theme.textMuted
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.textSm
+                            }
+                            StickerButton {
+                                objectName: "editType"
+                                anchors.verticalCenter: parent.verticalCenter
+                                visible: !typeRow.confirming
+                                text: qsTr("Edit")
+                                onClicked: {
+                                    root.close()
+                                    Vault.openType(typeRow.modelData.id)
+                                }
+                            }
+                            StickerButton {
+                                objectName: "deleteType"
+                                anchors.verticalCenter: parent.verticalCenter
+                                enabled: Vault.writable
+                                text: typeRow.confirming ? qsTr("Delete %1").arg(
+                                                               typeRow.modelData.name) : qsTr(
+                                                               "Delete")
+                                onClicked: {
+                                    if (typeRow.confirming)
+                                        Vault.deleteType(typeRow.modelData.id)
+                                    else
+                                        typeRow.confirming = true
+                                }
+                            }
+                            StickerButton {
+                                anchors.verticalCenter: parent.verticalCenter
+                                visible: typeRow.confirming
+                                text: qsTr("Keep it")
+                                onClicked: typeRow.confirming = false
+                            }
+                        }
+                    }
+                    Row {
+                        spacing: Theme.space3
+
+                        Field {
+                            id: newTypeName
+                            objectName: "newTypeName"
+                            width: 200
+                            placeholderText: qsTr("New type's name")
+                            onAccepted: newTypeButton.clicked()
+                        }
+                        StickerButton {
+                            id: newTypeButton
+                            objectName: "newType"
+                            anchors.verticalCenter: parent.verticalCenter
+                            accent: true
+                            enabled: Vault.writable && newTypeName.text.trim() !== ""
+                            text: qsTr("New type")
+                            onClicked: {
+                                const name = newTypeName.text
+                                newTypeName.text = ""
+                                root.close()
+                                Vault.newType(name)
+                            }
+                        }
+                        StickerButton {
+                            objectName: "restoreTypes"
+                            anchors.verticalCenter: parent.verticalCenter
+                            enabled: Vault.writable
+                            text: qsTr("Restore defaults")
+                            onClicked: Vault.restoreDefaultTypes()
+                        }
+                    }
+                    Text {
+                        width: parent.width
+                        wrapMode: Text.Wrap
+                        text: qsTr(
+                                  "Restore defaults puts back Character, Location, Group, Item, Scene, Chapter and Event as Jot first wrote them, leaving other types alone.")
+                        color: Theme.textMuted
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.textSm
                     }
