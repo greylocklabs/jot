@@ -250,6 +250,11 @@ void TestNoteEditor::warnsOfFrontMatterProblems()
     body->setProperty("text", u"---\ntype: character\nstatus: sleeping\n---\nBody\n"_s);
     QTRY_VERIFY(warning->isVisible());
     QVERIFY(warning->property("tip").toString().contains(u"sleeping"_s));
+    // Typing in the body, under the same front matter, keeps what was found.
+    body->setProperty("text", u"---\ntype: character\nstatus: sleeping\n---\nMore body\n"_s);
+    QTest::qWait(50);
+    QVERIFY(warning->isVisible());
+    QVERIFY(warning->property("tip").toString().contains(u"sleeping"_s));
     body->setProperty("text", u"---\ntype: Charcter\n---\nBody\n"_s);
     QTRY_VERIFY(warning->property("tip").toString().contains(u"Charcter"_s));
     body->setProperty("text", u"---\ntype: Character\nstatus: alive\n---\nBody\n"_s);
