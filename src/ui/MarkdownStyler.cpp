@@ -41,7 +41,10 @@ MarkdownStyler::MarkdownStyler(QObject *parent)
     m_widthSettle->setInterval(150);
     connect(m_widthSettle, &QTimer::timeout, this, &MarkdownStyler::applyLook);
     if (VaultController *vault = VaultController::instance())
-        connect(vault, &VaultController::typesChanged, this, &MarkdownStyler::readFrontMatter);
+        connect(vault, &VaultController::typesChanged, this, [this] {
+            m_typeCheckedHead.clear();
+            readFrontMatter();
+        });
     connect(ThemeController::instance(), &ThemeController::changed, this,
             &MarkdownStyler::applyLook);
 }
@@ -139,6 +142,7 @@ void MarkdownStyler::setDocument(QQuickTextDocument *document)
     }
     m_folds.clear();
     m_foldRanges.clear();
+    m_typeCheckedHead.clear();
     Q_EMIT documentChanged();
     // At once rather than scheduled: the images' places belong to the old text, and asking
     // the new text for them, as the editor would before the update came, reaches past it.
@@ -154,14 +158,25 @@ void MarkdownStyler::readFrontMatter()
     QVariantList problems;
     if (m_document && m_document->textDocument()) {
         const QString text = m_document->textDocument()->toPlainText();
-        if (const NoteParts parts = splitFrontMatter(text); parts.hasFrontMatter)
+        const NoteParts parts = splitFrontMatter(text);
+        if (parts.hasFrontMatter)
             keys = jot::readFrontMatter(parts.frontMatter);
         QList<FrontMatterProblem> found = jot::frontMatterProblems(text);
-        if (const VaultController *vault = VaultController::instance()) {
-            found += noteTypeProblems(text, vault->types(), [vault](const QString &target) {
-                return vault->typeOfLink(target);
-            });
+        // Checking a type asks the index about each link, so it is done again only when the
+        // front matter changes, not on every edit to the body below it.
+        const QString head = text.first(parts.body.data() - text.data());
+        if (head != m_typeCheckedHead) {
+            m_typeCheckedHead = head;
+            m_typeProblems.clear();
+            if (const VaultController *vault = VaultController::instance();
+                vault && parts.hasFrontMatter) {
+                m_typeProblems =
+                    noteTypeProblems(head, vault->types(), [vault](const QString &target) {
+                        return vault->typeOfLink(target);
+                    });
+            }
         }
+        found += m_typeProblems;
         std::ranges::stable_sort(found, {}, &FrontMatterProblem::line);
         for (const FrontMatterProblem &problem : std::as_const(found))
             problems.append(
