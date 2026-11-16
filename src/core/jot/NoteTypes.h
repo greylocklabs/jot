@@ -99,6 +99,8 @@ public:
     static QStringList removeUntouchedStarters(const QString &root);
     /// The ids of the types in the vault at `root`, by their files.
     [[nodiscard]] static QStringList fileIds(const QString &root);
+    /// The starter types restoreStarters() would write, by id: those missing or changed.
+    [[nodiscard]] static QStringList startersToRestore(const QString &root);
     /// Writes each starter type that is missing or differs from Jot's own, leaving other types
     /// as they are.
     static bool restoreStarters(const QString &root, QString *error);

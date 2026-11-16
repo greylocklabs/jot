@@ -780,6 +780,19 @@ void TestDialogs::givesANoteATypeFromTheWindow()
     QMetaObject::invokeMethod(window, "run", Q_ARG(QVariant, u"noteTypes"_s));
     QTRY_VERIFY(all(root, u"typeRow"_s).size() == m_vault->types().all().size());
     QTRY_VERIFY(all(root, u"typesSection"_s).value(0)->isVisible());
+    // Restore defaults asks first, naming the starters it would write over.
+    QFile event(m_vault->root() + u"/.jot/types/event.yaml"_s);
+    QVERIFY(event.open(QIODevice::WriteOnly));
+    event.write("name: Event\nicon: bell\n");
+    event.close();
+    QMetaObject::invokeMethod(all(root, u"restoreTypes"_s).value(0), "clicked");
+    QQuickItem *confirm = all(root, u"restoreTypesConfirm"_s).value(0);
+    QTRY_VERIFY(confirm->isVisible());
+    QCOMPARE(confirm->property("restoring").toStringList(), QStringList{u"Event"_s});
+    QVERIFY(m_vault->defaultTypesToRestore().contains(u"Event"_s));
+    QMetaObject::invokeMethod(all(root, u"restoreTypesNow"_s).value(0), "clicked");
+    QTRY_VERIFY(!confirm->isVisible());
+    QVERIFY(m_vault->defaultTypesToRestore().isEmpty());
     QVERIFY(QFile::remove(rune.fileName()));
     QTRY_VERIFY(!m_vault->types().find(u"rune"_s));
 }

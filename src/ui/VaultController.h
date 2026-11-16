@@ -575,6 +575,9 @@ public:
     Q_INVOKABLE void openType(const QString &id);
     /// Deletes the file of the type `id`. Notes of the type keep their `type:`.
     Q_INVOKABLE bool deleteType(const QString &id);
+    /// The names of the starter types restoreDefaultTypes() would write back: those missing or
+    /// changed.
+    Q_INVOKABLE QStringList defaultTypesToRestore() const;
     /// Writes back the starter types that are missing or changed.
     Q_INVOKABLE bool restoreDefaultTypes();
     /// The vault's note types, as `.jot/types` has them now.
