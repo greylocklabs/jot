@@ -5758,6 +5758,10 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Could not delete the type: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Could not restore the types: %1</source>
         <translation type="unfinished"></translation>
     </message>
