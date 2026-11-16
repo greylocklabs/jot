@@ -8,6 +8,7 @@
 
 #include "jot/FrontMatter.h"
 #include "jot/MarkdownEdit.h"
+#include "jot/NoteTypes.h"
 #include "jot/TextFind.h"
 #include "jot/WritingStats.h"
 
@@ -39,6 +40,8 @@ MarkdownStyler::MarkdownStyler(QObject *parent)
     m_widthSettle->setSingleShot(true);
     m_widthSettle->setInterval(150);
     connect(m_widthSettle, &QTimer::timeout, this, &MarkdownStyler::applyLook);
+    if (VaultController *vault = VaultController::instance())
+        connect(vault, &VaultController::typesChanged, this, &MarkdownStyler::readFrontMatter);
     connect(ThemeController::instance(), &ThemeController::changed, this,
             &MarkdownStyler::applyLook);
 }
@@ -153,7 +156,14 @@ void MarkdownStyler::readFrontMatter()
         const QString text = m_document->textDocument()->toPlainText();
         if (const NoteParts parts = splitFrontMatter(text); parts.hasFrontMatter)
             keys = jot::readFrontMatter(parts.frontMatter);
-        for (const FrontMatterProblem &problem : jot::frontMatterProblems(text))
+        QList<FrontMatterProblem> found = jot::frontMatterProblems(text);
+        if (const VaultController *vault = VaultController::instance()) {
+            found += noteTypeProblems(text, vault->types(), [vault](const QString &target) {
+                return vault->typeOfLink(target);
+            });
+        }
+        std::ranges::stable_sort(found, {}, &FrontMatterProblem::line);
+        for (const FrontMatterProblem &problem : std::as_const(found))
             problems.append(
                 QVariantMap{{u"line"_s, problem.line}, {u"message"_s, problem.message}});
     }

@@ -1,6 +1,7 @@
 #include "jot/JsonSchema.h"
 
 #include "jot/DataTable.h"
+#include "jot/NoteTypes.h"
 
 #include <QDir>
 #include <QFile>
@@ -407,11 +408,36 @@ QString schemaPathFor(const QString &path, const QJsonValue &data)
     return QFileInfo(beside).isFile() ? beside : QString();
 }
 
+QList<DataProblem> checkNoteTypeFile(const QString &path, const QString &text)
+{
+    // The other types too, for what this one extends and links to.
+    const QFileInfo info(path);
+    QHash<QString, QString> files;
+    for (const QFileInfo &other : info.dir().entryInfoList({u"*.yaml"_s}, QDir::Files)) {
+        QFile file(other.filePath());
+        if (other.completeBaseName() != info.completeBaseName() && file.open(QIODevice::ReadOnly))
+            files.insert(other.completeBaseName(), QString::fromUtf8(file.readAll()));
+    }
+    files.insert(info.completeBaseName(), text);
+    QList<DataProblem> problems;
+    for (const TypeFileProblem &problem :
+         NoteTypes::fromFiles(files).problems(info.completeBaseName())) {
+        qsizetype at = 0;
+        for (int line = 1; line < problem.line && at >= 0; ++line)
+            at = text.indexOf(u'\n', at) + 1;
+        problems.append(problemAt(text, std::max<qsizetype>(at, 0), problem.message));
+    }
+    std::ranges::stable_sort(problems, {}, &DataProblem::line);
+    return problems;
+}
+
 QList<DataProblem> checkDataFile(const QString &path, const QString &text)
 {
     const QString kind = dataKindOf(path);
     if (const DataProblem problem = checkData(kind, text); !problem.ok())
         return {problem};
+    if (isNoteTypeFile(path))
+        return checkNoteTypeFile(path, text);
     QString error;
     const std::optional<QJsonValue> data = dataAsJson(kind, text, &error);
     if (!data)
