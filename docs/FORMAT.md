@@ -13,6 +13,7 @@ My Notes/                    the vault: any folder
   .jot/                      Jot's files for the vault, synced with the notes
     vault.yaml               vault settings and the format number
     layout.yaml              notebook emoji, sorts, word targets, favorite and hidden notes
+    types/                   note types, a file for each
     history/                 past versions of notes
     joplin.yaml              what imports from Joplin brought, once there has been one
     todoist.yaml             what imports from Todoist brought, once there has been one
@@ -103,7 +104,7 @@ Keys Jot understands:
 | `tags`    | list of strings           | Tags, nested with `/`: `cast/lead`                     |
 | `aliases` | list of strings           | Other names links and mentions can use                 |
 | `created` | ISO 8601 date-time        | When the note was created                              |
-| `type`    | string                    | The note's type; searchable as `type:` for now         |
+| `type`    | string                    | The note's type, as [Note types](#note-types) names it |
 | `target`  | whole number              | Words the note is meant to reach                       |
 | `lang`    | language code, as `en_GB` | The language spelling is checked in                    |
 | `tasks`   | `off`                     | Keeps the note's checkboxes out of the lists of to-dos |
@@ -253,6 +254,55 @@ Todoist does, and writes the repeat, the date and the priority in that order:
 ```markdown
 - [ ] Call Soren #calls @weekly @due 2026-10-29 14:00 @p1
 ```
+
+## Note types
+
+A note's `type:` names one of the vault's types, each a YAML file in `.jot/types/`. A type says
+what its notes are called and look like, and which keys they have:
+
+```yaml
+# .jot/types/character.yaml
+name: Character
+icon: person
+color: teal
+extends: Entity
+template: Templates/Character.md
+properties:
+  age: number
+  born: date
+  alive: checkbox
+  site: url
+  status: [alive, dead, unknown]
+  nicknames: list text
+  faction: link Group
+  portrait: image
+```
+
+| Key          | Meaning                                                                                            |
+| ------------ | -------------------------------------------------------------------------------------------------- |
+| `name`       | What notes write in `type:`; the file's name without `.yaml` when missing                          |
+| `icon`       | One of Jot's icons, shown with the type's notes                                                    |
+| `color`      | `red`, `orange`, `yellow`, `green`, `teal`, `blue`, `purple`, `pink`, `gray`, or a `#rrggbb` color |
+| `extends`    | Another type, whose properties come first, before this type's own                                  |
+| `template`   | The note a new note of this type is made from, as a path from the vault's root                     |
+| `properties` | Each key the type's notes have, in the order shown, with its kind                                  |
+
+A property's kind is `text`, `number`, `date` (as `2026-11-16`), `checkbox` (`true` or `false`),
+`url`, `image` (an attachment's path), `link` (a note, as `"[[Ash Court]]"`), or a list of
+choices. `link Group` takes only notes of type Group or a type that extends it, and `list`
+before a kind takes a list of them. The longer form `{kind: choice, choices: [a, b], list: true}`
+also works.
+
+Rules:
+
+- A note's `type:` matches a type's name or file name in any case: `character`, `Character`.
+- Values that do not fit the type are warned about, like other front matter problems, and never
+  changed. An empty value, or a key the note leaves out, is fine.
+- A type cannot give its own meaning to a key Jot reads in every note, such as `tags`.
+- A type extending another can give one of its keys another kind.
+- A vault without a `.jot/types` folder is given Jot's starter types the first time Jot opens it:
+  Character, Location, Group, Item, Scene, Chapter and Event. They are the vault's own from then
+  on, to change or delete; Jot puts back the ones changed or deleted only when asked.
 
 ## Notebook appearance and favorites
 

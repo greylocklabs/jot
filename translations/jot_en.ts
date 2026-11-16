@@ -2359,6 +2359,114 @@ Press %1 to make one.</source>
         <source>%1: %2 %3 is out, and this is %4. Update with: %1 upgrade</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>%1 has no choices</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 has %2, which is not kind, list, choices or type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 is %2, which is not a kind: %3</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>empty</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 is %2, with %3 after it, which only a link takes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>A type is keys and values, as name: Character</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>color is one of %1, or as #2a9d8f, not %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 is a key Jot reads in every note</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>properties is keys and kinds, as age: number</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 is one value</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 is not name, icon, color, extends, template or properties</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not write %1: %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 is a number, not %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 is a date, as 2026-11-16, not %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 is true or false, not %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 is a web address, as https://example.org, not %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 is one of %2, not %3</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 links to a %2, and %3 has no type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 links to a %2, and %3 is a %4</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 is also the name of %2.yaml</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>extends %1, and there is no type %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>extends %1, which comes back around to it</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 links to %2, and there is no type %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not make %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>There is no type %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 is one value, not a list</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 is a %2, not a nested value</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>QuickAdd</name>

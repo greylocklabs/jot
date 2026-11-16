@@ -244,6 +244,34 @@ void TestNoteEditor::warnsOfFrontMatterProblems()
 
     body->setProperty("text", u"---\ntarget: 300\n---\nBody\n"_s);
     QTRY_VERIFY(!warning->isVisible());
+
+    // A value the note's type does not take, and a type the vault does not have. The vault
+    // was given the starter types when it opened.
+    body->setProperty("text", u"---\ntype: character\nstatus: sleeping\n---\nBody\n"_s);
+    QTRY_VERIFY(warning->isVisible());
+    QVERIFY(warning->property("tip").toString().contains(u"sleeping"_s));
+    // Typing in the body, under the same front matter, keeps what was found.
+    body->setProperty("text", u"---\ntype: character\nstatus: sleeping\n---\nMore body\n"_s);
+    QTest::qWait(50);
+    QVERIFY(warning->isVisible());
+    QVERIFY(warning->property("tip").toString().contains(u"sleeping"_s));
+    body->setProperty("text", u"---\ntype: Charcter\n---\nBody\n"_s);
+    QTRY_VERIFY(warning->property("tip").toString().contains(u"Charcter"_s));
+    body->setProperty("text", u"---\ntype: Character\nstatus: alive\n---\nBody\n"_s);
+    QTRY_VERIFY(!warning->isVisible());
+
+    // A link to a note of the wrong type, until that note changes type on disk.
+    QFile court(m_root + u"/Ash Court.md"_s);
+    QVERIFY(court.open(QIODevice::WriteOnly));
+    court.write("---\ntype: Group\n---\n");
+    court.close();
+    QTRY_VERIFY(m_vault->index()->note(u"Ash Court.md"_s));
+    body->setProperty("text", u"---\ntype: Character\nhome: \"[[Ash Court]]\"\n---\nBody\n"_s);
+    QTRY_VERIFY(warning->isVisible());
+    QVERIFY(court.open(QIODevice::WriteOnly));
+    court.write("---\ntype: Location\n---\n");
+    court.close();
+    QTRY_VERIFY_WITH_TIMEOUT(!warning->isVisible(), 5000);
 }
 
 void TestNoteEditor::numbersANotesLinesWhenAsked()
