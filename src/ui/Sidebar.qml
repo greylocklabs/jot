@@ -779,6 +779,32 @@ Rectangle {
                 }
             }
         }
+        // A note of one of the vault's types, in this notebook.
+        MenuCard {
+            title: qsTr("New note of a type")
+            enabled: Vault.writable && Vault.noteTypes.length > 0
+            minimumWidth: 160
+
+            Repeater {
+                model: Vault.noteTypes
+
+                MenuEntry {
+                    required property var modelData
+                    text: modelData.name
+                    glyph: modelData.icon || "note"
+                    glyphColor: Theme.typeColor(modelData.color)
+                    onTriggered: {
+                        Vault.showingTasks = false
+                        Vault.showingTrash = false
+                        Vault.dropTag()
+                        Vault.notes.tag = ""
+                        Vault.notes.notebook = notebookMenu.path
+                        if (Vault.newNoteOfType(modelData.name) !== "")
+                            root.noteMade()
+                    }
+                }
+            }
+        }
         // A data file that opens as a table, in this notebook.
         MenuCard {
             title: qsTr("New file")

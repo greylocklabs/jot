@@ -94,6 +94,8 @@ public:
     /// Writes the starter types into the vault at `root` when it has no types folder yet, so a
     /// vault whose types were all deleted keeps none.
     static bool writeStartersIfMissing(const QString &root, QString *error);
+    /// The starter types restoreStarters() would write, by id: those missing or changed.
+    [[nodiscard]] static QStringList startersToRestore(const QString &root);
     /// Writes each starter type that is missing or differs from Jot's own, leaving other types
     /// as they are.
     static bool restoreStarters(const QString &root, QString *error);

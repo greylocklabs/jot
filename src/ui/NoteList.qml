@@ -216,6 +216,10 @@ Rectangle {
             required property string notebook
             required property date modified
             required property string snippet
+            required property string type
+            /// How the note's type looks, or nothing when it has none the vault knows.
+            readonly property var look: type !== "" ? Vault.typeLooks[type.trim().toLowerCase()]
+                                                      ?? null : null
             readonly property bool selected: Vault.current === path
             readonly property bool renaming: root.renamingPath !== "" && root.renamingPath === path
 
@@ -319,10 +323,24 @@ Rectangle {
                 Row {
                     spacing: Theme.space2
 
+                    Glyph {
+                        id: typeGlyph
+
+                        objectName: "noteTypeGlyph"
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: note.look !== null
+                        name: note.look?.icon || "note"
+                        color: Theme.typeColor(note.look?.color ?? "")
+                        stroke: Theme.smallGlyphStroke
+                        implicitWidth: Theme.smallGlyphSize
+                        implicitHeight: Theme.smallGlyphSize
+                        Accessible.name: note.look?.name ?? ""
+                    }
                     Text {
                         id: noteTitle
 
-                        width: note.width - card.leftPadding - card.rightPadding
+                        width: note.width - card.leftPadding - card.rightPadding - (
+                                   typeGlyph.visible ? typeGlyph.width + parent.spacing : 0)
                         text: note.title
                         elide: Text.ElideRight
                         // Hidden under the name being typed, which takes its place.

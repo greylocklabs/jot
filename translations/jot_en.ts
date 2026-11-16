@@ -1010,6 +1010,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>No types yet: make one in Settings, Types</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>No templates yet: notes in %1 are templates</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1103,6 +1111,18 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>Compare...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 has a template with sections this note could take.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Add the sections</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Not now</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2616,6 +2636,10 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Types</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Sync</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2657,6 +2681,79 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>Import from Todoist...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Note types</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>A note&apos;s type gives it an icon, a template and properties of its own, as type: in its front matter names it. Each type is a file in .jot/types.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message numerus="yes">
+        <source>%n note(s)</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n with problems</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n in its file</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Edit</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Delete %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Keep it</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>New type&apos;s name</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>New type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Restore defaults</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Put back %1 as Jot first wrote them? Changes to them go.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Restore</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Keep them</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Restore defaults puts back Character, Location, Group, Item, Scene, Chapter and Event as Jot first wrote them, leaving other types alone.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -3398,6 +3495,10 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>New from template</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>New note of a type</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -4570,6 +4671,10 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>New note of a type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Today&apos;s note</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4687,6 +4792,14 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>Rename the note</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Set the note&apos;s type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Note types</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -5565,6 +5678,10 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>%1, a %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Title, when the file name cannot hold it</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5601,6 +5718,10 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>A type of the vault&apos;s</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Keep its checkboxes out of Tasks</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5626,6 +5747,22 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>%1 (deleted)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not make the note: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not make the type: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not delete the type: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not restore the types: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

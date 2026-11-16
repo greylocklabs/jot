@@ -36,6 +36,10 @@ private Q_SLOTS:
 
     void startsClosed();
     void readsTheVaultsTypes();
+    void setsANotesType();
+    void makesNotesAndTypes();
+    void countsEachTypesNotes();
+    void suggestsATypesKeysAndValues();
     void opensAFolderAndRemembersIt();
     void leavesOutWhatTheVaultIgnores();
     void showsATagsNotesAndToDosTogether();
@@ -321,6 +325,154 @@ void TestVaultController::readsTheVaultsTypes()
     note.close();
     QTRY_VERIFY(m_vault->typeOfLink(u"Mara"_s) == u"Character"_s);
     QCOMPARE(m_vault->typeOfLink(u"Nobody"_s), std::nullopt);
+}
+
+namespace {
+
+void writeFile(const QString &path, const QByteArray &text)
+{
+    QDir().mkpath(QFileInfo(path).path());
+    QFile file(path);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write(text);
+}
+
+} // namespace
+
+void TestVaultController::setsANotesType()
+{
+    writeFile(
+        m_root + u"/Templates/Hero.md"_s,
+        "---\nmood: brave\npublished: false\nnotes:\n---\n## Backstory\n\n## {{title}}'s goals\n");
+    writeFile(m_root + u"/Cast/Mara.md"_s, "---\ntags: [cast]\n---\n");
+    writeFile(m_root + u"/Cast/Soren.md"_s, "Already has words.\n");
+    QVERIFY(m_vault->openPath(m_root));
+    writeFile(m_root + u"/.jot/types/hero.yaml"_s,
+              "name: Hero\ntemplate: Templates/Hero.md\nproperties:\n  mood: text\n");
+    QTRY_VERIFY(m_vault->types().find(u"hero"_s));
+
+    // A note with no text takes the template whole.
+    m_vault->setCurrent(u"Cast/Mara.md"_s);
+    QVariantMap result = m_vault->setType(u"hero"_s);
+    QVERIFY(!result.value(u"offerTemplate"_s).toBool());
+    QCOMPARE(
+        m_vault->currentText(),
+        u"---\ntags: [cast]\ntype: Hero\nmood: brave\npublished: false\nnotes:\n---\n## Backstory\n\n## Mara's goals\n"_s);
+
+    // One with text of its own is offered the sections instead.
+    m_vault->setCurrent(u"Cast/Soren.md"_s);
+    result = m_vault->setType(u"Hero"_s);
+    QVERIFY(result.value(u"offerTemplate"_s).toBool());
+    QCOMPARE(
+        m_vault->currentText(),
+        u"---\ntype: Hero\nmood: brave\npublished: false\nnotes:\n---\nAlready has words.\n"_s);
+    m_vault->applyTypeTemplate();
+    QCOMPARE(m_vault->currentText(), u"---\ntype: Hero\nmood: brave\npublished: "
+                                     u"false\nnotes:\n---\nAlready has words.\n\n## Backstory\n\n"
+                                     u"## Soren's goals\n"_s);
+    // Undone in one step, as any edit is.
+    m_vault->undo();
+    QCOMPARE(
+        m_vault->currentText(),
+        u"---\ntype: Hero\nmood: brave\npublished: false\nnotes:\n---\nAlready has words.\n"_s);
+
+    // A type the vault does not have is written as given, and none takes it away.
+    m_vault->setType(u"Sidekick"_s);
+    QVERIFY(m_vault->currentText().contains(u"type: Sidekick\n"_s));
+    m_vault->setType(QString());
+    QVERIFY(!m_vault->currentText().contains(u"type:"_s));
+}
+
+void TestVaultController::makesNotesAndTypes()
+{
+    writeFile(m_root + u"/Templates/Place.md"_s, "## Where it is\n");
+    QVERIFY(m_vault->openPath(m_root));
+    writeFile(m_root + u"/.jot/types/place.yaml"_s, "name: Place\ntemplate: Templates/Place.md\n");
+    QTRY_VERIFY(m_vault->types().find(u"place"_s));
+
+    const QString made = m_vault->newNoteOfType(u"place"_s);
+    QVERIFY(!made.isEmpty());
+    QCOMPARE(m_vault->current(), made);
+    QVERIFY(m_vault->currentText().contains(u"type: Place\n"_s));
+    QVERIFY(m_vault->currentText().contains(u"## Where it is"_s));
+    QVERIFY(m_vault->newNoteOfType(u"Nothing"_s).isEmpty());
+
+    // A new type is a file, shown to be filled in; one named again is the same file.
+    const QString type = m_vault->newType(u"Story Arc"_s);
+    QCOMPARE(type, u".jot/types/story-arc.yaml"_s);
+    QCOMPARE(m_vault->current(), type);
+    QCOMPARE(m_vault->currentKind(), u"yaml"_s);
+    QVERIFY(m_vault->types().find(u"story arc"_s));
+    QCOMPARE(m_vault->newType(u"story arc"_s), type);
+
+    QVERIFY(m_vault->deleteType(u"story-arc"_s));
+    QVERIFY(!m_vault->types().find(u"Story Arc"_s));
+    QVERIFY(m_vault->current().isEmpty());
+
+    QVERIFY(m_vault->deleteType(u"character"_s));
+    writeFile(m_root + u"/.jot/types/event.yaml"_s, "name: Event\nicon: flag\n");
+    // Restoring names what it would write over first.
+    QCOMPARE(m_vault->defaultTypesToRestore(), (QStringList{u"Character"_s, u"Event"_s}));
+    QVERIFY(m_vault->restoreDefaultTypes());
+    QVERIFY(m_vault->defaultTypesToRestore().isEmpty());
+    QVERIFY(m_vault->types().find(u"character"_s));
+    QVERIFY(m_vault->types().find(u"place"_s));
+    // A type that cannot be made or deleted says so. Root writes in any folder, so not there.
+    if (geteuid() != 0) {
+        const QString types = m_root + u"/.jot/types"_s;
+        QVERIFY(QFile::setPermissions(types, QFileDevice::ReadOwner | QFileDevice::ExeOwner));
+        const QString shown = m_vault->current();
+        QVERIFY(m_vault->newType(u"Locked Out"_s).isEmpty());
+        QVERIFY(m_vault->problem().contains(u"make"_s));
+        QCOMPARE(m_vault->current(), shown);
+        QVERIFY(!m_vault->deleteType(u"place"_s));
+        QVERIFY(m_vault->problem().contains(u"delete"_s));
+        QVERIFY(m_vault->types().find(u"place"_s));
+        QVERIFY(QFile::setPermissions(types, QFileDevice::ReadOwner | QFileDevice::WriteOwner |
+                                                 QFileDevice::ExeOwner));
+    }
+    const QVariantList list = m_vault->noteTypeList();
+    QCOMPARE(list.size(), NoteTypes::starterIds().size() + 1);
+    QCOMPARE(m_vault->typeLooks().value(u"character"_s).toMap().value(u"icon"_s), u"person"_s);
+}
+
+void TestVaultController::countsEachTypesNotes()
+{
+    // A vault of these notes only, as the sample has typed notes of its own.
+    m_root = m_dir->filePath(u"Typed"_s);
+    writeFile(m_root + u"/Mara.md"_s, "---\ntype: Character\nstatus: alive\n---\n");
+    writeFile(m_root + u"/Soren.md"_s, "---\ntype: character\nstatus: asleep\n---\n");
+    writeFile(m_root + u"/Ash Court.md"_s, "---\ntype: Location\n---\n");
+    writeFile(m_root + u"/Lost.md"_s, "---\ntype: Nothing\n---\n");
+    QVERIFY(m_vault->openPath(m_root));
+    const QVariantMap use = m_vault->typeUse();
+    QCOMPARE(use.value(u"character"_s).toMap().value(u"notes"_s).toInt(), 2);
+    QCOMPARE(use.value(u"character"_s).toMap().value(u"breaking"_s).toInt(), 1);
+    QCOMPARE(use.value(u"location"_s).toMap().value(u"notes"_s).toInt(), 1);
+    QVERIFY(!use.contains(u"event"_s));
+}
+
+void TestVaultController::suggestsATypesKeysAndValues()
+{
+    writeFile(m_root + u"/Mara.md"_s, "---\ntype: Character\n---\n");
+    writeFile(m_root + u"/Ash Court.md"_s, "---\ntype: Location\n---\n");
+    writeFile(m_root + u"/Ashes.md"_s, "No type.\n");
+    QVERIFY(m_vault->openPath(m_root));
+    m_vault->setCurrent(u"Mara.md"_s);
+    const auto texts = [this](const QString &kind, const QString &key, const QString &typed) {
+        QStringList found;
+        for (const QVariant &item : m_vault->frontMatterSuggestions(kind, key, typed))
+            found.append(item.toMap().value(u"text"_s).toString());
+        return found;
+    };
+    // The type's own keys come first.
+    QCOMPARE(texts(u"key"_s, {}, {}).mid(0, 3), (QStringList{u"role"_s, u"status"_s, u"born"_s}));
+    QCOMPARE(texts(u"value"_s, u"status"_s, {}),
+             (QStringList{u"alive"_s, u"dead"_s, u"unknown"_s}));
+    // A link offers notes of the type it takes, written as a link.
+    QCOMPARE(texts(u"value"_s, u"home"_s, u"As"_s), QStringList{u"\"[[Ash Court]]\""_s});
+    QCOMPARE(texts(u"value"_s, u"home"_s, u"\"[[As"_s), QStringList{u"\"[[Ash Court]]\""_s});
+    QVERIFY(texts(u"value"_s, u"type"_s, {}).contains(u"Character"_s));
 }
 
 void TestVaultController::switchesToAnotherFolder()
@@ -2056,7 +2208,9 @@ void TestVaultController::suggestsFrontMatterKeysAndValues()
     QCOMPARE(texts(u"key"_s, {}, u"mo"_s), QStringList{u"mood"_s});
     // A key already typed whole is not offered again.
     QVERIFY(!texts(u"key"_s, {}, u"tags"_s).contains(u"tags"_s));
-    QVERIFY(texts(u"value"_s, u"type"_s, {}).contains(u"location"_s));
+    // The vault's types by their names, though notes write them in another case.
+    QVERIFY(texts(u"value"_s, u"type"_s, {}).contains(u"Location"_s));
+    QVERIFY(!texts(u"value"_s, u"type"_s, {}).contains(u"location"_s));
     QCOMPARE(texts(u"value"_s, u"tags"_s, u"foo"_s), QStringList{u"food"_s});
     QCOMPARE(texts(u"value"_s, u"created"_s, {}).first(),
              QDate::currentDate().toString(Qt::ISODate));

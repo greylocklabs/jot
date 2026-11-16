@@ -12,6 +12,11 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   number, a date, a choice or a link to a note of another type. A value that does not fit is
   warned about with the note's other front matter problems. Every vault starts with Character,
   Location, Group, Item, Scene, Chapter and Event, to change or delete.
+- Set a note's type from the command palette, make a note of a type from the palette or a
+  notebook's menu, and see each note's type icon in the note list and in link suggestions.
+  Settings has a Types tab listing each type with how many notes have it and break it, to edit,
+  delete, add or restore the starters. Front matter completion offers a type's keys and values,
+  and a link property offers only notes of its type.
 
 ## 0.7.2 - 2026-11-15
 

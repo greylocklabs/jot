@@ -128,6 +128,12 @@ class VaultController : public QObject
     /// Where the cursor goes in the note just opened: where it was, for one gone back or
     /// forward to, and its start otherwise.
     Q_PROPERTY(int openingCursor READ openingCursor NOTIFY currentChanged)
+    /// How each type looks, `{name, icon, color}`, by its name and id in lower case, so a note's
+    /// `type:` finds it as written in any case.
+    Q_PROPERTY(QVariantMap typeLooks READ typeLooks NOTIFY typesChanged)
+    /// The vault's types, by name, each `{id, name, icon, color, problems}`, problems being how
+    /// many things are wrong in its file.
+    Q_PROPERTY(QVariantList noteTypes READ noteTypeList NOTIFY typesChanged)
     /// Edits not yet written to the note's file.
     Q_PROPERTY(bool unsaved READ unsaved NOTIFY unsavedChanged)
     /// The notes open in tabs, the note shown among them at `tabIndex`. Opening a note puts
@@ -548,6 +554,32 @@ public:
     [[nodiscard]] int tabIndex() const { return m_tabIndex; }
     [[nodiscard]] QString problem() const { return m_problem; }
     [[nodiscard]] const VaultIndex *index() const { return m_index.get(); }
+    [[nodiscard]] QVariantMap typeLooks() const;
+    [[nodiscard]] QVariantList noteTypeList() const;
+    /// For each type by id, `{notes, breaking}`: how many notes have it, and how many of those
+    /// have values it does not take. It reads each typed note, so it is for when it is shown.
+    Q_INVOKABLE QVariantMap typeUse() const;
+    /// Gives the note shown the type `name`, or takes its type away when `name` is empty. The
+    /// type's template gives it the front matter keys it lacks, and its sections too when the
+    /// note has no text yet. Gives `offerTemplate`, true when the template has sections the note
+    /// could take with applyTypeTemplate().
+    Q_INVOKABLE QVariantMap setType(const QString &name);
+    /// Adds the sections of the note's type's template after the note's text.
+    Q_INVOKABLE void applyTypeTemplate();
+    /// Makes a note of type `name` in the notebook shown, from its template when it has one,
+    /// and shows it. Gives its path.
+    Q_INVOKABLE QString newNoteOfType(const QString &name);
+    /// Makes a type called `name` and shows its file. Gives the file's vault path.
+    Q_INVOKABLE QString newType(const QString &name);
+    /// Shows the file of the type `id`.
+    Q_INVOKABLE void openType(const QString &id);
+    /// Deletes the file of the type `id`. Notes of the type keep their `type:`.
+    Q_INVOKABLE bool deleteType(const QString &id);
+    /// The names of the starter types restoreDefaultTypes() would write back: those missing or
+    /// changed.
+    Q_INVOKABLE QStringList defaultTypesToRestore() const;
+    /// Writes back the starter types that are missing or changed.
+    Q_INVOKABLE bool restoreDefaultTypes();
     /// The vault's note types, as `.jot/types` has them now.
     [[nodiscard]] const NoteTypes &types() const { return m_types; }
     /// The type of the note a link written in the note shown leads to, empty when it has none,
@@ -600,6 +632,10 @@ Q_SIGNALS:
     void todoistImportFinished(const QVariantMap &summary);
 
 private:
+    /// Notes to link to as `typed` is, those of `type` or a type extending it, or any note when
+    /// it is empty, as completion offers them.
+    [[nodiscard]] QVariantList typedLinkSuggestions(const QString &type,
+                                                    const QString &typed) const;
     /// Reads the vault's note types again and watches their files.
     void readTypes();
     /// Why an import cannot start now, as a failed summary, or nothing.

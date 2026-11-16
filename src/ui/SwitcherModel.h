@@ -54,6 +54,7 @@ private:
         QString path;
         QString title;
         QString alias;
+        QString type;
     };
     void refill();
 
