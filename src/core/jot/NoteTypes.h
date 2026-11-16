@@ -6,6 +6,7 @@
 #include <QList>
 #include <QString>
 #include <QStringList>
+#include <QVariant>
 
 #include <functional>
 #include <optional>
@@ -127,6 +128,23 @@ private:
 [[nodiscard]] QList<FrontMatterProblem>
 noteTypeProblems(QStringView note, const NoteTypes &types,
                  const std::function<std::optional<QString>(const QString &)> &typeOfLink);
+
+/// A key of a note's front matter as its properties show it.
+struct PropertyRow
+{
+    QString key;
+    /// What the note's type says of the key, or nothing for one it does not name.
+    std::optional<TypeProperty> property;
+    /// As readFrontMatter() gives it, or invalid when the note leaves the key out.
+    QVariant value;
+};
+
+/// A note's properties in the order to show them: `type`, then its type's properties in the
+/// type's order, those the note leaves out too, then the note's other keys as written.
+[[nodiscard]] QList<PropertyRow> propertyRows(QStringView note, const NoteTypes &types);
+
+/// `value` as a link property writes it, `[[Ash Court]]` for `Ash Court`.
+[[nodiscard]] QString linkValue(const QString &value);
 
 /// The note a link value leads to as written, `Ash Court` for `[[Ash Court|the Court]]` or
 /// `Ash Court`, or empty.

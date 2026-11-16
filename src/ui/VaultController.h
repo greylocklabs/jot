@@ -564,6 +564,10 @@ public:
     /// note has no text yet. Gives `offerTemplate`, true when the template has sections the note
     /// could take with applyTypeTemplate().
     Q_INVOKABLE QVariantMap setType(const QString &name);
+    /// Sets the note shown's property `key` to `value` as its properties panel gives it: a bool
+    /// for a checkbox, otherwise text, a list's items separated by commas. A link's notes are
+    /// written as links, and empty text takes the key away.
+    Q_INVOKABLE void setNoteProperty(const QString &key, const QVariant &value);
     /// Adds the sections of the note's type's template after the note's text.
     Q_INVOKABLE void applyTypeTemplate();
     /// Makes a note of type `name` in the notebook shown, from its template when it has one,

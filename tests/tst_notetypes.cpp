@@ -29,6 +29,7 @@ private Q_SLOTS:
     void knowsTypeFiles();
     void checksATypeFileWithTheOthersBesideIt();
     void writesATypeAsItsFileReadsIt();
+    void ordersANotesProperties();
 };
 
 void TestNoteTypes::readsATypesFile()
@@ -375,6 +376,29 @@ properties:
     QCOMPARE(
         NoteTypes::readFile(u"hero"_s, u"extends: x\nproperties:\n  a: text\n"_s).properties.size(),
         1);
+}
+
+void TestNoteTypes::ordersANotesProperties()
+{
+    const NoteTypes types = NoteTypes::fromFiles(
+        {{u"character"_s, u"properties:\n  age: number\n  home: link\n  status: [a, b]\n"_s}});
+    const QString note = u"---\nmood: dark\nstatus: a\ntype: Character\nzeal: high\n---\n"_s;
+    QStringList keys;
+    for (const PropertyRow &row : propertyRows(note, types))
+        keys.append(row.key);
+    // The type, its properties in its order, left out or not, then the rest as written.
+    QCOMPARE(keys,
+             (QStringList{u"type"_s, u"age"_s, u"home"_s, u"status"_s, u"mood"_s, u"zeal"_s}));
+    const QList<PropertyRow> rows = propertyRows(note, types);
+    QVERIFY(!rows.at(1).value.isValid());
+    QCOMPARE(rows.at(3).value.toString(), u"a"_s);
+    QVERIFY(rows.at(3).property);
+    QVERIFY(!rows.at(4).property);
+    QVERIFY(propertyRows(u"No front matter."_s, types).isEmpty());
+
+    QCOMPARE(linkValue(u" Ash Court "_s), u"[[Ash Court]]"_s);
+    QCOMPARE(linkValue(u"[[Ash Court]]"_s), u"[[Ash Court]]"_s);
+    QCOMPARE(linkValue(QString()), QString());
 }
 
 QTEST_GUILESS_MAIN(TestNoteTypes)
