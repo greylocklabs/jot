@@ -405,9 +405,22 @@ void TestVaultController::makesNotesAndTypes()
     QVERIFY(m_vault->current().isEmpty());
 
     QVERIFY(m_vault->deleteType(u"character"_s));
+    writeFile(m_root + u"/.jot/types/event.yaml"_s, "name: Event\nicon: flag\n");
+    // Restoring names what it would write over first.
+    QCOMPARE(m_vault->defaultTypesToRestore(), (QStringList{u"Character"_s, u"Event"_s}));
     QVERIFY(m_vault->restoreDefaultTypes());
+    QVERIFY(m_vault->defaultTypesToRestore().isEmpty());
     QVERIFY(m_vault->types().find(u"character"_s));
     QVERIFY(m_vault->types().find(u"place"_s));
+    // A type that cannot be written says so, and nothing is shown for it.
+    const QString types = m_root + u"/.jot/types"_s;
+    QVERIFY(QFile::setPermissions(types, QFileDevice::ReadOwner | QFileDevice::ExeOwner));
+    const QString shown = m_vault->current();
+    QVERIFY(m_vault->newType(u"Locked Out"_s).isEmpty());
+    QVERIFY(!m_vault->problem().isEmpty());
+    QCOMPARE(m_vault->current(), shown);
+    QVERIFY(QFile::setPermissions(types, QFileDevice::ReadOwner | QFileDevice::WriteOwner |
+                                             QFileDevice::ExeOwner));
     const QVariantList list = m_vault->noteTypeList();
     QCOMPARE(list.size(), NoteTypes::starterIds().size() + 1);
     QCOMPARE(m_vault->typeLooks().value(u"character"_s).toMap().value(u"icon"_s), u"person"_s);

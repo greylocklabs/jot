@@ -29,6 +29,7 @@
 #include <QLocale>
 #include <QProcess>
 #include <QRegularExpression>
+#include <QSaveFile>
 #include <QStandardPaths>
 #include <QSysInfo>
 #include <QTemporaryDir>
@@ -3121,13 +3122,13 @@ QString VaultController::newType(const QString &name)
     QString path = NoteTypes::kFolder + u'/' + id + u".yaml"_s;
     for (int n = 2; QFileInfo::exists(m_vault->absolute(path)); ++n)
         path = NoteTypes::kFolder + u'/' + id + u'-' + QString::number(n) + u".yaml"_s;
-    QFile file(m_vault->absolute(path));
-    if (!file.open(QIODevice::WriteOnly)) {
+    QSaveFile file(m_vault->absolute(path));
+    if (!file.open(QIODevice::WriteOnly) ||
+        file.write((u"name: %1\nproperties:\n"_s.arg(yamlScalar(wanted))).toUtf8()) < 0 ||
+        !file.commit()) {
         setProblem(tr("Could not make the type: %1").arg(file.errorString()));
         return {};
     }
-    file.write((u"name: %1\nproperties:\n"_s.arg(yamlScalar(wanted))).toUtf8());
-    file.close();
     readTypes();
     setCurrent(path);
     return path;
@@ -3151,8 +3152,22 @@ bool VaultController::deleteType(const QString &id)
     return removed;
 }
 
+QStringList VaultController::defaultTypesToRestore() const
+{
+    QStringList names;
+    for (const QString &id :
+         m_vault ? NoteTypes::startersToRestore(m_vault->root()) : QStringList()) {
+        const NoteType starter =
+            NoteTypes::fromFiles({{id, NoteTypes::starterText(id)}}).all().value(0);
+        names.append(starter.name.isEmpty() ? id : starter.name);
+    }
+    return names;
+}
+
 bool VaultController::restoreDefaultTypes()
 {
+    // A type file shown with edits not yet saved keeps them, as the file it was.
+    saveNow();
     QString error;
     if (!m_vault || !NoteTypes::restoreStarters(m_vault->root(), &error)) {
         setProblem(tr("Could not restore the types: %1").arg(error));
