@@ -2553,15 +2553,35 @@ QVariantList VaultController::frontMatterSuggestions(const QString &kind, const 
                                                      const QString &typed)
 {
     QList<std::pair<QString, QString>> offered;
-    if (kind == u"key") {
-        offered = {{u"title"_s, tr("Title, when the file name cannot hold it")},
-                   {u"tags"_s, tr("Tags, as a list")},
-                   {u"aliases"_s, tr("Other names links can use")},
-                   {u"created"_s, tr("When the note was made")},
-                   {u"type"_s, tr("The note's type")},
-                   {u"target"_s, tr("Words the note is to reach")},
-                   {u"lang"_s, tr("The language spelling is checked in")},
-                   {u"tasks"_s, tr("off keeps its checkboxes out of Tasks")}};
+    // The note's own type, whose keys and values come first.
+    const NoteParts parts = splitFrontMatter(m_currentText);
+    const NoteType *type =
+        parts.hasFrontMatter
+            ? m_types.find(readFrontMatter(parts.frontMatter).value(u"type"_s).toString())
+            : nullptr;
+    const TypeProperty *property = type && kind != u"key" ? type->property(key) : nullptr;
+    if (kind == u"key" && type) {
+        for (const TypeProperty &each : type->properties)
+            offered.append({each.key, tr("%1, a %2").arg(type->name, kindName(each.kind))});
+    }
+    if (property && property->kind == TypeProperty::Kind::Link)
+        return typedLinkSuggestions(property->linkType, typed);
+    if (property && property->kind == TypeProperty::Kind::Choice) {
+        for (const QString &choice : property->choices)
+            offered.append({choice, {}});
+    } else if (property && property->kind == TypeProperty::Kind::Checkbox) {
+        offered = {{u"true"_s, {}}, {u"false"_s, {}}};
+    } else if (property && property->kind == TypeProperty::Kind::Date) {
+        offered = {{QDate::currentDate().toString(Qt::ISODate), tr("Today")}};
+    } else if (kind == u"key") {
+        offered += {{u"title"_s, tr("Title, when the file name cannot hold it")},
+                    {u"tags"_s, tr("Tags, as a list")},
+                    {u"aliases"_s, tr("Other names links can use")},
+                    {u"created"_s, tr("When the note was made")},
+                    {u"type"_s, tr("The note's type")},
+                    {u"target"_s, tr("Words the note is to reach")},
+                    {u"lang"_s, tr("The language spelling is checked in")},
+                    {u"tasks"_s, tr("off keeps its checkboxes out of Tasks")}};
         if (!m_frontMatterKeys && m_vault && m_index) {
             QHash<QString, int> uses;
             for (const NoteInfo &note : m_index->notesIn({})) {
@@ -2591,14 +2611,18 @@ QVariantList VaultController::frontMatterSuggestions(const QString &kind, const 
         for (const QString &tag : m_index ? m_index->tags() : QStringList())
             offered.append({tag, {}});
     } else if (key == u"type") {
+        // The vault's types, then any other type notes name.
+        for (const NoteType &each : m_types.all())
+            offered.append({each.name, tr("A type of the vault's")});
         QStringList types;
         for (const NoteInfo &note : m_index ? m_index->notesIn({}) : QList<NoteInfo>()) {
-            if (!note.type.isEmpty() && !types.contains(note.type))
+            if (!note.type.isEmpty() && !m_types.find(note.type) &&
+                !types.contains(note.type, Qt::CaseInsensitive))
                 types.append(note.type);
         }
         types.sort(Qt::CaseInsensitive);
-        for (const QString &type : std::as_const(types))
-            offered.append({type, {}});
+        for (const QString &each : std::as_const(types))
+            offered.append({each, tr("Used in other notes")});
     } else if (key == u"tasks") {
         offered = {{u"off"_s, tr("Keep its checkboxes out of Tasks")},
                    // What a note without the key does.
@@ -2617,6 +2641,28 @@ QVariantList VaultController::frontMatterSuggestions(const QString &kind, const 
         if (text.startsWith(typed, Qt::CaseInsensitive))
             found.append(item);
         else if (typed.size() > 1 && text.contains(typed, Qt::CaseInsensitive))
+            inside.append(item);
+    }
+    found.append(inside);
+    return found.mid(0, 8);
+}
+
+QVariantList VaultController::typedLinkSuggestions(const QString &type, const QString &typed) const
+{
+    // What is typed may start the link already, as "[[Ma.
+    QString words = typed;
+    words.remove(QRegularExpression(u"^[\"']?(\\[\\[)?"_s));
+    QVariantList found;
+    QVariantList inside;
+    for (const NoteInfo &note : m_index ? m_index->shownIn({}) : QList<NoteInfo>()) {
+        if (note.path == m_current || (!type.isEmpty() && !m_types.isA(note.type, type)))
+            continue;
+        const QVariantMap item{{u"text"_s, u"\"[[%1]]\""_s.arg(note.title)},
+                               {u"detail"_s, note.type},
+                               {u"type"_s, note.type}};
+        if (note.title.startsWith(words, Qt::CaseInsensitive))
+            found.append(item);
+        else if (words.size() > 1 && note.title.contains(words, Qt::CaseInsensitive))
             inside.append(item);
     }
     found.append(inside);
@@ -2885,6 +2931,238 @@ void VaultController::readTypes()
         }
     }
     Q_EMIT typesChanged();
+}
+
+QVariantMap VaultController::typeLooks() const
+{
+    QVariantMap looks;
+    for (const NoteType &type : m_types.all()) {
+        const QVariantMap look{
+            {u"name"_s, type.name}, {u"icon"_s, type.icon}, {u"color"_s, type.color}};
+        looks.insert(type.id.toLower(), look);
+        looks.insert(type.name.toLower(), look);
+    }
+    return looks;
+}
+
+QVariantList VaultController::noteTypeList() const
+{
+    QVariantList list;
+    for (const NoteType &type : m_types.all()) {
+        list.append(QVariantMap{{u"id"_s, type.id},
+                                {u"name"_s, type.name},
+                                {u"icon"_s, type.icon},
+                                {u"color"_s, type.color},
+                                {u"problems"_s, m_types.problems(type.id).size()}});
+    }
+    return list;
+}
+
+QVariantMap VaultController::typeUse() const
+{
+    QHash<QString, std::pair<int, int>> use;
+    for (const NoteInfo &note : m_index ? m_index->notesIn({}) : QList<NoteInfo>()) {
+        const NoteType *type = m_types.find(note.type);
+        if (!type)
+            continue;
+        ++use[type->id].first;
+        QString ignored;
+        const std::optional<QString> text = notefile::read(m_vault->absolute(note.path), &ignored);
+        const auto typeOf = [this, &note](const QString &target) -> std::optional<QString> {
+            const QString path = m_index->resolve(target, note.path);
+            const std::optional<NoteInfo> linked =
+                path.isEmpty() ? std::nullopt : m_index->note(path);
+            return linked ? std::optional(linked->type) : std::nullopt;
+        };
+        if (text && !noteTypeProblems(*text, m_types, typeOf).isEmpty())
+            ++use[type->id].second;
+    }
+    QVariantMap counts;
+    for (auto it = use.cbegin(); it != use.cend(); ++it) {
+        counts.insert(it.key(), QVariantMap{{u"notes"_s, it.value().first},
+                                            {u"breaking"_s, it.value().second}});
+    }
+    return counts;
+}
+
+namespace {
+
+/// The template of `type` with its variables filled in for a note titled `title`, or nothing
+/// when it has none that can be read.
+std::optional<QString> typeTemplate(const Vault &vault, const NoteType &type, const QString &title)
+{
+    if (type.templatePath.isEmpty())
+        return std::nullopt;
+    QString ignored;
+    const std::optional<QString> pattern =
+        notefile::read(vault.absolute(type.templatePath), &ignored);
+    if (!pattern)
+        return std::nullopt;
+    return fillTemplate(*pattern, title, QDateTime::currentDateTime());
+}
+
+/// Whether `text` holds nothing but white space.
+bool blank(QStringView text)
+{
+    return std::ranges::all_of(text, [](QChar c) { return c.isSpace(); });
+}
+
+/// `note` with `body` after its text, a blank line between.
+QString withBody(QString note, QStringView body)
+{
+    while (!body.isEmpty() && (body.front() == u'\n' || body.front() == u'\r'))
+        body = body.sliced(1);
+    if (blank(splitFrontMatter(note).body)) {
+        while (note.endsWith(u'\n') && !note.endsWith(u"---\n"))
+            note.chop(1);
+        if (!note.endsWith(u'\n') && !note.isEmpty())
+            note += u'\n';
+        return note + body.toString();
+    }
+    while (note.endsWith(u'\n'))
+        note.chop(1);
+    return note + u"\n\n"_s + body.toString();
+}
+
+} // namespace
+
+QVariantMap VaultController::setType(const QString &name)
+{
+    if (!m_vault || m_current.isEmpty())
+        return {};
+    const NoteType *type = m_types.find(name);
+    const QString written = type ? type->name : name.trimmed();
+    QString text = setFrontMatterKey(m_currentText, u"type"_s,
+                                     written.isEmpty() ? QVariant() : QVariant(written));
+    bool offer = false;
+    if (const std::optional<QString> filled =
+            type ? typeTemplate(*m_vault, *type, currentTitle()) : std::nullopt) {
+        const NoteParts pattern = splitFrontMatter(*filled);
+        const QVariantMap has = readFrontMatter(splitFrontMatter(text).frontMatter);
+        const QVariantMap keys = readFrontMatter(pattern.frontMatter);
+        for (auto it = keys.cbegin(); it != keys.cend(); ++it) {
+            static const QStringList own{u"type"_s, u"title"_s, u"created"_s};
+            if (!has.contains(it.key()) && !own.contains(it.key()) &&
+                !it.value().toString().contains(u'\n'))
+                text = setFrontMatterKey(text, it.key(), it.value());
+        }
+        if (!blank(pattern.body)) {
+            if (blank(splitFrontMatter(text).body))
+                text = withBody(text, pattern.body);
+            else
+                offer = true;
+        }
+    }
+    // As an edit the editor takes in place, so its own undo keeps working.
+    rewriteNote(m_current, [&text](const QString &) { return std::optional(text); }, true);
+    return {{u"offerTemplate"_s, offer}, {u"type"_s, written}};
+}
+
+void VaultController::applyTypeTemplate()
+{
+    const NoteParts parts = splitFrontMatter(m_currentText);
+    const NoteType *type =
+        parts.hasFrontMatter
+            ? m_types.find(readFrontMatter(parts.frontMatter).value(u"type"_s).toString())
+            : nullptr;
+    if (!m_vault || !type)
+        return;
+    if (const std::optional<QString> filled = typeTemplate(*m_vault, *type, currentTitle())) {
+        const QString text = withBody(m_currentText, splitFrontMatter(*filled).body);
+        rewriteNote(m_current, [&text](const QString &) { return std::optional(text); }, true);
+    }
+}
+
+QString VaultController::newNoteOfType(const QString &name)
+{
+    const NoteType *type = m_types.find(name);
+    if (!m_vault || !type || !readyToLeave([this, name] { newNoteOfType(name); }))
+        return {};
+    saveNow();
+    QString error;
+    const QString folder = m_notes.tag().isEmpty() ? m_notes.notebook() : QString();
+    const std::optional<QString> made =
+        m_vault->createNote(folder, tr("Untitled"), QDateTime::currentDateTimeUtc(), &error);
+    std::optional<QString> text =
+        made ? notefile::read(m_vault->absolute(*made), &error) : std::nullopt;
+    if (text) {
+        if (const std::optional<QString> filled =
+                typeTemplate(*m_vault, *type, Vault::titleFromPath(*made)))
+            text = noteFromTemplate(*text, *filled);
+        text = setFrontMatterKey(*text, u"type"_s, type->name);
+    }
+    if (!made || !text || !notefile::write(m_vault->absolute(*made), *text, &error)) {
+        qCWarning(lcVault) << "could not make a note of type" << name << error;
+        setProblem(tr("Could not make the note: %1").arg(error));
+        return {};
+    }
+    m_index->update({*made});
+    reloadModels();
+    setCurrent(*made);
+    return *made;
+}
+
+QString VaultController::newType(const QString &name)
+{
+    const QString wanted = name.trimmed();
+    if (!m_vault || wanted.isEmpty())
+        return {};
+    if (const NoteType *existing = m_types.find(wanted)) {
+        openType(existing->id);
+        return NoteTypes::kFolder + u'/' + existing->id + u".yaml"_s;
+    }
+    QString id = wanted.toLower();
+    id.replace(QRegularExpression(u"[^\\w]+"_s), u"-"_s);
+    id.remove(QRegularExpression(u"^-+|-+$"_s));
+    if (id.isEmpty())
+        id = u"type"_s;
+    const QString folder = m_vault->absolute(NoteTypes::kFolder);
+    QDir().mkpath(folder);
+    QString path = NoteTypes::kFolder + u'/' + id + u".yaml"_s;
+    for (int n = 2; QFileInfo::exists(m_vault->absolute(path)); ++n)
+        path = NoteTypes::kFolder + u'/' + id + u'-' + QString::number(n) + u".yaml"_s;
+    QFile file(m_vault->absolute(path));
+    if (!file.open(QIODevice::WriteOnly)) {
+        setProblem(tr("Could not make the type: %1").arg(file.errorString()));
+        return {};
+    }
+    file.write((u"name: %1\nproperties:\n"_s.arg(yamlScalar(wanted))).toUtf8());
+    file.close();
+    readTypes();
+    setCurrent(path);
+    return path;
+}
+
+void VaultController::openType(const QString &id)
+{
+    if (m_vault && !id.isEmpty())
+        setCurrent(NoteTypes::kFolder + u'/' + id + u".yaml"_s);
+}
+
+bool VaultController::deleteType(const QString &id)
+{
+    if (!m_vault || id.isEmpty())
+        return false;
+    const QString path = NoteTypes::kFolder + u'/' + id + u".yaml"_s;
+    if (m_current == path)
+        setCurrent({});
+    const bool removed = QFile::remove(m_vault->absolute(path));
+    readTypes();
+    return removed;
+}
+
+bool VaultController::restoreDefaultTypes()
+{
+    QString error;
+    if (!m_vault || !NoteTypes::restoreStarters(m_vault->root(), &error)) {
+        setProblem(tr("Could not restore the types: %1").arg(error));
+        return false;
+    }
+    readTypes();
+    // The file shown may be one just written back.
+    if (isNoteTypeFile(m_current))
+        readCurrent();
+    return true;
 }
 
 std::optional<QString> VaultController::typeOfLink(const QString &target) const

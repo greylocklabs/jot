@@ -82,6 +82,21 @@ Popup {
                     }
                     spacing: Theme.space2
 
+                    // A note's type, when it has one the vault knows.
+                    Glyph {
+                        readonly property var look: row.modelData.type
+                                                    ? Vault.typeLooks[row.modelData.type.trim(
+                                                                          ).toLowerCase()] ?? null :
+                                                      null
+
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: look !== null
+                        name: look?.icon || "note"
+                        color: Theme.typeColor(look?.color ?? "")
+                        stroke: Theme.smallGlyphStroke
+                        implicitWidth: Theme.smallGlyphSize
+                        implicitHeight: Theme.smallGlyphSize
+                    }
                     Text {
                         width: Math.min(implicitWidth, parent.width)
                         elide: Text.ElideRight
