@@ -731,6 +731,14 @@ QList<PropertyRow> propertyRows(QStringView note, const NoteTypes &types)
     return rows;
 }
 
+QString linkValueText(const QString &value)
+{
+    const QString trimmed = value.trimmed();
+    if (trimmed.startsWith(u"[[") && trimmed.endsWith(u"]]"))
+        return trimmed.mid(2, trimmed.size() - 4);
+    return trimmed;
+}
+
 QString linkValue(const QString &value)
 {
     const QString trimmed = value.trimmed();
