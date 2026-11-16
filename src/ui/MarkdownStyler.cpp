@@ -140,9 +140,7 @@ void MarkdownStyler::setDocument(QQuickTextDocument *document)
                 &MarkdownStyler::readFrontMatter);
         // Swapping a note in can leave the TextEdit's record of what it drew wrong, so that it
         // draws little or none of the new text; it starts that record over once the swap is done.
-        QObject *edit = document->parent();
-        if (edit && edit->metaObject()->indexOfMethod("q_invalidate()") >= 0)
-            QMetaObject::invokeMethod(edit, "q_invalidate", Qt::QueuedConnection);
+        redrawAll();
     }
     m_folds.clear();
     m_foldRanges.clear();
@@ -186,11 +184,79 @@ void MarkdownStyler::readFrontMatter()
             problems.append(
                 QVariantMap{{u"line"_s, problem.line}, {u"message"_s, problem.message}});
     }
-    if (keys == m_frontMatter && problems == m_frontMatterProblems)
+    QVariantList properties;
+    int bodyStart = 0;
+    if (m_document && m_document->textDocument()) {
+        const QString text = m_document->textDocument()->toPlainText();
+        bodyStart = int(splitFrontMatter(text).body.data() - text.data());
+        const VaultController *vault = VaultController::instance();
+        for (const PropertyRow &row : propertyRows(text, vault ? vault->types() : NoteTypes()))
+            properties.append(propertyMap(row));
+    }
+    if (keys == m_frontMatter && problems == m_frontMatterProblems && properties == m_properties &&
+        bodyStart == m_bodyStart)
         return;
+    const bool moved = bodyStart != m_bodyStart;
     m_frontMatter = keys;
     m_frontMatterProblems = problems;
+    m_properties = properties;
+    m_bodyStart = bodyStart;
     Q_EMIT frontMatterChanged();
+    if (moved && m_hideFrontMatter)
+        applyFolds();
+}
+
+QVariantMap MarkdownStyler::propertyMap(const PropertyRow &row)
+{
+    const auto shown = [&row](const QString &item) {
+        // A link with a comma keeps its brackets, so the list's commas stay apart from it.
+        if (row.property && row.property->kind == TypeProperty::Kind::Link && !item.contains(u','))
+            return linkValueText(item);
+        return item;
+    };
+    QString kind = u"text"_s;
+    QString value;
+    if (row.value.typeId() == QMetaType::QStringList) {
+        QStringList items;
+        for (const QString &item : row.value.toStringList())
+            items.append(shown(item));
+        value = listText(items);
+        kind = u"list"_s;
+    } else {
+        value = shown(row.value.toString());
+        if (value.contains(u'\n'))
+            kind = u"nested"_s;
+    }
+    if (row.key == u"type")
+        kind = u"type"_s;
+    else if (row.property && kind != u"nested")
+        kind = kindName(row.property->kind);
+    return {{u"key"_s, row.key},
+            {u"kind"_s, kind},
+            {u"typed"_s, row.property.has_value()},
+            {u"present"_s, row.value.isValid()},
+            {u"list"_s, row.property ? row.property->list : kind == u"list"},
+            {u"choices"_s, row.property ? row.property->choices : QStringList()},
+            {u"linkType"_s, row.property ? row.property->linkType : QString()},
+            {u"value"_s, value}};
+}
+
+void MarkdownStyler::redrawAll()
+{
+    QObject *edit = m_document ? m_document->parent() : nullptr;
+    if (edit && edit->metaObject()->indexOfMethod("q_invalidate()") >= 0)
+        QMetaObject::invokeMethod(edit, "q_invalidate", Qt::QueuedConnection);
+}
+
+void MarkdownStyler::setHideFrontMatter(bool hide)
+{
+    if (m_hideFrontMatter == hide)
+        return;
+    m_hideFrontMatter = hide;
+    Q_EMIT hideFrontMatterChanged();
+    applyFolds();
+    // The lines below moved, and the pictures drawn over them with them.
+    Q_EMIT imagesChanged();
 }
 
 void MarkdownStyler::flash(int start, int end)
@@ -684,10 +750,12 @@ void MarkdownStyler::applyFolds()
         // Whole lines go, so a section's last line break stays with the line after it.
         QList<QTextBlock> changed;
         for (QTextBlock block = doc->begin(); block.isValid(); block = block.next()) {
-            const bool hidden = std::ranges::any_of(ranges, [&](const auto &range) {
-                return block.position() >= std::get<1>(range) &&
-                       block.position() < std::get<2>(range);
-            });
+            // The front matter, while the properties show it, is hidden as a fold is.
+            const bool hidden = (m_hideFrontMatter && block.position() < m_bodyStart) ||
+                                std::ranges::any_of(ranges, [&](const auto &range) {
+                                    return block.position() >= std::get<1>(range) &&
+                                           block.position() < std::get<2>(range);
+                                });
             if (block.isVisible() == hidden) {
                 block.setVisible(!hidden);
                 changed.append(block);
@@ -695,6 +763,9 @@ void MarkdownStyler::applyFolds()
         }
         for (const QTextBlock &block : std::as_const(changed))
             m_highlighter->rehighlightBlock(block);
+        // The lines below those hidden or shown move, which the TextEdit only redraws whole.
+        if (!changed.isEmpty())
+            redrawAll();
     }
     if (folds == m_folds && ranges == m_foldRanges)
         return;

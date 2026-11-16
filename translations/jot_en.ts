@@ -1462,6 +1462,72 @@ Press %1 to make one.</source>
     </message>
 </context>
 <context>
+    <name>PropertiesPanel</name>
+    <message>
+        <source>Clear</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Clear %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Set in the note&apos;s front matter, in Source</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>None</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Pick a day</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>A %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Items, with commas between</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Hide empty</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message numerus="yes">
+        <source>Show %n empty</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Add a property</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>New property</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Its value</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Add</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>QObject</name>
     <message>
         <source>not valid YAML</source>

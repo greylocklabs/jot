@@ -28,6 +28,7 @@ private Q_SLOTS:
     void readsLinkValues();
     void knowsTypeFiles();
     void checksATypeFileWithTheOthersBesideIt();
+    void ordersANotesProperties();
 };
 
 void TestNoteTypes::readsATypesFile()
@@ -332,6 +333,37 @@ void TestNoteTypes::checksATypeFileWithTheOthersBesideIt()
     QCOMPARE(problems.at(1).line, 5);
     QVERIFY(checkDataFile(path, u"name: Character\n"_s).isEmpty());
     QCOMPARE(checkDataFile(path, u"name: [\n"_s).size(), 1);
+}
+
+void TestNoteTypes::ordersANotesProperties()
+{
+    const NoteTypes types = NoteTypes::fromFiles(
+        {{u"character"_s, u"properties:\n  age: number\n  home: link\n  status: [a, b]\n"_s}});
+    const QString note = u"---\nmood: dark\nstatus: a\ntype: Character\nzeal: high\n---\n"_s;
+    QStringList keys;
+    for (const PropertyRow &row : propertyRows(note, types))
+        keys.append(row.key);
+    // The type, its properties in its order, left out or not, then the rest as written.
+    QCOMPARE(keys,
+             (QStringList{u"type"_s, u"age"_s, u"home"_s, u"status"_s, u"mood"_s, u"zeal"_s}));
+    const QList<PropertyRow> rows = propertyRows(note, types);
+    QVERIFY(!rows.at(1).value.isValid());
+    QCOMPARE(rows.at(3).value.toString(), u"a"_s);
+    QVERIFY(rows.at(3).property);
+    QVERIFY(!rows.at(4).property);
+    QVERIFY(propertyRows(u"No front matter."_s, types).isEmpty());
+
+    QCOMPARE(linkValue(u" Ash Court "_s), u"[[Ash Court]]"_s);
+    QCOMPARE(linkValue(u"[[Ash Court]]"_s), u"[[Ash Court]]"_s);
+    QCOMPARE(linkValue(QString()), QString());
+    // A list shown as text and read back is the same list, commas in items and all.
+    const QStringList items{u"[[Smith, John]]"_s, u"Vey, Mara"_s, u"plain"_s};
+    QCOMPARE(listText(items), u"[[Smith, John]], \"Vey, Mara\", plain"_s);
+    QCOMPARE(listItems(listText(items)), items);
+    QCOMPARE(listItems(u" a ,, b,"_s), (QStringList{u"a"_s, u"b"_s}));
+    QCOMPARE(linkValueText(u"[[Ash Court#History|the Court]]"_s), u"Ash Court#History|the Court"_s);
+    QCOMPARE(linkValue(linkValueText(u"[[Ash Court#History|the Court]]"_s)),
+             u"[[Ash Court#History|the Court]]"_s);
 }
 
 QTEST_GUILESS_MAIN(TestNoteTypes)

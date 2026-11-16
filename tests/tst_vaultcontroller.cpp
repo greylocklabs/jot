@@ -40,6 +40,7 @@ private Q_SLOTS:
     void makesNotesAndTypes();
     void countsEachTypesNotes();
     void suggestsATypesKeysAndValues();
+    void setsPropertiesAsTheirKindsWriteThem();
     void opensAFolderAndRemembersIt();
     void leavesOutWhatTheVaultIgnores();
     void showsATagsNotesAndToDosTogether();
@@ -473,6 +474,39 @@ void TestVaultController::suggestsATypesKeysAndValues()
     QCOMPARE(texts(u"value"_s, u"home"_s, u"As"_s), QStringList{u"\"[[Ash Court]]\""_s});
     QCOMPARE(texts(u"value"_s, u"home"_s, u"\"[[As"_s), QStringList{u"\"[[Ash Court]]\""_s});
     QVERIFY(texts(u"value"_s, u"type"_s, {}).contains(u"Character"_s));
+}
+
+void TestVaultController::setsPropertiesAsTheirKindsWriteThem()
+{
+    writeFile(m_root + u"/Mara.md"_s, "---\ntype: Character\naliases: [M]\n---\nBody.\n");
+    QVERIFY(m_vault->openPath(m_root));
+    m_vault->setCurrent(u"Mara.md"_s);
+    m_vault->setNoteProperty(u"home"_s, u"Ash Court"_s);
+    m_vault->setNoteProperty(u"groups"_s, u"Smiths, [[Ash Court]], "_s);
+    m_vault->setNoteProperty(u"born"_s, u"Year of Ash"_s);
+    m_vault->setNoteProperty(u"aliases"_s, u"M, Vey"_s);
+    m_vault->setNoteProperty(u"alive"_s, true);
+    m_vault->setNoteProperty(u"mood"_s, u"34"_s);
+    QCOMPARE(m_vault->currentText(),
+             u"---\ntype: Character\naliases: [M, Vey]\nhome: \"[[Ash Court]]\"\n"
+             u"groups: [\"[[Smiths]]\", \"[[Ash Court]]\"]\nborn: Year of Ash\n"
+             u"alive: true\nmood: 34\n---\nBody.\n"_s);
+    // A link's alias and heading, shown as written, go back as they were.
+    m_vault->setNoteProperty(u"groups"_s, u"Smiths|the guild, Ash Court#Origins, Ferry"_s);
+    QVERIFY(m_vault->currentText().contains(
+        u"groups: [\"[[Smiths|the guild]]\", \"[[Ash Court#Origins]]\", \"[[Ferry]]\"]\n"_s));
+    // A comma in a title or an item stays inside it.
+    m_vault->setNoteProperty(u"groups"_s, u"[[Smith, John]], Ferry"_s);
+    QVERIFY(m_vault->currentText().contains(u"groups: [\"[[Smith, John]]\", \"[[Ferry]]\"]\n"_s));
+    m_vault->setNoteProperty(u"aliases"_s, u"\"Vey, Mara\", M"_s);
+    QCOMPARE(readFrontMatter(splitFrontMatter(m_vault->currentText()).frontMatter)
+                 .value(u"aliases"_s)
+                 .toStringList(),
+             (QStringList{u"Vey, Mara"_s, u"M"_s}));
+    // Empty takes the key away, and the note is saved as each changes.
+    m_vault->setNoteProperty(u"born"_s, QString());
+    QVERIFY(!m_vault->currentText().contains(u"born"_s));
+    QVERIFY(!m_vault->unsaved());
 }
 
 void TestVaultController::switchesToAnotherFolder()

@@ -6,6 +6,7 @@
 #include <QList>
 #include <QString>
 #include <QStringList>
+#include <QVariant>
 
 #include <functional>
 #include <optional>
@@ -117,6 +118,35 @@ private:
 [[nodiscard]] QList<FrontMatterProblem>
 noteTypeProblems(QStringView note, const NoteTypes &types,
                  const std::function<std::optional<QString>(const QString &)> &typeOfLink);
+
+/// A key of a note's front matter as its properties show it.
+struct PropertyRow
+{
+    QString key;
+    /// What the note's type says of the key, or nothing for one it does not name.
+    std::optional<TypeProperty> property;
+    /// As readFrontMatter() gives it, or invalid when the note leaves the key out.
+    QVariant value;
+};
+
+/// A note's properties in the order to show them: `type`, then its type's properties in the
+/// type's order, those the note leaves out too, then the note's other keys as written.
+[[nodiscard]] QList<PropertyRow> propertyRows(QStringView note, const NoteTypes &types);
+
+/// A link value as the properties show it: as written, without its brackets, so
+/// `[[Ash Court|the Court]]` is `Ash Court|the Court`. linkValue() puts them back.
+[[nodiscard]] QString linkValueText(const QString &value);
+
+/// A list's items as one line of text for the properties to show, with commas between. An
+/// item with a comma of its own is in double quotes, or keeps its brackets as a link.
+[[nodiscard]] QString listText(const QStringList &items);
+
+/// The items of a list typed as listText() writes it, split on the commas outside double quotes
+/// and `[[ ]]`, empty ones left out.
+[[nodiscard]] QStringList listItems(QStringView text);
+
+/// `value` as a link property writes it, `[[Ash Court]]` for `Ash Court`.
+[[nodiscard]] QString linkValue(const QString &value);
 
 /// The note a link value leads to as written, `Ash Court` for `[[Ash Court|the Court]]` or
 /// `Ash Court`, or empty.
