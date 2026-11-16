@@ -3,6 +3,16 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## Unreleased
+
+### Added
+
+- Note types: a note's `type:` names one of the vault's types, each a file in `.jot/types` that
+  gives its notes an icon, a color, a template and properties of their own kinds, such as a
+  number, a date, a choice or a link to a note of another type. A value that does not fit is
+  warned about with the note's other front matter problems. Every vault starts with Character,
+  Location, Group, Item, Scene, Chapter and Event, to change or delete.
+
 ## 0.7.2 - 2026-11-15
 
 ### Fixed

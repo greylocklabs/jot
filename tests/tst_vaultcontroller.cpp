@@ -35,6 +35,7 @@ private Q_SLOTS:
     void cleanup();
 
     void startsClosed();
+    void readsTheVaultsTypes();
     void opensAFolderAndRemembersIt();
     void leavesOutWhatTheVaultIgnores();
     void showsATagsNotesAndToDosTogether();
@@ -286,6 +287,40 @@ void TestVaultController::refusesWhatIsNotAFolder()
     QVERIFY(!m_vault->openPath(file.fileName()));
     QVERIFY(!m_vault->isOpen());
     QVERIFY(!m_vault->error().isEmpty());
+}
+
+void TestVaultController::readsTheVaultsTypes()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    // A vault without types is given the starters.
+    QVERIFY(m_vault->types().find(u"Character"_s));
+    QCOMPARE(QDir(m_root + u"/.jot/types"_s).entryList(QDir::Files).size(),
+             NoteTypes::starterIds().size());
+
+    // A type written, or one deleted, as by a sync, is read again.
+    QSignalSpy changed(m_vault.get(), &VaultController::typesChanged);
+    QFile spell(m_root + u"/.jot/types/spell.yaml"_s);
+    QVERIFY(spell.open(QIODevice::WriteOnly));
+    spell.write("name: Spell\n");
+    spell.close();
+    QTRY_VERIFY(m_vault->types().find(u"spell"_s));
+    QVERIFY(QFile::remove(m_root + u"/.jot/types/item.yaml"_s));
+    QTRY_VERIFY(!m_vault->types().find(u"item"_s));
+    QVERIFY(changed.count() >= 2);
+
+    // An edit to a type's file counts too.
+    QVERIFY(spell.open(QIODevice::WriteOnly));
+    spell.write("name: Charm\n");
+    spell.close();
+    QTRY_VERIFY(m_vault->types().find(u"charm"_s));
+
+    // What a link leads to has the type its note says.
+    QFile note(m_root + u"/Mara.md"_s);
+    QVERIFY(note.open(QIODevice::WriteOnly));
+    note.write("---\ntype: Character\n---\nMara.\n");
+    note.close();
+    QTRY_VERIFY(m_vault->typeOfLink(u"Mara"_s) == u"Character"_s);
+    QCOMPARE(m_vault->typeOfLink(u"Nobody"_s), std::nullopt);
 }
 
 void TestVaultController::switchesToAnotherFolder()

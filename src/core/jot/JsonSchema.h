@@ -46,6 +46,10 @@ struct SchemaProblem
 /// disk are read; a schema on the web is never fetched.
 [[nodiscard]] QString schemaPathFor(const QString &path, const QJsonValue &data);
 
+/// What is wrong with the note type file at `path` holding `text`, read with the other types
+/// beside it, each on its line.
+[[nodiscard]] QList<DataProblem> checkNoteTypeFile(const QString &path, const QString &text);
+
 /// Everything wrong with the data file at `path` holding `text`: where it stops reading, or
 /// what in it breaks its schema, each at its line and column.
 [[nodiscard]] QList<DataProblem> checkDataFile(const QString &path, const QString &text);

@@ -244,6 +244,16 @@ void TestNoteEditor::warnsOfFrontMatterProblems()
 
     body->setProperty("text", u"---\ntarget: 300\n---\nBody\n"_s);
     QTRY_VERIFY(!warning->isVisible());
+
+    // A value the note's type does not take, and a type the vault does not have. The vault
+    // was given the starter types when it opened.
+    body->setProperty("text", u"---\ntype: character\nstatus: sleeping\n---\nBody\n"_s);
+    QTRY_VERIFY(warning->isVisible());
+    QVERIFY(warning->property("tip").toString().contains(u"sleeping"_s));
+    body->setProperty("text", u"---\ntype: Charcter\n---\nBody\n"_s);
+    QTRY_VERIFY(warning->property("tip").toString().contains(u"Charcter"_s));
+    body->setProperty("text", u"---\ntype: Character\nstatus: alive\n---\nBody\n"_s);
+    QTRY_VERIFY(!warning->isVisible());
 }
 
 void TestNoteEditor::numbersANotesLinesWhenAsked()

@@ -12,12 +12,14 @@
 #include "jot/JoplinImport.h"
 #include "jot/Layout.h"
 #include "jot/NoteTrail.h"
+#include "jot/NoteTypes.h"
 #include "jot/TodoistImport.h"
 #include "jot/Vault.h"
 #include "jot/VaultIndex.h"
 #include "jot/VaultWatcher.h"
 
 #include <QFile>
+#include <QFileSystemWatcher>
 #include <QObject>
 #include <QPointer>
 #include <QQmlEngine>
@@ -546,9 +548,16 @@ public:
     [[nodiscard]] int tabIndex() const { return m_tabIndex; }
     [[nodiscard]] QString problem() const { return m_problem; }
     [[nodiscard]] const VaultIndex *index() const { return m_index.get(); }
+    /// The vault's note types, as `.jot/types` has them now.
+    [[nodiscard]] const NoteTypes &types() const { return m_types; }
+    /// The type of the note a link written in the note shown leads to, empty when it has none,
+    /// or nothing when it leads to no note.
+    [[nodiscard]] std::optional<QString> typeOfLink(const QString &target) const;
 
 Q_SIGNALS:
     void openChanged();
+    /// The vault's note types were read again.
+    void typesChanged();
     void errorChanged();
     void notesChanged();
     void currentChanged();
@@ -591,6 +600,8 @@ Q_SIGNALS:
     void todoistImportFinished(const QVariantMap &summary);
 
 private:
+    /// Reads the vault's note types again and watches their files.
+    void readTypes();
     /// Why an import cannot start now, as a failed summary, or nothing.
     std::optional<QVariantMap> importCannotStart(bool dryRun);
     /// Shows what an import wrote: the lists, and the note shown if it changed.
@@ -670,6 +681,10 @@ private:
     std::unique_ptr<Vault> m_vault;
     std::unique_ptr<VaultIndex> m_index;
     std::unique_ptr<VaultWatcher> m_watcher;
+    NoteTypes m_types;
+    /// `.jot/types` and its files, which the vault's watcher leaves out.
+    QFileSystemWatcher m_typesWatcher;
+    QTimer m_typesTimer;
     QPointer<QThread> m_joplinThread;
     QPointer<QThread> m_todoistThread;
     /// The front matter keys the vault's notes use, most used first; read when first wanted,
