@@ -399,6 +399,9 @@ void TestNoteTypes::ordersANotesProperties()
     QCOMPARE(linkValue(u" Ash Court "_s), u"[[Ash Court]]"_s);
     QCOMPARE(linkValue(u"[[Ash Court]]"_s), u"[[Ash Court]]"_s);
     QCOMPARE(linkValue(QString()), QString());
+    QCOMPARE(linkValueText(u"[[Ash Court#History|the Court]]"_s), u"Ash Court#History|the Court"_s);
+    QCOMPARE(linkValue(linkValueText(u"[[Ash Court#History|the Court]]"_s)),
+             u"[[Ash Court#History|the Court]]"_s);
 }
 
 QTEST_GUILESS_MAIN(TestNoteTypes)
