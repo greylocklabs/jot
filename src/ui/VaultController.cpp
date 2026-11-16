@@ -3093,14 +3093,7 @@ QVariantMap VaultController::setType(const QString &name)
     if (const std::optional<QString> filled =
             type ? typeTemplate(*m_vault, *type, currentTitle()) : std::nullopt) {
         const NoteParts pattern = splitFrontMatter(*filled);
-        const QVariantMap has = readFrontMatter(splitFrontMatter(text).frontMatter);
-        const QVariantMap keys = readFrontMatter(pattern.frontMatter);
-        for (auto it = keys.cbegin(); it != keys.cend(); ++it) {
-            static const QStringList own{u"type"_s, u"title"_s, u"created"_s};
-            if (!has.contains(it.key()) && !own.contains(it.key()) &&
-                !it.value().toString().contains(u'\n'))
-                text = setFrontMatterKey(text, it.key(), it.value());
-        }
+        text = withTemplateKeys(text, *filled, {u"type"_s, u"title"_s, u"created"_s});
         if (!blank(pattern.body)) {
             if (blank(splitFrontMatter(text).body))
                 text = withBody(text, pattern.body);
@@ -3201,7 +3194,10 @@ bool VaultController::deleteType(const QString &id)
     const QString path = NoteTypes::kFolder + u'/' + id + u".yaml"_s;
     if (m_current == path)
         setCurrent({});
-    const bool removed = QFile::remove(m_vault->absolute(path));
+    QFile file(m_vault->absolute(path));
+    const bool removed = file.remove();
+    if (!removed)
+        setProblem(tr("Could not delete the type: %1").arg(file.errorString()));
     readTypes();
     return removed;
 }

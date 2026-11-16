@@ -30,4 +30,10 @@ class Vault;
 /// with: the template's front matter keys join the note's, and its body follows.
 [[nodiscard]] QString noteFromTemplate(const QString &made, const QString &filled);
 
+/// `note` with the front matter keys of `filled`, a filled template, that it does not have and
+/// `skip` does not name, copied as the template writes them. Its own keys and text stay as they
+/// are.
+[[nodiscard]] QString withTemplateKeys(const QString &note, const QString &filled,
+                                       const QStringList &skip = {});
+
 } // namespace jot
