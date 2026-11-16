@@ -71,6 +71,14 @@ VaultController::VaultController(Settings &settings, QObject *parent)
             m_syncedPaths.insert(note.path);
         updateSyncPending();
     });
+    // A burst of changes to the types, as when they sync, reads them once.
+    m_typesTimer.setSingleShot(true);
+    m_typesTimer.setInterval(300);
+    connect(&m_typesTimer, &QTimer::timeout, this, &VaultController::readTypes);
+    connect(&m_typesWatcher, &QFileSystemWatcher::directoryChanged, &m_typesTimer,
+            qOverload<>(&QTimer::start));
+    connect(&m_typesWatcher, &QFileSystemWatcher::fileChanged, &m_typesTimer,
+            qOverload<>(&QTimer::start));
     // Saving changes the list's order and titles; a burst of saves reloads it once.
     m_reloadTimer.setSingleShot(true);
     m_reloadTimer.setInterval(800);
@@ -174,6 +182,9 @@ bool VaultController::openPath(const QString &path)
     connect(m_watcher.get(), &VaultWatcher::foldersChanged, this, &VaultController::reloadModels);
     connect(m_watcher.get(), &VaultWatcher::ignoreChanged, this, &VaultController::readIgnoreAgain);
     m_watcher->start();
+    if (QString why; !NoteTypes::writeStartersIfMissing(m_vault->root(), &why))
+        qCWarning(lcVault) << "could not write the starter types:" << why;
+    readTypes();
     m_settings.setVaultPath(m_vault->root());
     // Named for the computer, to read, and by an id of its own, as two can share a name.
     QString computer = QSysInfo::machineHostName();
@@ -212,6 +223,7 @@ void VaultController::close()
     m_watcher.reset();
     m_index.reset();
     m_vault.reset();
+    readTypes();
     m_historyKept.clear();
     m_undo.clear();
     m_redo.clear();
@@ -2852,6 +2864,38 @@ void VaultController::updateSyncPending()
         waiting.append(tr("%1 (deleted)").arg(gone));
     waiting.sort(Qt::CaseInsensitive);
     m_sync.setWaiting(waiting);
+}
+
+void VaultController::readTypes()
+{
+    if (const QStringList watched = m_typesWatcher.files() + m_typesWatcher.directories();
+        !watched.isEmpty())
+        m_typesWatcher.removePaths(watched);
+    m_types = m_vault ? NoteTypes::read(m_vault->root()) : NoteTypes();
+    if (m_vault) {
+        // The folder for files coming and going, and the files for edits to them.
+        const QString folder = m_vault->absolute(NoteTypes::kFolder);
+        if (QFileInfo::exists(folder)) {
+            m_typesWatcher.addPath(folder);
+            const QStringList files = QDir(folder).entryList({u"*.yaml"_s}, QDir::Files);
+            for (const QString &file : files)
+                m_typesWatcher.addPath(folder + u'/' + file);
+        } else {
+            m_typesWatcher.addPath(m_vault->absolute(u".jot"_s));
+        }
+    }
+    Q_EMIT typesChanged();
+}
+
+std::optional<QString> VaultController::typeOfLink(const QString &target) const
+{
+    if (!m_index)
+        return std::nullopt;
+    const QString path = m_index->resolve(target, m_current);
+    const std::optional<NoteInfo> note = path.isEmpty() ? std::nullopt : m_index->note(path);
+    if (!note)
+        return std::nullopt;
+    return note->type;
 }
 
 void VaultController::reloadModels()
