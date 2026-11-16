@@ -424,6 +424,15 @@ Rectangle {
         }
     }
 
+    onReadShownChanged: Qt.callLater(hideFrontMatter)
+
+    /// Hides the front matter while the properties show it, but as text while the cursor is in
+    /// it, as a fold opens when gone into.
+    function hideFrontMatter() {
+        styler.hideFrontMatter = properties.visible && (root.readShown || body.cursorPosition
+                                                        >= styler.bodyStart)
+    }
+
     /// Offers to add the template sections of the type the note shown was just given.
     function offerTypeTemplate() {
         templateOffer.note = Vault.current
@@ -431,6 +440,7 @@ Rectangle {
 
     function load() {
         loading = true
+        properties.adding = false
         // Another note starts at its top, or where it was left when gone back to; the same one,
         // reloaded, stays where it was.
         const another = fresh
@@ -456,7 +466,11 @@ Rectangle {
         if (another)
             keptAsText = !tableModel.table
         loaded = Vault.current
-        body.cursorPosition = Math.min(cursor, body.length)
+        // A note opened at its top starts in its body, below the front matter the properties
+        // show, rather than in it.
+        const top = cursor === 0 && !Settings.sourceMode && styler.properties.length > 0
+              ? styler.bodyStart : 0
+        body.cursorPosition = Math.min(Math.max(cursor, top), body.length)
         title.show(Vault.currentTitle)
         if (another) {
             flick.contentY = 0
@@ -890,6 +904,28 @@ Rectangle {
                         text: qsTr("Not now")
                         onClicked: templateOffer.note = ""
                     }
+                }
+            }
+
+            // The note's properties, in place of the front matter they are written in, which
+            // Source shows as text.
+            PropertiesPanel {
+                id: properties
+
+                // The text below moves at once, before anything scrolls to a place in it.
+                onVisibleChanged: {
+                    page.forceLayout()
+                    Qt.callLater(root.hideFrontMatter)
+                }
+                onHeightChanged: page.forceLayout()
+
+                width: parent.width - parent.leftPadding - parent.rightPadding
+                visible: !root.dataFile && !Settings.sourceMode && rows.length > 0
+                rows: styler.properties
+                readOnly: root.readShown || !Vault.writable
+                onTypePicked: name => {
+                    if (Vault.setType(name).offerTemplate)
+                        root.offerTypeTemplate()
                 }
             }
 
@@ -1416,6 +1452,7 @@ Rectangle {
                 }
 
                 onCursorPositionChanged: {
+                    Qt.callLater(root.hideFrontMatter)
                     // Nothing typed or gone to stays out of sight.
                     if (!root.readShown)
                         root.unfoldAt(cursorPosition)
@@ -1444,6 +1481,13 @@ Rectangle {
                 }
 
                 Keys.onPressed: event => {
+                    // Backspace at the start of the body would join it to the hidden front
+                    // matter's closing line.
+                    if (event.key === Qt.Key_Backspace && styler.hideFrontMatter && selectionStart
+                            === selectionEnd && cursorPosition <= styler.bodyStart) {
+                        event.accepted = true
+                        return
+                    }
                     // While notes are offered for a link, the arrows choose one and
                     // Return or Tab puts it in.
                     if (linkPopup.visible && body.suggestionKey(event, linkPopup, body.pickLink, ()
@@ -1754,6 +1798,7 @@ Rectangle {
                     indentUnit: Settings.indentText
 
                     sourceMode: Settings.sourceMode
+                    onFrontMatterChanged: Qt.callLater(root.hideFrontMatter)
                     focusMode: Settings.focusMode
                     foldComments: margin.room
                     spellcheck: Settings.spellcheck && !root.dataFile
@@ -1778,7 +1823,8 @@ Rectangle {
                         return body.positionToRectangle(Math.max(0, Math.min(at, body.length)))
                     }
 
-                    visible: at >= 0
+                    // Not while the properties show the front matter in its place.
+                    visible: at >= 0 && !styler.hideFrontMatter
                     x: line.x
                     y: line.y
                     text: styler.closingFenceMark
