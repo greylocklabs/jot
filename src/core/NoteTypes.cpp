@@ -623,6 +623,40 @@ QString linkValueTarget(const QString &value)
     return target;
 }
 
+QList<PropertyRow> propertyRows(QStringView note, const NoteTypes &types)
+{
+    const NoteParts parts = splitFrontMatter(note);
+    const QVariantMap keys =
+        parts.hasFrontMatter ? readFrontMatter(parts.frontMatter) : QVariantMap();
+    QList<PropertyRow> rows;
+    if (keys.contains(u"type"_s))
+        rows.append({u"type"_s, std::nullopt, keys.value(u"type"_s)});
+    const NoteType *type = types.find(keys.value(u"type"_s).toString());
+    QSet<QString> shown{u"type"_s};
+    for (const TypeProperty &property : type ? type->properties : QList<TypeProperty>()) {
+        rows.append({property.key, property, keys.value(property.key)});
+        shown.insert(property.key);
+    }
+    const QHash<QString, int> lines = keyLines(note);
+    QStringList rest;
+    for (auto it = keys.cbegin(); it != keys.cend(); ++it) {
+        if (!shown.contains(it.key()))
+            rest.append(it.key());
+    }
+    std::ranges::sort(rest, {}, [&lines](const QString &key) { return lines.value(key); });
+    for (const QString &key : std::as_const(rest))
+        rows.append({key, std::nullopt, keys.value(key)});
+    return rows;
+}
+
+QString linkValue(const QString &value)
+{
+    const QString trimmed = value.trimmed();
+    if (trimmed.isEmpty() || (trimmed.startsWith(u"[[") && trimmed.endsWith(u"]]")))
+        return trimmed;
+    return u"[["_s + trimmed + u"]]"_s;
+}
+
 QList<FrontMatterProblem>
 noteTypeProblems(QStringView note, const NoteTypes &types,
                  const std::function<std::optional<QString>(const QString &)> &typeOfLink)

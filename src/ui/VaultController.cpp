@@ -3052,6 +3052,32 @@ QVariantMap VaultController::setType(const QString &name)
     return {{u"offerTemplate"_s, offer}, {u"type"_s, written}};
 }
 
+void VaultController::setNoteProperty(const QString &key, const QVariant &value)
+{
+    if (!m_vault || m_current.isEmpty() || key.trimmed().isEmpty())
+        return;
+    const QVariantMap keys = readFrontMatter(splitFrontMatter(m_currentText).frontMatter);
+    const NoteType *type = m_types.find(keys.value(u"type"_s).toString());
+    const TypeProperty *property = type ? type->property(key) : nullptr;
+    const bool link = property && property->kind == TypeProperty::Kind::Link;
+    QVariant written;
+    if (value.typeId() == QMetaType::Bool) {
+        written = value;
+    } else if (property ? property->list : keys.value(key).typeId() == QMetaType::QStringList) {
+        QStringList items;
+        for (const QString &item : value.toString().split(u',')) {
+            if (!item.trimmed().isEmpty())
+                items.append(link ? linkValue(item) : item.trimmed());
+        }
+        if (!items.isEmpty())
+            written = items;
+    } else if (const QString text = value.toString().trimmed(); !text.isEmpty()) {
+        written = link ? linkValue(text) : text;
+    }
+    const QString text = setFrontMatterKey(m_currentText, key.trimmed(), written);
+    rewriteNote(m_current, [&text](const QString &) { return std::optional(text); }, true);
+}
+
 void VaultController::applyTypeTemplate()
 {
     const NoteParts parts = splitFrontMatter(m_currentText);

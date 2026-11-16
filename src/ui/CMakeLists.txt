@@ -124,6 +124,7 @@ qt_add_qml_module(jotui
         NotebookTarget.qml
         PickerButton.qml
         PillButton.qml
+        PropertiesPanel.qml
         QuoteBars.qml
         QuickAdd.qml
         TaskSchedule.qml

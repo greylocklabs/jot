@@ -40,6 +40,7 @@ private Q_SLOTS:
     void makesNotesAndTypes();
     void countsEachTypesNotes();
     void suggestsATypesKeysAndValues();
+    void setsPropertiesAsTheirKindsWriteThem();
     void opensAFolderAndRemembersIt();
     void leavesOutWhatTheVaultIgnores();
     void showsATagsNotesAndToDosTogether();
@@ -473,6 +474,27 @@ void TestVaultController::suggestsATypesKeysAndValues()
     QCOMPARE(texts(u"value"_s, u"home"_s, u"As"_s), QStringList{u"\"[[Ash Court]]\""_s});
     QCOMPARE(texts(u"value"_s, u"home"_s, u"\"[[As"_s), QStringList{u"\"[[Ash Court]]\""_s});
     QVERIFY(texts(u"value"_s, u"type"_s, {}).contains(u"Character"_s));
+}
+
+void TestVaultController::setsPropertiesAsTheirKindsWriteThem()
+{
+    writeFile(m_root + u"/Mara.md"_s, "---\ntype: Character\naliases: [M]\n---\nBody.\n");
+    QVERIFY(m_vault->openPath(m_root));
+    m_vault->setCurrent(u"Mara.md"_s);
+    m_vault->setNoteProperty(u"home"_s, u"Ash Court"_s);
+    m_vault->setNoteProperty(u"groups"_s, u"Smiths, [[Ash Court]], "_s);
+    m_vault->setNoteProperty(u"born"_s, u"Year of Ash"_s);
+    m_vault->setNoteProperty(u"aliases"_s, u"M, Vey"_s);
+    m_vault->setNoteProperty(u"alive"_s, true);
+    m_vault->setNoteProperty(u"mood"_s, u"34"_s);
+    QCOMPARE(m_vault->currentText(),
+             u"---\ntype: Character\naliases: [M, Vey]\nhome: \"[[Ash Court]]\"\n"
+             u"groups: [\"[[Smiths]]\", \"[[Ash Court]]\"]\nborn: Year of Ash\n"
+             u"alive: true\nmood: 34\n---\nBody.\n"_s);
+    // Empty takes the key away, and the note is saved as each changes.
+    m_vault->setNoteProperty(u"born"_s, QString());
+    QVERIFY(!m_vault->currentText().contains(u"born"_s));
+    QVERIFY(!m_vault->unsaved());
 }
 
 void TestVaultController::switchesToAnotherFolder()

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "jot/FrontMatter.h"
+#include "jot/NoteTypes.h"
 
 #include <QObject>
 #include <QPointer>
@@ -81,6 +82,16 @@ class MarkdownStyler : public QObject
     Q_PROPERTY(QString closingFenceMark READ closingFenceMark NOTIFY closingFenceChanged)
     /// What is wrong with the front matter, each as `{line, message}`, the line counted from 1.
     Q_PROPERTY(QVariantList frontMatterProblems READ frontMatterProblems NOTIFY frontMatterChanged)
+    /// The note's properties for the panel that shows them, as propertyRows() orders them: each
+    /// `{key, kind, typed, present, list, choices, linkType, value}`. `kind` is a property's kind,
+    /// "type", or for a key the type does not name "text", "list" or "nested"; `value` is text,
+    /// a list's items joined with commas and a link's notes by name.
+    Q_PROPERTY(QVariantList properties READ properties NOTIFY frontMatterChanged)
+    /// Where the note's body starts, after its front matter, or 0 without any.
+    Q_PROPERTY(int bodyStart READ bodyStart NOTIFY frontMatterChanged)
+    /// Hides the front matter's lines, which the properties show instead.
+    Q_PROPERTY(bool hideFrontMatter READ hideFrontMatter WRITE setHideFrontMatter NOTIFY
+                   hideFrontMatterChanged)
 
 public:
     explicit MarkdownStyler(QObject *parent = nullptr);
@@ -102,6 +113,10 @@ public:
     /// Which of `headings`, as headings() gives them, `position` is under: the last starting at
     /// or before it, or -1.
     Q_INVOKABLE static int headingAt(const QVariantList &headings, int position);
+    [[nodiscard]] QVariantList properties() const { return m_properties; }
+    [[nodiscard]] int bodyStart() const { return m_bodyStart; }
+    [[nodiscard]] bool hideFrontMatter() const { return m_hideFrontMatter; }
+    void setHideFrontMatter(bool hide);
     [[nodiscard]] QStringList folded() const { return m_folded; }
     void setFolded(const QStringList &folded);
     [[nodiscard]] QVariantList folds() const { return m_folds; }
@@ -200,6 +215,7 @@ Q_SIGNALS:
     void widthChanged();
     void imagesChanged();
     void frontMatterChanged();
+    void hideFrontMatterChanged();
     void closingFenceChanged();
     void sourceModeChanged();
     void focusModeChanged();
@@ -229,6 +245,10 @@ private:
     QString m_closingFenceMark;
     /// Finds the closing fence again, as the text or the cursor moved.
     void findClosingFence();
+    /// Has the TextEdit draw all of the text again, as its own updates miss lines that moved.
+    void redrawAll();
+    /// A property row as the panel takes it.
+    static QVariantMap propertyMap(const PropertyRow &row);
     QVariantList m_frontMatterProblems;
     /// The note's text up to its body when its type was last checked, and what was found.
     QString m_typeCheckedHead;
@@ -236,6 +256,9 @@ private:
     /// The headings the tables of contents were last drawn with.
     QList<std::pair<int, QString>> m_headings;
     bool m_sourceMode = false;
+    QVariantList m_properties;
+    int m_bodyStart = 0;
+    bool m_hideFrontMatter = false;
     bool m_focusMode = false;
     bool m_foldComments = false;
     QStringList m_folded;
