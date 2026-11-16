@@ -491,6 +491,10 @@ void TestVaultController::setsPropertiesAsTheirKindsWriteThem()
              u"---\ntype: Character\naliases: [M, Vey]\nhome: \"[[Ash Court]]\"\n"
              u"groups: [\"[[Smiths]]\", \"[[Ash Court]]\"]\nborn: Year of Ash\n"
              u"alive: true\nmood: 34\n---\nBody.\n"_s);
+    // A link's alias and heading, shown as written, go back as they were.
+    m_vault->setNoteProperty(u"groups"_s, u"Smiths|the guild, Ash Court#Origins, Ferry"_s);
+    QVERIFY(m_vault->currentText().contains(
+        u"groups: [\"[[Smiths|the guild]]\", \"[[Ash Court#Origins]]\", \"[[Ferry]]\"]\n"_s));
     // Empty takes the key away, and the note is saved as each changes.
     m_vault->setNoteProperty(u"born"_s, QString());
     QVERIFY(!m_vault->currentText().contains(u"born"_s));

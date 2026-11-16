@@ -209,9 +209,8 @@ void MarkdownStyler::readFrontMatter()
 QVariantMap MarkdownStyler::propertyMap(const PropertyRow &row)
 {
     const auto shown = [&row](const QString &item) {
-        return row.property && row.property->kind == TypeProperty::Kind::Link
-                   ? linkValueTarget(item)
-                   : item;
+        return row.property && row.property->kind == TypeProperty::Kind::Link ? linkValueText(item)
+                                                                              : item;
     };
     QString kind = u"text"_s;
     QString value;

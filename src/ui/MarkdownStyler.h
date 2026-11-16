@@ -85,7 +85,7 @@ class MarkdownStyler : public QObject
     /// The note's properties for the panel that shows them, as propertyRows() orders them: each
     /// `{key, kind, typed, present, list, choices, linkType, value}`. `kind` is a property's kind,
     /// "type", or for a key the type does not name "text", "list" or "nested"; `value` is text,
-    /// a list's items joined with commas and a link's notes by name.
+    /// a list's items joined with commas and a link without its brackets.
     Q_PROPERTY(QVariantList properties READ properties NOTIFY frontMatterChanged)
     /// Where the note's body starts, after its front matter, or 0 without any.
     Q_PROPERTY(int bodyStart READ bodyStart NOTIFY frontMatterChanged)

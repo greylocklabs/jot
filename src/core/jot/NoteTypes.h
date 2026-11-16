@@ -133,6 +133,10 @@ struct PropertyRow
 /// type's order, those the note leaves out too, then the note's other keys as written.
 [[nodiscard]] QList<PropertyRow> propertyRows(QStringView note, const NoteTypes &types);
 
+/// A link value as the properties show it: as written, without its brackets, so
+/// `[[Ash Court|the Court]]` is `Ash Court|the Court`. linkValue() puts them back.
+[[nodiscard]] QString linkValueText(const QString &value);
+
 /// `value` as a link property writes it, `[[Ash Court]]` for `Ash Court`.
 [[nodiscard]] QString linkValue(const QString &value);
 
