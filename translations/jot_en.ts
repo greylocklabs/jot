@@ -2741,6 +2741,18 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Put back %1 as Jot first wrote them? Changes to them go.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Restore</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Keep them</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Restore defaults puts back Character, Location, Group, Item, Scene, Chapter and Event as Jot first wrote them, leaving other types alone.</source>
         <translation type="unfinished"></translation>
     </message>

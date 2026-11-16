@@ -276,8 +276,11 @@ Popup {
                     id: typesSection
 
                     /// How many notes have each type and break it, read when the tab is shown.
-                    readonly property var use: root.tab === "types" && Vault.noteTypes ? Vault.typeUse(
-                                                                                             ) : ({})
+                    // Read again as the types change, but only while they are shown, as it reads
+                    // each typed note.
+                    readonly property var use: root.opened && root.tab === "types"
+                                               && Vault.noteTypes.length >= 0 ? Vault.typeUse() : (
+                                                                                    {})
 
                     objectName: "typesSection"
                     title: qsTr("Note types")
@@ -402,7 +405,49 @@ Popup {
                             anchors.verticalCenter: parent.verticalCenter
                             enabled: Vault.writable
                             text: qsTr("Restore defaults")
-                            onClicked: Vault.restoreDefaultTypes()
+                            onClicked: restoreConfirm.restoring = Vault.defaultTypesToRestore()
+                        }
+                    }
+                    // Restoring writes over the starters as changed, so it says which first.
+                    Row {
+                        id: restoreConfirm
+
+                        property var restoring: []
+
+                        objectName: "restoreTypesConfirm"
+                        visible: restoring.length > 0
+                        spacing: Theme.space3
+
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: Math.min(implicitWidth, typesSection.width - restoreNow.width
+                                            - keepTypes.width - 2 * parent.spacing)
+                            wrapMode: Text.Wrap
+                            text: qsTr(
+                                      "Put back %1 as Jot first wrote them? Changes to them go.").arg(
+                                      restoreConfirm.restoring.join(", "))
+                            textFormat: Text.PlainText
+                            color: Theme.text
+                            font.family: Theme.fontFamily
+                            font.pixelSize: Theme.textSm
+                        }
+                        StickerButton {
+                            id: restoreNow
+
+                            objectName: "restoreTypesNow"
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: qsTr("Restore")
+                            onClicked: {
+                                restoreConfirm.restoring = []
+                                Vault.restoreDefaultTypes()
+                            }
+                        }
+                        StickerButton {
+                            id: keepTypes
+
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: qsTr("Keep them")
+                            onClicked: restoreConfirm.restoring = []
                         }
                     }
                     Text {
