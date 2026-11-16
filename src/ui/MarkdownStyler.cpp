@@ -40,11 +40,15 @@ MarkdownStyler::MarkdownStyler(QObject *parent)
     m_widthSettle->setSingleShot(true);
     m_widthSettle->setInterval(150);
     connect(m_widthSettle, &QTimer::timeout, this, &MarkdownStyler::applyLook);
-    if (VaultController *vault = VaultController::instance())
-        connect(vault, &VaultController::typesChanged, this, [this] {
+    if (VaultController *vault = VaultController::instance()) {
+        // What a type allows changes with the types, and what a link leads to with the notes.
+        const auto checkAgain = [this] {
             m_typeCheckedHead.clear();
             readFrontMatter();
-        });
+        };
+        connect(vault, &VaultController::typesChanged, this, checkAgain);
+        connect(vault, &VaultController::notesChanged, this, checkAgain);
+    }
     connect(ThemeController::instance(), &ThemeController::changed, this,
             &MarkdownStyler::applyLook);
 }
