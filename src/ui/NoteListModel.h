@@ -33,6 +33,8 @@ public:
         NotebookRole,
         ModifiedRole,
         SnippetRole,
+        /// The note's `type:` as written, or empty.
+        TypeRole,
     };
 
     explicit NoteListModel(QObject *parent = nullptr);
@@ -74,6 +76,7 @@ private:
         QString title;
         qint64 modified = 0;
         QString snippet;
+        QString type;
     };
     void refill();
 

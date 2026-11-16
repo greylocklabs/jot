@@ -39,7 +39,7 @@ void SwitcherModel::refill()
         for (const NoteInfo &note : std::as_const(m_notes)) {
             if (m_rows.size() == kLimit)
                 break;
-            m_rows.append({note.path, note.title, {}});
+            m_rows.append({note.path, note.title, {}, note.type});
         }
     } else {
         struct Scored
@@ -65,7 +65,7 @@ void SwitcherModel::refill()
                 alias.clear();
             }
             if (best)
-                scored.append({*best, {note.path, note.title, alias}});
+                scored.append({*best, {note.path, note.title, alias, note.type}});
         }
         std::ranges::stable_sort(
             scored, [](const Scored &a, const Scored &b) { return a.score > b.score; });
@@ -97,6 +97,7 @@ QVariantList SwitcherModel::suggestions(int limit) const
             {u"text"_s, row.title},
             {u"detail"_s, row.alias.isEmpty() ? notebook : row.alias},
             {u"path"_s, row.path},
+            {u"type"_s, row.type},
         });
     }
     return items;
