@@ -259,6 +259,19 @@ void TestNoteEditor::warnsOfFrontMatterProblems()
     QTRY_VERIFY(warning->property("tip").toString().contains(u"Charcter"_s));
     body->setProperty("text", u"---\ntype: Character\nstatus: alive\n---\nBody\n"_s);
     QTRY_VERIFY(!warning->isVisible());
+
+    // A link to a note of the wrong type, until that note changes type on disk.
+    QFile court(m_root + u"/Ash Court.md"_s);
+    QVERIFY(court.open(QIODevice::WriteOnly));
+    court.write("---\ntype: Group\n---\n");
+    court.close();
+    QTRY_VERIFY(m_vault->index()->note(u"Ash Court.md"_s));
+    body->setProperty("text", u"---\ntype: Character\nhome: \"[[Ash Court]]\"\n---\nBody\n"_s);
+    QTRY_VERIFY(warning->isVisible());
+    QVERIFY(court.open(QIODevice::WriteOnly));
+    court.write("---\ntype: Location\n---\n");
+    court.close();
+    QTRY_VERIFY_WITH_TIMEOUT(!warning->isVisible(), 5000);
 }
 
 void TestNoteEditor::numbersANotesLinesWhenAsked()
