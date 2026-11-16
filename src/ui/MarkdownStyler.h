@@ -1,5 +1,7 @@
 #pragma once
 
+#include "jot/FrontMatter.h"
+
 #include <QObject>
 #include <QPointer>
 #include <QQmlEngine>
@@ -228,6 +230,9 @@ private:
     /// Finds the closing fence again, as the text or the cursor moved.
     void findClosingFence();
     QVariantList m_frontMatterProblems;
+    /// The note's text up to its body when its type was last checked, and what was found.
+    QString m_typeCheckedHead;
+    QList<FrontMatterProblem> m_typeProblems;
     /// The headings the tables of contents were last drawn with.
     QList<std::pair<int, QString>> m_headings;
     bool m_sourceMode = false;
