@@ -44,6 +44,7 @@ MarkdownStyler::MarkdownStyler(QObject *parent)
         // What a type allows changes with the types, and what a link leads to with the notes.
         const auto checkAgain = [this] {
             m_typeCheckedHead.clear();
+            m_typeProblems.clear();
             readFrontMatter();
         };
         connect(vault, &VaultController::typesChanged, this, checkAgain);
@@ -147,6 +148,7 @@ void MarkdownStyler::setDocument(QQuickTextDocument *document)
     m_folds.clear();
     m_foldRanges.clear();
     m_typeCheckedHead.clear();
+    m_typeProblems.clear();
     Q_EMIT documentChanged();
     // At once rather than scheduled: the images' places belong to the old text, and asking
     // the new text for them, as the editor would before the update came, reaches past it.

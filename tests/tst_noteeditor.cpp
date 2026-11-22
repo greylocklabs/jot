@@ -260,6 +260,13 @@ void TestNoteEditor::warnsOfFrontMatterProblems()
     body->setProperty("text", u"---\ntype: Character\nstatus: alive\n---\nBody\n"_s);
     QTRY_VERIFY(!warning->isVisible());
 
+    // Another note, with no front matter, has none of this one's problems.
+    body->setProperty("text", u"---\ntype: character\nstatus: sleeping\n---\nBody\n"_s);
+    QTRY_VERIFY(warning->isVisible());
+    m_vault->setCurrent(u"Inbox/Groceries.md"_s);
+    QTRY_VERIFY(!warning->isVisible());
+    m_vault->setCurrent(u"Welcome.md"_s);
+
     // A link to a note of the wrong type, until that note changes type on disk.
     QFile court(m_root + u"/Ash Court.md"_s);
     QVERIFY(court.open(QIODevice::WriteOnly));
