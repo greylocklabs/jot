@@ -28,6 +28,7 @@ private Q_SLOTS:
     void readsLinkValues();
     void knowsTypeFiles();
     void checksATypeFileWithTheOthersBesideIt();
+    void writesATypeAsItsFileReadsIt();
 };
 
 void TestNoteTypes::readsATypesFile()
@@ -145,6 +146,8 @@ properties:
     QCOMPARE(types.find(u"A"_s)->id, u"a"_s);
     // A property that cannot be read is left out; the rest of the type is still there.
     QVERIFY(types.find(u"A"_s)->property(u"kin"_s));
+    // A choice with none to choose yet stays one, to fill in.
+    QCOMPARE(types.find(u"A"_s)->property(u"mood"_s)->kind, TypeProperty::Kind::Choice);
     QVERIFY(!types.find(u"A"_s)->property(u"age"_s));
 }
 
@@ -332,6 +335,46 @@ void TestNoteTypes::checksATypeFileWithTheOthersBesideIt()
     QCOMPARE(problems.at(1).line, 5);
     QVERIFY(checkDataFile(path, u"name: Character\n"_s).isEmpty());
     QCOMPARE(checkDataFile(path, u"name: [\n"_s).size(), 1);
+}
+
+void TestNoteTypes::writesATypeAsItsFileReadsIt()
+{
+    NoteType type;
+    type.id = u"hero"_s;
+    type.name = u"Hero"_s;
+    type.icon = u"person"_s;
+    type.color = u"teal"_s;
+    type.extends = u"Character"_s;
+    type.templatePath = u"Templates/Hero.md"_s;
+    using Kind = TypeProperty::Kind;
+    type.properties = {{u"age"_s, Kind::Number, false, {}, {}},
+                       {u"mood"_s, Kind::Choice, false, {u"glad"_s, u"sad, very"_s}, {}},
+                       {u"tags of mine"_s, Kind::Choice, true, {u"a"_s, u"b"_s}, {}},
+                       {u"rivals"_s, Kind::Link, true, {}, u"Story Arc"_s},
+                       {u"home"_s, Kind::Link, false, {}, {}}};
+    const QString text = NoteTypes::fileText(type);
+    QCOMPARE(text, uR"(name: Hero
+icon: person
+color: teal
+extends: Character
+template: Templates/Hero.md
+properties:
+  age: number
+  mood: [glad, "sad, very"]
+  tags of mine: {kind: choice, choices: [a, b], list: true}
+  rivals: list link Story Arc
+  home: link
+)"_s);
+    const NoteType read = NoteTypes::readFile(u"hero"_s, text);
+    QCOMPARE(read.name, type.name);
+    QCOMPARE(read.icon, type.icon);
+    QCOMPARE(read.extends, type.extends);
+    QCOMPARE(read.templatePath, type.templatePath);
+    QCOMPARE(read.properties, type.properties);
+    // What it extends is left out of the file's own reading.
+    QCOMPARE(
+        NoteTypes::readFile(u"hero"_s, u"extends: x\nproperties:\n  a: text\n"_s).properties.size(),
+        1);
 }
 
 QTEST_GUILESS_MAIN(TestNoteTypes)

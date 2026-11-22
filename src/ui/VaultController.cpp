@@ -3155,10 +3155,8 @@ QString VaultController::newType(const QString &name)
     const QString wanted = name.trimmed();
     if (!m_vault || wanted.isEmpty())
         return {};
-    if (const NoteType *existing = m_types.find(wanted)) {
-        openType(existing->id);
+    if (const NoteType *existing = m_types.find(wanted))
         return NoteTypes::kFolder + u'/' + existing->id + u".yaml"_s;
-    }
     QString id = wanted.toLower();
     id.replace(QRegularExpression(u"[^\\w]+"_s), u"-"_s);
     id.remove(QRegularExpression(u"^-+|-+$"_s));
@@ -3177,7 +3175,6 @@ QString VaultController::newType(const QString &name)
         return {};
     }
     readTypes();
-    setCurrent(path);
     return path;
 }
 
@@ -3200,6 +3197,106 @@ bool VaultController::deleteType(const QString &id)
         setProblem(tr("Could not delete the type: %1").arg(file.errorString()));
     readTypes();
     return removed;
+}
+
+QVariantMap VaultController::typeForm(const QString &id) const
+{
+    const NoteType type = NoteTypes::readFile(id, typeFileText(id));
+    QVariantList properties;
+    for (const TypeProperty &property : type.properties) {
+        properties.append(QVariantMap{{u"key"_s, property.key},
+                                      {u"kind"_s, kindName(property.kind)},
+                                      {u"list"_s, property.list},
+                                      {u"choices"_s, property.choices.join(u", "_s)},
+                                      {u"linkType"_s, property.linkType}});
+    }
+    return {{u"id"_s, id},
+            {u"name"_s, type.name},
+            {u"icon"_s, type.icon},
+            {u"color"_s, type.color},
+            {u"extends"_s, type.extends},
+            {u"template"_s, type.templatePath},
+            {u"properties"_s, properties}};
+}
+
+bool VaultController::saveTypeForm(const QString &id, const QVariantMap &form)
+{
+    if (!m_vault || id.isEmpty())
+        return false;
+    NoteType type;
+    type.id = id;
+    type.name = form.value(u"name"_s).toString().trimmed();
+    type.icon = form.value(u"icon"_s).toString();
+    type.color = form.value(u"color"_s).toString();
+    type.extends = form.value(u"extends"_s).toString();
+    type.templatePath = form.value(u"template"_s).toString();
+    const QStringList kinds = propertyKinds();
+    for (const QVariant &each : form.value(u"properties"_s).toList()) {
+        const QVariantMap row = each.toMap();
+        TypeProperty property;
+        property.key = row.value(u"key"_s).toString().trimmed();
+        if (property.key.isEmpty())
+            continue;
+        property.kind = TypeProperty::Kind(
+            std::max<qsizetype>(0, kinds.indexOf(row.value(u"kind"_s).toString())));
+        property.list = row.value(u"list"_s).toBool();
+        property.linkType = row.value(u"linkType"_s).toString().trimmed();
+        for (const QString &choice : row.value(u"choices"_s).toString().split(u',')) {
+            if (!choice.trimmed().isEmpty())
+                property.choices.append(choice.trimmed());
+        }
+        type.properties.append(property);
+    }
+    const NoteType *before = m_types.find(id);
+    const QString oldName = before ? before->name : QString();
+    if (!writeTypeFile(id, NoteTypes::fileText(type)))
+        return false;
+    // The type's notes say its name, so they follow it to the new one.
+    if (!oldName.isEmpty() && !type.name.isEmpty() &&
+        oldName.compare(type.name, Qt::CaseInsensitive) != 0 && m_index) {
+        for (const NoteInfo &note : m_index->notesIn({})) {
+            if (note.type.trimmed().compare(oldName, Qt::CaseInsensitive) != 0)
+                continue;
+            const QString name = type.name;
+            rewriteNote(
+                note.path,
+                [&name](const QString &text) {
+                    return std::optional(setFrontMatterKey(text, u"type"_s, name));
+                },
+                false);
+        }
+    }
+    return true;
+}
+
+QString VaultController::typeFileText(const QString &id) const
+{
+    if (!m_vault || id.isEmpty())
+        return {};
+    QFile file(m_vault->absolute(NoteTypes::kFolder + u'/' + id + u".yaml"_s));
+    return file.open(QIODevice::ReadOnly) ? QString::fromUtf8(file.readAll()) : QString();
+}
+
+bool VaultController::writeTypeFile(const QString &id, const QString &text)
+{
+    if (!m_vault || id.isEmpty())
+        return false;
+    QDir().mkpath(m_vault->absolute(NoteTypes::kFolder));
+    QSaveFile file(m_vault->absolute(NoteTypes::kFolder + u'/' + id + u".yaml"_s));
+    if (!file.open(QIODevice::WriteOnly) || file.write(text.toUtf8()) < 0 || !file.commit()) {
+        setProblem(tr("Could not write the type: %1").arg(file.errorString()));
+        return false;
+    }
+    readTypes();
+    return true;
+}
+
+QStringList VaultController::propertyKinds()
+{
+    QStringList kinds;
+    for (int kind = 0; kind <= int(TypeProperty::Kind::Image); ++kind)
+        kinds.append(kindName(TypeProperty::Kind(kind)));
+    return kinds;
 }
 
 QStringList VaultController::defaultTypesToRestore() const

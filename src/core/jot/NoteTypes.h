@@ -74,6 +74,11 @@ public:
     [[nodiscard]] static NoteTypes read(const QString &root);
     /// Reads `files`, each a type's id and its file's text, as one vault's types.
     [[nodiscard]] static NoteTypes fromFiles(const QHash<QString, QString> &files);
+    /// The type the file `text` describes on its own: its own properties, without those of a
+    /// type it extends.
+    [[nodiscard]] static NoteType readFile(const QString &id, const QString &text);
+    /// `type`'s own fields and properties as its file writes them, as readFile() reads them.
+    [[nodiscard]] static QString fileText(const NoteType &type);
 
     /// Every type, by name.
     [[nodiscard]] QList<NoteType> all() const { return m_types; }

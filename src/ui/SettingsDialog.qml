@@ -27,6 +27,12 @@ Popup {
     /// Which group of settings shows: "general", "writing", "tasks", "sync", "appearance",
     /// "keyboard" or "developer".
     property string tab: "general"
+
+    // Types deleted and the one being edited belong to this showing of the dialog.
+    onClosed: {
+        typesSection.deleted = []
+        typesSection.editing = ""
+    }
     /// A sync, or a check of where to sync, is under way: what would start or stop one waits.
     readonly property bool syncBusy: Vault.sync.syncing || Vault.sync.checking
     /// The tab list's width: its longest label's.
@@ -282,6 +288,16 @@ Popup {
                                                && Vault.noteTypes.length >= 0 ? Vault.typeUse() : (
                                                                                     {})
 
+                    /// The type being edited, by id, or none.
+                    property string editing
+                    /// Types deleted while the tab is shown, with their files' text, to bring back.
+                    property var deleted: []
+                    /// The vault's types and those just deleted, in their places by name.
+                    readonly property var listed: Vault.noteTypes.concat(deleted.filter(gone =>
+                    !Vault.noteTypes.some(type => type.id === gone.id))).sort((a, b)
+                                                                              => a.name.localeCompare(
+                                                                                     b.name))
+
                     objectName: "typesSection"
                     title: qsTr("Note types")
                     visible: root.tab === "types" && Vault.isOpen
@@ -296,83 +312,120 @@ Popup {
                         font.pixelSize: Theme.textSm
                     }
                     Repeater {
-                        model: Vault.noteTypes
+                        model: typesSection.listed
 
-                        Row {
+                        Column {
                             id: typeRow
 
                             required property var modelData
                             readonly property var counts: typesSection.use[modelData.id] ?? ({})
-                            property bool confirming: false
+                            readonly property bool deleted: modelData.deleted === true
+                            readonly property bool editing: typesSection.editing === modelData.id
+                                                            && !deleted
 
                             objectName: "typeRow"
+                            width: typesSection.width
                             spacing: Theme.space3
 
-                            Glyph {
-                                anchors.verticalCenter: parent.verticalCenter
-                                name: typeRow.modelData.icon || "note"
-                                color: Theme.typeColor(typeRow.modelData.color)
-                            }
-                            Text {
-                                anchors.verticalCenter: parent.verticalCenter
-                                width: 140
-                                text: typeRow.modelData.name
-                                textFormat: Text.PlainText
-                                elide: Text.ElideRight
-                                color: Theme.text
-                                font.family: Theme.fontFamily
-                                font.pixelSize: Theme.textMd
-                            }
-                            Text {
-                                objectName: "typeCounts"
-                                anchors.verticalCenter: parent.verticalCenter
-                                width: 200
-                                text: {
-                                    const parts = [qsTr("%n note(s)", "", typeRow.counts.notes
-                                                        ?? 0)]
+                            Row {
+                                spacing: Theme.space3
 
-                                    if (typeRow.counts.breaking > 0)
-                                        parts.push(qsTr("%n with problems", "",
-                                                        typeRow.counts.breaking))
-                                    if (typeRow.modelData.problems > 0)
-                                        parts.push(qsTr("%n in its file", "",
-                                                        typeRow.modelData.problems))
-                                    return parts.join(", ")
+                                Row {
+                                    spacing: Theme.space3
+                                    opacity: typeRow.deleted ? 0.5 : 1
+
+                                    Glyph {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        name: typeRow.modelData.icon || "note"
+                                        color: Theme.typeColor(typeRow.modelData.color)
+                                    }
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        width: 140
+                                        text: typeRow.modelData.name
+                                        textFormat: Text.PlainText
+                                        elide: Text.ElideRight
+                                        color: Theme.text
+                                        font.family: Theme.fontFamily
+                                        font.pixelSize: Theme.textMd
+                                        font.strikeout: typeRow.deleted
+                                    }
+                                    Text {
+                                        objectName: "typeCounts"
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        width: 200
+                                        text: {
+                                            if (typeRow.deleted)
+                                                return qsTr("Deleted")
+                                            const notes = typeRow.counts.notes ?? 0
+                                            const parts = [notes === 1 ? qsTr("1 note") : qsTr(
+                                                                             "%1 notes").arg(notes)]
+                                            if (typeRow.counts.breaking > 0)
+                                                parts.push(qsTr("%n with problems", "",
+                                                                typeRow.counts.breaking))
+                                            if (typeRow.modelData.problems > 0)
+                                                parts.push(qsTr("%n in its file", "",
+                                                                typeRow.modelData.problems))
+                                            return parts.join(", ")
+                                        }
+                                        color: !typeRow.deleted && (typeRow.counts.breaking > 0
+                                                                    || typeRow.modelData.problems
+                                                                    > 0) ? Theme.danger :
+                                                                           Theme.textMuted
+                                        font.family: Theme.fontFamily
+                                        font.pixelSize: Theme.textSm
+                                    }
+                                    StickerButton {
+                                        objectName: "editType"
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        // As wide as Done or Edit, so the button beside it stays put.
+                                        width: Math.max(implicitWidth, 72)
+                                        enabled: !typeRow.deleted
+                                        text: typeRow.editing ? qsTr("Done") : qsTr("Edit")
+                                        onClicked: typesSection.editing = typeRow.editing ? "" :
+                                                                                            typeRow.modelData.id
+                                    }
                                 }
-                                color: typeRow.counts.breaking > 0 || typeRow.modelData.problems
-                                       > 0 ? Theme.danger : Theme.textMuted
-                                font.family: Theme.fontFamily
-                                font.pixelSize: Theme.textSm
-                            }
-                            StickerButton {
-                                objectName: "editType"
-                                anchors.verticalCenter: parent.verticalCenter
-                                visible: !typeRow.confirming
-                                text: qsTr("Edit")
-                                onClicked: {
-                                    root.close()
-                                    Vault.openType(typeRow.modelData.id)
+                                // Deleted at once, and brought back by the same place.
+                                StickerButton {
+                                    objectName: typeRow.deleted ? "undoDeleteType" : "deleteType"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    enabled: Vault.writable
+                                    glyph: typeRow.deleted ? "undo" : "trash"
+                                    Accessible.name: typeRow.deleted ? qsTr("Bring back %1").arg(
+                                                                           typeRow.modelData.name) :
+                                                                       qsTr("Delete %1").arg(
+                                                                           typeRow.modelData.name)
+                                    onClicked: {
+                                        const type = typeRow.modelData
+                                        if (typeRow.deleted) {
+                                            if (Vault.writeTypeFile(type.id, type.text))
+                                                typesSection.deleted = typesSection.deleted.filter(
+                                                            each => each.id !== type.id)
+                                            return
+                                        }
+                                        const text = Vault.typeFileText(type.id)
+                                        if (Vault.deleteType(type.id))
+                                            typesSection.deleted = typesSection.deleted.concat(
+                                                        [Object.assign({}, type, {
+                                                                           "deleted": true,
+                                                                           "text": text
+                                                                       })])
+                                    }
                                 }
                             }
-                            StickerButton {
-                                objectName: "deleteType"
-                                anchors.verticalCenter: parent.verticalCenter
-                                enabled: Vault.writable
-                                text: typeRow.confirming ? qsTr("Delete %1").arg(
-                                                               typeRow.modelData.name) : qsTr(
-                                                               "Delete")
-                                onClicked: {
-                                    if (typeRow.confirming)
-                                        Vault.deleteType(typeRow.modelData.id)
-                                    else
-                                        typeRow.confirming = true
+                            Loader {
+                                active: typeRow.editing
+                                visible: active
+                                width: parent.width
+                                sourceComponent: TypeEditor {
+                                    typeId: typeRow.modelData.id
+                                    width: typeRow.width
+                                    onYamlRequested: {
+                                        root.close()
+                                        Vault.openType(typeRow.modelData.id)
+                                    }
                                 }
-                            }
-                            StickerButton {
-                                anchors.verticalCenter: parent.verticalCenter
-                                visible: typeRow.confirming
-                                text: qsTr("Keep it")
-                                onClicked: typeRow.confirming = false
                             }
                         }
                     }
@@ -394,10 +447,11 @@ Popup {
                             enabled: Vault.writable && newTypeName.text.trim() !== ""
                             text: qsTr("New type")
                             onClicked: {
-                                const name = newTypeName.text
+                                const path = Vault.newType(newTypeName.text)
                                 newTypeName.text = ""
-                                root.close()
-                                Vault.newType(name)
+                                if (path !== "")
+                                    typesSection.editing = path.split("/").pop().replace(/\.yaml$/,
+                                                                                         "")
                             }
                         }
                         StickerButton {

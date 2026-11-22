@@ -128,10 +128,9 @@ std::optional<TypeProperty> readProperty(const QString &key, const Node &spec, Q
         property.kind = TypeProperty::Kind::Choice;
         for (const Node &item : spec.items)
             property.choices.append(item.text);
-        if (property.choices.isEmpty()) {
+        // Kept, so a choice being set up keeps its kind until its choices are filled in.
+        if (property.choices.isEmpty())
             *problem = QObject::tr("%1 has no choices").arg(key);
-            return std::nullopt;
-        }
         return property;
     }
     QString words = spec.text.simplified();
@@ -178,10 +177,8 @@ std::optional<TypeProperty> readProperty(const QString &key, const Node &spec, Q
             QObject::tr("%1 is %2, with %3 after it, which only a link takes").arg(key, kind, rest);
         return std::nullopt;
     }
-    if (property.kind == TypeProperty::Kind::Choice && property.choices.isEmpty()) {
+    if (property.kind == TypeProperty::Kind::Choice && property.choices.isEmpty())
         *problem = QObject::tr("%1 has no choices").arg(key);
-        return std::nullopt;
-    }
     return property;
 }
 
@@ -235,7 +232,7 @@ NoteType readType(const QString &id, const QString &text, QList<TypeFileProblem>
                 QString problem;
                 if (const std::optional<TypeProperty> property = readProperty(name, spec, &problem))
                     type.properties.append(*property);
-                else
+                if (!problem.isEmpty())
                     problems->append({spec.line, problem});
             }
         } else if (key == u"properties" && scalar && value.text.isEmpty()) {
@@ -526,6 +523,66 @@ NoteTypes NoteTypes::fromFiles(const QHash<QString, QString> &files)
         return a.name.localeAwareCompare(b.name) < 0;
     });
     return types;
+}
+
+NoteType NoteTypes::readFile(const QString &id, const QString &text)
+{
+    QList<TypeFileProblem> problems;
+    QHash<QString, int> lines;
+    return readType(id, text, &problems, &lines);
+}
+
+namespace {
+
+/// `text` as an item of a YAML flow list, quoted when a comma or bracket would end it.
+QString flowScalar(const QString &text)
+{
+    if (!text.contains(QRegularExpression(u"[,\\[\\]{}]"_s)))
+        return yamlScalar(text);
+    QString escaped = text;
+    escaped.replace(u'\\', u"\\\\"_s).replace(u'"', u"\\\""_s);
+    return u'"' + escaped + u'"';
+}
+
+QString flowList(const QStringList &items)
+{
+    QStringList written;
+    for (const QString &item : items)
+        written.append(flowScalar(item));
+    return u'[' + written.join(u", "_s) + u']';
+}
+
+} // namespace
+
+QString NoteTypes::fileText(const NoteType &type)
+{
+    QString text = u"name: %1\n"_s.arg(yamlScalar(type.name.isEmpty() ? type.id : type.name));
+    const auto add = [&text](const QString &key, const QString &value) {
+        if (!value.trimmed().isEmpty())
+            text += u"%1: %2\n"_s.arg(key, yamlScalar(value.trimmed()));
+    };
+    add(u"icon"_s, type.icon);
+    add(u"color"_s, type.color);
+    add(u"extends"_s, type.extends);
+    add(u"template"_s, type.templatePath);
+    if (type.properties.isEmpty())
+        return text;
+    text += u"properties:\n"_s;
+    for (const TypeProperty &property : type.properties) {
+        QString spec;
+        if (property.kind == TypeProperty::Kind::Choice) {
+            spec =
+                property.list
+                    ? u"{kind: choice, choices: %1, list: true}"_s.arg(flowList(property.choices))
+                    : flowList(property.choices);
+        } else {
+            spec = (property.list ? u"list "_s : QString()) + kindName(property.kind);
+            if (property.kind == TypeProperty::Kind::Link && !property.linkType.isEmpty())
+                spec += u' ' + property.linkType;
+        }
+        text += u"  %1: %2\n"_s.arg(yamlScalar(property.key), spec);
+    }
+    return text;
 }
 
 const NoteType *NoteTypes::find(const QString &name) const

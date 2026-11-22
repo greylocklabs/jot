@@ -137,6 +137,7 @@ qt_add_qml_module(jotui
         SuggestionPopup.qml
         SwitcherRow.qml
         ThemeEditor.qml
+        TypeEditor.qml
         ViStatusLine.qml
         WhichKey.qml
         Tip.qml

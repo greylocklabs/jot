@@ -34,6 +34,7 @@ MenuItem {
             visible: root.glyph !== ""
             name: root.glyph
             color: root.glyphColor
+            opacity: root.enabled ? 1 : 0.4
             stroke: Theme.smallGlyphStroke
             implicitWidth: Theme.smallGlyphSize
             implicitHeight: Theme.smallGlyphSize
@@ -49,7 +50,8 @@ MenuItem {
                 bottom: parent.bottom
             }
             text: root.text
-            color: Theme.text
+            // A disabled entry, such as a submenu with nothing in it, reads as one.
+            color: root.enabled ? Theme.text : Theme.textFaint
             font.family: Theme.fontFamily
             font.pixelSize: Theme.textSm
             font.weight: root.current ? Theme.weightBold : Font.Normal
@@ -62,7 +64,7 @@ MenuItem {
     arrow: Glyph {
         x: root.width - width - Theme.space3
         anchors.verticalCenter: parent.verticalCenter
-        visible: root.subMenu !== null
+        visible: root.subMenu !== null && root.enabled
         name: "chevron-right"
         color: Theme.textFaint
         stroke: Theme.smallGlyphStroke
