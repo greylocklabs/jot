@@ -3221,13 +3221,23 @@ QVariantMap VaultController::typeForm(const QString &id) const
             {u"properties"_s, properties},
             // Written back from the form, the file would lose anything it does not show, such
             // as a comment or a line it cannot read, so then only its YAML is edited.
-            {u"editable"_s, NoteTypes::fileText(type) == text}};
+            {u"editable"_s, NoteTypes::fileText(type) == text},
+            // What the form was read from, so a save after the file changed is refused.
+            {u"basis"_s, text}};
 }
 
 bool VaultController::saveTypeForm(const QString &id, const QVariantMap &form)
 {
     if (!m_vault || id.isEmpty())
         return false;
+    // The file open in the editor is saved first, so what was typed there counts as a change.
+    if (m_current == NoteTypes::kFolder + u'/' + id + u".yaml"_s)
+        saveNow();
+    if (form.contains(u"basis"_s) && form.value(u"basis"_s).toString() != typeFileText(id)) {
+        setProblem(
+            tr("The type %1 changed since the form showed it, so look at it again.").arg(id));
+        return false;
+    }
     if (!typeForm(id).value(u"editable"_s).toBool()) {
         setProblem(tr("The type %1 has more in its file than the form shows, so edit it as YAML.")
                        .arg(id));
@@ -3256,6 +3266,11 @@ bool VaultController::saveTypeForm(const QString &id, const QVariantMap &form)
                 property.choices.append(choice.trimmed());
         }
         type.properties.append(property);
+    }
+    // Two types by one name could not be told apart, nor the notes of each.
+    if (const NoteType *other = m_types.find(type.name); other && other->id != id) {
+        setProblem(tr("Another type is already called %1.").arg(type.name));
+        return false;
     }
     const NoteType *before = m_types.find(id);
     const QString oldName = before ? before->name : QString();
@@ -3291,13 +3306,20 @@ bool VaultController::writeTypeFile(const QString &id, const QString &text)
 {
     if (!m_vault || id.isEmpty())
         return false;
+    // The file open in the editor keeps what was typed into it until now, then shows this.
+    const QString path = NoteTypes::kFolder + u'/' + id + u".yaml"_s;
+    const bool shown = m_current == path;
+    if (shown)
+        saveNow();
     QDir().mkpath(m_vault->absolute(NoteTypes::kFolder));
-    QSaveFile file(m_vault->absolute(NoteTypes::kFolder + u'/' + id + u".yaml"_s));
+    QSaveFile file(m_vault->absolute(path));
     if (!file.open(QIODevice::WriteOnly) || file.write(text.toUtf8()) < 0 || !file.commit()) {
         setProblem(tr("Could not write the type: %1").arg(file.errorString()));
         return false;
     }
     readTypes();
+    if (shown)
+        readCurrent();
     return true;
 }
 
