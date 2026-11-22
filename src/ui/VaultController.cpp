@@ -3049,9 +3049,13 @@ std::optional<QString> typeTemplate(const Vault &vault, const NoteType &type, co
 {
     if (type.templatePath.isEmpty())
         return std::nullopt;
+    // Only a note in the vault, so a type file never reads text from elsewhere on the computer.
+    const QString path =
+        QFileInfo(vault.absolute(QDir::cleanPath(type.templatePath))).canonicalFilePath();
+    if (path.isEmpty() || vault.relative(path).isEmpty())
+        return std::nullopt;
     QString ignored;
-    const std::optional<QString> pattern =
-        notefile::read(vault.absolute(type.templatePath), &ignored);
+    const std::optional<QString> pattern = notefile::read(path, &ignored);
     if (!pattern)
         return std::nullopt;
     return fillTemplate(*pattern, title, QDateTime::currentDateTime());
