@@ -583,17 +583,29 @@ bool NoteTypes::writeStartersIfMissing(const QString &root, QString *error)
     return restoreStarters(root, error);
 }
 
-void NoteTypes::removeUntouchedStarters(const QString &root)
+QStringList NoteTypes::removeUntouchedStarters(const QString &root)
 {
     const QString folder = root + u'/' + kFolder;
+    QStringList removed;
     for (const auto &[id, text] : starters()) {
         QFile file(folder + u'/' + id + u".yaml"_s);
         if (file.open(QIODevice::ReadOnly) && QString::fromUtf8(file.readAll()) == text) {
             file.close();
-            file.remove();
+            if (file.remove())
+                removed.append(id);
         }
     }
     QDir().rmdir(folder);
+    return removed;
+}
+
+QStringList NoteTypes::fileIds(const QString &root)
+{
+    QStringList ids;
+    for (const QFileInfo &info :
+         QDir(root + u'/' + kFolder).entryInfoList({u"*.yaml"_s}, QDir::Files))
+        ids.append(info.completeBaseName());
+    return ids;
 }
 
 bool NoteTypes::restoreStarters(const QString &root, QString *error)

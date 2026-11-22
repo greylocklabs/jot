@@ -381,6 +381,25 @@ void TestVaultController::takesTheTypesASyncedVaultHas()
     QVERIFY(finished.wait(10000));
     QTRY_COMPARE(QDir(third + u"/.jot/types"_s).entryList(QDir::Files).size(),
                  NoteTypes::starterIds().size());
+
+    // A vault with a starter of its own changed, syncing with a place with no types, keeps that
+    // change and has the other starters back.
+    const QString fourth = m_dir->filePath(u"Fourth"_s);
+    const QString bare = m_dir->filePath(u"bare"_s);
+    QVERIFY(QDir().mkpath(fourth));
+    QVERIFY(QDir().mkpath(bare));
+    QVERIFY(m_vault->openPath(fourth));
+    QFile mine(fourth + u"/.jot/types/character.yaml"_s);
+    QVERIFY(mine.open(QIODevice::WriteOnly));
+    mine.write("name: Character\nicon: bell\n");
+    mine.close();
+    finished.clear();
+    QVERIFY(m_vault->sync()->syncWithFolder(QUrl::fromLocalFile(bare)));
+    QVERIFY(finished.wait(10000));
+    QTRY_COMPARE(QDir(fourth + u"/.jot/types"_s).entryList(QDir::Files).size(),
+                 NoteTypes::starterIds().size());
+    QCOMPARE(readFile(fourth + u"/.jot/types/character.yaml"_s),
+             u"name: Character\nicon: bell\n"_s);
 }
 
 void TestVaultController::switchesToAnotherFolder()
