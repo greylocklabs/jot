@@ -528,6 +528,32 @@ void TestVaultController::makesNotesAndTypes()
     QVERIFY(m_vault->writeTypeFile(u"story-arc"_s,
                                    NoteTypes::fileText(*m_vault->types().find(u"Saga"_s))));
 
+    // A name another type has is not taken, and no note changes type.
+    form = m_vault->typeForm(u"story-arc"_s);
+    form.insert(u"name"_s, u"Character"_s);
+    QVERIFY(!m_vault->saveTypeForm(u"story-arc"_s, form));
+    QVERIFY(m_vault->problem().contains(u"Character"_s));
+    QVERIFY(m_vault->types().find(u"Saga"_s));
+    QCOMPARE(*notefile::read(m_root + u"/Arc One.md"_s, &error),
+             u"---\ntype: Saga\n---\nBody.\n"_s);
+
+    // Its file open in the editor, with something typed into it, keeps that: the form read before
+    // is refused, and one read again keeps the typing and shows the form's change.
+    form = m_vault->typeForm(u"story-arc"_s);
+    m_vault->openType(u"story-arc"_s);
+    m_vault->edit(m_vault->currentText() + u"color: red\n"_s);
+    form.insert(u"icon"_s, u"bell"_s);
+    QVERIFY(!m_vault->saveTypeForm(u"story-arc"_s, form));
+    QVERIFY(m_vault->typeFileText(u"story-arc"_s).contains(u"color: red"_s));
+    form = m_vault->typeForm(u"story-arc"_s);
+    form.insert(u"icon"_s, u"bell"_s);
+    QVERIFY(m_vault->saveTypeForm(u"story-arc"_s, form));
+    QCOMPARE(m_vault->types().find(u"Saga"_s)->icon, u"bell"_s);
+    QCOMPARE(m_vault->types().find(u"Saga"_s)->color, u"red"_s);
+    QVERIFY(m_vault->currentText().contains(u"icon: bell\n"_s));
+    QVERIFY(!m_vault->unsaved());
+    m_vault->setCurrent({});
+
     // Its text, kept before a delete, brings it back.
     const QString text = m_vault->typeFileText(u"story-arc"_s);
     QVERIFY(text.startsWith(u"name: Saga\n"_s));

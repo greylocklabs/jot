@@ -5866,7 +5866,15 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>The type %1 changed since the form showed it, so look at it again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>The type %1 has more in its file than the form shows, so edit it as YAML.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Another type is already called %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
