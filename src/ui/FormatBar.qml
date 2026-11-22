@@ -381,6 +381,8 @@ Rectangle {
             visible: root.frontMatterProblems.length > 0 && !root.dataFile
             implicitWidth: 32
             implicitHeight: 32
+            // Hovered, it lists the problems, which a desktop without hover effects would not.
+            hoverEnabled: true
             focusPolicy: Qt.NoFocus
             Accessible.name: root.frontMatterProblems.length === 1 ? qsTr("Front matter problem") :
                                                                      qsTr("%1 front matter problems").arg(
@@ -401,10 +403,12 @@ Rectangle {
             background: null
 
             Loader {
+                objectName: "problemsTip"
                 active: problems.hovered
 
                 sourceComponent: Tip {
                     parent: problems
+                    visible: !problems.pressed
                     // Below the bar, clear of the buttons above.
                     y: problems.height + Theme.space2
                     text: problems.tip
