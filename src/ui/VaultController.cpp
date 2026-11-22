@@ -29,6 +29,7 @@
 #include <QLocale>
 #include <QProcess>
 #include <QRegularExpression>
+#include <QSaveFile>
 #include <QStandardPaths>
 #include <QSysInfo>
 #include <QTemporaryDir>
@@ -62,6 +63,7 @@ VaultController::VaultController(Settings &settings, QObject *parent)
     connect(this, &VaultController::currentChanged, this, &VaultController::refreshTarget);
     connect(&m_sync, &SyncController::finished, this, [this](const SyncReport &report) {
         // Starters set aside for a first sync come back when it brought no types, or failed.
+        restoreSetAsideTypes(!report.failure.isEmpty());
         seedTypes();
         // A sync that failed sent nothing, so what waited still waits.
         if (!report.failure.isEmpty()) {
@@ -83,8 +85,10 @@ VaultController::VaultController(Settings &settings, QObject *parent)
             qOverload<>(&QTimer::start));
     // A sync that stops before it starts, as without its key, sets the starters aside too.
     connect(&m_sync, &SyncController::changed, this, [this] {
-        if (!m_sync.syncing() && !m_sync.problem().isEmpty())
+        if (!m_sync.syncing() && !m_sync.problem().isEmpty()) {
+            restoreSetAsideTypes(true);
             seedTypes();
+        }
     });
     // Saving changes the list's order and titles; a burst of saves reloads it once.
     m_reloadTimer.setSingleShot(true);
@@ -211,8 +215,10 @@ bool VaultController::openPath(const QString &path)
             saveNow();
         // The starter types give way to those another computer already has, which come in
         // with the first sync; seedTypes() puts them back after it when none do.
-        if (m_vault && m_sync.firstSync())
-            NoteTypes::removeUntouchedStarters(m_vault->root());
+        if (m_vault && m_sync.firstSync() && m_setAsideTypes.isEmpty()) {
+            m_setAsideTypes = NoteTypes::removeUntouchedStarters(m_vault->root());
+            m_keptTypes = NoteTypes::fileIds(m_vault->root());
+        }
     });
     // A vault that syncs is given starter types only after a sync shows it has none of its own.
     if (!m_sync.configured())
@@ -2876,6 +2882,31 @@ void VaultController::updateSyncPending()
         waiting.append(tr("%1 (deleted)").arg(gone));
     waiting.sort(Qt::CaseInsensitive);
     m_sync.setWaiting(waiting);
+}
+
+void VaultController::restoreSetAsideTypes(bool failed)
+{
+    if (!m_vault || m_setAsideTypes.isEmpty())
+        return;
+    // Types that came in with the sync are another computer's set, which stands as it is; with
+    // none, or no sync, the starters set aside go back.
+    QStringList arrived = NoteTypes::fileIds(m_vault->root());
+    for (const QString &kept : std::as_const(m_keptTypes))
+        arrived.removeAll(kept);
+    if (failed || arrived.isEmpty()) {
+        QDir().mkpath(m_vault->absolute(NoteTypes::kFolder));
+        for (const QString &id : std::as_const(m_setAsideTypes)) {
+            const QString path = m_vault->absolute(NoteTypes::kFolder + u'/' + id + u".yaml"_s);
+            QSaveFile file(path);
+            if (!QFileInfo::exists(path) && file.open(QIODevice::WriteOnly)) {
+                file.write(NoteTypes::starterText(id).toUtf8());
+                file.commit();
+            }
+        }
+    }
+    m_setAsideTypes.clear();
+    m_keptTypes.clear();
+    readTypes();
 }
 
 void VaultController::seedTypes()

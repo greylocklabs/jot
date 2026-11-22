@@ -602,6 +602,8 @@ Q_SIGNALS:
 private:
     /// Writes the starter types into a vault that has no types folder.
     void seedTypes();
+    /// Puts back the starters set aside for a first sync, unless types came in with it.
+    void restoreSetAsideTypes(bool failed);
     /// Reads the vault's note types again and watches their files.
     void readTypes();
     /// Why an import cannot start now, as a failed summary, or nothing.
@@ -684,6 +686,9 @@ private:
     std::unique_ptr<VaultIndex> m_index;
     std::unique_ptr<VaultWatcher> m_watcher;
     NoteTypes m_types;
+    /// The starter types set aside for a first sync, and the types kept, by id.
+    QStringList m_setAsideTypes;
+    QStringList m_keptTypes;
     /// `.jot/types` and its files, which the vault's watcher leaves out.
     QFileSystemWatcher m_typesWatcher;
     QTimer m_typesTimer;
