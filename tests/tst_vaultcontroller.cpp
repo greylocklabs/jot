@@ -39,6 +39,8 @@ private Q_SLOTS:
     void takesTheTypesASyncedVaultHas();
     void setsANotesType();
     void makesNotesAndTypes();
+    void leavesTheTypesOfAVaultItOnlyReads();
+    void saysWhichNotesARenameCouldNotChange();
     void countsEachTypesNotes();
     void suggestsATypesKeysAndValues();
     void opensAFolderAndRemembersIt();
@@ -611,6 +613,40 @@ void TestVaultController::makesNotesAndTypes()
     const QVariantList list = m_vault->noteTypeList();
     QCOMPARE(list.size(), NoteTypes::starterIds().size() + 1);
     QCOMPARE(m_vault->typeLooks().value(u"character"_s).toMap().value(u"icon"_s), u"person"_s);
+}
+
+void TestVaultController::leavesTheTypesOfAVaultItOnlyReads()
+{
+    // A vault from a newer Jot is only read, so its types are neither made nor changed here.
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/.jot/vault.yaml"_s, u"format: 99\n"_s, &error));
+    QVERIFY(m_vault->openPath(m_root));
+    QVERIFY(!m_vault->writable());
+    QVERIFY(!QFileInfo::exists(m_root + u"/.jot/types"_s));
+    QVERIFY(m_vault->newType(u"Spell"_s).isEmpty());
+    QVERIFY(!m_vault->writeTypeFile(u"spell"_s, u"name: Spell\n"_s));
+    QVERIFY(!m_vault->restoreDefaultTypes());
+    QVERIFY(!QFileInfo::exists(m_root + u"/.jot/types"_s));
+}
+
+void TestVaultController::saysWhichNotesARenameCouldNotChange()
+{
+    if (geteuid() == 0)
+        QSKIP("root can write any file");
+    writeFile(m_root + u"/Bolt.md"_s, "---\ntype: Spell\n---\n");
+    writeFile(m_root + u"/Ward.md"_s, "---\ntype: Spell\n---\n");
+    QVERIFY(m_vault->openPath(m_root));
+    QVERIFY(m_vault->writeTypeFile(u"spell"_s, u"name: Spell\n"_s));
+    QTRY_VERIFY(m_vault->index()->note(u"Ward.md"_s));
+    QVERIFY(QFile::setPermissions(m_root + u"/Ward.md"_s, QFileDevice::ReadOwner));
+    QVariantMap form = m_vault->typeForm(u"spell"_s);
+    form.insert(u"name"_s, u"Charm"_s);
+    QVERIFY(m_vault->saveTypeForm(u"spell"_s, form));
+    QString error;
+    QCOMPARE(*notefile::read(m_root + u"/Bolt.md"_s, &error), u"---\ntype: Charm\n---\n"_s);
+    QVERIFY(m_vault->problem().contains(u"Ward"_s));
+    QVERIFY(QFile::setPermissions(m_root + u"/Ward.md"_s,
+                                  QFileDevice::ReadOwner | QFileDevice::WriteOwner));
 }
 
 void TestVaultController::countsEachTypesNotes()

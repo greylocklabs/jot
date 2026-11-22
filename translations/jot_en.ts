@@ -5878,6 +5878,10 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Could not give %1 the type&apos;s new name, so they still say %2.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>%1 still name %2 in their files, so change them as YAML.</source>
         <translation type="unfinished"></translation>
     </message>

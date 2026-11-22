@@ -2960,7 +2960,8 @@ void VaultController::restoreSetAsideTypes(bool failed)
 
 void VaultController::seedTypes()
 {
-    if (!m_vault || QFileInfo::exists(m_vault->absolute(NoteTypes::kFolder)))
+    if (!m_vault || !m_vault->writable() ||
+        QFileInfo::exists(m_vault->absolute(NoteTypes::kFolder)))
         return;
     if (QString why; !NoteTypes::writeStartersIfMissing(m_vault->root(), &why))
         qCWarning(lcVault) << "could not write the starter types:" << why;
@@ -3153,7 +3154,7 @@ QString VaultController::newNoteOfType(const QString &name)
 QString VaultController::newType(const QString &name)
 {
     const QString wanted = name.trimmed();
-    if (!m_vault || wanted.isEmpty())
+    if (!m_vault || !m_vault->writable() || wanted.isEmpty())
         return {};
     if (const NoteType *existing = m_types.find(wanted))
         return NoteTypes::kFolder + u'/' + existing->id + u".yaml"_s;
@@ -3187,7 +3188,7 @@ void VaultController::openType(const QString &id)
 
 bool VaultController::deleteType(const QString &id)
 {
-    if (!m_vault || id.isEmpty())
+    if (!m_vault || !m_vault->writable() || id.isEmpty())
         return false;
     const QString path = NoteTypes::kFolder + u'/' + id + u".yaml"_s;
     if (m_current == path)
@@ -3228,7 +3229,7 @@ QVariantMap VaultController::typeForm(const QString &id) const
 
 bool VaultController::saveTypeForm(const QString &id, const QVariantMap &form)
 {
-    if (!m_vault || id.isEmpty())
+    if (!m_vault || !m_vault->writable() || id.isEmpty())
         return false;
     // The file open in the editor is saved first, so what was typed there counts as a change.
     if (m_current == NoteTypes::kFolder + u'/' + id + u".yaml"_s)
@@ -3279,17 +3280,23 @@ bool VaultController::saveTypeForm(const QString &id, const QVariantMap &form)
     // The type's notes say its name, so they follow it to the new one.
     if (!oldName.isEmpty() && !type.name.isEmpty() &&
         oldName.compare(type.name, Qt::CaseInsensitive) != 0 && m_index) {
+        QStringList missed;
         for (const NoteInfo &note : m_index->notesIn({})) {
             if (note.type.trimmed().compare(oldName, Qt::CaseInsensitive) != 0)
                 continue;
             const QString name = type.name;
-            rewriteNote(
-                note.path,
-                [&name](const QString &text) {
-                    return std::optional(setFrontMatterKey(text, u"type"_s, name));
-                },
-                false);
+            if (!rewriteNote(
+                    note.path,
+                    [&name](const QString &text) {
+                        return std::optional(setFrontMatterKey(text, u"type"_s, name));
+                    },
+                    false))
+                missed.append(note.title);
         }
+        // Those that could not be written still name the old type, which is said, not hidden.
+        if (!missed.isEmpty())
+            setProblem(tr("Could not give %1 the type's new name, so they still say %2.")
+                           .arg(missed.join(u", "_s), oldName));
         renameInOtherTypes(id, oldName, type.name);
     }
     return true;
@@ -3341,7 +3348,7 @@ QString VaultController::typeFileText(const QString &id) const
 
 bool VaultController::writeTypeFile(const QString &id, const QString &text)
 {
-    if (!m_vault || id.isEmpty())
+    if (!m_vault || !m_vault->writable() || id.isEmpty())
         return false;
     // The file open in the editor keeps what was typed into it until now, then shows this.
     const QString path = NoteTypes::kFolder + u'/' + id + u".yaml"_s;
@@ -3382,6 +3389,8 @@ QStringList VaultController::defaultTypesToRestore() const
 
 bool VaultController::restoreDefaultTypes()
 {
+    if (!m_vault || !m_vault->writable())
+        return false;
     // A type file shown with edits not yet saved keeps them, as the file it was.
     saveNow();
     QString error;
