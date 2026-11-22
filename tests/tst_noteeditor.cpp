@@ -377,6 +377,53 @@ void TestNoteEditor::showsPropertiesInPlaceOfFrontMatter()
     QTRY_VERIFY(!document->firstBlock().isVisible());
     QVERIFY(document->lastBlock().isVisible());
     body->setProperty("text", frontMatter + u"The lead.\n"_s);
+    // A key the note has already is not added over, and a nested one cannot be cleared here.
+    body->setProperty("text",
+                      u"---\ntype: Location\npopulation: 1.5\nplace:\n  x: 1\n---\nBody\n"_s);
+    QTRY_VERIFY(panel->property("rows").toList().size() >= 3);
+    const auto named = [&](const QString &name, const QString &key) {
+        QList<QQuickItem *> found;
+        const std::function<void(QQuickItem *)> look = [&](QQuickItem *at) {
+            for (QQuickItem *child : at->childItems()) {
+                if (child->objectName() == name &&
+                    (key.isEmpty() || child->property("Accessible.name").isValid()))
+                    found.append(child);
+                look(child);
+            }
+        };
+        look(panel);
+        return found;
+    };
+    panel->setProperty("adding", true);
+    QQuickItem *newKey = named(u"newPropertyKey"_s, {}).value(0);
+    QQuickItem *newValue = named(u"newPropertyValue"_s, {}).value(0);
+    newKey->setProperty("text", u"place"_s);
+    newValue->setProperty("text", u"here"_s);
+    QVERIFY(!named(u"addProperty"_s, {}).value(0)->isEnabled());
+    QVERIFY(named(u"propertyTaken"_s, {}).value(0)->isVisible());
+    newKey->setProperty("text", u"mood"_s);
+    QVERIFY(named(u"addProperty"_s, {}).value(0)->isEnabled());
+    panel->setProperty("adding", false);
+    for (QQuickItem *row : named(u"propertyRow"_s, {})) {
+        if (row->property("key") == u"place"_s) {
+            QQuickItem *clear = nullptr;
+            for (QQuickItem *child : row->childItems()) {
+                if (child->objectName() == u"removeProperty"_s)
+                    clear = child;
+            }
+            QVERIFY(clear && !clear->isEnabled());
+        }
+    }
+    // A number field reads numbers as the file writes them, whatever the desktop's language.
+    for (QQuickItem *field : named(u"propertyText"_s, {})) {
+        if (field->property("text") == u"1.5"_s) {
+            auto *validator = field->property("validator").value<QObject *>();
+            QVERIFY(validator);
+            QCOMPARE(validator->property("locale").toString(), u"C"_s);
+        }
+    }
+    body->setProperty("text", frontMatter + u"The lead.\n"_s);
+
     // Edit as text shows them in Source.
     QMetaObject::invokeMethod(find(u"editAsText"_s), "clicked");
     QVERIFY(m_settings->sourceMode());
