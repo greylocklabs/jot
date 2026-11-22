@@ -3132,6 +3132,9 @@ void VaultController::setNoteProperty(const QString &key, const QVariant &value)
             written = items;
     } else if (const QString text = value.toString().trimmed(); !text.isEmpty()) {
         written = link ? linkValue(text) : text;
+        // A key no type names keeps true or false as YAML reads them, not as quoted words.
+        if (!property && (text == u"true" || text == u"false"))
+            written = text == u"true";
     }
     const QString text = setFrontMatterKey(m_currentText, key.trimmed(), written);
     rewriteNote(m_current, [&text](const QString &) { return std::optional(text); }, true);
