@@ -600,6 +600,8 @@ Q_SIGNALS:
     void todoistImportFinished(const QVariantMap &summary);
 
 private:
+    /// Writes the starter types into a vault that has no types folder.
+    void seedTypes();
     /// Reads the vault's note types again and watches their files.
     void readTypes();
     /// Why an import cannot start now, as a failed summary, or nothing.

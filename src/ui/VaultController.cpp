@@ -66,6 +66,7 @@ VaultController::VaultController(Settings &settings, QObject *parent)
             updateSyncPending();
             return;
         }
+        seedTypes();
         m_syncedPaths.clear();
         for (const NoteInfo &note : m_index ? m_index->notesIn({}) : QList<NoteInfo>())
             m_syncedPaths.insert(note.path);
@@ -182,9 +183,6 @@ bool VaultController::openPath(const QString &path)
     connect(m_watcher.get(), &VaultWatcher::foldersChanged, this, &VaultController::reloadModels);
     connect(m_watcher.get(), &VaultWatcher::ignoreChanged, this, &VaultController::readIgnoreAgain);
     m_watcher->start();
-    if (QString why; !NoteTypes::writeStartersIfMissing(m_vault->root(), &why))
-        qCWarning(lcVault) << "could not write the starter types:" << why;
-    readTypes();
     m_settings.setVaultPath(m_vault->root());
     // Named for the computer, to read, and by an id of its own, as two can share a name.
     QString computer = QSysInfo::machineHostName();
@@ -205,7 +203,15 @@ bool VaultController::openPath(const QString &path)
     m_sync.setVault(m_vault->root(), [this] {
         if (m_settings.autosave())
             saveNow();
+        // The starter types give way to those another computer already has, which come in
+        // with the first sync; seedTypes() puts them back after it when none do.
+        if (m_vault && m_sync.firstSync())
+            NoteTypes::removeUntouchedStarters(m_vault->root());
     });
+    // A vault that syncs is given starter types only after a sync shows it has none of its own.
+    if (!m_sync.configured())
+        seedTypes();
+    readTypes();
     expireTrash();
     reloadTrash();
     return true;
@@ -2864,6 +2870,15 @@ void VaultController::updateSyncPending()
         waiting.append(tr("%1 (deleted)").arg(gone));
     waiting.sort(Qt::CaseInsensitive);
     m_sync.setWaiting(waiting);
+}
+
+void VaultController::seedTypes()
+{
+    if (!m_vault || QFileInfo::exists(m_vault->absolute(NoteTypes::kFolder)))
+        return;
+    if (QString why; !NoteTypes::writeStartersIfMissing(m_vault->root(), &why))
+        qCWarning(lcVault) << "could not write the starter types:" << why;
+    readTypes();
 }
 
 void VaultController::readTypes()

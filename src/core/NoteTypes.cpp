@@ -583,6 +583,19 @@ bool NoteTypes::writeStartersIfMissing(const QString &root, QString *error)
     return restoreStarters(root, error);
 }
 
+void NoteTypes::removeUntouchedStarters(const QString &root)
+{
+    const QString folder = root + u'/' + kFolder;
+    for (const auto &[id, text] : starters()) {
+        QFile file(folder + u'/' + id + u".yaml"_s);
+        if (file.open(QIODevice::ReadOnly) && QString::fromUtf8(file.readAll()) == text) {
+            file.close();
+            file.remove();
+        }
+    }
+    QDir().rmdir(folder);
+}
+
 bool NoteTypes::restoreStarters(const QString &root, QString *error)
 {
     const QString folder = root + u'/' + kFolder;

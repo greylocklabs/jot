@@ -36,6 +36,7 @@ private Q_SLOTS:
 
     void startsClosed();
     void readsTheVaultsTypes();
+    void takesTheTypesASyncedVaultHas();
     void opensAFolderAndRemembersIt();
     void leavesOutWhatTheVaultIgnores();
     void showsATagsNotesAndToDosTogether();
@@ -321,6 +322,53 @@ void TestVaultController::readsTheVaultsTypes()
     note.close();
     QTRY_VERIFY(m_vault->typeOfLink(u"Mara"_s) == u"Character"_s);
     QCOMPARE(m_vault->typeOfLink(u"Nobody"_s), std::nullopt);
+}
+
+void TestVaultController::takesTheTypesASyncedVaultHas()
+{
+    // Another computer's vault, with its own Character and its Item deleted.
+    const QString nas = m_dir->filePath(u"nas"_s);
+    QVERIFY(QDir().mkpath(nas + u"/.jot/types"_s));
+    QFile hero(nas + u"/.jot/types/character.yaml"_s);
+    QVERIFY(hero.open(QIODevice::WriteOnly));
+    hero.write("name: Character\nicon: flag\n");
+    hero.close();
+    QFile place(nas + u"/.jot/types/location.yaml"_s);
+    QVERIFY(place.open(QIODevice::WriteOnly));
+    place.write(NoteTypes::starterText(u"location"_s).toUtf8());
+    place.close();
+
+    // A new vault here is given the starters, then set to sync with it.
+    const QString root = m_dir->filePath(u"Fresh"_s);
+    QVERIFY(QDir().mkpath(root));
+    QVERIFY(m_vault->openPath(root));
+    QVERIFY(m_vault->types().find(u"item"_s));
+    QSignalSpy finished(m_vault->sync(), &SyncController::finished);
+    QVERIFY(m_vault->sync()->syncWithFolder(QUrl::fromLocalFile(nas)));
+    QVERIFY(finished.wait(10000));
+
+    // Its types are the other computer's: no starter in their place, none brought back, and no
+    // conflict copies.
+    QTRY_COMPARE(readFile(root + u"/.jot/types/character.yaml"_s),
+                 u"name: Character\nicon: flag\n"_s);
+    QVERIFY(!QFileInfo::exists(root + u"/.jot/types/item.yaml"_s));
+    QCOMPARE(QDir(root + u"/.jot/types"_s).entryList(QDir::Files).size(), 2);
+    QCOMPARE(QDir(nas + u"/.jot/types"_s).entryList(QDir::Files).size(), 2);
+    QTRY_COMPARE(m_vault->types().find(u"character"_s)->icon, u"flag"_s);
+
+    // A vault that syncs with a place that has no types is given the starters after the sync.
+    const QString empty = m_dir->filePath(u"empty"_s);
+    const QString other = m_dir->filePath(u"Other"_s);
+    QVERIFY(QDir().mkpath(empty));
+    QVERIFY(QDir().mkpath(other));
+    QVERIFY(m_vault->openPath(other));
+    QVERIFY(QDir(other + u"/.jot/types"_s).exists());
+    finished.clear();
+    QVERIFY(m_vault->sync()->syncWithFolder(QUrl::fromLocalFile(empty)));
+    QVERIFY(finished.wait(10000));
+    QTRY_COMPARE(QDir(other + u"/.jot/types"_s).entryList(QDir::Files).size(),
+                 NoteTypes::starterIds().size());
+    QTRY_VERIFY(m_vault->types().find(u"item"_s));
 }
 
 void TestVaultController::switchesToAnotherFolder()

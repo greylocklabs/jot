@@ -94,6 +94,9 @@ public:
     /// Writes the starter types into the vault at `root` when it has no types folder yet, so a
     /// vault whose types were all deleted keeps none.
     static bool writeStartersIfMissing(const QString &root, QString *error);
+    /// Deletes the starter types still as Jot wrote them, and the types folder if that empties it,
+    /// so a vault's first sync takes the types another computer already has.
+    static void removeUntouchedStarters(const QString &root);
     /// Writes each starter type that is missing or differs from Jot's own, leaving other types
     /// as they are.
     static bool restoreStarters(const QString &root, QString *error);

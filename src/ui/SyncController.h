@@ -138,6 +138,8 @@ public:
     /// How long a sign-in in the browser may take.
     static constexpr int kSignInMs = 5 * 60 * 1000;
     [[nodiscard]] QDateTime lastSynced() const { return m_lastSynced; }
+    /// Whether the vault has never synced with its remote, so there is no base to merge from.
+    [[nodiscard]] bool firstSync() const;
     [[nodiscard]] QString problem() const { return m_problem; }
     [[nodiscard]] QString stamp() const;
     [[nodiscard]] QString details() const;
