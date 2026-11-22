@@ -711,15 +711,15 @@ QList<PropertyRow> propertyRows(QStringView note, const NoteTypes &types)
     const QVariantMap keys =
         parts.hasFrontMatter ? readFrontMatter(parts.frontMatter) : QVariantMap();
     QList<PropertyRow> rows;
+    const QHash<QString, int> lines = keyLines(note);
     if (keys.contains(u"type"_s))
-        rows.append({u"type"_s, std::nullopt, keys.value(u"type"_s)});
+        rows.append({u"type"_s, std::nullopt, keys.value(u"type"_s), lines.value(u"type"_s)});
     const NoteType *type = types.find(keys.value(u"type"_s).toString());
     QSet<QString> shown{u"type"_s};
     for (const TypeProperty &property : type ? type->properties : QList<TypeProperty>()) {
-        rows.append({property.key, property, keys.value(property.key)});
+        rows.append({property.key, property, keys.value(property.key), lines.value(property.key)});
         shown.insert(property.key);
     }
-    const QHash<QString, int> lines = keyLines(note);
     QStringList rest;
     for (auto it = keys.cbegin(); it != keys.cend(); ++it) {
         if (!shown.contains(it.key()))
@@ -727,7 +727,7 @@ QList<PropertyRow> propertyRows(QStringView note, const NoteTypes &types)
     }
     std::ranges::sort(rest, {}, [&lines](const QString &key) { return lines.value(key); });
     for (const QString &key : std::as_const(rest))
-        rows.append({key, std::nullopt, keys.value(key)});
+        rows.append({key, std::nullopt, keys.value(key), lines.value(key)});
     return rows;
 }
 

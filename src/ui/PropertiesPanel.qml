@@ -5,7 +5,7 @@ import QtQuick.Controls
 
 /// A note's properties as a form above its text, in place of the front matter they are written
 /// in: its type, then its type's properties, then any other keys.
-Rectangle {
+Item {
     id: root
 
     /// As MarkdownStyler::properties gives them.
@@ -20,23 +20,17 @@ Rectangle {
 
     /// A type was picked for the note, so the editor can offer its template.
     signal typePicked(string name)
+    /// The front matter is to be edited as text, which Source shows.
+    signal textRequested
 
     objectName: "propertiesPanel"
-    implicitHeight: column.implicitHeight + 2 * Theme.space3
-    radius: Theme.radiusMd
-    color: Theme.surface
-    border.color: Theme.hairline
+    implicitHeight: column.implicitHeight + Theme.space3
 
     Column {
         id: column
 
-        anchors {
-            left: parent.left
-            right: parent.right
-            top: parent.top
-            margins: Theme.space3
-        }
-        spacing: Theme.space1
+        width: root.width
+        spacing: 0
 
         Repeater {
             model: root.rows.filter(row => row.present || (root.showEmpty && !root.readOnly))
@@ -48,6 +42,7 @@ Rectangle {
                 readonly property string key: modelData.key
                 readonly property string kind: modelData.kind
                 readonly property string value: modelData.value
+                readonly property string problem: modelData.problem ?? ""
 
                 /// Sets the property, as text, a list's items as text with commas, or a bool.
                 function write(value) {
@@ -59,17 +54,22 @@ Rectangle {
 
                 objectName: "propertyRow"
                 width: column.width
-                height: Math.max(Theme.listRowHeight + Theme.space2, editor.implicitHeight)
+                height: Math.max(Theme.listRowHeight, editor.implicitHeight) + (problemText.visible
+                                                                                ? problemText.implicitHeight :
+                                                                                  0) + Theme.space1
 
+                HoverHandler {
+                    id: rowHover
+                }
                 Text {
                     id: label
 
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: Math.min(140, row.width / 3)
+                    y: (Math.max(Theme.listRowHeight, editor.implicitHeight) - height) / 2
+                    width: Math.min(120, row.width / 3)
                     text: row.key
                     textFormat: Text.PlainText
                     elide: Text.ElideRight
-                    color: Theme.textMuted
+                    color: row.problem !== "" ? Theme.danger : Theme.textMuted
                     font.family: Theme.fontFamily
                     font.pixelSize: Theme.textSm
                 }
@@ -80,9 +80,9 @@ Rectangle {
                         left: label.right
                         leftMargin: Theme.space3
                         right: remove.left
-                        rightMargin: Theme.space2
-                        verticalCenter: parent.verticalCenter
+                        rightMargin: Theme.space1
                     }
+                    y: (Math.max(Theme.listRowHeight, implicitHeight) - implicitHeight) / 2
                     sourceComponent: {
                         if (root.readOnly || row.kind === "nested")
                             return shownValue
@@ -101,18 +101,35 @@ Rectangle {
                     }
                 }
                 // Takes the value away; a type's property stays, empty, to fill in later.
-                PillButton {
+                StickerButton {
                     id: remove
 
                     objectName: "removeProperty"
-                    anchors {
-                        right: parent.right
-                        verticalCenter: parent.verticalCenter
-                    }
-                    visible: !root.readOnly && row.modelData.present
-                    label: qsTr("Clear")
+                    anchors.right: parent.right
+                    y: (Math.max(Theme.listRowHeight, editor.implicitHeight) - height) / 2
+                    width: height
+                    opacity: !root.readOnly && row.modelData.present && (rowHover.hovered
+                                                                         || activeFocus) ? 1 : 0
+                    enabled: !root.readOnly && row.modelData.present
+                    glyph: "close"
                     Accessible.name: qsTr("Clear %1").arg(row.key)
                     onClicked: row.write("")
+                }
+                Text {
+                    id: problemText
+
+                    anchors {
+                        left: editor.left
+                        right: editor.right
+                        top: editor.bottom
+                    }
+                    visible: row.problem !== ""
+                    text: row.problem
+                    textFormat: Text.PlainText
+                    wrapMode: Text.Wrap
+                    color: Theme.danger
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.textXs
                 }
 
                 Component {
@@ -124,6 +141,8 @@ Rectangle {
                                                       row.value !== "" ? row.value : "-"
                         textFormat: Text.PlainText
                         elide: Text.ElideRight
+                        verticalAlignment: Text.AlignVCenter
+                        height: Theme.listRowHeight
                         color: row.value !== "" && row.kind !== "nested" ? Theme.text :
                                                                            Theme.textFaint
                         font.family: Theme.fontFamily
@@ -162,6 +181,11 @@ Rectangle {
                     id: choice
 
                     Dropdown {
+                        /// The value as written, when it is none of the choices, so it shows.
+                        readonly property bool stray: row.value !== "" && !row.modelData.choices.some(
+                                                          each => each.toLowerCase()
+                                                                  === row.value.toLowerCase())
+
                         objectName: "propertyChoice"
                         minimumWidth: 180
                         model: [
@@ -169,13 +193,18 @@ Rectangle {
                                 "id": "",
                                 "name": qsTr("None")
                             }
-                        ].concat(row.modelData.choices.map(each => ({
-                            "id": each,
-                            "name": each
-                        })))
-                        currentValue: row.modelData.choices.find(each => each.toLowerCase()
-                                                                         === row.value.toLowerCase(
-                                                                             )) ?? ""
+                        ].concat(stray ? [
+                                             {
+                                                 "id": row.value,
+                                                 "name": qsTr("%1 (not a choice)").arg(row.value)
+                                             }
+                                         ] : []).concat(row.modelData.choices.map(each => ({
+                                             "id": each,
+                                             "name": each
+                                         })))
+                        currentValue: stray ? row.value : row.modelData.choices.find(each => each.toLowerCase(
+                                                                                                 ) === row.value.toLowerCase(
+                                                                                                 )) ?? ""
                         Accessible.name: row.key
                         onActivated: value => row.write(value)
                     }
@@ -223,9 +252,17 @@ Rectangle {
                                                                                                   row.kind
                                                                                                   === "date"
                                                                                                   ? "2026-11-16" :
-                                                                                                    ""
+                                                                                                    qsTr("Empty")
                         validator: row.kind === "number" && !row.modelData.list ? number : null
                         Accessible.name: row.key
+                        // Quiet until pointed at or typed in, so the values read as the note's.
+                        background: Rectangle {
+                            radius: Theme.radiusSm
+                            color: field.activeFocus ? Theme.surface : field.hovered
+                                                       ? Theme.surfaceAlt : "transparent"
+                            border.width: field.activeFocus ? 1 : 0
+                            border.color: Theme.accent
+                        }
                         onEditingFinished: {
                             suggestions.items = []
                             if (text !== row.value)
@@ -277,7 +314,8 @@ Rectangle {
             }
         }
         Row {
-            visible: !root.readOnly && (root.emptyCount > 0 || !root.adding)
+            visible: !root.readOnly
+            topPadding: Theme.space1
             spacing: Theme.space2
 
             PillButton {
@@ -296,17 +334,23 @@ Rectangle {
                     newKey.forceActiveFocus()
                 }
             }
+            PillButton {
+                objectName: "editAsText"
+                label: qsTr("Edit as text")
+                onClicked: root.textRequested()
+            }
         }
         // A key of the note's own, which no type names.
         Row {
             visible: !root.readOnly && root.adding
+            topPadding: Theme.space2
             spacing: Theme.space2
 
             Field {
                 id: newKey
 
                 objectName: "newPropertyKey"
-                width: Math.min(140, column.width / 3)
+                width: Math.min(120, column.width / 3)
                 placeholderText: qsTr("New property")
                 onAccepted: newValue.forceActiveFocus()
                 Keys.onEscapePressed: root.adding = false
@@ -335,5 +379,12 @@ Rectangle {
                 }
             }
         }
+    }
+    // Where the properties end and the note begins.
+    Rectangle {
+        anchors.bottom: parent.bottom
+        width: parent.width
+        height: 1
+        color: Theme.hairline
     }
 }

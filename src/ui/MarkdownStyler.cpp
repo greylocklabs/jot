@@ -208,7 +208,7 @@ void MarkdownStyler::readFrontMatter()
         applyFolds();
 }
 
-QVariantMap MarkdownStyler::propertyMap(const PropertyRow &row)
+QVariantMap MarkdownStyler::propertyMap(const PropertyRow &row) const
 {
     const auto shown = [&row](const QString &item) {
         // A link with a comma keeps its brackets, so the list's commas stay apart from it.
@@ -216,6 +216,12 @@ QVariantMap MarkdownStyler::propertyMap(const PropertyRow &row)
             return linkValueText(item);
         return item;
     };
+    // What is wrong with the value, as the warnings above the note say it.
+    QString problem;
+    for (const FrontMatterProblem &each : m_typeProblems) {
+        if (row.line > 0 && each.line == row.line)
+            problem = each.message;
+    }
     QString kind = u"text"_s;
     QString value;
     if (row.value.typeId() == QMetaType::QStringList) {
@@ -240,7 +246,8 @@ QVariantMap MarkdownStyler::propertyMap(const PropertyRow &row)
             {u"list"_s, row.property ? row.property->list : kind == u"list"},
             {u"choices"_s, row.property ? row.property->choices : QStringList()},
             {u"linkType"_s, row.property ? row.property->linkType : QString()},
-            {u"value"_s, value}};
+            {u"value"_s, value},
+            {u"problem"_s, problem}};
 }
 
 void MarkdownStyler::redrawAll()

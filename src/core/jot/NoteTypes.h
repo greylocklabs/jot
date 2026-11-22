@@ -137,6 +137,8 @@ struct PropertyRow
     std::optional<TypeProperty> property;
     /// As readFrontMatter() gives it, or invalid when the note leaves the key out.
     QVariant value;
+    /// The key's line in the note, counted from 1, or 0 when the note leaves it out.
+    int line = 0;
 };
 
 /// A note's properties in the order to show them: `type`, then its type's properties in the

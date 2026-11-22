@@ -20,8 +20,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 - Properties: in Styled and Read, a note's front matter shows as a form above its text, with a
   control for each of its type's properties: a list of choices, a checkbox, a day to pick, or a
   field that offers notes of a link's type. Empty ones wait behind Show empty, and Add a property
-  adds a key of the note's own. The front matter shows as text again while the cursor is in it,
-  and always in Source. Read shows the values without changing them.
+  adds a key of the note's own. A value its type does not take says why on its row. Edit as text
+  shows the front matter in Source, and Read shows the values without changing them.
 
 ## 0.7.2 - 2026-11-15
 
