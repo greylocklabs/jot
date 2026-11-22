@@ -404,6 +404,11 @@ void TestNoteTypes::ordersANotesProperties()
     QCOMPARE(listText(items), u"[[Smith, John]], \"Vey, Mara\", plain"_s);
     QCOMPARE(listItems(listText(items)), items);
     QCOMPARE(listItems(u" a ,, b,"_s), (QStringList{u"a"_s, u"b"_s}));
+    // Quotes in an item are kept, marked where it has to be quoted, and as typed otherwise.
+    const QStringList quotes{u"say \"hi\", then go"_s, u"a \\ b"_s, u"\"bare\""_s, u"x"_s};
+    QCOMPARE(listItems(listText(quotes)), quotes);
+    QCOMPARE(listItems(u"say \"hi\" twice, x"_s), (QStringList{u"say \"hi\" twice"_s, u"x"_s}));
+    QCOMPARE(listItems(u"\"Vey, Mara\" , M"_s), (QStringList{u"Vey, Mara"_s, u"M"_s}));
     QCOMPARE(linkValueText(u"[[Ash Court#History|the Court]]"_s), u"Ash Court#History|the Court"_s);
     QCOMPARE(linkValue(linkValueText(u"[[Ash Court#History|the Court]]"_s)),
              u"[[Ash Court#History|the Court]]"_s);
