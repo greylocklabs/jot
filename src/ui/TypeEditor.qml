@@ -220,7 +220,7 @@ Column {
     Repeater {
         model: root.form.properties ?? []
 
-        Row {
+        Item {
             id: property
             enabled: root.editable
 
@@ -233,65 +233,76 @@ Column {
             }
 
             objectName: "typeProperty"
-            spacing: Theme.space2
+            width: root.width
+            height: propertyFields.implicitHeight
 
-            Field {
-                width: 140
-                text: property.modelData.key
-                placeholderText: qsTr("Key")
-                Accessible.name: qsTr("Property key")
-                onEditingFinished: {
-                    if (text.trim() !== "" && text !== property.modelData.key)
-                        property.set("key", text.trim())
-                }
-            }
-            Dropdown {
-                objectName: "propertyKind"
-                minimumWidth: 120
-                model: Vault.propertyKinds().map(kind => ({
-                    "id": kind,
-                    "name": kind
-                }))
-                currentValue: property.modelData.kind
-                Accessible.name: qsTr("Kind of %1").arg(property.modelData.key)
-                onActivated: value => property.set("kind", value)
-            }
-            CheckBox {
-                anchors.verticalCenter: parent.verticalCenter
-                text: qsTr("List")
-                checked: property.modelData.list
-                onClicked: property.set("list", checked)
-            }
-            Field {
-                visible: property.modelData.kind === "choice"
-                width: 200
-                text: property.modelData.choices
-                placeholderText: qsTr("Choices, with commas between")
-                Accessible.name: qsTr("Choices for %1").arg(property.modelData.key)
-                onEditingFinished: {
-                    if (text !== property.modelData.choices)
-                        property.set("choices", text)
-                }
-            }
-            Dropdown {
-                visible: property.modelData.kind === "link"
-                minimumWidth: 160
-                model: [
-                    {
-                        "id": "",
-                        "name": qsTr("Any note")
+            Row {
+                id: propertyFields
+
+                spacing: Theme.space2
+
+                Field {
+                    width: 140
+                    text: property.modelData.key
+                    placeholderText: qsTr("Key")
+                    Accessible.name: qsTr("Property key")
+                    onEditingFinished: {
+                        if (text.trim() !== "" && text !== property.modelData.key)
+                            property.set("key", text.trim())
                     }
-                ].concat(Vault.noteTypes.map(type => ({
-                    "id": type.name,
-                    "name": type.name
-                })))
-                currentValue: property.modelData.linkType
-                Accessible.name: qsTr("Type %1 links to").arg(property.modelData.key)
-                onActivated: value => property.set("linkType", value)
+                }
+                Dropdown {
+                    objectName: "propertyKind"
+                    minimumWidth: 120
+                    model: Vault.propertyKinds().map(kind => ({
+                        "id": kind,
+                        "name": kind
+                    }))
+                    currentValue: property.modelData.kind
+                    Accessible.name: qsTr("Kind of %1").arg(property.modelData.key)
+                    onActivated: value => property.set("kind", value)
+                }
+                CheckBox {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: qsTr("List")
+                    checked: property.modelData.list
+                    onClicked: property.set("list", checked)
+                }
+                Field {
+                    visible: property.modelData.kind === "choice"
+                    width: 200
+                    text: property.modelData.choices
+                    placeholderText: qsTr("Choices, with commas between")
+                    Accessible.name: qsTr("Choices for %1").arg(property.modelData.key)
+                    onEditingFinished: {
+                        if (text !== property.modelData.choices)
+                            property.set("choices", text)
+                    }
+                }
+                Dropdown {
+                    visible: property.modelData.kind === "link"
+                    minimumWidth: 160
+                    model: [
+                        {
+                            "id": "",
+                            "name": qsTr("Any note")
+                        }
+                    ].concat(Vault.noteTypes.map(type => ({
+                        "id": type.name,
+                        "name": type.name
+                    })))
+                    currentValue: property.modelData.linkType
+                    Accessible.name: qsTr("Type %1 links to").arg(property.modelData.key)
+                    onActivated: value => property.set("linkType", value)
+                }
             }
-            StickerButton {
+            // On the right, as the type's own trash is.
+            IconButton {
                 objectName: "removeTypeProperty"
-                anchors.verticalCenter: parent.verticalCenter
+                anchors {
+                    right: parent.right
+                    verticalCenter: parent.verticalCenter
+                }
                 glyph: "trash"
                 Accessible.name: qsTr("Remove %1").arg(property.modelData.key)
                 onClicked: root.edit(form => form.properties.splice(property.index, 1))

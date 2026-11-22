@@ -327,10 +327,16 @@ Popup {
                             width: typesSection.width
                             spacing: Theme.space3
 
-                            Row {
-                                spacing: Theme.space3
+                            // The type, and on the right, what to do with it.
+                            Item {
+                                width: parent.width
+                                height: Math.max(typeLeft.implicitHeight,
+                                                 typeButtons.implicitHeight)
 
                                 Row {
+                                    id: typeLeft
+
+                                    anchors.verticalCenter: parent.verticalCenter
                                     spacing: Theme.space3
                                     opacity: typeRow.deleted ? 0.5 : 1
 
@@ -375,6 +381,16 @@ Popup {
                                         font.family: Theme.fontFamily
                                         font.pixelSize: Theme.textSm
                                     }
+                                }
+                                Row {
+                                    id: typeButtons
+
+                                    anchors {
+                                        right: parent.right
+                                        verticalCenter: parent.verticalCenter
+                                    }
+                                    spacing: Theme.space2
+
                                     StickerButton {
                                         objectName: "editType"
                                         anchors.verticalCenter: parent.verticalCenter
@@ -385,32 +401,36 @@ Popup {
                                         onClicked: typesSection.editing = typeRow.editing ? "" :
                                                                                             typeRow.modelData.id
                                     }
-                                }
-                                // Deleted at once, and brought back by the same place.
-                                StickerButton {
-                                    objectName: typeRow.deleted ? "undoDeleteType" : "deleteType"
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    enabled: Vault.writable
-                                    glyph: typeRow.deleted ? "undo" : "trash"
-                                    Accessible.name: typeRow.deleted ? qsTr("Bring back %1").arg(
-                                                                           typeRow.modelData.name) :
-                                                                       qsTr("Delete %1").arg(
-                                                                           typeRow.modelData.name)
-                                    onClicked: {
-                                        const type = typeRow.modelData
-                                        if (typeRow.deleted) {
-                                            if (Vault.writeTypeFile(type.id, type.text))
-                                                typesSection.deleted = typesSection.deleted.filter(
-                                                            each => each.id !== type.id)
-                                            return
+                                    // Deleted at once, and brought back by the same place.
+                                    IconButton {
+                                        objectName: typeRow.deleted ? "undoDeleteType" :
+                                                                      "deleteType"
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        enabled: Vault.writable
+                                        glyph: typeRow.deleted ? "undo" : "trash"
+                                        danger: !typeRow.deleted
+                                        Accessible.name: typeRow.deleted ? qsTr("Bring back %1").arg(
+                                                                               typeRow.modelData.name) :
+                                                                           qsTr("Delete %1").arg(
+                                                                               typeRow.modelData.name)
+                                        onClicked: {
+                                            const type = typeRow.modelData
+                                            if (typeRow.deleted) {
+                                                if (Vault.writeTypeFile(type.id, type.text))
+                                                    typesSection.deleted
+                                                            = typesSection.deleted.filter(each
+                                                                                          => each.id
+                                                                                             !== type.id)
+                                                return
+                                            }
+                                            const text = Vault.typeFileText(type.id)
+                                            if (Vault.deleteType(type.id))
+                                                typesSection.deleted = typesSection.deleted.concat(
+                                                            [Object.assign({}, type, {
+                                                                               "deleted": true,
+                                                                               "text": text
+                                                                           })])
                                         }
-                                        const text = Vault.typeFileText(type.id)
-                                        if (Vault.deleteType(type.id))
-                                            typesSection.deleted = typesSection.deleted.concat(
-                                                        [Object.assign({}, type, {
-                                                                           "deleted": true,
-                                                                           "text": text
-                                                                       })])
                                     }
                                 }
                             }
