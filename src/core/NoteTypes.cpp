@@ -744,7 +744,14 @@ QString listText(const QStringList &items)
     QStringList shown;
     for (const QString &item : items) {
         const bool link = item.startsWith(u"[[") && item.endsWith(u"]]");
-        shown.append(!item.contains(u',') || link ? item : u'"' + item + u'"');
+        if (link || (!item.contains(u',') && !item.contains(u'"'))) {
+            shown.append(item);
+            continue;
+        }
+        // In quotes, its own quotes and backslashes marked, so it reads back as written.
+        QString escaped = item;
+        escaped.replace(u'\\', u"\\\\"_s).replace(u'"', u"\\\""_s);
+        shown.append(u'"' + escaped + u'"');
     }
     return shown.join(u", "_s);
 }
@@ -754,20 +761,34 @@ QStringList listItems(QStringView text)
     QStringList items;
     QString item;
     bool quoted = false;
+    // Whether the item was in quotes, so its quotes and backslashes are taken as marked.
+    bool wasQuoted = false;
     int brackets = 0;
     const auto finish = [&] {
-        QString trimmed = item.trimmed();
-        if (trimmed.size() >= 2 && trimmed.startsWith(u'"') && trimmed.endsWith(u'"'))
-            trimmed = trimmed.mid(1, trimmed.size() - 2);
-        if (!trimmed.isEmpty())
-            items.append(trimmed);
+        const QString trimmed = item.trimmed();
+        if (!trimmed.isEmpty() || wasQuoted)
+            items.append(wasQuoted ? item : trimmed);
         item.clear();
+        wasQuoted = false;
     };
     for (qsizetype i = 0; i < text.size(); ++i) {
         const QChar c = text.at(i);
-        if (c == u'"' && brackets == 0)
+        if (quoted && c == u'\\' && i + 1 < text.size()) {
+            item += text.at(++i);
+            continue;
+        }
+        // A quote opens an item only at its start; one inside an item is part of it.
+        if (c == u'"' && brackets == 0 && (quoted || item.trimmed().isEmpty())) {
+            if (!quoted)
+                item.clear();
             quoted = !quoted;
-        else if (!quoted && text.sliced(i).startsWith(u"[["))
+            wasQuoted = true;
+            continue;
+        }
+        // Space after a quoted item's closing quote is not part of it.
+        if (wasQuoted && !quoted && c.isSpace())
+            continue;
+        if (!quoted && text.sliced(i).startsWith(u"[["))
             ++brackets;
         else if (!quoted && brackets > 0 && text.sliced(i).startsWith(u"]]"))
             --brackets;
