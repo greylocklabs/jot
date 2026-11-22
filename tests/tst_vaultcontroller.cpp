@@ -369,6 +369,18 @@ void TestVaultController::takesTheTypesASyncedVaultHas()
     QTRY_COMPARE(QDir(other + u"/.jot/types"_s).entryList(QDir::Files).size(),
                  NoteTypes::starterIds().size());
     QTRY_VERIFY(m_vault->types().find(u"item"_s));
+
+    // A vault whose first sync fails still has the starters after it.
+    const QString third = m_dir->filePath(u"Third"_s);
+    QVERIFY(QDir().mkpath(third));
+    m_settings->setSyncRemote(third, u"folder:"_s + m_dir->filePath(u"gone"_s));
+    QVERIFY(m_vault->openPath(third));
+    QVERIFY(m_vault->sync()->configured());
+    finished.clear();
+    m_vault->sync()->syncNow();
+    QVERIFY(finished.wait(10000));
+    QTRY_COMPARE(QDir(third + u"/.jot/types"_s).entryList(QDir::Files).size(),
+                 NoteTypes::starterIds().size());
 }
 
 void TestVaultController::switchesToAnotherFolder()

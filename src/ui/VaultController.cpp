@@ -61,12 +61,13 @@ VaultController::VaultController(Settings &settings, QObject *parent)
     connect(this, &VaultController::currentChanged, this, &VaultController::followCurrentInTabs);
     connect(this, &VaultController::currentChanged, this, &VaultController::refreshTarget);
     connect(&m_sync, &SyncController::finished, this, [this](const SyncReport &report) {
+        // Starters set aside for a first sync come back when it brought no types, or failed.
+        seedTypes();
         // A sync that failed sent nothing, so what waited still waits.
         if (!report.failure.isEmpty()) {
             updateSyncPending();
             return;
         }
-        seedTypes();
         m_syncedPaths.clear();
         for (const NoteInfo &note : m_index ? m_index->notesIn({}) : QList<NoteInfo>())
             m_syncedPaths.insert(note.path);
@@ -80,6 +81,11 @@ VaultController::VaultController(Settings &settings, QObject *parent)
             qOverload<>(&QTimer::start));
     connect(&m_typesWatcher, &QFileSystemWatcher::fileChanged, &m_typesTimer,
             qOverload<>(&QTimer::start));
+    // A sync that stops before it starts, as without its key, sets the starters aside too.
+    connect(&m_sync, &SyncController::changed, this, [this] {
+        if (!m_sync.syncing() && !m_sync.problem().isEmpty())
+            seedTypes();
+    });
     // Saving changes the list's order and titles; a burst of saves reloads it once.
     m_reloadTimer.setSingleShot(true);
     m_reloadTimer.setInterval(800);
