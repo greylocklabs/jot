@@ -364,6 +364,16 @@ void TestNoteEditor::showsPropertiesInPlaceOfFrontMatter()
     QCOMPARE(body->property("text").toString(), frontMatter);
     QTest::keyClick(m_window.get(), Qt::Key_Z, Qt::ControlModifier);
     QTRY_COMPARE(body->property("text").toString(), frontMatter + u"The lead.\n"_s);
+    // A note that is only front matter, with no line after it, gets one to type on.
+    body->setProperty("text", u"---\ntype: Character\n---"_s);
+    body->forceActiveFocus();
+    body->setProperty("cursorPosition", int(body->property("text").toString().size()));
+    QTRY_COMPARE(body->property("text").toString(), u"---\ntype: Character\n---\n"_s);
+    QTest::keyClick(m_window.get(), Qt::Key_X);
+    QCOMPARE(body->property("text").toString(), u"---\ntype: Character\n---\nx"_s);
+    QTRY_VERIFY(!document->firstBlock().isVisible());
+    QVERIFY(document->lastBlock().isVisible());
+    body->setProperty("text", frontMatter + u"The lead.\n"_s);
     // Edit as text shows them in Source.
     QMetaObject::invokeMethod(find(u"editAsText"_s), "clicked");
     QVERIFY(m_settings->sourceMode());

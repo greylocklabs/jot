@@ -426,8 +426,23 @@ Rectangle {
 
     /// Keeps the cursor and the selection in the body while the front matter is hidden, so
     /// nothing typed or deleted reaches it unseen.
+    property bool addingBodyLine: false
+
     function keepOutOfFrontMatter() {
-        if (!styler.hideFrontMatter || body.selectionStart >= styler.bodyStart)
+        if (!styler.hideFrontMatter)
+            return
+        // A note that is only front matter gets a line after it to type on, rather than the
+        // hidden closing fence's.
+        if (body.activeFocus && styler.bodyStart >= body.length && !body.text.endsWith("\n")) {
+            // Once: the insert moves the cursor, which asks again before the text has settled.
+            if (!addingBodyLine) {
+                addingBodyLine = true
+                body.insert(body.length, "\n")
+                addingBodyLine = false
+            }
+            return
+        }
+        if (body.selectionStart >= styler.bodyStart)
             return
         if (body.selectionStart === body.selectionEnd)
             body.cursorPosition = Math.min(styler.bodyStart, body.length)
