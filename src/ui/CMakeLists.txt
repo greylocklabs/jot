@@ -110,6 +110,7 @@ qt_add_qml_module(jotui
         FoldArrows.qml
         FoundMarks.qml
         Glyph.qml
+        IconButton.qml
         KeyCap.qml
         KeyHelp.qml
         LazyPopup.qml
