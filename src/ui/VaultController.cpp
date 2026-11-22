@@ -232,6 +232,9 @@ bool VaultController::openPath(const QString &path)
 void VaultController::close()
 {
     saveNow();
+    // Starters set aside for this vault's first sync belong to it, not the next one opened.
+    m_setAsideTypes.clear();
+    m_keptTypes.clear();
     m_frontMatterKeys.reset();
     m_sync.setVault({}, {});
     m_syncedPaths.clear();
