@@ -53,7 +53,7 @@ public:
         std::optional<JsonNode> node = readValue(0);
         skipSpace();
         if (node && m_at != m_text.size())
-            return fail(QObject::tr("more after the end of the JSON"));
+            return fail(QObject::tr("There is more after the end of the JSON."));
         return node;
     }
 
@@ -76,9 +76,9 @@ private:
     std::optional<JsonNode> readValue(int depth)
     {
         if (depth > 512)
-            return fail(QObject::tr("nested too deeply"));
+            return fail(QObject::tr("Its values are nested too deeply to show."));
         if (m_at >= m_text.size())
-            return fail(QObject::tr("the JSON ends early"));
+            return fail(QObject::tr("The JSON ends before it is finished."));
         const QChar c = m_text.at(m_at);
         JsonNode node;
         node.start = m_at;
@@ -96,12 +96,12 @@ private:
                 member.keyStart = m_at;
                 const std::optional<QString> key = readString();
                 if (!key)
-                    return fail(QObject::tr("a key that is not a string"));
+                    return fail(QObject::tr("A key is not in quotes, as JSON needs."));
                 member.key = *key;
                 member.keyEnd = m_at;
                 skipSpace();
                 if (m_at >= m_text.size() || m_text.at(m_at) != u':')
-                    return fail(QObject::tr("a key without a colon"));
+                    return fail(QObject::tr("A key has no colon after it."));
                 ++m_at;
                 skipSpace();
                 std::optional<JsonNode> value = readValue(depth + 1);
@@ -118,7 +118,7 @@ private:
                     node.end = ++m_at;
                     return node;
                 }
-                return fail(QObject::tr("an object that is not closed"));
+                return fail(QObject::tr("A { is never closed."));
             }
         }
         if (c == u'[') {
@@ -144,13 +144,13 @@ private:
                     node.end = ++m_at;
                     return node;
                 }
-                return fail(QObject::tr("an array that is not closed"));
+                return fail(QObject::tr("A [ is never closed."));
             }
         }
         if (c == u'"') {
             const std::optional<QString> text = readString();
             if (!text)
-                return fail(QObject::tr("a string that is not closed"));
+                return fail(QObject::tr("A quote is never closed."));
             node.kind = JsonNode::Kind::String;
             node.text = *text;
             node.end = m_at;
@@ -178,7 +178,7 @@ private:
             node.end = m_at;
             return node;
         }
-        return fail(QObject::tr("something that is not a JSON value"));
+        return fail(QObject::tr("Something in it is not JSON."));
     }
 
     std::optional<QString> readString()
@@ -431,7 +431,7 @@ bool DataTable::parse(QString *why)
             if (where.part.key == m_part.key && where.part.document == m_part.document)
                 return parseRange(where, why);
         }
-        *why = QObject::tr("no list of records called %1").arg(m_part.name);
+        *why = QObject::tr("There is no list called %1 in it.").arg(m_part.name);
         return false;
     }
     if (m_kind == u"json")
@@ -440,7 +440,7 @@ bool DataTable::parse(QString *why)
         return parseDelimited(why);
     if (m_kind == u"yaml")
         return parseYaml(why);
-    *why = QObject::tr("not a kind of file that holds a table");
+    *why = QObject::tr("Only CSV, TSV, JSON and YAML files open as tables.");
     return false;
 }
 
@@ -456,7 +456,7 @@ bool DataTable::parseJson(QString *why)
         !std::ranges::all_of(root->items, [](const JsonNode &item) {
             return item.kind == JsonNode::Kind::Object;
         })) {
-        *why = QObject::tr("not a list of records");
+        *why = QObject::tr("Only a list of rows with named fields shows as a table.");
         return false;
     }
     m_array = {root->start, root->end};
@@ -608,11 +608,11 @@ bool DataTable::parseDelimited(QString *why)
         }
     }
     if (quoted) {
-        *why = QObject::tr("a quote that is never closed");
+        *why = QObject::tr("A quote is never closed.");
         return false;
     }
     if (records.isEmpty()) {
-        *why = QObject::tr("no header row");
+        *why = QObject::tr("It has no header row naming its columns.");
         return false;
     }
     m_header = records.takeFirst();
@@ -1241,7 +1241,7 @@ bool DataTable::parseYaml(QString *why)
 
     yaml_parser_t parser;
     if (!yaml_parser_initialize(&parser)) {
-        *why = QObject::tr("YAML could not be read");
+        *why = QObject::tr("The YAML could not be read.");
         return false;
     }
     yaml_parser_set_input_string(&parser, reinterpret_cast<const unsigned char *>(bytes.data()),
@@ -1251,7 +1251,8 @@ bool DataTable::parseYaml(QString *why)
         yaml_parser_delete(&parser);
         return false;
     };
-    const QString notRecords = QObject::tr("not a list of records");
+    const QString notRecords =
+        QObject::tr("Only a list of rows with named fields shows as a table.");
 
     int depth = 0;
     int documents = 0;
@@ -1347,11 +1348,11 @@ bool DataTable::parseYaml(QString *why)
             if (!root)
                 return fail(notRecords);
             if (rootFlow && !m_rows.isEmpty())
-                return fail(QObject::tr("a list written on one line, to edit as text"));
+                return fail(QObject::tr("A list written on one line is edited as text."));
             return true;
         case YAML_DOCUMENT_START_EVENT:
             if (++documents > 1)
-                return fail(QObject::tr("more than one YAML document"));
+                return fail(QObject::tr("It holds more than one YAML document."));
             break;
         case YAML_SEQUENCE_START_EVENT:
         case YAML_MAPPING_START_EVENT: {
@@ -1376,7 +1377,7 @@ bool DataTable::parseYaml(QString *why)
                 key = true;
             } else if (depth == 2) {
                 if (key)
-                    return fail(QObject::tr("a key that is not plain text"));
+                    return fail(QObject::tr("A key is not plain text."));
                 nestedStart = start;
                 field.block = !flow;
                 field.locked = marked;
@@ -1427,7 +1428,7 @@ bool DataTable::parseYaml(QString *why)
             }
             if (key) {
                 if (type == YAML_ALIAS_EVENT)
-                    return fail(QObject::tr("a key that is not plain text"));
+                    return fail(QObject::tr("A key is not plain text."));
                 field = {};
                 field.name = scalar.text;
                 field.key = {start, end};
