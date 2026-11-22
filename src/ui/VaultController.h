@@ -649,6 +649,8 @@ Q_SIGNALS:
     void todoistImportFinished(const QVariantMap &summary);
 
 private:
+    /// Writes `to` for `from` where other types than `id` build on it or link to it by name.
+    void renameInOtherTypes(const QString &id, const QString &from, const QString &to);
     /// Writes the starter types into a vault that has no types folder.
     void seedTypes();
     /// Puts back the starters set aside for a first sync, unless types came in with it.
