@@ -364,10 +364,13 @@ void TestNoteEditor::showsPropertiesInPlaceOfFrontMatter()
     QCOMPARE(body->property("text").toString(), frontMatter);
     QTest::keyClick(m_window.get(), Qt::Key_Z, Qt::ControlModifier);
     QTRY_COMPARE(body->property("text").toString(), frontMatter + u"The lead.\n"_s);
-    // A note that is only front matter, with no line after it, gets one to type on.
+    // A note that is only front matter, with no line after it, gets one to type on, even when
+    // the cursor is already at its end as the note is gone into.
+    find(u"title"_s)->forceActiveFocus();
     body->setProperty("text", u"---\ntype: Character\n---"_s);
-    body->forceActiveFocus();
     body->setProperty("cursorPosition", int(body->property("text").toString().size()));
+    QCOMPARE(body->property("text").toString(), u"---\ntype: Character\n---"_s);
+    body->forceActiveFocus();
     QTRY_COMPARE(body->property("text").toString(), u"---\ntype: Character\n---\n"_s);
     QTest::keyClick(m_window.get(), Qt::Key_X);
     QCOMPARE(body->property("text").toString(), u"---\ntype: Character\n---\nx"_s);

@@ -1241,6 +1241,9 @@ Rectangle {
                 }
                 onCursorRectangleChanged: flick.follow(cursorRectangle)
                 onActiveFocusChanged: {
+                    // A note that is only front matter gets its line to type on as it is gone
+                    // into, with the cursor already at its end.
+                    root.keepOutOfFrontMatter()
                     if (!activeFocus && vi.mode === "visual")
                         vi.mode = "normal"
                     // Leaving the note tidies the line, as leaving the line does.
