@@ -3167,9 +3167,10 @@ QString VaultController::newType(const QString &name)
     QString path = NoteTypes::kFolder + u'/' + id + u".yaml"_s;
     for (int n = 2; QFileInfo::exists(m_vault->absolute(path)); ++n)
         path = NoteTypes::kFolder + u'/' + id + u'-' + QString::number(n) + u".yaml"_s;
+    NoteType fresh;
+    fresh.name = wanted;
     QSaveFile file(m_vault->absolute(path));
-    if (!file.open(QIODevice::WriteOnly) ||
-        file.write((u"name: %1\nproperties:\n"_s.arg(yamlScalar(wanted))).toUtf8()) < 0 ||
+    if (!file.open(QIODevice::WriteOnly) || file.write(NoteTypes::fileText(fresh).toUtf8()) < 0 ||
         !file.commit()) {
         setProblem(tr("Could not make the type: %1").arg(file.errorString()));
         return {};
@@ -3201,7 +3202,8 @@ bool VaultController::deleteType(const QString &id)
 
 QVariantMap VaultController::typeForm(const QString &id) const
 {
-    const NoteType type = NoteTypes::readFile(id, typeFileText(id));
+    const QString text = typeFileText(id);
+    const NoteType type = NoteTypes::readFile(id, text);
     QVariantList properties;
     for (const TypeProperty &property : type.properties) {
         properties.append(QVariantMap{{u"key"_s, property.key},
@@ -3216,13 +3218,21 @@ QVariantMap VaultController::typeForm(const QString &id) const
             {u"color"_s, type.color},
             {u"extends"_s, type.extends},
             {u"template"_s, type.templatePath},
-            {u"properties"_s, properties}};
+            {u"properties"_s, properties},
+            // Written back from the form, the file would lose anything it does not show, such
+            // as a comment or a line it cannot read, so then only its YAML is edited.
+            {u"editable"_s, NoteTypes::fileText(type) == text}};
 }
 
 bool VaultController::saveTypeForm(const QString &id, const QVariantMap &form)
 {
     if (!m_vault || id.isEmpty())
         return false;
+    if (!typeForm(id).value(u"editable"_s).toBool()) {
+        setProblem(tr("The type %1 has more in its file than the form shows, so edit it as YAML.")
+                       .arg(id));
+        return false;
+    }
     NoteType type;
     type.id = id;
     type.name = form.value(u"name"_s).toString().trimmed();

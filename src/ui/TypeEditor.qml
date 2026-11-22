@@ -16,6 +16,8 @@ Column {
     readonly property var icons: ["note", "person", "people", "pin", "box", "flag", "video", "bell", "clock",
         "mic", "task", "table", "quote", "braces", "search", "play", "sound", "list-bullet"]
 
+    readonly property bool editable: form.editable !== false
+
     /// Asks for the type's file to be shown as YAML, which the dialog does by closing first.
     signal yamlRequested
 
@@ -29,6 +31,31 @@ Column {
     objectName: "typeEditor"
     spacing: Theme.space3
 
+    // A file with more than the form shows is edited as YAML, so nothing in it is lost.
+    Row {
+        visible: root.form.editable === false
+        spacing: Theme.space3
+
+        Text {
+            objectName: "typeNotEditable"
+            anchors.verticalCenter: parent.verticalCenter
+            width: Math.min(implicitWidth, root.width - yamlButton.width - parent.spacing)
+            wrapMode: Text.Wrap
+            text: qsTr(
+                      "This type's file has comments or lines the form cannot show, so edit it as YAML to keep them.")
+            color: Theme.textMuted
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.textSm
+        }
+        PillButton {
+            id: yamlButton
+
+            anchors.verticalCenter: parent.verticalCenter
+            label: qsTr("Edit as YAML")
+            onClicked: root.yamlRequested()
+        }
+    }
+
     component Label: Text {
         width: 100
         color: Theme.textMuted
@@ -37,6 +64,7 @@ Column {
     }
 
     Row {
+        enabled: root.editable
         spacing: Theme.space3
 
         Label {
@@ -56,6 +84,7 @@ Column {
     }
     // The icons as buttons to pick from, as the emoji are.
     Row {
+        enabled: root.editable
         spacing: Theme.space3
 
         Label {
@@ -101,6 +130,7 @@ Column {
         }
     }
     Row {
+        enabled: root.editable
         spacing: Theme.space3
 
         Label {
@@ -134,6 +164,7 @@ Column {
         }
     }
     Row {
+        enabled: root.editable
         spacing: Theme.space3
 
         Label {
@@ -158,6 +189,7 @@ Column {
         }
     }
     Row {
+        enabled: root.editable
         spacing: Theme.space3
 
         Label {
@@ -190,6 +222,7 @@ Column {
 
         Row {
             id: property
+            enabled: root.editable
 
             required property var modelData
             required property int index
@@ -266,6 +299,7 @@ Column {
         }
     }
     Row {
+        enabled: root.editable
         spacing: Theme.space3
 
         Field {

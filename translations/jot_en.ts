@@ -4033,6 +4033,10 @@ Press %1 to make one.</source>
 <context>
     <name>TypeEditor</name>
     <message>
+        <source>This type&apos;s file has comments or lines the form cannot show, so edit it as YAML to keep them.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Name</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5859,6 +5863,10 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>Could not delete the type: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The type %1 has more in its file than the form shows, so edit it as YAML.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
