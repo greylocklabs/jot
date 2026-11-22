@@ -478,6 +478,20 @@ void TestVaultController::makesNotesAndTypes()
     QVERIFY(m_vault->currentText().contains(u"## Where it is"_s));
     QVERIFY(m_vault->newNoteOfType(u"Nothing"_s).isEmpty());
 
+    // A template outside the vault is not read, however the type names it.
+    writeFile(m_dir->filePath(u"secret.md"_s), "Not the vault's.\n");
+    writeFile(m_root + u"/.jot/types/stray.yaml"_s, "name: Stray\ntemplate: ../secret.md\n");
+    QTRY_VERIFY(m_vault->types().find(u"stray"_s));
+    QVERIFY(!m_vault->newNoteOfType(u"stray"_s).isEmpty());
+    QVERIFY(!m_vault->currentText().contains(u"Not the vault's"_s));
+    QVERIFY(QFile::link(m_dir->filePath(u"secret.md"_s), m_root + u"/Linked.md"_s));
+    writeFile(m_root + u"/.jot/types/stray.yaml"_s, "name: Stray\ntemplate: Linked.md\n");
+    QTRY_COMPARE(m_vault->types().find(u"stray"_s)->templatePath, u"Linked.md"_s);
+    QVERIFY(!m_vault->newNoteOfType(u"stray"_s).isEmpty());
+    QVERIFY(!m_vault->currentText().contains(u"Not the vault's"_s));
+    QVERIFY(QFile::remove(m_root + u"/Linked.md"_s));
+    QVERIFY(m_vault->deleteType(u"stray"_s));
+
     // A new type is a file; one named again is the same file. Its file opens as YAML when asked.
     const QString type = m_vault->newType(u"Story Arc"_s);
     QCOMPARE(type, u".jot/types/story-arc.yaml"_s);
