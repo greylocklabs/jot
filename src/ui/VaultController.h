@@ -581,11 +581,13 @@ public:
     /// Writes back the starter types that are missing or changed.
     Q_INVOKABLE bool restoreDefaultTypes();
     /// The type `id` as its file has it, for a form to edit: `{id, name, icon, color, extends,
-    /// template, properties}`, each property `{key, kind, list, choices, linkType}`, choices as
-    /// text with commas between. Only its own properties, not those of a type it extends.
+    /// template, properties, editable}`, each property `{key, kind, list, choices, linkType}`,
+    /// choices as text with commas between. Only its own properties, not those of a type it
+    /// extends. `editable` is false for a file the form could not write back as it is, such as
+    /// one with a comment or a line it cannot read.
     Q_INVOKABLE QVariantMap typeForm(const QString &id) const;
-    /// Writes the type `id` from `form`, as typeForm() gives it. A new name is written into the
-    /// notes of the type too, so they keep it.
+    /// Writes the type `id` from `form`, as typeForm() gives it, unless its file is not editable
+    /// in the form. A new name is written into the notes of the type too, so they keep it.
     Q_INVOKABLE bool saveTypeForm(const QString &id, const QVariantMap &form);
     /// The text of the type `id`'s file, to put back with writeTypeFile() after a delete.
     Q_INVOKABLE QString typeFileText(const QString &id) const;

@@ -514,6 +514,20 @@ void TestVaultController::makesNotesAndTypes()
     QCOMPARE(*notefile::read(m_root + u"/Arc One.md"_s, &error),
              u"---\ntype: Saga\n---\nBody.\n"_s);
 
+    // A file with more than the form shows is not written from it, so nothing in it is lost.
+    const QString kept =
+        u"# Written by hand.\nname: Saga\nmood: brooding\nproperties:\n  acts: nubmer\n"_s;
+    QVERIFY(m_vault->writeTypeFile(u"story-arc"_s, kept));
+    form = m_vault->typeForm(u"story-arc"_s);
+    QVERIFY(!form.value(u"editable"_s).toBool());
+    form.insert(u"icon"_s, u"bell"_s);
+    QVERIFY(!m_vault->saveTypeForm(u"story-arc"_s, form));
+    QCOMPARE(m_vault->typeFileText(u"story-arc"_s), kept);
+    // Jot's own files are as the form writes them.
+    QVERIFY(m_vault->typeForm(u"character"_s).value(u"editable"_s).toBool());
+    QVERIFY(m_vault->writeTypeFile(u"story-arc"_s,
+                                   NoteTypes::fileText(*m_vault->types().find(u"Saga"_s))));
+
     // Its text, kept before a delete, brings it back.
     const QString text = m_vault->typeFileText(u"story-arc"_s);
     QVERIFY(text.startsWith(u"name: Saga\n"_s));
