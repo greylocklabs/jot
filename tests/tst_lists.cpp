@@ -392,6 +392,19 @@ QQuickItem *TestLists::menuEntry(const QString &text) const
 
 void TestLists::click(QQuickItem *item, Qt::MouseButton button)
 {
+    // A row past the bottom of the window, which the list's order can put it, is scrolled into
+    // view first, as a person would.
+    for (QQuickItem *view = item->parentItem(); view; view = view->parentItem()) {
+        if (!view->inherits("QQuickFlickable"))
+            continue;
+        const QRectF at = item->mapRectToItem(view, {0, 0, item->width(), item->height()});
+        if (at.top() < 0 || at.bottom() > view->height()) {
+            const qreal contentY = view->property("contentY").toReal();
+            view->setProperty("contentY", std::max(0.0, contentY + at.top()));
+            QCoreApplication::processEvents();
+        }
+        break;
+    }
     QTest::mouseClick(m_window.get(), button, {},
                       item->mapToScene({item->width() / 2, item->height() / 2}).toPoint());
 }
