@@ -1530,6 +1530,10 @@ Press %1 to make one.</source>
         <source>Add</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>The note has %1 already; change it in its row above.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>QObject</name>

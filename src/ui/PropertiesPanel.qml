@@ -18,6 +18,11 @@ Item {
     property bool adding: false
     readonly property int emptyCount: rows.filter(row => !row.present).length
 
+    /// Whether the note has `key` already, which Add would write over.
+    function taken(key) {
+        return rows.some(row => row.present && row.key === key.trim())
+    }
+
     /// A type was picked for the note, so the editor can offer its template.
     signal typePicked(string name)
     /// The front matter is to be edited as text, which Source shows.
@@ -108,9 +113,12 @@ Item {
                     anchors.right: parent.right
                     y: (Math.max(Theme.listRowHeight, editor.implicitHeight) - height) / 2
                     width: height
-                    opacity: !root.readOnly && row.modelData.present && (rowHover.hovered
-                                                                         || activeFocus) ? 1 : 0
-                    enabled: !root.readOnly && row.modelData.present
+                    // Not for a nested value, which the panel leaves to Source.
+                    readonly property bool shown: !root.readOnly && row.modelData.present && row.kind
+                                                  !== "nested"
+
+                    opacity: shown && (rowHover.hovered || activeFocus) ? 1 : 0
+                    enabled: shown
                     glyph: "close"
                     Accessible.name: qsTr("Clear %1").arg(row.key)
                     onClicked: row.write("")
@@ -291,8 +299,10 @@ Item {
                             }
                         }
 
+                        // As numbers are written in the file, whatever the desktop's language.
                         DoubleValidator {
                             id: number
+                            locale: "C"
                             notation: DoubleValidator.StandardNotation
                         }
                         // A link offers notes of the type it takes.
@@ -369,7 +379,8 @@ Item {
 
                 objectName: "addProperty"
                 anchors.verticalCenter: parent.verticalCenter
-                enabled: Vault.writable && newKey.text.trim() !== "" && newValue.text.trim() !== ""
+                enabled: Vault.writable && newKey.text.trim() !== "" && newValue.text.trim() !== "" &&
+                         !root.taken(newKey.text)
                 text: qsTr("Add")
                 onClicked: {
                     Vault.setNoteProperty(newKey.text.trim(), newValue.text)
@@ -378,6 +389,16 @@ Item {
                     root.adding = false
                 }
             }
+        }
+        Text {
+            objectName: "propertyTaken"
+            visible: root.adding && root.taken(newKey.text)
+            text: qsTr("The note has %1 already; change it in its row above.").arg(newKey.text.trim(
+                                                                                       ))
+            textFormat: Text.PlainText
+            color: Theme.textMuted
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.textXs
         }
     }
     // Where the properties end and the note begins.

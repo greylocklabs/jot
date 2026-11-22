@@ -231,8 +231,10 @@ QVariantMap MarkdownStyler::propertyMap(const PropertyRow &row) const
         value = listText(items);
         kind = u"list"_s;
     } else {
-        value = shown(row.value.toString());
-        if (value.contains(u'\n'))
+        // A value on the lines below its key, kept as written with its indent, is nested.
+        const QString raw = row.value.toString();
+        value = shown(raw);
+        if (raw.contains(u'\n') || (!raw.isEmpty() && raw.front().isSpace()))
             kind = u"nested"_s;
     }
     if (row.key == u"type")
