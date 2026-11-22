@@ -173,6 +173,9 @@ QVariantList DataStyler::lineTops(QQuickTextDocument *quick, qreal top, qreal bo
     QAbstractTextDocumentLayout *layout = document->documentLayout();
     int number = 1;
     for (QTextBlock block = document->begin(); block.isValid(); block = block.next(), ++number) {
+        // None for a line hidden, as a fold or front matter the properties show is.
+        if (!block.isVisible())
+            continue;
         const QRectF box = layout->blockBoundingRect(block);
         if (box.bottom() < top)
             continue;

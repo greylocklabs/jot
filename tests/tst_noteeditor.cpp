@@ -298,6 +298,8 @@ void TestNoteEditor::showsPropertiesInPlaceOfFrontMatter()
     file.write("---\ntype: Character\nstatus: alive\nmood: dark\n---\nThe lead.\n");
     file.close();
     QTRY_VERIFY(m_vault->index()->note(u"Mara Vey.md"_s));
+    // With line numbers on before the note opens, as they stay on from note to note.
+    m_settings->setLineNumbers(true);
     m_vault->setCurrent(u"Mara Vey.md"_s);
     QQuickItem *body = find(u"body"_s);
     QQuickItem *panel = find(u"propertiesPanel"_s);
@@ -335,6 +337,18 @@ void TestNoteEditor::showsPropertiesInPlaceOfFrontMatter()
     auto *document = body->property("textDocument").value<QQuickTextDocument *>()->textDocument();
     QTRY_VERIFY(!document->firstBlock().isVisible());
     QVERIFY(document->findBlock(int(frontMatter.size())).isVisible());
+    // With line numbers, the hidden lines have none, so the body's first is its own number.
+    const auto shownNumbers = [&] {
+        QList<int> numbers;
+        for (QQuickItem *child : find(u"gutter"_s)->childItems()) {
+            if (child->isVisible() && child->property("modelData").isValid())
+                numbers.append(child->property("modelData").toMap().value(u"number"_s).toInt());
+        }
+        return numbers;
+    };
+    QTRY_VERIFY(!shownNumbers().isEmpty());
+    QCOMPARE(shownNumbers().first(), int(frontMatter.count(u'\n')) + 1);
+    m_settings->setLineNumbers(false);
     // Taking no room, so the body starts where the front matter would.
     const auto bodyTop = [&] {
         QRectF at;

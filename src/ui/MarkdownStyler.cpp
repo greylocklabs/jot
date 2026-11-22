@@ -264,8 +264,9 @@ void MarkdownStyler::setHideFrontMatter(bool hide)
     if (m_hideFrontMatter == hide)
         return;
     m_hideFrontMatter = hide;
-    Q_EMIT hideFrontMatterChanged();
     applyFolds();
+    // Once the lines are hidden, so what follows it, as the line numbers, sees them as they are.
+    Q_EMIT hideFrontMatterChanged();
     // The lines below moved, and the pictures drawn over them with them.
     Q_EMIT imagesChanged();
 }
