@@ -1689,6 +1689,9 @@ Rectangle {
                     Repeater {
                         model: {
                             body.layoutTick
+                            // Lines hidden or shown move the rest, as the front matter does.
+                            styler.hideFrontMatter
+                            styler.folds
                             if (!gutter.visible || !body.textDocument)
                                 return []
                             const top = flick.contentY - page.y - body.y
