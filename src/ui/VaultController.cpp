@@ -3290,8 +3290,45 @@ bool VaultController::saveTypeForm(const QString &id, const QVariantMap &form)
                 },
                 false);
         }
+        renameInOtherTypes(id, oldName, type.name);
     }
     return true;
+}
+
+void VaultController::renameInOtherTypes(const QString &id, const QString &from, const QString &to)
+{
+    const auto names = [&from, &id](const QString &name) {
+        return name.trimmed().compare(from, Qt::CaseInsensitive) == 0 &&
+               name.trimmed().compare(id, Qt::CaseInsensitive) != 0;
+    };
+    QStringList stuck;
+    for (const NoteType &other : m_types.all()) {
+        if (other.id == id)
+            continue;
+        const QString text = typeFileText(other.id);
+        NoteType own = NoteTypes::readFile(other.id, text);
+        bool changed = false;
+        if (names(own.extends)) {
+            own.extends = to;
+            changed = true;
+        }
+        for (TypeProperty &property : own.properties) {
+            if (names(property.linkType)) {
+                property.linkType = to;
+                changed = true;
+            }
+        }
+        if (!changed)
+            continue;
+        // A file the form could not write back as it is is left for its YAML.
+        if (NoteTypes::fileText(NoteTypes::readFile(other.id, text)) == text)
+            writeTypeFile(other.id, NoteTypes::fileText(own));
+        else
+            stuck.append(other.name);
+    }
+    if (!stuck.isEmpty())
+        setProblem(tr("%1 still name %2 in their files, so change them as YAML.")
+                       .arg(stuck.join(u", "_s), from));
 }
 
 QString VaultController::typeFileText(const QString &id) const

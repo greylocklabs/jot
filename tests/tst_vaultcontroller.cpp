@@ -528,6 +528,27 @@ void TestVaultController::makesNotesAndTypes()
     QVERIFY(m_vault->writeTypeFile(u"story-arc"_s,
                                    NoteTypes::fileText(*m_vault->types().find(u"Saga"_s))));
 
+    // Types that build on it or link to it by its old name follow it too.
+    QVERIFY(m_vault->writeTypeFile(u"epic"_s, u"name: Epic\nextends: Saga\n"_s));
+    QVERIFY(m_vault->writeTypeFile(u"scene"_s,
+                                   NoteTypes::starterText(u"scene"_s)
+                                       .replace(u"chapter: link Chapter"_s, u"arc: link Saga"_s)));
+    form = m_vault->typeForm(u"story-arc"_s);
+    form.insert(u"name"_s, u"Long Saga"_s);
+    QVERIFY(m_vault->saveTypeForm(u"story-arc"_s, form));
+    QCOMPARE(m_vault->types().find(u"epic"_s)->extends, u"Long Saga"_s);
+    // And so still has what it builds on, with nothing wrong in its file.
+    QVERIFY(m_vault->types().problems(u"epic"_s).isEmpty());
+    QCOMPARE(m_vault->types().find(u"epic"_s)->properties,
+             m_vault->types().find(u"Long Saga"_s)->properties);
+    QCOMPARE(m_vault->types().find(u"scene"_s)->property(u"arc"_s)->linkType, u"Long Saga"_s);
+    form.insert(u"basis"_s, m_vault->typeFileText(u"story-arc"_s));
+    form.insert(u"name"_s, u"Saga"_s);
+    QVERIFY(m_vault->saveTypeForm(u"story-arc"_s, form));
+    QCOMPARE(m_vault->types().find(u"epic"_s)->extends, u"Saga"_s);
+    QVERIFY(m_vault->deleteType(u"epic"_s));
+    QVERIFY(m_vault->restoreDefaultTypes());
+
     // A name another type has is not taken, and no note changes type.
     form = m_vault->typeForm(u"story-arc"_s);
     form.insert(u"name"_s, u"Character"_s);
