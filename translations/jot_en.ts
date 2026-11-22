@@ -1464,10 +1464,6 @@ Press %1 to make one.</source>
 <context>
     <name>PropertiesPanel</name>
     <message>
-        <source>Clear</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Clear %1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1488,6 +1484,10 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>%1 (not a choice)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Pick a day</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1497,6 +1497,10 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>Items, with commas between</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Empty</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1512,6 +1516,10 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>Add a property</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Edit as text</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

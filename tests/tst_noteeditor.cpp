@@ -317,6 +317,19 @@ void TestNoteEditor::showsPropertiesInPlaceOfFrontMatter()
     QCOMPARE(panel->property("emptyCount").toInt(), rows().size() - 3);
     QCOMPARE(rows().last(), u"mood"_s);
     QVERIFY(rows().contains(u"portrait"_s));
+    // A value the type does not take says why on its row.
+    const auto problemOf = [&](const QString &key) {
+        for (const QVariant &row : panel->property("rows").toList()) {
+            if (row.toMap().value(u"key"_s) == key)
+                return row.toMap().value(u"problem"_s).toString();
+        }
+        return QString();
+    };
+    QVERIFY(problemOf(u"status"_s).isEmpty());
+    m_vault->setNoteProperty(u"status"_s, u"asleep"_s);
+    QTRY_VERIFY(problemOf(u"status"_s).contains(u"asleep"_s));
+    m_vault->setNoteProperty(u"status"_s, u"alive"_s);
+    QTRY_VERIFY(problemOf(u"status"_s).isEmpty());
 
     // The front matter's lines are hidden, and Backspace at the body's start leaves them be.
     auto *document = body->property("textDocument").value<QQuickTextDocument *>()->textDocument();
@@ -340,11 +353,22 @@ void TestNoteEditor::showsPropertiesInPlaceOfFrontMatter()
     body->setProperty("cursorPosition", int(frontMatter.size()));
     QTest::keyClick(m_window.get(), Qt::Key_Backspace);
     QCOMPARE(body->property("text").toString(), frontMatter + u"The lead.\n"_s);
-    // The cursor gone into them shows them, as a fold opens, and leaving hides them again.
+    // The cursor and the selection stay in the body, so nothing typed reaches them unseen.
     QTest::keyClick(m_window.get(), Qt::Key_Up);
-    QVERIFY(body->property("cursorPosition").toInt() < int(frontMatter.size()));
+    QCOMPARE(body->property("cursorPosition").toInt(), int(frontMatter.size()));
+    body->setProperty("cursorPosition", 3);
+    QCOMPARE(body->property("cursorPosition").toInt(), int(frontMatter.size()));
+    QMetaObject::invokeMethod(body, "selectAll");
+    QCOMPARE(body->property("selectionStart").toInt(), int(frontMatter.size()));
+    QTest::keyClick(m_window.get(), Qt::Key_Delete);
+    QCOMPARE(body->property("text").toString(), frontMatter);
+    QTest::keyClick(m_window.get(), Qt::Key_Z, Qt::ControlModifier);
+    QTRY_COMPARE(body->property("text").toString(), frontMatter + u"The lead.\n"_s);
+    // Edit as text shows them in Source.
+    QMetaObject::invokeMethod(find(u"editAsText"_s), "clicked");
+    QVERIFY(m_settings->sourceMode());
     QTRY_VERIFY(document->firstBlock().isVisible());
-    body->setProperty("cursorPosition", int(frontMatter.size()) + 3);
+    m_settings->setSourceMode(false);
     QTRY_VERIFY(!document->firstBlock().isVisible());
 
     // A field writes its key back into the note.
@@ -688,18 +712,21 @@ void TestNoteEditor::goesBackToWhereTheCursorWas()
     m_vault->setCurrent(u"Ashfall/Characters/Mara Vey.md"_s);
     QQuickItem *body = find(u"body"_s);
     body->forceActiveFocus();
-    body->setProperty("cursorPosition", 40);
+    // In the body, as the front matter above it is hidden.
+    const int at = int(body->property("text").toString().indexOf(u"Mara runs"_s)) + 4;
+    QVERIFY(at > 4);
+    body->setProperty("cursorPosition", at);
     m_vault->setCurrent(u"Welcome.md"_s);
     QCOMPARE(body->property("cursorPosition").toInt(), 0);
     body->setProperty("cursorPosition", 12);
 
     QVERIFY(m_vault->goBack());
-    QCOMPARE(body->property("cursorPosition").toInt(), 40);
+    QCOMPARE(body->property("cursorPosition").toInt(), at);
     QVERIFY(m_vault->goForward());
     QCOMPARE(body->property("cursorPosition").toInt(), 12);
     // Left untouched since going back to it, it is still where it was.
     QVERIFY(m_vault->goBack());
-    QCOMPARE(body->property("cursorPosition").toInt(), 40);
+    QCOMPARE(body->property("cursorPosition").toInt(), at);
 }
 
 void TestNoteEditor::showsAndResolvesAConflictCopy()
@@ -727,6 +754,8 @@ void TestNoteEditor::showsAndResolvesAConflictCopy()
 
 void TestNoteEditor::theTitleFollowsAnEditedTitleKey()
 {
+    // Front matter is typed as text in Source; Styled shows it as properties.
+    m_settings->setSourceMode(true);
     QQuickItem *title = find(u"title"_s);
     QQuickItem *body = find(u"body"_s);
     QCOMPARE(title->property("text").toString(), u"Mara Vey"_s);
@@ -3338,6 +3367,8 @@ void TestNoteEditor::runsViCommands()
 
 void TestNoteEditor::completesFrontMatter()
 {
+    // Front matter is typed as text in Source; Styled shows it as properties.
+    m_settings->setSourceMode(true);
     m_vault->setCurrent(u"Welcome.md"_s);
     QQuickItem *body = find(u"body"_s);
     auto *popup = m_editor->findChild<QObject *>(u"frontMatterPopup"_s);
@@ -3495,6 +3526,8 @@ void TestNoteEditor::undoesTitleEdits()
 
 void TestNoteEditor::suggestsOnlyWhileTypingInVi()
 {
+    // Front matter is typed as text in Source; Styled shows it as properties.
+    m_settings->setSourceMode(true);
     m_settings->setViMode(true);
     m_vault->setCurrent(u"Welcome.md"_s);
     QQuickItem *body = find(u"body"_s);
@@ -3544,27 +3577,28 @@ void TestNoteEditor::showsTheClosingFenceWithRoomBelow()
     QQuickItem *body = find(u"body"_s);
     QQuickItem *fence = find(u"frontMatterFence"_s);
     QVERIFY(fence);
-    // The front matter shows as text, with its fence, while the cursor is in it.
+    // Front matter with keys shows as properties, so its fence is not drawn.
+    QTRY_VERIFY(find(u"propertiesPanel"_s)->isVisible());
+    QVERIFY(!fence->isVisible());
+    // Empty front matter has no properties to show, so it shows as text, with its fence.
     body->forceActiveFocus();
-    body->setProperty("cursorPosition", 4);
+    body->setProperty("text", u"---\n---\nBody\n"_s);
+    body->setProperty("cursorPosition", int(body->property("text").toString().size()) - 1);
     QTRY_VERIFY2(fence->isVisible(), qPrintable(fence->property("at").toString()));
     // Drawn at the top of its line, which keeps room below it before the note.
-    const QString text = body->property("text").toString();
-    const int at = int(text.indexOf(u"---"_s, 3));
     QRectF line;
     QMetaObject::invokeMethod(body, "positionToRectangle", Q_RETURN_ARG(QRectF, line),
-                              Q_ARG(int, at));
+                              Q_ARG(int, 4));
     QVERIFY(line.height() > 1.8 * fence->height());
     // On its line, the cursor shows it as written instead.
-    body->forceActiveFocus();
-    body->setProperty("cursorPosition", at);
+    body->setProperty("cursorPosition", 4);
     QTRY_VERIFY(!fence->isVisible());
     // Closed with `...`, that is what shows; with no fence opening the note, none.
-    body->setProperty("text", u"---\ntags: [a]\n...\nBody\n"_s);
-    body->setProperty("cursorPosition", 4);
+    body->setProperty("text", u"---\n...\nBody\n"_s);
+    body->setProperty("cursorPosition", int(body->property("text").toString().size()) - 1);
     QTRY_VERIFY(fence->isVisible());
     QCOMPARE(fence->property("text").toString(), u"..."_s);
-    body->setProperty("text", u" ---\ntags: [a]\n---\nBody\n"_s);
+    body->setProperty("text", u" ---\n---\nBody\n"_s);
     QTRY_VERIFY(!fence->isVisible());
 }
 

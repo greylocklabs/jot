@@ -424,13 +424,16 @@ Rectangle {
         }
     }
 
-    onReadShownChanged: Qt.callLater(hideFrontMatter)
-
-    /// Hides the front matter while the properties show it, but as text while the cursor is in
-    /// it, as a fold opens when gone into.
-    function hideFrontMatter() {
-        styler.hideFrontMatter = properties.visible && (root.readShown || body.cursorPosition
-                                                        >= styler.bodyStart)
+    /// Keeps the cursor and the selection in the body while the front matter is hidden, so
+    /// nothing typed or deleted reaches it unseen.
+    function keepOutOfFrontMatter() {
+        if (!styler.hideFrontMatter || body.selectionStart >= styler.bodyStart)
+            return
+        if (body.selectionStart === body.selectionEnd)
+            body.cursorPosition = Math.min(styler.bodyStart, body.length)
+        else
+            body.select(Math.min(styler.bodyStart, body.length), Math.max(body.selectionEnd,
+                                                                          styler.bodyStart))
     }
 
     /// Offers to add the template sections of the type the note shown was just given.
@@ -606,9 +609,12 @@ Rectangle {
         whyNotTable: tableModel.why
         frontMatterProblems: styler.frontMatterProblems
         // In Read, the note is shown to edit first, as there is no cursor to move there.
+        // A line of the front matter is shown as text in Source, as the properties hide it.
         onProblemPicked: line => {
             if (Settings.readMode)
                 Settings.readMode = false
+            if (styler.hideFrontMatter && styler.lineStart(line - 1) < styler.bodyStart)
+                Settings.sourceMode = true
             body.cursorPosition = styler.lineStart(line - 1)
             body.forceActiveFocus()
         }
@@ -913,10 +919,7 @@ Rectangle {
                 id: properties
 
                 // The text below moves at once, before anything scrolls to a place in it.
-                onVisibleChanged: {
-                    page.forceLayout()
-                    Qt.callLater(root.hideFrontMatter)
-                }
+                onVisibleChanged: page.forceLayout()
                 onHeightChanged: page.forceLayout()
 
                 width: parent.width - parent.leftPadding - parent.rightPadding
@@ -927,6 +930,7 @@ Rectangle {
                     if (Vault.setType(name).offerTemplate)
                         root.offerTypeTemplate()
                 }
+                onTextRequested: Settings.sourceMode = true
             }
 
             Text {
@@ -1451,8 +1455,10 @@ Rectangle {
                     cursorLine = line
                 }
 
+                // A selection, as Select All makes, also stays out of the hidden front matter.
+                onSelectionStartChanged: root.keepOutOfFrontMatter()
                 onCursorPositionChanged: {
-                    Qt.callLater(root.hideFrontMatter)
+                    root.keepOutOfFrontMatter()
                     // Nothing typed or gone to stays out of sight.
                     if (!root.readShown)
                         root.unfoldAt(cursorPosition)
@@ -1798,7 +1804,11 @@ Rectangle {
                     indentUnit: Settings.indentText
 
                     sourceMode: Settings.sourceMode
-                    onFrontMatterChanged: Qt.callLater(root.hideFrontMatter)
+                    // The properties show the front matter in Styled and Read, so its lines are
+                    // hidden there; Source shows them as text.
+                    hideFrontMatter: properties.visible
+                    onHideFrontMatterChanged: root.keepOutOfFrontMatter()
+                    onFrontMatterChanged: root.keepOutOfFrontMatter()
                     focusMode: Settings.focusMode
                     foldComments: margin.room
                     spellcheck: Settings.spellcheck && !root.dataFile
