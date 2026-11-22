@@ -569,7 +569,7 @@ public:
     /// Makes a note of type `name` in the notebook shown, from its template when it has one,
     /// and shows it. Gives its path.
     Q_INVOKABLE QString newNoteOfType(const QString &name);
-    /// Makes a type called `name` and shows its file. Gives the file's vault path.
+    /// Makes a type called `name`, or finds the one by that name. Gives its file's vault path.
     Q_INVOKABLE QString newType(const QString &name);
     /// Shows the file of the type `id`.
     Q_INVOKABLE void openType(const QString &id);
@@ -580,6 +580,20 @@ public:
     Q_INVOKABLE QStringList defaultTypesToRestore() const;
     /// Writes back the starter types that are missing or changed.
     Q_INVOKABLE bool restoreDefaultTypes();
+    /// The type `id` as its file has it, for a form to edit: `{id, name, icon, color, extends,
+    /// template, properties}`, each property `{key, kind, list, choices, linkType}`, choices as
+    /// text with commas between. Only its own properties, not those of a type it extends.
+    Q_INVOKABLE QVariantMap typeForm(const QString &id) const;
+    /// Writes the type `id` from `form`, as typeForm() gives it. A new name is written into the
+    /// notes of the type too, so they keep it.
+    Q_INVOKABLE bool saveTypeForm(const QString &id, const QVariantMap &form);
+    /// The text of the type `id`'s file, to put back with writeTypeFile() after a delete.
+    Q_INVOKABLE QString typeFileText(const QString &id) const;
+    Q_INVOKABLE bool writeTypeFile(const QString &id, const QString &text);
+    /// What a property can be, as type files name them.
+    Q_INVOKABLE static QStringList propertyKinds();
+    /// The named colors a type can have.
+    Q_INVOKABLE static QStringList typeColorNames() { return colorNames(); }
     /// The vault's note types, as `.jot/types` has them now.
     [[nodiscard]] const NoteTypes &types() const { return m_types; }
     /// The type of the note a link written in the note shown leads to, empty when it has none,

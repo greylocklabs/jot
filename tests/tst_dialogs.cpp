@@ -793,6 +793,34 @@ void TestDialogs::givesANoteATypeFromTheWindow()
     QMetaObject::invokeMethod(all(root, u"restoreTypesNow"_s).value(0), "clicked");
     QTRY_VERIFY(!confirm->isVisible());
     QVERIFY(m_vault->defaultTypesToRestore().isEmpty());
+    // A type is edited in place: its icon picked from those shown.
+    const auto runeRow = [&] {
+        for (QQuickItem *row : all(root, u"typeRow"_s)) {
+            if (row->property("modelData").toMap().value(u"id"_s) == u"rune"_s)
+                return row;
+        }
+        return static_cast<QQuickItem *>(nullptr);
+    };
+    QVERIFY(runeRow());
+    QMetaObject::invokeMethod(all(runeRow(), u"editType"_s).value(0), "clicked");
+    QTRY_VERIFY(!all(runeRow(), u"typeEditor"_s).isEmpty());
+    QQuickItem *flag = nullptr;
+    for (QQuickItem *icon : all(runeRow(), u"typeIcon"_s)) {
+        if (icon->property("modelData") == u"flag"_s)
+            flag = icon;
+    }
+    QVERIFY(flag);
+    QMetaObject::invokeMethod(flag, "clicked");
+    QTRY_COMPARE(m_vault->types().find(u"rune"_s)->icon, u"flag"_s);
+
+    // Deleted, it stays where it was with a way back, which brings it back as it was.
+    QMetaObject::invokeMethod(all(runeRow(), u"deleteType"_s).value(0), "clicked");
+    QTRY_VERIFY(!m_vault->types().find(u"rune"_s));
+    QTRY_VERIFY(runeRow() && !all(runeRow(), u"undoDeleteType"_s).isEmpty());
+    QMetaObject::invokeMethod(all(runeRow(), u"undoDeleteType"_s).value(0), "clicked");
+    QTRY_VERIFY(m_vault->types().find(u"rune"_s));
+    QCOMPARE(m_vault->types().find(u"rune"_s)->icon, u"flag"_s);
+
     QVERIFY(QFile::remove(rune.fileName()));
     QTRY_VERIFY(!m_vault->types().find(u"rune"_s));
 }

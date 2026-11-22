@@ -476,17 +476,54 @@ void TestVaultController::makesNotesAndTypes()
     QVERIFY(m_vault->currentText().contains(u"## Where it is"_s));
     QVERIFY(m_vault->newNoteOfType(u"Nothing"_s).isEmpty());
 
-    // A new type is a file, shown to be filled in; one named again is the same file.
+    // A new type is a file; one named again is the same file. Its file opens as YAML when asked.
     const QString type = m_vault->newType(u"Story Arc"_s);
     QCOMPARE(type, u".jot/types/story-arc.yaml"_s);
-    QCOMPARE(m_vault->current(), type);
-    QCOMPARE(m_vault->currentKind(), u"yaml"_s);
     QVERIFY(m_vault->types().find(u"story arc"_s));
     QCOMPARE(m_vault->newType(u"story arc"_s), type);
+    m_vault->openType(u"story-arc"_s);
+    QCOMPARE(m_vault->current(), type);
+    QCOMPARE(m_vault->currentKind(), u"yaml"_s);
+
+    // As a form: its own fields, changed and written back.
+    QVariantMap form = m_vault->typeForm(u"story-arc"_s);
+    QCOMPARE(form.value(u"name"_s), u"Story Arc"_s);
+    form.insert(u"icon"_s, u"flag"_s);
+    form.insert(u"properties"_s,
+                QVariantList{QVariantMap{{u"key"_s, u"acts"_s}, {u"kind"_s, u"number"_s}},
+                             QVariantMap{{u"key"_s, u"mood"_s},
+                                         {u"kind"_s, u"choice"_s},
+                                         {u"choices"_s, u"grim, hopeful"_s}},
+                             QVariantMap{{u"key"_s, u"pending"_s}, {u"kind"_s, u"choice"_s}}});
+    QVERIFY(m_vault->saveTypeForm(u"story-arc"_s, form));
+    const NoteType *arc = m_vault->types().find(u"Story Arc"_s);
+    QVERIFY(arc);
+    QCOMPARE(arc->icon, u"flag"_s);
+    QCOMPARE(arc->property(u"mood"_s)->choices, (QStringList{u"grim"_s, u"hopeful"_s}));
+    // A choice with no choices yet stays one, to fill in.
+    QCOMPARE(arc->property(u"pending"_s)->kind, TypeProperty::Kind::Choice);
+
+    // Renamed, the notes of the type follow it.
+    writeFile(m_root + u"/Arc One.md"_s, "---\ntype: story arc\n---\nBody.\n");
+    QTRY_VERIFY(m_vault->index()->note(u"Arc One.md"_s));
+    form = m_vault->typeForm(u"story-arc"_s);
+    form.insert(u"name"_s, u"Saga"_s);
+    QVERIFY(m_vault->saveTypeForm(u"story-arc"_s, form));
+    QVERIFY(m_vault->types().find(u"Saga"_s));
+    QString error;
+    QCOMPARE(*notefile::read(m_root + u"/Arc One.md"_s, &error),
+             u"---\ntype: Saga\n---\nBody.\n"_s);
+
+    // Its text, kept before a delete, brings it back.
+    const QString text = m_vault->typeFileText(u"story-arc"_s);
+    QVERIFY(text.startsWith(u"name: Saga\n"_s));
 
     QVERIFY(m_vault->deleteType(u"story-arc"_s));
-    QVERIFY(!m_vault->types().find(u"Story Arc"_s));
+    QVERIFY(!m_vault->types().find(u"Saga"_s));
     QVERIFY(m_vault->current().isEmpty());
+    QVERIFY(m_vault->writeTypeFile(u"story-arc"_s, text));
+    QVERIFY(m_vault->types().find(u"Saga"_s));
+    QVERIFY(m_vault->deleteType(u"story-arc"_s));
 
     QVERIFY(m_vault->deleteType(u"character"_s));
     writeFile(m_root + u"/.jot/types/event.yaml"_s, "name: Event\nicon: flag\n");

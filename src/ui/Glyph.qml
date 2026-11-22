@@ -6,7 +6,7 @@ import QtQuick
 /// take the text color: chevron-left, chevron-right, chevron-down, minimize, maximize,
 /// restore, close, check, plus, refresh, bell, search, settings, menu, video, more,
 /// list-bullet, list-number, task, quote, table, pin, trash, note, braces, clock, mic, stop, play,
-/// pause, sound, muted, sidebar, flag, person, people or box.
+/// pause, sound, muted, sidebar, flag, person, people, box or undo.
 Item {
     id: root
 
@@ -138,10 +138,50 @@ Item {
                               "muted": mediaShape,
                               "flag": flagShape,
                               "person": figureShape,
+                              "undo": undoShape,
                               "people": figureShape,
                               "maximize": frameShape,
                               "restore": frameShape
                           })[root.name] ?? null
+    }
+
+    // Undo: an arrow curling back to the left, as in most apps.
+    Component {
+        id: undoShape
+
+        Canvas {
+            id: undo
+            antialiasing: true
+            onPaint: {
+                const ctx = getContext("2d")
+                ctx.reset()
+                const w = width, h = height, s = root.stroke
+                ctx.strokeStyle = root.color
+                ctx.lineWidth = s
+                ctx.lineCap = "round"
+                ctx.lineJoin = "round"
+                // The curl: from the arrow's tail on the left, over and down to the right.
+                ctx.beginPath()
+                ctx.moveTo(w * 0.18, h * 0.4)
+                ctx.lineTo(w * 0.58, h * 0.4)
+                ctx.arc(w * 0.58, h * 0.6, h * 0.2, -Math.PI / 2, Math.PI / 2)
+                ctx.lineTo(w * 0.42, h * 0.8)
+                ctx.stroke()
+                // Its head, pointing left.
+                ctx.beginPath()
+                ctx.moveTo(w * 0.36, h * 0.22)
+                ctx.lineTo(w * 0.18, h * 0.4)
+                ctx.lineTo(w * 0.36, h * 0.58)
+                ctx.stroke()
+            }
+
+            Connections {
+                target: root
+                function onColorChanged() {
+                    undo.requestPaint()
+                }
+            }
+        }
     }
 
     // A person: a head over the curve of the shoulders, with a second behind for people.

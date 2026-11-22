@@ -2691,12 +2691,17 @@ Press %1 to make one.</source>
         <source>A note&apos;s type gives it an icon, a template and properties of its own, as type: in its front matter names it. Each type is a file in .jot/types.</source>
         <translation type="unfinished"></translation>
     </message>
-    <message numerus="yes">
-        <source>%n note(s)</source>
-        <translation type="unfinished">
-            <numerusform></numerusform>
-            <numerusform></numerusform>
-        </translation>
+    <message>
+        <source>Deleted</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>1 note</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 notes</source>
+        <translation type="unfinished"></translation>
     </message>
     <message numerus="yes">
         <source>%n with problems</source>
@@ -2717,15 +2722,15 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Done</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Bring back %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Delete %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Delete</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Keep it</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -4022,6 +4027,101 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>The note&apos;s text</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>TypeEditor</name>
+    <message>
+        <source>Name</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Type name</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Icon</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Color</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No color</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Builds on</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No other type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Type it builds on</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Template</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No template</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Properties</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Key</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Property key</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Kind of %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>List</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Choices, with commas between</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Choices for %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Any note</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Type %1 links to</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remove %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>New property</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Add</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Edit as YAML</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -5759,6 +5859,10 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>Could not delete the type: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not write the type: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
