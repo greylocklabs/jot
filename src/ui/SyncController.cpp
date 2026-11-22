@@ -421,6 +421,11 @@ void SyncController::syncNow()
     start();
 }
 
+bool SyncController::firstSync() const
+{
+    return configured() && QDir(syncStateDir(m_root, m_remote)).isEmpty();
+}
+
 void SyncController::start()
 {
     if (!configured())
