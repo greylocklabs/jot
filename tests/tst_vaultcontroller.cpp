@@ -739,6 +739,14 @@ void TestVaultController::setsPropertiesAsTheirKindsWriteThem()
                  .value(u"aliases"_s)
                  .toStringList(),
              (QStringList{u"Vey, Mara"_s, u"M"_s}));
+    // A key no type names keeps true and false as they are, not quoted.
+    m_vault->setNoteProperty(u"draft"_s, u"false"_s);
+    QVERIFY(m_vault->currentText().contains(u"draft: false\n"_s));
+    // A text property keeps the word as text.
+    m_vault->setNoteProperty(u"born"_s, u"true"_s);
+    QVERIFY(m_vault->currentText().contains(u"born: \"true\"\n"_s));
+    m_vault->setNoteProperty(u"draft"_s, QString());
+    m_vault->setNoteProperty(u"born"_s, u"Year of Ash"_s);
     // Empty takes the key away, and the note is saved as each changes.
     m_vault->setNoteProperty(u"born"_s, QString());
     QVERIFY(!m_vault->currentText().contains(u"born"_s));
