@@ -484,10 +484,6 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>This can&apos;t be a table: %1.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Styled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1550,55 +1546,55 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>more after the end of the JSON</source>
+        <source>There is more after the end of the JSON.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>nested too deeply</source>
+        <source>Its values are nested too deeply to show.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>the JSON ends early</source>
+        <source>The JSON ends before it is finished.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>a key that is not a string</source>
+        <source>A key is not in quotes, as JSON needs.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>a key without a colon</source>
+        <source>A key has no colon after it.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>an object that is not closed</source>
+        <source>A { is never closed.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>an array that is not closed</source>
+        <source>A [ is never closed.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>a string that is not closed</source>
+        <source>A quote is never closed.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>something that is not a JSON value</source>
+        <source>Something in it is not JSON.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>no list of records called %1</source>
+        <source>There is no list called %1 in it.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>not a kind of file that holds a table</source>
+        <source>Only CSV, TSV, JSON and YAML files open as tables.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>not a list of records</source>
+        <source>Only a list of rows with named fields shows as a table.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>no header row</source>
+        <source>It has no header row naming its columns.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1614,19 +1610,23 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>The YAML could not be read.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>A list written on one line is edited as text.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>It holds more than one YAML document.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>A key is not plain text.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>YAML could not be read</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>a list written on one line, to edit as text</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>more than one YAML document</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>a key that is not plain text</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2458,11 +2458,11 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>%1 has %2, which is not kind, list, choices or type</source>
+        <source>%1 has %2, but takes only kind, list, choices and type</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>%1 is %2, which is not a kind: %3</source>
+        <source>%1 is %2, but a property is one of %3</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

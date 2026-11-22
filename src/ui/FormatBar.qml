@@ -276,8 +276,7 @@ Rectangle {
             ModeSwitch {
                 id: modes
 
-                readonly property string notTable: qsTr("This can't be a table: %1.").arg(
-                                                       root.whyNotTable)
+                readonly property string notTable: root.whyNotTable
 
                 objectName: root.dataFile ? "viewSwitch" : "modes"
                 anchors.verticalCenter: parent.verticalCenter

@@ -147,7 +147,7 @@ std::optional<TypeProperty> readProperty(const QString &key, const Node &spec, Q
             } else if (name == u"type") {
                 property.linkType = value.text.trimmed();
             } else {
-                *problem = QObject::tr("%1 has %2, which is not kind, list, choices or type")
+                *problem = QObject::tr("%1 has %2, but takes only kind, list, choices and type")
                                .arg(key, name);
                 return std::nullopt;
             }
@@ -165,7 +165,7 @@ std::optional<TypeProperty> readProperty(const QString &key, const Node &spec, Q
     const qsizetype index = kKindNames.indexOf(kind);
     if (index < 0) {
         *problem =
-            QObject::tr("%1 is %2, which is not a kind: %3")
+            QObject::tr("%1 is %2, but a property is one of %3")
                 .arg(key, words.isEmpty() ? QObject::tr("empty") : words, kKindNames.join(u", "_s));
         return std::nullopt;
     }
