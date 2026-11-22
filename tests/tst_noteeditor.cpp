@@ -226,6 +226,15 @@ void TestNoteEditor::warnsOfFrontMatterProblems()
     body->setProperty("text", u"---\ntags: [a]\ntarget: lots\n---\nBody\n"_s);
     QTRY_VERIFY(warning->isVisible());
     QVERIFY(warning->property("tip").toString().contains(u"lots"_s));
+    // Hovered, it lists them.
+    QTest::mouseMove(m_window.get(),
+                     warning->mapToScene({warning->width() / 2, warning->height() / 2}).toPoint());
+    QTRY_VERIFY(warning->property("hovered").toBool());
+    auto *tip = warning->findChild<QObject *>(u"problemsTip"_s);
+    QVERIFY(tip);
+    QTRY_VERIFY(tip->property("item").value<QObject *>());
+    QTRY_VERIFY(tip->property("item").value<QObject *>()->property("opened").toBool());
+    QTest::mouseMove(m_window.get(), {5, 5});
 
     // Pressed, it goes to the line.
     body->setProperty("cursorPosition", 0);
