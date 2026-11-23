@@ -524,12 +524,10 @@ void TestNoteEditor::numbersANotesLinesWhenAsked()
     QVERIFY(!gutter->isVisible());
     QCOMPARE(body->property("leftPadding").toReal(), 0.0);
 
-    // The toggle in the bar turns them on, one number for each line however it wraps.
-    QQuickItem *toggle = find(u"linesToggle"_s);
-    QVERIFY(toggle->isVisible());
-    QMetaObject::invokeMethod(toggle, "toggle");
-    QMetaObject::invokeMethod(toggle, "toggled");
-    QVERIFY(m_settings->lineNumbers());
+    // Settings, or the palette's command, turns them on, one number for each line however it
+    // wraps; the bar has no toggle for them.
+    QVERIFY(!find(u"linesToggle"_s));
+    m_settings->setLineNumbers(true);
     QTRY_VERIFY(gutter->isVisible());
     // In the margin, leaving the text where it was, and never cut off on the left.
     QCOMPARE(body->property("leftPadding").toReal(), 0.0);
@@ -574,9 +572,8 @@ void TestNoteEditor::numbersANotesLinesWhenAsked()
     for (qsizetype i = 1; i < shown.size(); ++i)
         QVERIFY(shown.at(i)->y() >= shown.at(i - 1)->y() + shown.at(i - 1)->height() - 1);
 
-    // Read shows the note without them, and without the toggle.
+    // Read shows the note without them.
     m_settings->setReadMode(true);
-    QTRY_VERIFY(!toggle->isVisible());
     QTRY_VERIFY(!gutter->isVisible() || !body->isVisible());
     m_settings->setReadMode(false);
     m_settings->setLineNumbers(false);
