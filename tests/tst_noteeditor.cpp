@@ -3424,6 +3424,22 @@ void TestNoteEditor::viActsOnTextObjects()
     start(u"one\n\ntwo\nthree\n\nfour"_s, u"three"_s);
     type(u"dap"_s);
     QCOMPARE(text(), u"one\n\nfour"_s);
+
+    // The last paragraph, with no line break after it, goes back whole as a line.
+    start(u"a\n\nb"_s, u"b"_s);
+    type(u"yip"_s);
+    body->setProperty("cursorPosition", 0);
+    type(u"p"_s);
+    QCOMPARE(text(), u"a\nb\n\nb"_s);
+
+    // On a note that cannot change, d takes nothing, not even into the clipboard.
+    QGuiApplication::clipboard()->setText(u"kept"_s);
+    start(u"one two"_s, u"two"_s);
+    body->setProperty("readOnly", true);
+    type(u"diw"_s);
+    body->setProperty("readOnly", false);
+    QCOMPARE(text(), u"one two"_s);
+    QCOMPARE(QGuiApplication::clipboard()->text(), u"kept"_s);
     m_settings->setViMode(false);
 }
 
