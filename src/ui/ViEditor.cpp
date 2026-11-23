@@ -371,15 +371,19 @@ bool ViEditor::actOnObject(QChar op, bool around, QChar kind)
         QMetaObject::invokeMethod(m_target, "select", Q_ARG(int, start), Q_ARG(int, end));
         return true;
     }
-    // A paragraph is whole lines, which p puts back as lines.
-    keep(text.mid(start, end - start), kind == u'p');
+    if (op != u'y' && !writable())
+        return true;
+    // A paragraph is whole lines, which p puts back as lines, ending in a line break as `dd`'s do
+    // even at the end of the text.
+    QString taken = text.mid(start, end - start);
+    if (kind == u'p' && !taken.endsWith(u'\n'))
+        taken += u'\n';
+    keep(taken, kind == u'p');
     if (op == u'y') {
         Q_EMIT yanked(start, end);
         setCursor(start);
         return true;
     }
-    if (!writable())
-        return true;
     QTextCursor edit(doc);
     edit.setPosition(start);
     edit.setPosition(end, QTextCursor::KeepAnchor);
