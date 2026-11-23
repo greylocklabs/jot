@@ -746,6 +746,7 @@ void MarkdownStyler::applyFolds()
             int line;
             int start;
             int end;
+            bool list;
         };
         QList<Foldable> foldables;
         const QList<Heading> headings = headingsOf(body);
@@ -754,11 +755,11 @@ void MarkdownStyler::applyFolds()
             const auto [start, end] = sectionOf(body, headings, i);
             if (start != end)
                 foldables.append({keys.at(i), offset + int(headings.at(i).position),
-                                  offset + int(start), offset + int(end)});
+                                  offset + int(start), offset + int(end), false});
         }
-        for (const ListFold &list : listFolds(body))
+        for (const ListFold &list : listFolds(body, keys))
             foldables.append({list.key, offset + int(list.position), offset + int(list.start),
-                              offset + int(list.end)});
+                              offset + int(list.end), true});
         std::ranges::stable_sort(foldables, {}, &Foldable::line);
         for (const Foldable &each : std::as_const(foldables)) {
             // One folded away with another has no arrow of its own, as the reader draws.
@@ -770,6 +771,7 @@ void MarkdownStyler::applyFolds()
                                      {u"end"_s, doc->findBlock(each.line).position() +
                                                     doc->findBlock(each.line).length() - 1},
                                      {u"until"_s, each.end},
+                                     {u"list"_s, each.list},
                                      {u"folded"_s, folded}});
             // A folded section inside one folded further out is hidden already.
             if (folded && (ranges.isEmpty() || each.start >= std::get<2>(ranges.last())))

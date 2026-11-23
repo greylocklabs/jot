@@ -1251,6 +1251,25 @@ void TestNoteEditor::foldsWhatIsUnderAListItem()
     QVERIFY(found.isNull() || !found.isValid() || found.toMap().isEmpty());
     m_settings->setViMode(false);
 
+    // A heading named like an item folds on its own.
+    QVERIFY(notefile::write(m_root + u"/Drafts.md"_s,
+                            u"# - draft\nHeading text.\n\n- draft\n  under the item\n"_s, &error));
+    m_vault->setCurrent(u"Drafts.md"_s);
+    QTRY_VERIFY(body->property("text").toString().contains(u"under the item"_s));
+    QTRY_COMPARE(styler->property("folds").toList().size(), 2);
+    const QVariantList both = styler->property("folds").toList();
+    QVERIFY(both.at(0).toMap().value(u"key"_s) != both.at(1).toMap().value(u"key"_s));
+    QVERIFY(!both.at(0).toMap().value(u"list"_s).toBool());
+    QVERIFY(both.at(1).toMap().value(u"list"_s).toBool());
+    QMetaObject::invokeMethod(m_editor.get(), "setFold",
+                              Q_ARG(QVariant, both.at(1).toMap().value(u"key"_s)),
+                              Q_ARG(QVariant, true));
+    QTRY_VERIFY(!shown(u"under the item"_s));
+    QVERIFY(shown(u"Heading text"_s));
+    QMetaObject::invokeMethod(m_editor.get(), "setFold",
+                              Q_ARG(QVariant, both.at(1).toMap().value(u"key"_s)),
+                              Q_ARG(QVariant, false));
+
     // A quoted list is drawn as one too, and the arrow still finds its item.
     const auto readFolded = [&](const QString &name, const QString &text) {
         QString failure;

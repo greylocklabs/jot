@@ -429,6 +429,11 @@ void TestNoteScan::findsListItemsToFold()
     QCOMPARE(body.mid(folds.at(1).start, folds.at(1).end - folds.at(1).start),
              u"  more about it\n"_s);
     QVERIFY(listFolds(u"- one\n- two\n"_s).isEmpty());
+    // A heading's key is never an item's too.
+    const QList<ListFold> beside =
+        listFolds(u"- draft\n  under it\n"_s, {u"- draft"_s, u"- draft (2)"_s});
+    QCOMPARE(beside.size(), 1);
+    QCOMPARE(beside.first().key, u"- draft (3)"_s);
 }
 
 QTEST_GUILESS_MAIN(TestNoteScan)

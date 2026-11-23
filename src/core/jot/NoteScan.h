@@ -93,8 +93,9 @@ struct ListFold
 [[nodiscard]] QList<qsizetype> listItemStarts(QStringView body);
 
 /// The list items of `body` with lines indented deeper than them below, in order. Blank lines
-/// between those lines are taken in, those after them are not, and code is left alone.
-[[nodiscard]] QList<ListFold> listFolds(QStringView body);
+/// between those lines are taken in, those after them are not, and code is left alone. Keys
+/// in `taken`, the note's heading keys, are not used, so a heading and an item never share one.
+[[nodiscard]] QList<ListFold> listFolds(QStringView body, const QStringList &taken = {});
 
 /// The `$...$` math in a line of prose, as Pandoc reads it: each span's start and end, its
 /// dollar signs included. The first has a character other than a space after it, the second

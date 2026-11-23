@@ -215,7 +215,7 @@ void NoteReader::render()
         const auto [start, end] = sectionOf(parts.body, headings, i);
         foldables.append({keys.at(i), headings.at(i).position, start, end, int(i)});
     }
-    for (const ListFold &list : listFolds(parts.body))
+    for (const ListFold &list : listFolds(parts.body, keys))
         foldables.append({list.key, list.position, list.start, list.end, -1});
     std::ranges::stable_sort(foldables, {}, &Foldable::at);
     for (const Foldable &each : std::as_const(foldables)) {
