@@ -86,6 +86,7 @@ private Q_SLOTS:
     void readingFindsSelectsAndCopies();
     void readingTakesViKeys();
     void foldsHeadingsAway();
+    void foldsWhatIsUnderAListItem();
     void outlinesTheNoteBesideIt();
     void aTagLinkOpensTheTagsView();
     void showsTabsOverTheNote();
@@ -1194,6 +1195,60 @@ void TestNoteEditor::readingTakesViKeys()
     QTest::keyClick(m_window.get(), Qt::Key_Escape);
     QCOMPARE(left.size(), 1);
     m_settings->setReadMode(false);
+    m_settings->setViMode(false);
+}
+
+void TestNoteEditor::foldsWhatIsUnderAListItem()
+{
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Trip.md"_s,
+                            u"- [ ] Plan the trip\n    - [ ] book train\n    - [x] pack\n"
+                            u"- [ ] Call Soren\n\nAfter the list.\n"_s,
+                            &error));
+    m_vault->setCurrent(u"Trip.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    QTRY_VERIFY(body->property("text").toString().contains(u"After the list"_s));
+    auto *styler = m_editor->findChild<QObject *>(u"styler"_s);
+    // One fold, for the item with lines under it, known by its words, not its checkbox.
+    QTRY_COMPARE(styler->property("folds").toList().size(), 1);
+    QCOMPARE(styler->property("folds").toList().first().toMap().value(u"key"_s).toString(),
+             u"- Plan the trip"_s);
+    auto *document = body->property("textDocument").value<QQuickTextDocument *>()->textDocument();
+    const auto shown = [document](const QString &words) {
+        return document->findBlock(int(document->toPlainText().indexOf(words))).isVisible();
+    };
+
+    // Folded, its lines go and the rest stays; it is kept for the note.
+    QMetaObject::invokeMethod(m_editor.get(), "setFold", Q_ARG(QVariant, u"- Plan the trip"_s),
+                              Q_ARG(QVariant, true));
+    QTRY_VERIFY(!shown(u"book train"_s));
+    QVERIFY(!shown(u"pack"_s));
+    QVERIFY(shown(u"Call Soren"_s));
+    QVERIFY(shown(u"Plan the trip"_s));
+    QCOMPARE(m_vault->foldsOf(u"Trip.md"_s), QStringList{u"- Plan the trip"_s});
+
+    // Read leaves them out too, with the item's arrow where it is drawn.
+    m_settings->setReadMode(true);
+    auto *reader = m_editor->findChild<QObject *>(u"reading"_s);
+    QVERIFY(reader);
+    QTRY_COMPARE(reader->property("folds").toList().size(), 1);
+    QVERIFY(reader->property("folds").toList().first().toMap().value(u"position"_s).toInt() >= 0);
+    QQuickItem *reading = find(u"reader"_s);
+    QVERIFY(!reading->property("text").toString().contains(u"book train"_s));
+    m_settings->setReadMode(false);
+
+    // Vi's za on the item opens it again; below the list, it has no fold of its own to use.
+    m_settings->setViMode(true);
+    body->forceActiveFocus();
+    body->setProperty("cursorPosition", int(body->property("text").toString().indexOf(u"Plan")));
+    QTest::keyClick(m_window.get(), Qt::Key_Z);
+    QTest::keyClick(m_window.get(), Qt::Key_A);
+    QTRY_VERIFY(shown(u"book train"_s));
+    QVariant found;
+    body->setProperty("cursorPosition",
+                      int(body->property("text").toString().indexOf(u"After the list")));
+    QMetaObject::invokeMethod(m_editor.get(), "foldAtCursor", Q_RETURN_ARG(QVariant, found));
+    QVERIFY(found.isNull() || !found.isValid() || found.toMap().isEmpty());
     m_settings->setViMode(false);
 }
 

@@ -261,6 +261,99 @@ std::pair<qsizetype, qsizetype> sectionOf(QStringView body, const QList<Heading>
     return {start, std::max(start, end)};
 }
 
+namespace {
+
+const QRegularExpression &listItemPattern()
+{
+    static const QRegularExpression item(
+        uR"(^([ \t]*)(?:[-*+]|\d+[.)])[ \t]+(?:\[[ xX]\][ \t]+)?(.*)$)"_s);
+    return item;
+}
+
+} // namespace
+
+QList<qsizetype> listItemStarts(QStringView body)
+{
+    QList<qsizetype> starts;
+    bool fenced = false;
+    for (qsizetype at = 0; at < body.size();) {
+        qsizetype end = body.indexOf(u'\n', at);
+        end = end < 0 ? body.size() : end + 1;
+        const QStringView line = body.sliced(at, end - at).trimmed();
+        if (line.startsWith(u"```") || line.startsWith(u"~~~"))
+            fenced = !fenced;
+        else if (!fenced && listItemPattern().matchView(body.sliced(at, end - at)).hasMatch())
+            starts.append(at);
+        at = end;
+    }
+    return starts;
+}
+
+QList<ListFold> listFolds(QStringView body)
+{
+    const QRegularExpression &item = listItemPattern();
+    struct Line
+    {
+        qsizetype start;
+        qsizetype end; // after its line break
+        QStringView text;
+    };
+    QList<Line> lines;
+    for (qsizetype at = 0; at < body.size();) {
+        qsizetype end = body.indexOf(u'\n', at);
+        end = end < 0 ? body.size() : end + 1;
+        QStringView text = body.sliced(at, end - at);
+        if (text.endsWith(u'\n'))
+            text.chop(1);
+        lines.append({at, end, text});
+        at = end;
+    }
+    // A tab counts as four spaces, as Markdown reads indents.
+    const auto indent = [](QStringView text) {
+        int width = 0;
+        for (const QChar c : text) {
+            if (c == u' ')
+                ++width;
+            else if (c == u'\t')
+                width += 4;
+            else
+                break;
+        }
+        return width;
+    };
+    QList<ListFold> folds;
+    QHash<QString, int> seen;
+    bool fenced = false;
+    for (qsizetype i = 0; i < lines.size(); ++i) {
+        const QStringView text = lines.at(i).text;
+        if (text.trimmed().startsWith(u"```") || text.trimmed().startsWith(u"~~~")) {
+            fenced = !fenced;
+            continue;
+        }
+        const QRegularExpressionMatch match =
+            fenced ? QRegularExpressionMatch() : item.matchView(text);
+        if (!match.hasMatch())
+            continue;
+        const int depth = indent(text);
+        qsizetype last = -1;
+        for (qsizetype j = i + 1; j < lines.size(); ++j) {
+            const QStringView under = lines.at(j).text;
+            if (under.trimmed().isEmpty())
+                continue;
+            if (indent(under) <= depth)
+                break;
+            last = j;
+        }
+        if (last < 0)
+            continue;
+        const QString name = u"- "_s + match.captured(2).trimmed();
+        const int count = ++seen[name];
+        folds.append({count == 1 ? name : u"%1 (%2)"_s.arg(name).arg(count), lines.at(i).start,
+                      lines.at(i).end, lines.at(last).end});
+    }
+    return folds;
+}
+
 QList<std::pair<qsizetype, qsizetype>> inlineMath(QStringView line)
 {
     static const QRegularExpression math(

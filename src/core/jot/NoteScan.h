@@ -73,6 +73,29 @@ struct Heading
 [[nodiscard]] std::pair<qsizetype, qsizetype>
 sectionOf(QStringView body, const QList<Heading> &headings, qsizetype index);
 
+/// A list item with lines indented under it, which can fold away like a heading's section.
+struct ListFold
+{
+    /// What remembers it folded: "- " and the item's text, without its marker or checkbox, so
+    /// ticking it keeps the fold; " (2)" and on for later ones with the same text.
+    QString key;
+    /// Where the item's line starts in the body.
+    qsizetype position = 0;
+    /// What folding it hides: from the line after it to the end of the last line indented under
+    /// it, as `[start, end)`.
+    qsizetype start = 0;
+    qsizetype end = 0;
+
+    bool operator==(const ListFold &) const = default;
+};
+
+/// Where each list item's line starts in `body`, in order, leaving code alone.
+[[nodiscard]] QList<qsizetype> listItemStarts(QStringView body);
+
+/// The list items of `body` with lines indented deeper than them below, in order. Blank lines
+/// between those lines are taken in, those after them are not, and code is left alone.
+[[nodiscard]] QList<ListFold> listFolds(QStringView body);
+
 /// The `$...$` math in a line of prose, as Pandoc reads it: each span's start and end, its
 /// dollar signs included. The first has a character other than a space after it, the second
 /// one before it and no digit after it, so prices stay text; `\$` is a dollar sign, and
