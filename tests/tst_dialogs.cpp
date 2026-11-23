@@ -49,6 +49,7 @@ private Q_SLOTS:
     void gitSyncStartsFromTheVaultsOwnRepository();
     void stopSyncingSitsApartFromTheSyncButtons();
     void syncButtonsWaitWhileBusy();
+    void theSyncStampTellsHowSyncWent();
     void themeColorsFinishHoweverClosed();
     void showsAndRestoresPastVersions();
     void importsFromTheJoplinOnThisComputer();
@@ -366,6 +367,41 @@ void TestDialogs::syncButtonsWaitWhileBusy()
     }
     QTRY_VERIFY_WITH_TIMEOUT(!sync->checking(), 15000);
     QTRY_VERIFY(enabled(u"syncWithGit"_s));
+}
+
+void TestDialogs::theSyncStampTellsHowSyncWent()
+{
+    const QString nas = m_dir.filePath(u"stamp-nas"_s);
+    QVERIFY(QDir().mkpath(nas));
+    SyncController *sync = m_vault->sync();
+    QSignalSpy finished(sync, &SyncController::finished);
+    QVERIFY(sync->syncWithFolder(QUrl::fromLocalFile(nas)));
+    QVERIFY(finished.wait(10000));
+    const auto stopSyncing = qScopeGuard([sync] { sync->stop(); });
+
+    QQmlEngine engine;
+    QQmlComponent component(&engine);
+    component.loadFromModule("Jot.Ui", "Main");
+    std::unique_ptr<QObject> main(component.create());
+    QVERIFY2(main, qPrintable(component.errorString()));
+    auto *window = qobject_cast<QQuickWindow *>(main.get());
+    window->resize(1200, 760);
+    QVERIFY(QTest::qWaitForWindowExposed(window));
+    auto *stamp = main->findChild<QQuickItem *>(u"syncStamp"_s);
+    QVERIFY(stamp);
+    QTRY_VERIFY(stamp->isVisible());
+    QVERIFY(!sync->details().isEmpty());
+
+    // Hovered, it says when and how the last sync went.
+    QTest::mouseMove(window,
+                     stamp->mapToScene({stamp->width() / 2, stamp->height() / 2}).toPoint());
+    auto *tip = stamp->findChild<QObject *>(u"syncStampTip"_s);
+    QVERIFY(tip);
+    QTRY_VERIFY(tip->property("item").value<QObject *>());
+    auto *shown = tip->property("item").value<QObject *>();
+    QTRY_VERIFY(shown->property("opened").toBool());
+    QCOMPARE(shown->property("text").toString(), sync->details());
+    QTest::mouseMove(window, {5, 5});
 }
 
 void TestDialogs::themeColorsFinishHoweverClosed()

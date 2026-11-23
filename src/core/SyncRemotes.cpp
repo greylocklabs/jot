@@ -72,8 +72,10 @@ SyncReport syncVault(const QString &root, const QString &remote, const QString &
 {
     if (remote.startsWith(u"git:"_s)) {
         const auto [url, branch] = gitRemote(remote);
-        return GitSync(root, url, branch, stateDir + u"/git"_s, device)
-            .sync(QDateTime::currentDateTime(), request);
+        GitSync git(root, url, branch, stateDir + u"/git"_s, device);
+        // For Git, what the keyring keeps is the passphrase of an SSH key, if one was given.
+        git.setSshPassphrase(secret);
+        return git.sync(QDateTime::currentDateTime(), request);
     }
     QString error;
     std::unique_ptr<Transport> transport = transportFor(remote, secret, &error);

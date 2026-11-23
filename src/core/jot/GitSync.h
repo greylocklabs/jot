@@ -3,6 +3,7 @@
 #include "jot/Sync.h"
 
 #include <QDateTime>
+#include <QProcessEnvironment>
 #include <QStringList>
 
 #include <optional>
@@ -40,6 +41,22 @@ public:
     /// Whether the repository at `url` answers, as with the keys and settings this computer
     /// has; says why not otherwise.
     static bool reachable(const QString &url, QString *error);
+
+    /// The program SSH runs to be given a key's passphrase, Jot itself, as main() learns it.
+    static void setAskpass(const QString &program);
+    /// Answers SSH as its askpass, when Jot was started as one: the passphrase given it for a
+    /// prompt asking for one, as the exit code says, nothing for any other. Nothing to do when
+    /// Jot was started as itself.
+    [[nodiscard]] static std::optional<int> answerAskpass(const QStringList &arguments);
+    /// The passphrase for an SSH key that has one, from the keyring, so syncs need no agent.
+    void setSshPassphrase(const QString &passphrase) { m_sshPassphrase = passphrase; }
+    /// `base` as git runs in it: no prompt anyone would have to see, and SSH kept from asking,
+    /// or with `passphrase`, given it by Jot as SSH's askpass, which answers nothing else.
+    [[nodiscard]] static QProcessEnvironment environment(QProcessEnvironment base, bool batchSsh,
+                                                         const QString &passphrase);
+    /// Whether one of the person's SSH keys in ~/.ssh has a passphrase, so SSH turned away
+    /// without an agent may only need it.
+    [[nodiscard]] static bool lockedSshKey();
 
     /// A vault's own git repository, as it is set up.
     struct OwnRepository
@@ -104,7 +121,7 @@ private:
     Run git(const QStringList &arguments, int timeoutMs = kNetworkMs) const;
     /// Runs git; `batchSsh` keeps SSH from asking anything.
     static Run command(const QStringList &arguments, const QString &directory, int timeoutMs,
-                       bool batchSsh = true);
+                       bool batchSsh = true, const QString &passphrase = {});
     /// Whether the person chose how git runs SSH, in the environment or git's settings as
     /// `gitArguments` find them.
     static bool sshChosen(const QStringList &gitArguments);
@@ -147,6 +164,7 @@ private:
     bool m_own = false;
     /// Whether to keep SSH from asking anything, found out at the first git run.
     mutable std::optional<bool> m_batchSsh;
+    QString m_sshPassphrase;
 };
 
 } // namespace jot

@@ -56,6 +56,8 @@ void SyncController::setVault(const QString &root, std::function<void()> save)
     m_save = std::move(save);
     m_remote = root.isEmpty() ? QString() : m_settings.syncRemote(root);
     m_secret.clear();
+    m_needsPassphrase = false;
+    m_askedForPassphrase = false;
     m_problem.clear();
     m_lastSynced = {};
     m_failedAt = {};
@@ -426,6 +428,41 @@ bool SyncController::firstSync() const
     return configured() && QDir(syncStateDir(m_root, m_remote)).isEmpty();
 }
 
+bool SyncController::wantsPassphrase(const QString &remote, const QString &failure)
+{
+    return remote.startsWith(u"git:") && failure.contains(u"Permission denied (publickey"_s);
+}
+
+bool SyncController::setSshPassphrase(const QString &passphrase)
+{
+    if (!m_remote.startsWith(u"git:") || passphrase.isEmpty())
+        return false;
+    QString error;
+    if (!secrets::write(remoteSecretKey(m_remote), passphrase, &error)) {
+        m_problem = tr("Could not keep the passphrase in the keyring: %1").arg(error);
+        Q_EMIT changed();
+        return false;
+    }
+    m_secret = passphrase;
+    m_needsPassphrase = false;
+    Q_EMIT changed();
+    syncNow();
+    return true;
+}
+
+bool SyncController::forgetSshPassphrase()
+{
+    QString error;
+    if (!secrets::remove(remoteSecretKey(m_remote), &error)) {
+        m_problem = tr("Could not take the passphrase out of the keyring: %1").arg(error);
+        Q_EMIT changed();
+        return false;
+    }
+    m_secret.clear();
+    Q_EMIT changed();
+    return true;
+}
+
 void SyncController::start()
 {
     if (!configured())
@@ -436,6 +473,13 @@ void SyncController::start()
     }
     if (m_save)
         m_save();
+    // A Git remote's SSH passphrase, when one was given, read once, and missing is fine.
+    if (m_remote.startsWith(u"git:") && m_secret.isEmpty() && !m_askedForPassphrase) {
+        m_askedForPassphrase = true;
+        QString ignored;
+        if (const std::optional<QString> kept = secrets::read(remoteSecretKey(m_remote), &ignored))
+            m_secret = *kept;
+    }
     // The key is read once from the keyring, here, as the keyring may ask to be unlocked.
     if (remoteNeedsSecret(m_remote) && m_secret.isEmpty()) {
         QString error;
@@ -475,7 +519,16 @@ void SyncController::done(const SyncReport &report)
         qCWarning(lcVault) << "sync failed:" << report.failure;
         m_problem = report.failure;
         m_failedAt = QDateTime::currentDateTime();
+        // SSH turned away with no agent holding the key: its passphrase is asked for when it
+        // has one.
+        m_needsPassphrase = wantsPassphrase(m_remote, report.failure) && GitSync::lockedSshKey();
+        if (m_needsPassphrase)
+            m_problem = m_secret.isEmpty()
+                            ? tr("Your SSH key needs its passphrase; give it in Settings, Sync.")
+                            : tr("The SSH passphrase did not unlock your key; give it again in "
+                                 "Settings, Sync.");
     } else {
+        m_needsPassphrase = false;
         m_lastReport = report;
         m_syncedFrom = m_startedAt;
         m_failedAt = {};

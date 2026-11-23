@@ -2995,7 +2995,19 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>SSH key passphrase</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unlock</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Sync now</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Forget the SSH passphrase</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -5464,7 +5476,23 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Could not keep the passphrase in the keyring: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not take the passphrase out of the keyring: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>The key for %1 is not in the keyring: %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Your SSH key needs its passphrase; give it in Settings, Sync.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The SSH passphrase did not unlock your key; give it again in Settings, Sync.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

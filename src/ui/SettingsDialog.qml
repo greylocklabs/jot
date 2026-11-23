@@ -951,6 +951,36 @@ Popup {
                                                                         ? null : value)
                         }
                     }
+                    // The SSH key's passphrase, asked for when git was turned away for the want of it.
+                    Row {
+                        visible: Vault.sync.needsPassphrase
+                        width: parent.width
+                        spacing: Theme.space2
+
+                        Field {
+                            id: sshPassphrase
+                            objectName: "sshPassphrase"
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: parent.width - unlockKey.width - parent.spacing
+                            placeholderText: qsTr("SSH key passphrase")
+                            echoMode: TextInput.Password
+                            onAccepted: unlockKey.clicked()
+                        }
+                        StickerButton {
+                            id: unlockKey
+                            objectName: "unlockKey"
+                            anchors.verticalCenter: parent.verticalCenter
+                            accent: true
+                            enabled: sshPassphrase.text !== "" && !Vault.sync.syncing
+                            text: qsTr("Unlock")
+                            onClicked: {
+                                if (!enabled)
+                                    return
+                                Vault.sync.setSshPassphrase(sshPassphrase.text)
+                                sshPassphrase.text = ""
+                            }
+                        }
+                    }
                     Flow {
                         width: parent.width
                         spacing: Theme.space2
@@ -961,6 +991,12 @@ Popup {
                             accent: true
                             text: qsTr("Sync now")
                             onClicked: Vault.sync.syncNow()
+                        }
+                        StickerButton {
+                            objectName: "forgetPassphrase"
+                            visible: Vault.sync.hasSshPassphrase
+                            text: qsTr("Forget the SSH passphrase")
+                            onClicked: Vault.sync.forgetSshPassphrase()
                         }
                         StickerButton {
                             objectName: "gitCommitButton"

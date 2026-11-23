@@ -1,5 +1,6 @@
 #include "Completion.h"
 #include "VaultCommands.h"
+#include "jot/GitSync.h"
 
 #include "greylock/Identity.h"
 #include "greylock/Issues.h"
@@ -276,7 +277,17 @@ int runCompletions(const QString &shell)
 /// Quiet on success. Each failure is one line on stderr, and any failure exits 1.
 int main(int argc, char *argv[])
 {
+    // Started by SSH to give a key's passphrase for a sync, it answers and is done.
+    {
+        QStringList arguments;
+        for (int i = 0; i < argc; ++i)
+            arguments.append(QString::fromLocal8Bit(argv[i]));
+        if (const std::optional<int> answered = jot::GitSync::answerAskpass(arguments))
+            return *answered;
+    }
     QCoreApplication app(argc, argv);
+    // SSH asks this program for a key's passphrase, which a sync gives it.
+    jot::GitSync::setAskpass(QCoreApplication::applicationFilePath());
     greylock::installTranslations(app);
     app.setApplicationName(greylock::identity::dirName());
     app.setApplicationVersion(QStringLiteral(JOT_VERSION));

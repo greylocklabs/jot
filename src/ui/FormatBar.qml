@@ -432,6 +432,7 @@ Rectangle {
             visible: Vault.writable
             implicitWidth: 32
             implicitHeight: 32
+            hoverEnabled: true
             focusPolicy: Qt.NoFocus
             Accessible.name: qsTr("Move to trash")
             onClicked: root.trashRequested()
@@ -460,6 +461,7 @@ Rectangle {
 
                 sourceComponent: Tip {
                     parent: trash
+                    visible: !trash.pressed
                     text: qsTr("Move to trash")
                     delay: Theme.durSlow * 2
                     closePolicy: Popup.NoAutoClose
