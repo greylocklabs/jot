@@ -27,6 +27,11 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 - Clicking a dropdown or a date while its list is open closes it, rather than opening it again.
 
+### Changed
+
+- Line numbers are switched on in Settings or from the command palette; the Lines toggle has left
+  the note's bar.
+
 ## 0.7.2 - 2026-11-15
 
 ### Fixed

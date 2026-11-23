@@ -516,14 +516,6 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Lines</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Show line numbers beside the note</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Front matter problem</source>
         <translation type="unfinished"></translation>
     </message>
