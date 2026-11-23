@@ -739,25 +739,41 @@ void MarkdownStyler::applyFolds()
         const QString note = doc->toPlainText();
         const QStringView body = splitFrontMatter(note).body;
         const int offset = int(body.data() - note.data());
+        // Headings' sections and list items' lines, in the order they come.
+        struct Foldable
+        {
+            QString key;
+            int line;
+            int start;
+            int end;
+        };
+        QList<Foldable> foldables;
         const QList<Heading> headings = headingsOf(body);
         const QStringList keys = headingKeys(headings);
         for (qsizetype i = 0; i < headings.size(); ++i) {
-            const int line = offset + int(headings.at(i).position);
-            // A heading folded away with another has no arrow of its own, as the reader draws.
-            if (!ranges.isEmpty() && line < std::get<2>(ranges.last()))
-                continue;
             const auto [start, end] = sectionOf(body, headings, i);
-            if (start == end)
+            if (start != end)
+                foldables.append({keys.at(i), offset + int(headings.at(i).position),
+                                  offset + int(start), offset + int(end)});
+        }
+        for (const ListFold &list : listFolds(body))
+            foldables.append({list.key, offset + int(list.position), offset + int(list.start),
+                              offset + int(list.end)});
+        std::ranges::stable_sort(foldables, {}, &Foldable::line);
+        for (const Foldable &each : std::as_const(foldables)) {
+            // One folded away with another has no arrow of its own, as the reader draws.
+            if (!ranges.isEmpty() && each.line < std::get<2>(ranges.last()))
                 continue;
-            const bool folded = !m_sourceMode && m_folded.contains(keys.at(i));
-            folds.append(QVariantMap{
-                {u"key"_s, keys.at(i)},
-                {u"position"_s, line},
-                {u"end"_s, doc->findBlock(line).position() + doc->findBlock(line).length() - 1},
-                {u"folded"_s, folded}});
+            const bool folded = !m_sourceMode && m_folded.contains(each.key);
+            folds.append(QVariantMap{{u"key"_s, each.key},
+                                     {u"position"_s, each.line},
+                                     {u"end"_s, doc->findBlock(each.line).position() +
+                                                    doc->findBlock(each.line).length() - 1},
+                                     {u"until"_s, each.end},
+                                     {u"folded"_s, folded}});
             // A folded section inside one folded further out is hidden already.
-            if (folded && (ranges.isEmpty() || offset + start >= std::get<2>(ranges.last())))
-                ranges.append({keys.at(i), offset + int(start), offset + int(end)});
+            if (folded && (ranges.isEmpty() || each.start >= std::get<2>(ranges.last())))
+                ranges.append({each.key, each.start, each.end});
         }
         // Whole lines go, so a section's last line break stays with the line after it.
         QList<QTextBlock> changed;

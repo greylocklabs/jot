@@ -255,7 +255,9 @@ Rectangle {
         const at = root.readShown ? -1 : body.cursorPosition
         let found = null
         for (const each of styler.folds) {
-            if (each.position <= at)
+            // A list item's, only on the item or the lines under it; a heading's, below it.
+            const list = each.key.startsWith("- ")
+            if (each.position <= at && (!list || at < each.until))
                 found = each
         }
         return found

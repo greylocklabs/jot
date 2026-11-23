@@ -199,24 +199,43 @@ void NoteReader::render()
     QList<std::pair<int, int>> cutLines;
     QVariantList foldable;
     m_hiddenHeadings = QList<bool>(headings.size(), false);
+    // Headings' sections and list items' lines, in the order they come; a heading is known by
+    // its index, a list item by where it is.
+    struct Foldable
+    {
+        QString key;
+        qsizetype at;
+        qsizetype start;
+        qsizetype end;
+        int heading;
+    };
+    QList<Foldable> foldables;
     for (qsizetype i = 0; i < headings.size(); ++i) {
-        const qsizetype at = headings.at(i).position;
-        if (!cut.isEmpty() && at >= cut.last().first && at < cut.last().second) {
-            m_hiddenHeadings[i] = true;
+        const auto [start, end] = sectionOf(parts.body, headings, i);
+        foldables.append({keys.at(i), headings.at(i).position, start, end, int(i)});
+    }
+    for (const ListFold &list : listFolds(parts.body))
+        foldables.append({list.key, list.position, list.start, list.end, -1});
+    std::ranges::stable_sort(foldables, {}, &Foldable::at);
+    for (const Foldable &each : std::as_const(foldables)) {
+        if (!cut.isEmpty() && each.at >= cut.last().first && each.at < cut.last().second) {
+            if (each.heading >= 0)
+                m_hiddenHeadings[each.heading] = true;
             continue;
         }
-        const auto [start, end] = sectionOf(parts.body, headings, i);
-        if (start == end)
+        if (each.start == each.end)
             continue;
-        const bool folded = m_folded.contains(keys.at(i));
-        foldable.append(
-            QVariantMap{{u"key"_s, keys.at(i)}, {u"index"_s, int(i)}, {u"folded"_s, folded}});
+        const bool folded = m_folded.contains(each.key);
+        foldable.append(QVariantMap{{u"key"_s, each.key},
+                                    {u"index"_s, each.heading},
+                                    {u"at"_s, each.at},
+                                    {u"folded"_s, folded}});
         if (folded) {
-            cut.append({start, end});
+            cut.append({each.start, each.end});
             const auto lineAt = [&](qsizetype position) {
                 return firstLine + int(parts.body.first(position).count(u'\n'));
             };
-            cutLines.append({lineAt(start), lineAt(end)});
+            cutLines.append({lineAt(each.start), lineAt(each.end)});
         }
     }
     m_shown.clear();
@@ -238,6 +257,13 @@ void NoteReader::render()
     if (const VaultController *vault = VaultController::instance(); vault && vault->isOpen())
         doc->setBaseUrl(QUrl::fromLocalFile(vault->root() + u'/' + vault->current()));
     doc->setMarkdown(markdown, QTextDocument::MarkdownDialectGitHub);
+    // Each list item drawn, in order, to find where a list fold's item is; before styling, which
+    // draws lists its own way.
+    QList<int> listBlocks;
+    for (QTextBlock block = doc->begin(); block.isValid(); block = block.next()) {
+        if (block.textList())
+            listBlocks.append(block.position());
+    }
 
     m_tasks.clear();
     for (const NoteScan::Task &task : scanNote(parts.body, firstLine).tasks) {
@@ -260,9 +286,24 @@ void NoteReader::render()
     placeImages();
     placeSounds();
 
+    const QList<qsizetype> listStarts = listItemStarts(m_shown);
     for (QVariant &fold : foldable) {
         QVariantMap map = fold.toMap();
-        const int position = headingPosition(map.value(u"index"_s).toInt());
+        const int index = map.value(u"index"_s).toInt();
+        int position = -1;
+        if (index >= 0) {
+            position = headingPosition(index);
+        } else if (listStarts.size() == listBlocks.size()) {
+            // Where the item is in what is shown, with the cuts before it taken out.
+            qsizetype at = map.value(u"at"_s).toLongLong();
+            for (const auto &[start, end] : std::as_const(cut)) {
+                if (end <= at)
+                    at -= end - start;
+            }
+            const qsizetype item = listStarts.indexOf(at);
+            if (item >= 0)
+                position = listBlocks.at(item);
+        }
         const QTextBlock line = doc->findBlock(std::max(position, 0));
         map.insert(u"position"_s, position);
         map.insert(u"end"_s, line.position() + line.length() - 1);

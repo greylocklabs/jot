@@ -13,6 +13,7 @@ class TestNoteScan : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void findsListItemsToFold();
     void tickingARepeatingTaskWritesTheNext();
     void readsAsMarkdownWithLinks();
     void findsHeadingsForAContentsList();
@@ -407,6 +408,27 @@ void TestNoteScan::foldsAHeadingsSection()
     QCOMPARE(hidden(3), QString());
     QCOMPARE(hidden(5), u"Part text.\n"_s);
     QCOMPARE(hidden(6), QString());
+}
+
+void TestNoteScan::findsListItemsToFold()
+{
+    const QString body = u"- [ ] Plan the trip\n    - [ ] book train\n\n    - [x] pack\n\n"
+                         u"- Ideas\n  more about it\n- [ ] Call Soren\n1. First\n   1. Sub\n"
+                         u"```\n- [ ] in code\n    - not a list\n```\n- Plan the trip\n  again\n"_s;
+    const QList<ListFold> folds = listFolds(body);
+    QStringList keys;
+    for (const ListFold &fold : folds)
+        keys.append(fold.key);
+    QCOMPARE(keys, (QStringList{u"- Plan the trip"_s, u"- Ideas"_s, u"- First"_s,
+                                u"- Plan the trip (2)"_s}));
+    // Its lines under it, blank ones between taken in, the blank one after left.
+    const ListFold &trip = folds.first();
+    QCOMPARE(trip.position, 0);
+    QCOMPARE(body.mid(trip.start, trip.end - trip.start),
+             u"    - [ ] book train\n\n    - [x] pack\n"_s);
+    QCOMPARE(body.mid(folds.at(1).start, folds.at(1).end - folds.at(1).start),
+             u"  more about it\n"_s);
+    QVERIFY(listFolds(u"- one\n- two\n"_s).isEmpty());
 }
 
 QTEST_GUILESS_MAIN(TestNoteScan)

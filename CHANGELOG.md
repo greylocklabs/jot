@@ -7,6 +7,9 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ### Added
 
+- A list item with lines indented under it folds like a heading: its arrow in Styled and Read,
+  and vi's `za`, hide the lines under it, and the fold is kept for the note, by the item's words,
+  so ticking it keeps it folded.
 - Vi text objects: `d`, `c` and `y`, and `v` to select, take `iw`, `aw`, `iW`, `aW`, the quotes
   `i"` `a"` `i'` `a'` and backticks, the brackets `i(` `a(` `i[` `i{` `i<` with `ib` and `iB`, and
   paragraphs `ip` and `ap`, as in vim.
