@@ -43,6 +43,7 @@ private Q_SLOTS:
     void saysWhichNotesARenameCouldNotChange();
     void countsEachTypesNotes();
     void suggestsATypesKeysAndValues();
+    void tidiesTheNotesLists();
     void setsPropertiesAsTheirKindsWriteThem();
     void opensAFolderAndRemembersIt();
     void leavesOutWhatTheVaultIgnores();
@@ -751,6 +752,30 @@ void TestVaultController::setsPropertiesAsTheirKindsWriteThem()
     m_vault->setNoteProperty(u"born"_s, QString());
     QVERIFY(!m_vault->currentText().contains(u"born"_s));
     QVERIFY(!m_vault->unsaved());
+}
+
+void TestVaultController::tidiesTheNotesLists()
+{
+    const QByteArray note = "---\ntags: [a]\n---\n- [x] eggs\n- [ ] milk\n- [ ] bread\n";
+    writeFile(m_root + u"/Shop.md"_s, note);
+    QVERIFY(m_vault->openPath(m_root));
+    m_vault->setCurrent(u"Shop.md"_s);
+    QVERIFY(m_vault->moveTicked());
+    QCOMPARE(m_vault->currentText(),
+             u"---\ntags: [a]\n---\n- [ ] milk\n- [ ] bread\n- [x] eggs\n"_s);
+    // Again, nothing more to do.
+    QVERIFY(!m_vault->moveTicked());
+    // Each is one step to undo.
+    QVERIFY(m_vault->undo());
+    QCOMPARE(m_vault->currentText(), QString::fromUtf8(note));
+    // Sorted where the cursor is, in the body after the front matter.
+    m_vault->setProperty("cursorPosition", int(m_vault->currentText().indexOf(u"milk"_s)));
+    QVERIFY(m_vault->sortListAtCursor());
+    QCOMPARE(m_vault->currentText(),
+             u"---\ntags: [a]\n---\n- [ ] bread\n- [x] eggs\n- [ ] milk\n"_s);
+    QVERIFY(m_vault->untickAllToDos());
+    QVERIFY(!m_vault->currentText().contains(u"[x]"_s));
+    QVERIFY(m_vault->removeTickedToDos() == false);
 }
 
 void TestVaultController::switchesToAnotherFolder()

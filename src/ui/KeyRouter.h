@@ -71,6 +71,12 @@ public:
     /// The window's actions for the command palette, as actionList() gives them, best match
     /// for `query` first, leaving out those in `unavailable` and the palette itself.
     Q_INVOKABLE static QVariantList commands(const QString &query, const QStringList &unavailable);
+    /// What vi's `:` calls action `id`: its id's words joined by hyphens, as copy-link.
+    Q_INVOKABLE static QString commandName(const QString &id);
+    /// The palette's actions as vi's `:` commands, each `{text, detail}`: its name and label.
+    Q_INVOKABLE static QVariantList viCommands();
+    /// The palette's action that `:` `typed` names, or empty.
+    Q_INVOKABLE static QString viCommandAction(const QString &typed);
     /// Vi mode's action in Read mode for `keys`, as `{id, partial}`: its id or empty, and
     /// whether `keys` begins a longer one.
     Q_INVOKABLE static QVariantMap readAction(const QString &keys);

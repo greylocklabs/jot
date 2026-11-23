@@ -75,11 +75,17 @@ Rectangle {
             "detail": qsTr("Vi's keys and commands")
         }
     ]
+    /// The palette's actions by their names, as KeyRouter::viCommands() gives them.
+    property var actionCommands: []
+    /// Vi's own commands, then the palette's actions.
+    readonly property var allCommands: commands.concat(actionCommands)
     /// Those that start with what is typed, which is not one of them already.
-    readonly property var offered: commanding ? commands.filter(each => each.text.startsWith(
-                                                                            command.text)
-                                                                        && each.text
-                                                                        !== command.text) : []
+    // A few at a time, as the palette's actions are many.
+    readonly property var offered: commanding ? allCommands.filter(each => each.text.startsWith(
+                                                                               command.text)
+                                                                           && each.text
+                                                                           !== command.text).slice(0,
+                                                                                                   8) : []
     /// The one the arrows chose, or -1.
     property int chosen: -1
 

@@ -1052,6 +1052,10 @@ ApplicationWindow {
             return Vault.isOpen && Vault.writable && !Vault.showingTrash && Vault.noteTypes.length
                     > 0
         case "setType":
+        case "moveTicked":
+        case "removeTicked":
+        case "untickAll":
+        case "sortList":
             return note && Vault.writable && !editor.dataFile && !Vault.showingTasks &&
                     !Vault.showingTrash
 
@@ -1162,6 +1166,18 @@ ApplicationWindow {
             break
         case "setType":
             setTypeMenu.popup(editor, Theme.space6, Theme.space6)
+            break
+        case "moveTicked":
+            Vault.moveTicked()
+            break
+        case "removeTicked":
+            Vault.removeTickedToDos()
+            break
+        case "untickAll":
+            Vault.untickAllToDos()
+            break
+        case "sortList":
+            Vault.sortListAtCursor()
             break
         case "noteTypes":
             settingsDialog.open()

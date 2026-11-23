@@ -2662,6 +2662,7 @@ Rectangle {
         column: vi.column
         pickedLines: vi.pickedLines
         place: vi.percent + "%"
+        actionCommands: root.router ? root.router.viCommands() : []
         onRun: typed => {
             body.forceActiveFocus()
             statusLine.say(vi.runCommand(typed))

@@ -134,6 +134,10 @@ QList<KeyAction> KeyRouter::actions()
         act(u"editNote"_s, tr("Write in the note"), window, {}, u"i"_s),
         act(u"rename"_s, tr("Rename the note"), window, {}, {}, u"r"_s),
         act(u"setType"_s, tr("Set the note's type"), window, {}),
+        act(u"moveTicked"_s, tr("Move ticked to-dos to the end of their lists"), window, {}),
+        act(u"removeTicked"_s, tr("Remove ticked to-dos"), window, {}),
+        act(u"untickAll"_s, tr("Untick every to-do"), window, {}),
+        act(u"sortList"_s, tr("Sort the list A to Z"), window, {}),
         act(u"noteTypes"_s, tr("Note types"), window, {}),
         act(u"closeTab"_s, tr("Close the tab"), window, {int(K::Close)}),
         act(u"nextTab"_s, tr("Next tab"), window, {int(K::NextChild)}),
@@ -378,6 +382,39 @@ QVariantList KeyRouter::commands(const QString &query, const QStringList &unavai
     for (const Scored &each : std::as_const(scored))
         found << each.action;
     return toList(found);
+}
+
+QString KeyRouter::commandName(const QString &id)
+{
+    // Its id's words, joined by hyphens: copyLink is copy-link.
+    QString name;
+    for (const QChar c : id) {
+        if (c.isUpper() && !name.isEmpty())
+            name += u'-';
+        name += c.toLower();
+    }
+    return name;
+}
+
+QVariantList KeyRouter::viCommands()
+{
+    QVariantList commands;
+    for (const KeyAction &action : chosenActions()) {
+        if (action.scope == u"window" && action.id != u"commands")
+            commands.append(
+                QVariantMap{{u"text"_s, commandName(action.id)}, {u"detail"_s, action.label}});
+    }
+    return commands;
+}
+
+QString KeyRouter::viCommandAction(const QString &typed)
+{
+    const QString name = typed.trimmed();
+    for (const KeyAction &action : chosenActions()) {
+        if (action.scope == u"window" && action.id != u"commands" && commandName(action.id) == name)
+            return action.id;
+    }
+    return {};
 }
 
 QVariantList KeyRouter::toList(const QList<KeyAction> &actions)

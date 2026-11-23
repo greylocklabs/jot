@@ -60,6 +60,8 @@ add_library(jotcore STATIC
     jot/JoplinImport.h
     JoplinImport.cpp
     jot/Layout.h
+    jot/ListEdit.h
+    ListEdit.cpp
     Layout.cpp
     jot/NoteTypes.h
     NoteTypes.cpp

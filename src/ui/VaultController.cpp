@@ -6,6 +6,7 @@
 #include "jot/JoplinExport.h"
 #include "jot/JoplinImport.h"
 #include "jot/Layout.h"
+#include "jot/ListEdit.h"
 #include "jot/Logging.h"
 #include "jot/Merge.h"
 #include "jot/NoteHistory.h"
@@ -3138,6 +3139,40 @@ void VaultController::setNoteProperty(const QString &key, const QVariant &value)
     }
     const QString text = setFrontMatterKey(m_currentText, key.trimmed(), written);
     rewriteNote(m_current, [&text](const QString &) { return std::optional(text); }, true);
+}
+
+bool VaultController::changeBody(const std::function<QString(const QString &, int)> &change)
+{
+    if (!m_vault || !m_vault->writable() || m_current.isEmpty() || Vault::isDataFile(m_current))
+        return false;
+    const NoteParts parts = splitFrontMatter(m_currentText);
+    const int offset = int(parts.body.data() - m_currentText.constData());
+    const QString body = parts.body.toString();
+    const QString changed = change(body, std::max(0, m_cursorPosition - offset));
+    if (changed == body)
+        return false;
+    const QString text = m_currentText.first(offset) + changed;
+    return rewriteNote(m_current, [&text](const QString &) { return std::optional(text); }, true);
+}
+
+bool VaultController::moveTicked()
+{
+    return changeBody([](const QString &body, int) { return moveTickedToEnd(body); });
+}
+
+bool VaultController::removeTickedToDos()
+{
+    return changeBody([](const QString &body, int) { return removeTicked(body); });
+}
+
+bool VaultController::untickAllToDos()
+{
+    return changeBody([](const QString &body, int) { return untickAll(body); });
+}
+
+bool VaultController::sortListAtCursor()
+{
+    return changeBody([](const QString &body, int at) { return sortList(body, at); });
 }
 
 void VaultController::applyTypeTemplate()

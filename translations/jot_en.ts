@@ -808,6 +808,10 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Any command of the palette, by its name in words joined by hyphens</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Out of the note</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4990,6 +4994,22 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>Set the note&apos;s type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Move ticked to-dos to the end of their lists</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remove ticked to-dos</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Untick every to-do</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sort the list A to Z</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
