@@ -89,7 +89,7 @@ struct ListFold
     bool operator==(const ListFold &) const = default;
 };
 
-/// Where each list item's line starts in `body`, in order, leaving code alone.
+/// Where each list item's line starts in `body`, in order, quoted ones too, leaving code alone.
 [[nodiscard]] QList<qsizetype> listItemStarts(QStringView body);
 
 /// The list items of `body` with lines indented deeper than them below, in order. Blank lines

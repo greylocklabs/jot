@@ -270,6 +270,19 @@ const QRegularExpression &listItemPattern()
     return item;
 }
 
+/// `line` without the `>` marks of the quotes it is in.
+QStringView unquoted(QStringView line)
+{
+    qsizetype at = 0;
+    while (at < line.size() && (line.at(at) == u' ' || line.at(at) == u'\t'))
+        ++at;
+    if (at == line.size() || line.at(at) != u'>')
+        return line;
+    while (at < line.size() && (line.at(at) == u'>' || line.at(at) == u' ' || line.at(at) == u'\t'))
+        ++at;
+    return line.sliced(at);
+}
+
 } // namespace
 
 QList<qsizetype> listItemStarts(QStringView body)
@@ -282,7 +295,8 @@ QList<qsizetype> listItemStarts(QStringView body)
         const QStringView line = body.sliced(at, end - at).trimmed();
         if (line.startsWith(u"```") || line.startsWith(u"~~~"))
             fenced = !fenced;
-        else if (!fenced && listItemPattern().matchView(body.sliced(at, end - at)).hasMatch())
+        else if (!fenced &&
+                 listItemPattern().matchView(unquoted(body.sliced(at, end - at))).hasMatch())
             starts.append(at);
         at = end;
     }
