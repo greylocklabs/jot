@@ -59,6 +59,7 @@ public:
     explicit Lists(const QString &body)
     {
         m_finalBreak = body.endsWith(u'\n');
+        m_crlf = body.contains(u"\r\n"_s);
         m_lines = body.split(u'\n');
         if (m_finalBreak)
             m_lines.removeLast();
@@ -139,10 +140,19 @@ public:
         return out;
     }
 
-    [[nodiscard]] QString text(const QStringList &lines) const
+    [[nodiscard]] QString text(QStringList lines) const
     {
         if (lines.isEmpty())
             return {};
+        // Lines keep their own \r; one that had no break, now followed by another, gets the
+        // note's \r\n, and the one now last has none if the note ended without one.
+        for (qsizetype i = 0; i < lines.size(); ++i) {
+            const bool breaks = i + 1 < lines.size() || m_finalBreak;
+            if (m_crlf && breaks && !lines.at(i).endsWith(u'\r'))
+                lines[i].append(u'\r');
+            else if (!breaks && lines.at(i).endsWith(u'\r'))
+                lines[i].chop(1);
+        }
         return lines.join(u'\n') + (m_finalBreak ? u"\n"_s : QString());
     }
 
@@ -176,6 +186,8 @@ private:
     QStringList m_lines;
     QList<bool> m_code;
     bool m_finalBreak = false;
+    /// Whether the note breaks its lines with \r\n.
+    bool m_crlf = false;
 };
 
 /// Compares words as people sort them: in any case, and numbers by their value, so 9 comes
