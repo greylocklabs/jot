@@ -776,6 +776,17 @@ void TestVaultController::tidiesTheNotesLists()
     QVERIFY(m_vault->untickAllToDos());
     QVERIFY(!m_vault->currentText().contains(u"[x]"_s));
     QVERIFY(m_vault->removeTickedToDos() == false);
+
+    // In a note with Windows line breaks and a byte order mark, still the list at the cursor.
+    writeFile(
+        m_root + u"/Windows.md"_s,
+        "\xef\xbb\xbf---\r\ntags: [a]\r\n---\r\n- b\r\n- a\r\n\r\nText.\r\n\r\n- d\r\n- c\r\n");
+    m_vault->setCurrent(u"Windows.md"_s);
+    const QString shown = u"---\ntags: [a]\n---\n- b\n- a\n\nText.\n\n- d\n- c\n"_s;
+    m_vault->setProperty("cursorPosition", int(shown.indexOf(u"- c"_s)));
+    QVERIFY(m_vault->sortListAtCursor());
+    QVERIFY(m_vault->currentText().contains(u"- b\r\n- a\r\n"_s));
+    QVERIFY(m_vault->currentText().contains(u"- c\r\n- d\r\n"_s));
 }
 
 void TestVaultController::switchesToAnotherFolder()

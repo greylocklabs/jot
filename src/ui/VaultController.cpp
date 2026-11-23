@@ -3148,7 +3148,14 @@ bool VaultController::changeBody(const std::function<QString(const QString &, in
     const NoteParts parts = splitFrontMatter(m_currentText);
     const int offset = int(parts.body.data() - m_currentText.constData());
     const QString body = parts.body.toString();
-    const QString changed = change(body, std::max(0, m_cursorPosition - offset));
+    // The cursor is in the editor's text, which has plain \n lines and no byte order mark.
+    int cursor = m_currentText.startsWith(QChar(0xfeff)) ? 1 : 0;
+    for (int left = m_cursorPosition; left > 0 && cursor < m_currentText.size(); --left)
+        cursor += m_currentText.at(cursor) == u'\r' && cursor + 1 < m_currentText.size() &&
+                          m_currentText.at(cursor + 1) == u'\n'
+                      ? 2
+                      : 1;
+    const QString changed = change(body, std::max(0, cursor - offset));
     if (changed == body)
         return false;
     const QString text = m_currentText.first(offset) + changed;
