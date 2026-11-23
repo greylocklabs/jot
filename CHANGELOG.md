@@ -23,6 +23,10 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   adds a key of the note's own. A value its type does not take says why on its row. Edit as text
   shows the front matter in Source, and Read shows the values without changing them.
 
+### Fixed
+
+- Clicking a dropdown or a date while its list is open closes it, rather than opening it again.
+
 ## 0.7.2 - 2026-11-15
 
 ### Fixed

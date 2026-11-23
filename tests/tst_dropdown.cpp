@@ -21,6 +21,8 @@ private Q_SLOTS:
     void pickingTheCurrentChoiceKeepsItMarked();
     void aLongListFitsTheWindow();
     void aLongChoiceIsCutShort();
+    void aClickOnItOpenClosesIt();
+    void aClickOnAnOpenCalendarClosesIt();
 
 private:
     /// The menu's entries, in the overlay over the window's content.
@@ -84,6 +86,58 @@ void TestDropdown::pickingTheCurrentChoiceKeepsItMarked()
     click(window, dropdown);
     QTRY_COMPARE(entries(window).size(), 2);
     QCOMPARE(marked(), QStringList{u"Notes"_s});
+}
+
+void TestDropdown::aClickOnItOpenClosesIt()
+{
+    QQmlEngine engine;
+    QQmlComponent component(&engine);
+    component.loadFromModule("Jot.Ui", "Dropdown");
+    const QVariantList model{QVariantMap{{u"id"_s, u"notes"_s}, {u"name"_s, u"Notes"_s}},
+                             QVariantMap{{u"id"_s, u"month"_s}, {u"name"_s, u"Month"_s}}};
+    std::unique_ptr<QObject> object(component.createWithInitialProperties(
+        {{u"model"_s, model}, {u"currentValue"_s, u"notes"_s}}));
+    QVERIFY2(object, qPrintable(component.errorString()));
+    auto *dropdown = qobject_cast<QQuickItem *>(object.get());
+    QQuickWindow window;
+    window.resize(400, 300);
+    dropdown->setParentItem(window.contentItem());
+    window.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&window));
+    auto *menu = dropdown->findChild<QObject *>(u"dropdownMenu"_s);
+    QVERIFY(menu);
+
+    click(window, dropdown);
+    QTRY_VERIFY(menu->property("opened").toBool());
+    // Clicked again, it closes and stays closed, rather than opening again.
+    click(window, dropdown);
+    QTRY_VERIFY(!menu->property("visible").toBool());
+    QTest::qWait(300);
+    QVERIFY(!menu->property("visible").toBool());
+}
+
+void TestDropdown::aClickOnAnOpenCalendarClosesIt()
+{
+    QQmlEngine engine;
+    QQmlComponent component(&engine);
+    component.loadFromModule("Jot.Ui", "DatePicker");
+    std::unique_ptr<QObject> object(component.create());
+    QVERIFY2(object, qPrintable(component.errorString()));
+    auto *picker = qobject_cast<QQuickItem *>(object.get());
+    QQuickWindow window;
+    window.resize(400, 400);
+    picker->setParentItem(window.contentItem());
+    window.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&window));
+    auto *calendar = picker->findChild<QObject *>(u"calendar"_s);
+    QVERIFY(calendar);
+
+    click(window, picker);
+    QTRY_VERIFY(calendar->property("opened").toBool());
+    click(window, picker);
+    QTRY_VERIFY(!calendar->property("visible").toBool());
+    QTest::qWait(300);
+    QVERIFY(!calendar->property("visible").toBool());
 }
 
 void TestDropdown::aLongListFitsTheWindow()
