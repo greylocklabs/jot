@@ -114,6 +114,9 @@ private:
     bool key(const QKeyEvent *event);
     /// Does the action `id`; says whether it was one.
     bool run(const QString &id);
+    /// Deletes (`d`), changes (`c`) or yanks (`y`) the text object `kind` at the cursor, or
+    /// selects it when `op` is null, its inside or with `around`. Gives whether a key was used.
+    bool actOnObject(QChar op, bool around, QChar kind);
     /// Moves the cursor as the TextEdit's own keys do, selecting in visual mode.
     bool move(const QString &id);
     void sendKey(int key, Qt::KeyboardModifiers modifiers);

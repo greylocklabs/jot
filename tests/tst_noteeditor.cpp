@@ -129,6 +129,7 @@ private Q_SLOTS:
     void tickingARepeatingToDoWritesTheNext();
     void editsInViModes();
     void viActsOnWhatTheMouseSelects();
+    void viActsOnTextObjects();
     void viKeepsTheCursorInViewOnScroll();
     void runsViCommands();
     void viStatusLineGivesWayAsItNarrows();
@@ -509,6 +510,15 @@ void TestNoteEditor::viLeavesHiddenFrontMatterAlone()
     QMetaObject::invokeMethod(vi, "runCommand", Q_RETURN_ARG(QString, said),
                               Q_ARG(QString, u"%s/a/A/g"_s));
     QCOMPARE(text(), frontMatter + u"leAd."_s);
+
+    // A paragraph text object stops where the body starts, and quotes reaching above it do not
+    // count.
+    type(u"di\""_s);
+    QCOMPARE(text(), frontMatter + u"leAd."_s);
+    body->setProperty("text", frontMatter + u"first line\nsecond\n\nnext"_s);
+    body->setProperty("cursorPosition", int(frontMatter.size()) + 2);
+    type(u"dip"_s);
+    QCOMPARE(text(), frontMatter + u"\nnext"_s);
 
     // Deleting the last line keeps the line break that ends the front matter.
     QTest::keyClick(m_window.get(), Qt::Key_D);
@@ -3360,6 +3370,60 @@ void TestNoteEditor::viActsOnWhatTheMouseSelects()
     QTRY_COMPARE(vi->property("mode").toString(), u"visual"_s);
     QTest::mouseClick(m_window.get(), Qt::LeftButton, {}, at(1));
     QTRY_COMPARE(vi->property("mode").toString(), u"normal"_s);
+    m_settings->setViMode(false);
+}
+
+void TestNoteEditor::viActsOnTextObjects()
+{
+    m_settings->setViMode(true);
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    auto *vi = body->findChild<QObject *>(u"vi"_s);
+    body->forceActiveFocus();
+    const auto text = [body] { return body->property("text").toString(); };
+    const auto type = [this](const QString &keys) {
+        for (const QChar c : keys)
+            QTest::keyClick(m_window.get(), c.toLatin1());
+    };
+    const auto start = [&](const QString &with, const QString &at) {
+        body->setProperty("text", with);
+        body->setProperty("cursorPosition", int(with.indexOf(at)));
+        QTRY_COMPARE(vi->property("mode").toString(), u"normal"_s);
+    };
+
+    // diw takes the word; daw the space after it too.
+    start(u"one two three"_s, u"two"_s);
+    type(u"diw"_s);
+    QCOMPARE(text(), u"one  three"_s);
+    start(u"one two three"_s, u"two"_s);
+    type(u"daw"_s);
+    QCOMPARE(text(), u"one three"_s);
+
+    // ci" changes what is quoted, in insert mode after.
+    start(u"say \"hello there\" now"_s, u"there"_s);
+    type(u"ci\""_s);
+    QCOMPARE(vi->property("mode").toString(), u"insert"_s);
+    type(u"bye"_s);
+    QCOMPARE(text(), u"say \"bye\" now"_s);
+    QTest::keyClick(m_window.get(), Qt::Key_Escape);
+
+    // ya( keeps the brackets and what is in them, and p puts them back.
+    start(u"f(a, b) end"_s, u"b)"_s);
+    type(u"ya("_s);
+    QCOMPARE(text(), u"f(a, b) end"_s);
+    QCOMPARE(QGuiApplication::clipboard()->text(), u"(a, b)"_s);
+
+    // viw selects the word, which d then deletes.
+    start(u"alpha beta gamma"_s, u"eta"_s);
+    type(u"viw"_s);
+    QCOMPARE(body->property("selectedText").toString(), u"beta"_s);
+    type(u"d"_s);
+    QCOMPARE(text(), u"alpha  gamma"_s);
+
+    // dap takes a paragraph with the blank line after it.
+    start(u"one\n\ntwo\nthree\n\nfour"_s, u"three"_s);
+    type(u"dap"_s);
+    QCOMPARE(text(), u"one\n\nfour"_s);
     m_settings->setViMode(false);
 }
 

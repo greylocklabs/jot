@@ -7,6 +7,9 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ### Added
 
+- Vi text objects: `d`, `c` and `y`, and `v` to select, take `iw`, `aw`, `iW`, `aW`, the quotes
+  `i"` `a"` `i'` `a'` and backticks, the brackets `i(` `a(` `i[` `i{` `i<` with `ib` and `iB`, and
+  paragraphs `ip` and `ap`, as in vim.
 - Note types: a note's `type:` names one of the vault's types, each a file in `.jot/types` that
   gives its notes an icon, a color, a template and properties of their own kinds, such as a
   number, a date, a choice or a link to a note of another type. A value that does not fit is

@@ -2,6 +2,8 @@
 
 #include "KeyRouter.h"
 
+#include "jot/TextObjects.h"
+
 #include <QClipboard>
 #include <QCoreApplication>
 #include <QGuiApplication>
@@ -304,6 +306,23 @@ bool ViEditor::key(const QKeyEvent *event)
         const QChar kind = last == u';' ? m_findKind : kOther.value(m_findKind);
         return find(operated ? keys.front() : QChar(), kind, m_findTarget, true);
     }
+    // A text object: d, c or y, or visual mode, then i or a, then what, as diw or vi".
+    const bool operating = !visual && !keys.isEmpty() && u"dcy"_s.contains(keys.front());
+    const QString object = visual ? keys : operating ? keys.mid(1) : QString();
+    if (operating && keys == u"c") {
+        setPending(keys);
+        return true;
+    }
+    if ((visual || operating) && !object.isEmpty() &&
+        (object.front() == u'i' || object.front() == u'a')) {
+        if (object.size() == 1) {
+            setPending(keys);
+            return true;
+        }
+        setPending({});
+        return actOnObject(operating ? keys.front() : QChar(), object.front() == u'a',
+                           object.at(1));
+    }
     if (m_mode == kVisual) {
         const QString id = KeyRouter::viAction(kVisual, keys);
         if (!id.isEmpty()) {
@@ -331,6 +350,43 @@ bool ViEditor::key(const QKeyEvent *event)
     if (m_mode == kVisual && !moveKey(id) && id != u"visual")
         return true;
     run(id);
+    return true;
+}
+
+bool ViEditor::actOnObject(QChar op, bool around, QChar kind)
+{
+    QTextDocument *doc = document();
+    if (!doc)
+        return true;
+    const QString text = doc->toPlainText();
+    std::optional<std::pair<int, int>> range = textObject(text, cursor(), kind, around);
+    // A paragraph starts no higher than the floor, as the lines above it are hidden; anything
+    // else reaching there is left alone, as nothing found is.
+    if (range && kind == u'p')
+        range->first = std::max(range->first, m_floor);
+    if (!range || range->first < m_floor || range->second <= range->first)
+        return true;
+    const auto [start, end] = *range;
+    if (op.isNull()) {
+        QMetaObject::invokeMethod(m_target, "select", Q_ARG(int, start), Q_ARG(int, end));
+        return true;
+    }
+    // A paragraph is whole lines, which p puts back as lines.
+    keep(text.mid(start, end - start), kind == u'p');
+    if (op == u'y') {
+        Q_EMIT yanked(start, end);
+        setCursor(start);
+        return true;
+    }
+    if (!writable())
+        return true;
+    QTextCursor edit(doc);
+    edit.setPosition(start);
+    edit.setPosition(end, QTextCursor::KeepAnchor);
+    edit.removeSelectedText();
+    setCursor(start);
+    if (op == u'c')
+        setMode(kInsert);
     return true;
 }
 

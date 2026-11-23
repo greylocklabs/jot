@@ -283,6 +283,32 @@ Popup {
                     rows: root.rows("note", "vi")
                 }
                 Table {
+                    objectName: "viTextObjects"
+                    visible: root.tab === "vi"
+                    title: qsTr("Text objects, after d, c, y or v")
+                    rows: [
+                        {
+                            "keys": ["iw", "aw"],
+                            "label": qsTr(
+                                         "The word, or with the space after it; iW and aW to the next space")
+                        },
+                        {
+                            "keys": ["i\"", "a\""],
+                            "label": qsTr(
+                                         "What is quoted on the line, or with its quotes; ' and ` too")
+                        },
+                        {
+                            "keys": ["i(", "a("],
+                            "label": qsTr(
+                                         "What the brackets around the cursor hold, or with them; [ { < and b B too")
+                        },
+                        {
+                            "keys": ["ip", "ap"],
+                            "label": qsTr("The paragraph, or with the blank lines after it")
+                        }
+                    ]
+                }
+                Table {
                     visible: root.tab === "vi"
                     title: qsTr("In the note, visual mode")
                     rows: root.rows("visual", "vi").concat([
