@@ -36,6 +36,24 @@
   </categories>
 
   <releases>
+    <release version="0.8.0" date="2026-11-22">
+      <description>
+        <ul>
+          <li>Commands for a note's lists, in the command palette: move ticked to-dos to the end of their lists, remove ticked to-dos, untick every to-do, and sort the list the cursor is in A to Z. Each keeps the lines under an item with it and is one step to undo.</li>
+          <li>Vi's : runs any command of the palette by its name, as :copy-link or :move-ticked, and offers them as you type.</li>
+          <li>A list item with lines indented under it folds like a heading: its arrow in Styled and Read, and vi's za, hide the lines under it, and the fold is kept for the note, by the item's words, so ticking it keeps it folded.</li>
+          <li>Vi text objects: d, c and y, and v to select, take iw, aw, iW, aW, the quotes i" a" i' a' and backticks, the brackets i( a( i[ i{ i&lt; with ib and iB, and paragraphs ip and ap, as in vim.</li>
+          <li>Note types: a note's type: names one of the vault's types, each a file in .jot/types that gives its notes an icon, a color, a template and properties of their own kinds, such as a number, a date, a choice or a link to a note of another type. A value that does not fit is warned about with the note's other front matter problems. Every vault starts with Character, Location, Group, Item, Scene, Chapter and Event, to change or delete.</li>
+          <li>Set a note's type from the command palette, make a note of a type from the palette or a notebook's menu, and see each note's type icon in the note list and in link suggestions. Settings has a Types tab listing each type with how many notes have it and break it, to edit, delete, add or restore the starters. Front matter completion offers a type's keys and values, and a link property offers only notes of its type.</li>
+          <li>Properties: in Styled and Read, a note's front matter shows as a form above its text, with a control for each of its type's properties: a list of choices, a checkbox, a day to pick, or a field that offers notes of a link's type. Empty ones wait behind Show empty, and Add a property adds a key of the note's own. A value its type does not take says why on its row. Edit as text shows the front matter in Source, and Read shows the values without changing them.</li>
+          <li>Clicking a dropdown or a date while its list is open closes it, rather than opening it again.</li>
+          <li>In vi mode, text selected with the mouse is a visual selection, so d, y and c act on it.</li>
+          <li>Git sync works with an SSH key that has a passphrase and no agent holding it: Jot asks for the passphrase in Settings, Sync, keeps it in the keyring, and gives it to SSH for each sync, in the app and with jot sync. Settings can forget it again.</li>
+          <li>Hovering the sync stamp, the sync button or the trash button shows its tip again, so a failed sync says why where it shows.</li>
+          <li>Line numbers are switched on in Settings or from the command palette; the Lines toggle has left the note's bar.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.7.2" date="2026-11-15">
       <description>
         <ul>
