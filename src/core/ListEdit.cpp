@@ -59,7 +59,7 @@ public:
     explicit Lists(const QString &body)
     {
         m_finalBreak = body.endsWith(u'\n');
-        m_crlf = body.contains(u"\r\n"_s);
+        m_crlf = body.contains(u"\r\n"_s) && body.count(u'\n') == body.count(u"\r\n"_s);
         m_lines = body.split(u'\n');
         if (m_finalBreak)
             m_lines.removeLast();
@@ -186,7 +186,7 @@ private:
     QStringList m_lines;
     QList<bool> m_code;
     bool m_finalBreak = false;
-    /// Whether the note breaks its lines with \r\n.
+    /// Whether the note breaks every line with \r\n; one with both keeps each as it is.
     bool m_crlf = false;
 };
 
