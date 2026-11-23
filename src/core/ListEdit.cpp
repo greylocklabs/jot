@@ -1,6 +1,5 @@
 #include "jot/ListEdit.h"
 
-#include <QCollator>
 #include <QList>
 #include <QRegularExpression>
 #include <QStringList>
@@ -49,8 +48,10 @@ struct Item
 };
 
 /// What to do with one list's items, siblings at one indent, in order: their new order, by
-/// index, leaving out any to drop. Children are done before their list.
-using ListChange = std::function<QList<int>(const QStringList &lines, const QList<Item> &items)>;
+/// index, leaving out any to drop. `first` is the line its first item is on in the text.
+/// Children are done before their list.
+using ListChange =
+    std::function<QList<int>(const QStringList &lines, const QList<Item> &items, int first)>;
 
 class Lists
 {
@@ -123,13 +124,15 @@ public:
             const QRegularExpressionMatch firstItem = itemPattern().match(lines.first());
             const int startsAt =
                 firstItem.captured(3).isEmpty() ? 1 : firstItem.captured(3).toInt();
-            const QList<int> order = change(lines, local);
+            const QList<int> order = change(lines, local, i);
             QStringList listed;
             for (const int index : order) {
                 for (int k = local.at(index).start; k < local.at(index).end; ++k)
                     listed.append(lines.at(k));
             }
-            renumber(listed, depth, startsAt);
+            // Only a list whose items moved or went is numbered again.
+            if (order.size() != local.size() || !std::ranges::is_sorted(order))
+                renumber(listed, depth, startsAt);
             out.append(listed);
             i = j;
         }
@@ -147,8 +150,17 @@ public:
 
 private:
     /// Numbers a numbered list's items again from its first number, after a change of order.
+    /// One numbered all alike, as `1.` each, is left so.
     static void renumber(QStringList &lines, int depth, int startsAt)
     {
+        QStringList numbers;
+        for (const QString &line : std::as_const(lines)) {
+            const QRegularExpressionMatch match = itemPattern().match(line);
+            if (match.hasMatch() && indentOf(line) == depth)
+                numbers.append(match.captured(3));
+        }
+        if (numbers.size() > 1 && numbers.count(numbers.first()) == numbers.size())
+            return;
         int number = startsAt;
         for (QString &line : lines) {
             const QRegularExpressionMatch match = itemPattern().match(line);
@@ -166,6 +178,45 @@ private:
     bool m_finalBreak = false;
 };
 
+/// Compares words as people sort them: in any case, and numbers by their value, so 9 comes
+/// before 10.
+int compareWords(const QString &a, const QString &b)
+{
+    qsizetype i = 0;
+    qsizetype j = 0;
+    while (i < a.size() && j < b.size()) {
+        if (a.at(i).isDigit() && b.at(j).isDigit()) {
+            qsizetype endA = i;
+            qsizetype endB = j;
+            while (endA < a.size() && a.at(endA).isDigit())
+                ++endA;
+            while (endB < b.size() && b.at(endB).isDigit())
+                ++endB;
+            // Leading zeros aside, a longer run of digits is the larger number.
+            QStringView numberA = QStringView(a).sliced(i, endA - i);
+            QStringView numberB = QStringView(b).sliced(j, endB - j);
+            while (numberA.size() > 1 && numberA.front() == u'0')
+                numberA = numberA.sliced(1);
+            while (numberB.size() > 1 && numberB.front() == u'0')
+                numberB = numberB.sliced(1);
+            if (numberA.size() != numberB.size())
+                return numberA.size() < numberB.size() ? -1 : 1;
+            if (const int order = numberA.compare(numberB); order != 0)
+                return order;
+            i = endA;
+            j = endB;
+            continue;
+        }
+        const QChar x = a.at(i).toCaseFolded();
+        const QChar y = b.at(j).toCaseFolded();
+        if (x != y)
+            return x < y ? -1 : 1;
+        ++i;
+        ++j;
+    }
+    return int(a.size() - i > 0) - int(b.size() - j > 0);
+}
+
 bool ticked(const QString &line)
 {
     const QRegularExpressionMatch match = itemPattern().match(line);
@@ -177,8 +228,8 @@ bool ticked(const QString &line)
 QString moveTickedToEnd(const QString &body)
 {
     Lists lists(body);
-    return lists.text(
-        lists.apply(0, lists.lineCount(), [](const QStringList &lines, const QList<Item> &items) {
+    return lists.text(lists.apply(
+        0, lists.lineCount(), [](const QStringList &lines, const QList<Item> &items, int) {
             QList<int> open;
             QList<int> done;
             for (int i = 0; i < items.size(); ++i)
@@ -190,15 +241,15 @@ QString moveTickedToEnd(const QString &body)
 QString removeTicked(const QString &body)
 {
     Lists lists(body);
-    return lists.text(
-        lists.apply(0, lists.lineCount(), [](const QStringList &lines, const QList<Item> &items) {
-            QList<int> kept;
-            for (int i = 0; i < items.size(); ++i) {
-                if (!ticked(lines.at(items.at(i).start)))
-                    kept.append(i);
-            }
-            return kept;
-        }));
+    return lists.text(lists.apply(0, lists.lineCount(),
+                                  [](const QStringList &lines, const QList<Item> &items, int) {
+                                      QList<int> kept;
+                                      for (int i = 0; i < items.size(); ++i) {
+                                          if (!ticked(lines.at(items.at(i).start)))
+                                              kept.append(i);
+                                      }
+                                      return kept;
+                                  }));
 }
 
 QString untickAll(const QString &body)
@@ -220,12 +271,6 @@ QString sortList(const QString &body, int position)
     Lists lists(body);
     const int line =
         int(QStringView(body).first(std::clamp(position, 0, int(body.size()))).count(u'\n'));
-    // Lists inside are done first, so once the one holding the line sorts, those around it are
-    // left as they are.
-    bool sorted = false;
-    QCollator collator;
-    collator.setCaseSensitivity(Qt::CaseInsensitive);
-    collator.setNumericMode(true);
     const QStringList original = body.split(u'\n');
     const auto words = [](const QString &itemLine) {
         return itemPattern().match(itemLine).captured(8).trimmed();
@@ -233,7 +278,6 @@ QString sortList(const QString &body, int position)
     // The innermost list with an item on the line or over it, known to the change below by its
     // first item's line and indent.
     int first = -1;
-    int depth = -1;
     for (int i = std::min(line, lists.lineCount() - 1); i >= 0; --i) {
         if (!lists.isItem(i))
             continue;
@@ -250,7 +294,6 @@ QString sortList(const QString &body, int position)
             }
         }
         if (holds) {
-            depth = d;
             // Back to the first of its siblings.
             first = i;
             for (int k = i - 1; k >= 0; --k) {
@@ -265,19 +308,16 @@ QString sortList(const QString &body, int position)
     }
     if (first < 0)
         return body;
-    const QString firstLine = original.at(first);
-    return lists.text(
-        lists.apply(0, lists.lineCount(), [&](const QStringList &lines, const QList<Item> &items) {
+    return lists.text(lists.apply(
+        0, lists.lineCount(), [&](const QStringList &lines, const QList<Item> &items, int at) {
             QList<int> order;
             for (int i = 0; i < items.size(); ++i)
                 order.append(i);
-            if (sorted || lines.at(items.first().start) != firstLine ||
-                indentOf(lines.at(items.first().start)) != depth)
+            if (at != first)
                 return order;
-            sorted = true;
             std::ranges::stable_sort(order, [&](int a, int b) {
-                return collator.compare(words(lines.at(items.at(a).start)),
-                                        words(lines.at(items.at(b).start))) < 0;
+                return compareWords(words(lines.at(items.at(a).start)),
+                                    words(lines.at(items.at(b).start))) < 0;
             });
             return order;
         }));

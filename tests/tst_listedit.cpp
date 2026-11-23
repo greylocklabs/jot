@@ -29,6 +29,10 @@ void TestListEdit::movesTickedToTheEnd()
     QCOMPARE(moveTickedToEnd(u"1. [x] a\n2. [ ] b\n3. [ ] c"_s), u"1. [ ] b\n2. [ ] c\n3. [x] a"_s);
     // Nothing ticked, nothing changes.
     QCOMPARE(moveTickedToEnd(u"- [ ] a\n- b\n"_s), u"- [ ] a\n- b\n"_s);
+    // Lists left in their order keep their numbers, however they were written.
+    QCOMPARE(moveTickedToEnd(u"1. a\n1. b\n\n3. x\n5. y\n"_s), u"1. a\n1. b\n\n3. x\n5. y\n"_s);
+    // A list numbered all alike stays so when its items move.
+    QCOMPARE(moveTickedToEnd(u"1. [x] a\n1. [ ] b\n"_s), u"1. [ ] b\n1. [x] a\n"_s);
 }
 
 void TestListEdit::removesTicked()
@@ -57,6 +61,10 @@ void TestListEdit::sortsTheListHoldingTheCursor()
     QCOMPARE(sortList(u"- item 10\n- item 9\n"_s, 0), u"- item 9\n- item 10\n"_s);
     // Not in a list, nothing changes.
     QCOMPARE(sortList(body, 2), body);
+    // Of two lists alike, the one holding the cursor.
+    const QString twice = u"- b\n- a\n\nText.\n\n- b\n- c\n- a\n"_s;
+    QCOMPARE(sortList(twice, int(twice.lastIndexOf(u"c"))),
+             u"- b\n- a\n\nText.\n\n- a\n- b\n- c\n"_s);
 }
 
 void TestListEdit::leavesCodeAlone()
