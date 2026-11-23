@@ -816,6 +816,26 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Text objects, after d, c, y or v</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The word, or with the space after it; iW and aW to the next space</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>What is quoted on the line, or with its quotes; &apos; and ` too</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>What the brackets around the cursor hold, or with them; [ { &lt; and b B too</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The paragraph, or with the blank lines after it</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>In the note, visual mode</source>
         <translation type="unfinished"></translation>
     </message>
