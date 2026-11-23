@@ -7,6 +7,11 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ### Added
 
+- Commands for a note's lists, in the command palette: move ticked to-dos to the end of their
+  lists, remove ticked to-dos, untick every to-do, and sort the list the cursor is in A to Z.
+  Each keeps the lines under an item with it and is one step to undo.
+- Vi's `:` runs any command of the palette by its name, as `:copy-link` or `:move-ticked`, and
+  offers them as you type.
 - A list item with lines indented under it folds like a heading: its arrow in Styled and Read,
   and vi's `za`, hide the lines under it, and the fold is kept for the note, by the item's words,
   so ticking it keeps it folded.

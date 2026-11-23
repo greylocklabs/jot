@@ -568,6 +568,13 @@ public:
     /// for a checkbox, otherwise text, a list's items separated by commas. A link's notes are
     /// written as links, and empty text takes the key away.
     Q_INVOKABLE void setNoteProperty(const QString &key, const QVariant &value);
+    /// The note shown's list actions, each one step to undo, its front matter left as it is:
+    /// ticked to-dos moved to the end of their lists, or taken out, every to-do unticked, or the
+    /// list the cursor is in sorted A to Z. Each says whether anything changed.
+    Q_INVOKABLE bool moveTicked();
+    Q_INVOKABLE bool removeTickedToDos();
+    Q_INVOKABLE bool untickAllToDos();
+    Q_INVOKABLE bool sortListAtCursor();
     /// Adds the sections of the note's type's template after the note's text.
     Q_INVOKABLE void applyTypeTemplate();
     /// Makes a note of type `name` in the notebook shown, from its template when it has one,
@@ -663,6 +670,9 @@ private:
     /// it is empty, as completion offers them.
     [[nodiscard]] QVariantList typedLinkSuggestions(const QString &type,
                                                     const QString &typed) const;
+    /// Changes the note shown's body by `change`, given the body and the cursor's place in it,
+    /// as one step to undo. Whether anything changed.
+    bool changeBody(const std::function<QString(const QString &, int)> &change);
     /// Reads the vault's note types again and watches their files.
     void readTypes();
     /// Why an import cannot start now, as a failed summary, or nothing.

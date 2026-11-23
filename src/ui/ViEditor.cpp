@@ -755,6 +755,11 @@ QString ViEditor::runCommand(const QString &command)
         trigger(u"viHelp"_s);
         return {};
     }
+    // Every action the palette has, by its name, as :copy-link or :move-ticked.
+    if (const QString id = KeyRouter::viCommandAction(typed); !id.isEmpty()) {
+        trigger(id);
+        return {};
+    }
     if (typed == u"noh" || typed == u"nohlsearch") {
         endSteps();
         Q_EMIT highlightsCleared();

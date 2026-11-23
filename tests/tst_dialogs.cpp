@@ -67,6 +67,7 @@ private Q_SLOTS:
     void changesAShortcutByPressingIt();
     void aChosenShortcutWorksInTheWindow();
     void givesANoteATypeFromTheWindow();
+    void runsNoteActionsFromVisCommandLine();
 
 private:
     QTemporaryDir m_dir;
@@ -823,6 +824,33 @@ void TestDialogs::givesANoteATypeFromTheWindow()
 
     QVERIFY(QFile::remove(rune.fileName()));
     QTRY_VERIFY(!m_vault->types().find(u"rune"_s));
+}
+
+void TestDialogs::runsNoteActionsFromVisCommandLine()
+{
+    QQmlEngine engine;
+    QQmlComponent component(&engine);
+    component.loadFromModule("Jot.Ui", "Main");
+    std::unique_ptr<QObject> main(component.create());
+    QVERIFY2(main, qPrintable(component.errorString()));
+    auto *window = qobject_cast<QQuickWindow *>(main.get());
+    QVERIFY(QTest::qWaitForWindowExposed(window));
+    QFile note(m_vault->root() + u"/Errands.md"_s);
+    QVERIFY(note.open(QIODevice::WriteOnly));
+    note.write("- [x] post\n- [ ] bank\n");
+    note.close();
+    QTRY_VERIFY(m_vault->index()->note(u"Errands.md"_s));
+    m_vault->setCurrent(u"Errands.md"_s);
+    QTRY_VERIFY(m_vault->currentText().startsWith(u"- [x]"_s));
+    auto *vi = main->findChild<QObject *>(u"vi"_s);
+    QVERIFY(vi);
+    // A palette action by its name runs as the palette would run it.
+    QString said;
+    QMetaObject::invokeMethod(vi, "runCommand", Q_RETURN_ARG(QString, said),
+                              Q_ARG(QString, u"move-ticked"_s));
+    QVERIFY(said.isEmpty());
+    QTRY_COMPARE(m_vault->currentText(), u"- [ ] bank\n- [x] post\n"_s);
+    QVERIFY(QFile::remove(note.fileName()));
 }
 
 QTEST_MAIN(TestDialogs)
