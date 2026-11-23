@@ -303,7 +303,7 @@ QList<qsizetype> listItemStarts(QStringView body)
     return starts;
 }
 
-QList<ListFold> listFolds(QStringView body)
+QList<ListFold> listFolds(QStringView body, const QStringList &taken)
 {
     const QRegularExpression &item = listItemPattern();
     struct Line
@@ -361,9 +361,12 @@ QList<ListFold> listFolds(QStringView body)
         if (last < 0)
             continue;
         const QString name = u"- "_s + match.captured(2).trimmed();
-        const int count = ++seen[name];
-        folds.append({count == 1 ? name : u"%1 (%2)"_s.arg(name).arg(count), lines.at(i).start,
-                      lines.at(i).end, lines.at(last).end});
+        QString key;
+        do {
+            const int count = ++seen[name];
+            key = count == 1 ? name : u"%1 (%2)"_s.arg(name).arg(count);
+        } while (taken.contains(key));
+        folds.append({key, lines.at(i).start, lines.at(i).end, lines.at(last).end});
     }
     return folds;
 }
