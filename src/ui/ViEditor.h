@@ -24,6 +24,8 @@ class ViEditor : public QObject
     /// While true, as while a note loads and scrolls to its own place, the view's scrolling leaves
     /// the cursor where it is.
     Q_PROPERTY(bool holding MEMBER m_holding NOTIFY holdingChanged)
+    /// Where vi may start changing the text, as after front matter the note hides; 0 for all.
+    Q_PROPERTY(int floor MEMBER m_floor NOTIFY floorChanged)
     /// The Flickable the TextEdit scrolls in. As in vi, scrolling it keeps the cursor on a line in
     /// view, so a key after a scroll acts where the note is shown.
     Q_PROPERTY(QQuickItem *viewport READ viewport WRITE setViewport NOTIFY viewportChanged)
@@ -87,6 +89,7 @@ Q_SIGNALS:
     void targetChanged();
     void viewportChanged();
     void holdingChanged();
+    void floorChanged();
     void routerChanged();
     void enabledChanged();
     void busyChanged();
@@ -136,6 +139,7 @@ private:
     QPointer<QQuickItem> m_target;
     QPointer<QQuickItem> m_viewport;
     bool m_holding = false;
+    int m_floor = 0;
     KeyRouter *m_router = nullptr;
     bool m_enabled = false;
     bool m_busy = false;

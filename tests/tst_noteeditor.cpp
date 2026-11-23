@@ -65,6 +65,7 @@ private Q_SLOTS:
     void numbersANotesLinesWhenAsked();
     void warnsOfFrontMatterProblems();
     void showsPropertiesInPlaceOfFrontMatter();
+    void viLeavesHiddenFrontMatterAlone();
     void opensALongNoteAtTheTop();
     void theTitleFollowsAnEditedTitleKey();
     void aTickFromTheTaskViewKeepsTheEditorsUndo();
@@ -471,6 +472,48 @@ void TestNoteEditor::showsPropertiesInPlaceOfFrontMatter()
     QTRY_VERIFY(panel->isVisible());
     QVERIFY(panel->property("readOnly").toBool());
     m_settings->setReadMode(false);
+}
+
+void TestNoteEditor::viLeavesHiddenFrontMatterAlone()
+{
+    m_settings->setViMode(true);
+    QFile file(m_root + u"/Hidden.md"_s);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write("---\ntype: Character\nstatus: alive\n---\nThe lead.");
+    file.close();
+    QTRY_VERIFY(m_vault->index()->note(u"Hidden.md"_s));
+    m_vault->setCurrent(u"Hidden.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    auto *vi = body->findChild<QObject *>(u"vi"_s);
+    QVERIFY(vi);
+    QTRY_VERIFY(find(u"propertiesPanel"_s)->isVisible());
+    const QString frontMatter = u"---\ntype: Character\nstatus: alive\n---\n"_s;
+    const auto text = [body] { return body->property("text").toString(); };
+    body->forceActiveFocus();
+    body->setProperty("cursorPosition", int(frontMatter.size()) + 4);
+
+    // A find back to a character only the hidden front matter has finds nothing to delete.
+    const auto type = [this](const QString &keys) {
+        for (const QChar c : keys)
+            QTest::keyClick(m_window.get(), c.toLatin1());
+    };
+    type(u"dF:"_s);
+    QCOMPARE(text(), frontMatter + u"The lead."_s);
+    // While a find back to a character in the body still deletes up to it.
+    type(u"dFT"_s);
+    QCOMPARE(text(), frontMatter + u"lead."_s);
+
+    // Substituting everywhere changes only what shows.
+    QString said;
+    QMetaObject::invokeMethod(vi, "runCommand", Q_RETURN_ARG(QString, said),
+                              Q_ARG(QString, u"%s/a/A/g"_s));
+    QCOMPARE(text(), frontMatter + u"leAd."_s);
+
+    // Deleting the last line keeps the line break that ends the front matter.
+    QTest::keyClick(m_window.get(), Qt::Key_D);
+    QTest::keyClick(m_window.get(), Qt::Key_D);
+    QTRY_VERIFY(text().startsWith(frontMatter));
+    m_settings->setViMode(false);
 }
 
 void TestNoteEditor::numbersANotesLinesWhenAsked()
