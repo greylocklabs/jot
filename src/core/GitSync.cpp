@@ -256,17 +256,18 @@ QProcessEnvironment GitSync::environment(QProcessEnvironment base, bool batchSsh
     // Never wait on a question nobody sees: a password prompt fails instead, and SSH uses the
     // agent and keys it has, unless the person chose how git runs SSH.
     base.insert(u"GIT_TERMINAL_PROMPT"_s, u"0"_s);
-    if (!passphrase.isEmpty() && !askpassProgram().isEmpty()) {
+    // An SSH command the person chose may let a server ask questions, so only Jot's own is given
+    // the passphrase.
+    if (batchSsh && !passphrase.isEmpty() && !askpassProgram().isEmpty()) {
         // SSH asks Jot, which gives the passphrase for a key and declines anything else, such
         // as a new host to trust, so that still fails as it would have.
         base.insert(u"SSH_ASKPASS"_s, askpassProgram());
         base.insert(u"SSH_ASKPASS_REQUIRE"_s, u"force"_s);
         base.insert(u"JOT_SSH_ASKPASS"_s, u"1"_s);
         base.insert(u"JOT_SSH_PASSPHRASE"_s, passphrase);
-        if (batchSsh)
-            base.insert(u"GIT_SSH_COMMAND"_s,
-                        u"ssh -o NumberOfPasswordPrompts=1 -o PasswordAuthentication=no "
-                        u"-o KbdInteractiveAuthentication=no"_s);
+        base.insert(u"GIT_SSH_COMMAND"_s,
+                    u"ssh -o NumberOfPasswordPrompts=1 -o PasswordAuthentication=no "
+                    u"-o KbdInteractiveAuthentication=no"_s);
     } else if (batchSsh) {
         base.insert(u"GIT_SSH_COMMAND"_s, u"ssh -o BatchMode=yes"_s);
     }
