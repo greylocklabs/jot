@@ -145,6 +145,7 @@ void NoteReader::setText(const QString &text)
     if (m_text == text)
         return;
     m_text = text;
+    m_unplaced.clear();
     Q_EMIT changed();
 }
 
@@ -225,7 +226,8 @@ void NoteReader::render()
         }
         if (each.start == each.end)
             continue;
-        const bool folded = m_folded.contains(each.key);
+        const bool folded =
+            m_folded.contains(each.key) && (each.heading >= 0 || !m_unplaced.contains(each.key));
         foldable.append(QVariantMap{{u"key"_s, each.key},
                                     {u"index"_s, each.heading},
                                     {u"at"_s, each.at},
@@ -308,6 +310,20 @@ void NoteReader::render()
         map.insert(u"position"_s, position);
         map.insert(u"end"_s, line.position() + line.length() - 1);
         fold = map;
+    }
+    // A folded list item with no arrow to open it again is drawn unfolded instead.
+    bool unplaced = false;
+    for (const QVariant &fold : std::as_const(foldable)) {
+        const QVariantMap map = fold.toMap();
+        if (map.value(u"folded"_s).toBool() && map.value(u"position"_s).toInt() < 0 &&
+            !m_unplaced.contains(map.value(u"key"_s).toString())) {
+            m_unplaced.append(map.value(u"key"_s).toString());
+            unplaced = true;
+        }
+    }
+    if (unplaced) {
+        render();
+        return;
     }
     foldable.removeIf(
         [](const QVariant &fold) { return fold.toMap().value(u"position"_s).toInt() < 0; });

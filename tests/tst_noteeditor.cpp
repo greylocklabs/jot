@@ -1250,6 +1250,31 @@ void TestNoteEditor::foldsWhatIsUnderAListItem()
     QMetaObject::invokeMethod(m_editor.get(), "foldAtCursor", Q_RETURN_ARG(QVariant, found));
     QVERIFY(found.isNull() || !found.isValid() || found.toMap().isEmpty());
     m_settings->setViMode(false);
+
+    // A quoted list is drawn as one too, and the arrow still finds its item.
+    const auto readFolded = [&](const QString &name, const QString &text) {
+        QString failure;
+        if (!notefile::write(m_root + u'/' + name, text, &failure))
+            return false;
+        m_vault->setCurrent(name);
+        if (!QTest::qWaitFor([&] { return body->property("text").toString() == text; }))
+            return false;
+        QMetaObject::invokeMethod(m_editor.get(), "setFold", Q_ARG(QVariant, u"- a"_s),
+                                  Q_ARG(QVariant, true));
+        m_settings->setReadMode(true);
+        return true;
+    };
+    QVERIFY(readFolded(u"Quoted.md"_s, u"- a\n  under a\n\n> - q\n"_s));
+    QTRY_COMPARE(reader->property("folds").toList().size(), 1);
+    QVERIFY(reader->property("folds").toList().first().toMap().value(u"position"_s).toInt() >= 0);
+    QVERIFY(!reading->property("text").toString().contains(u"under a"_s));
+    m_settings->setReadMode(false);
+
+    // An item Read cannot find among those it draws, here as a code line looks like one, is
+    // shown unfolded rather than hidden with no arrow.
+    QVERIFY(readFolded(u"Coded.md"_s, u"- a\n  under a\n\nText.\n\n    - code\n"_s));
+    QTRY_VERIFY(reading->property("text").toString().contains(u"under a"_s));
+    m_settings->setReadMode(false);
 }
 
 void TestNoteEditor::foldsHeadingsAway()

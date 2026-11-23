@@ -119,6 +119,8 @@ private:
     QVariantList m_quoteRuns;
     QVariantList m_found;
     QStringList m_folded;
+    /// Folded list items Read found no drawn item for, so shows unfolded.
+    QStringList m_unplaced;
     QVariantList m_folds;
     /// The body as drawn, folded sections left out, and for each of its headings as
     /// headingsOf() finds them in the whole body, whether it was left out with one.
