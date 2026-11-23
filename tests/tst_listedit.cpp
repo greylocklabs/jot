@@ -61,6 +61,11 @@ void TestListEdit::sortsTheListHoldingTheCursor()
     QCOMPARE(sortList(u"- item 10\n- item 9\n"_s, 0), u"- item 9\n- item 10\n"_s);
     // Not in a list, nothing changes.
     QCOMPARE(sortList(body, 2), body);
+    // Windows line breaks stay so, with none added at the end.
+    QCOMPARE(sortList(u"- b\r\n- a"_s, 0), u"- a\r\n- b"_s);
+    QCOMPARE(moveTickedToEnd(u"- [x] a\r\n- [ ] b"_s), u"- [ ] b\r\n- [x] a"_s);
+    QCOMPARE(removeTicked(u"- [ ] a\r\n- [x] b"_s), u"- [ ] a"_s);
+    QCOMPARE(sortList(u"- b\r\n- a\r\n"_s, 0), u"- a\r\n- b\r\n"_s);
     // Of two lists alike, the one holding the cursor.
     const QString twice = u"- b\n- a\n\nText.\n\n- b\n- c\n- a\n"_s;
     QCOMPARE(sortList(twice, int(twice.lastIndexOf(u"c"))),
