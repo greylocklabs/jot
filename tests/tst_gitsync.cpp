@@ -802,7 +802,9 @@ void TestGitSync::keepsSshFromAskingUnlessGivenAPassphrase()
     QVERIFY(!batch.contains(u"SSH_ASKPASS"_s));
 
     const QProcessEnvironment given = GitSync::environment({}, true, u"open sesame"_s);
-    QCOMPARE(given.value(u"GIT_SSH_COMMAND"_s), u"ssh -o NumberOfPasswordPrompts=1"_s);
+    QCOMPARE(given.value(u"GIT_SSH_COMMAND"_s),
+             u"ssh -o NumberOfPasswordPrompts=1 -o PasswordAuthentication=no "
+             u"-o KbdInteractiveAuthentication=no"_s);
     QCOMPARE(given.value(u"SSH_ASKPASS"_s), u"/usr/bin/jot"_s);
     QCOMPARE(given.value(u"SSH_ASKPASS_REQUIRE"_s), u"force"_s);
     QCOMPARE(given.value(u"JOT_SSH_PASSPHRASE"_s), u"open sesame"_s);
@@ -825,14 +827,18 @@ void TestGitSync::givesSshTheKeysPassphraseOnly()
         GitSync::environment(QProcessEnvironment::systemEnvironment(), true, u"open sesame"_s);
     GitSync::setAskpass({});
 
-    // Asked anything but a passphrase, such as whether to trust a host, Jot says nothing.
-    QProcess asked;
-    asked.setProcessEnvironment(environment);
-    asked.start(QStringLiteral(JOT_BINARY),
-                {u"Are you sure you want to continue connecting (yes/no/[fingerprint])?"_s});
-    QVERIFY(asked.waitForFinished(10000));
-    QCOMPARE(asked.exitCode(), 1);
-    QVERIFY(asked.readAllStandardOutput().isEmpty());
+    // Asked anything but SSH's question for a key, such as whether to trust a host, or a
+    // server's own prompt naming a passphrase, Jot says nothing.
+    for (const QString &prompt :
+         {u"Are you sure you want to continue connecting (yes/no/[fingerprint])?"_s,
+          u"Enter passphrase:"_s, u"(user@host) Passphrase for 2FA: "_s}) {
+        QProcess asked;
+        asked.setProcessEnvironment(environment);
+        asked.start(QStringLiteral(JOT_BINARY), {prompt});
+        QVERIFY(asked.waitForFinished(10000));
+        QCOMPARE(asked.exitCode(), 1);
+        QVERIFY(asked.readAllStandardOutput().isEmpty());
+    }
 
     // SSH, given a key with a passphrase, unlocks it with what Jot answers.
     const QString key = m_dir->filePath(u"id_ed25519"_s);
