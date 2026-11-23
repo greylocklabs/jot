@@ -183,7 +183,8 @@ Q_SIGNALS:
 
 private:
     void start();
-    void done(const SyncReport &report);
+    /// Takes in a sync's report, and whether it was turned away for want of an SSH passphrase.
+    void done(const SyncReport &report, bool needsPassphrase);
     /// Starts or stops the timer for automatic syncs, as syncEvery() says.
     void applyInterval();
     /// Checks a new remote on a thread of its own with `check`, which may change the secret

@@ -243,8 +243,8 @@ std::optional<int> GitSync::answerAskpass(const QStringList &arguments)
 {
     if (qEnvironmentVariable("JOT_SSH_ASKPASS") != u"1")
         return std::nullopt;
-    const QString prompt = arguments.value(1);
-    if (!prompt.contains(u"passphrase"_s, Qt::CaseInsensitive))
+    // Only SSH's own question for a key; a server's prompt, whatever it says, gets nothing.
+    if (!arguments.value(1).startsWith(u"Enter passphrase for "_s))
         return 1;
     QTextStream(stdout) << qEnvironmentVariable("JOT_SSH_PASSPHRASE") << '\n';
     return 0;
@@ -264,7 +264,9 @@ QProcessEnvironment GitSync::environment(QProcessEnvironment base, bool batchSsh
         base.insert(u"JOT_SSH_ASKPASS"_s, u"1"_s);
         base.insert(u"JOT_SSH_PASSPHRASE"_s, passphrase);
         if (batchSsh)
-            base.insert(u"GIT_SSH_COMMAND"_s, u"ssh -o NumberOfPasswordPrompts=1"_s);
+            base.insert(u"GIT_SSH_COMMAND"_s,
+                        u"ssh -o NumberOfPasswordPrompts=1 -o PasswordAuthentication=no "
+                        u"-o KbdInteractiveAuthentication=no"_s);
     } else if (batchSsh) {
         base.insert(u"GIT_SSH_COMMAND"_s, u"ssh -o BatchMode=yes"_s);
     }

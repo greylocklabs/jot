@@ -44,9 +44,9 @@ public:
 
     /// The program SSH runs to be given a key's passphrase, Jot itself, as main() learns it.
     static void setAskpass(const QString &program);
-    /// Answers SSH as its askpass, when Jot was started as one: the passphrase given it for a
-    /// prompt asking for one, as the exit code says, nothing for any other. Nothing to do when
-    /// Jot was started as itself.
+    /// Answers SSH as its askpass, when Jot was started as one: the passphrase given it for
+    /// SSH's question for a key, as the exit code says, nothing for any other prompt. Nothing to do
+    /// when Jot was started as itself.
     [[nodiscard]] static std::optional<int> answerAskpass(const QStringList &arguments);
     /// The passphrase for an SSH key that has one, from the keyring, so syncs need no agent.
     void setSshPassphrase(const QString &passphrase) { m_sshPassphrase = passphrase; }

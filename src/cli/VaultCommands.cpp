@@ -367,6 +367,12 @@ int VaultCommands::sync(const QString &remote, bool json)
         }
         secret = *kept;
     }
+    // A Git remote's SSH passphrase, when the app was given one; without it SSH goes on as
+    // before.
+    if (remote.startsWith(u"git:"_s)) {
+        QString ignored;
+        secret = secrets::read(remoteSecretKey(remote), &ignored).value_or(QString());
+    }
     const SyncReport report =
         syncVault(m_vault.root(), remote, secret, syncStateDir(m_vault.root(), remote),
                   QSysInfo::machineHostName());

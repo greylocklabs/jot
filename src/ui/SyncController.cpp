@@ -500,14 +500,18 @@ void SyncController::start()
     m_startedAt = QDateTime::currentDateTime();
     m_thread = QThread::create([this, root, remote, secret, state, device, request] {
         const SyncReport report = syncVault(root, remote, secret, state, device, request);
-        QMetaObject::invokeMethod(this, [this, report] { done(report); }, Qt::QueuedConnection);
+        // SSH turned away with no agent holding the key: its passphrase is asked for when it
+        // has one. Looking runs ssh-keygen, so it is done here rather than on the UI's thread.
+        const bool locked = wantsPassphrase(remote, report.failure) && GitSync::lockedSshKey();
+        QMetaObject::invokeMethod(
+            this, [this, report, locked] { done(report, locked); }, Qt::QueuedConnection);
     });
     connect(m_thread, &QThread::finished, m_thread, &QObject::deleteLater);
     m_thread->start(QThread::LowPriority);
     Q_EMIT changed();
 }
 
-void SyncController::done(const SyncReport &report)
+void SyncController::done(const SyncReport &report, bool needsPassphrase)
 {
     if (m_thread) {
         m_thread->wait();
@@ -519,9 +523,7 @@ void SyncController::done(const SyncReport &report)
         qCWarning(lcVault) << "sync failed:" << report.failure;
         m_problem = report.failure;
         m_failedAt = QDateTime::currentDateTime();
-        // SSH turned away with no agent holding the key: its passphrase is asked for when it
-        // has one.
-        m_needsPassphrase = wantsPassphrase(m_remote, report.failure) && GitSync::lockedSshKey();
+        m_needsPassphrase = needsPassphrase;
         if (m_needsPassphrase)
             m_problem = m_secret.isEmpty()
                             ? tr("Your SSH key needs its passphrase; give it in Settings, Sync.")
