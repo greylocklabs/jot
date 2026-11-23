@@ -492,6 +492,15 @@ void TestVaultController::makesNotesAndTypes()
     QVERIFY(QFile::remove(m_root + u"/Linked.md"_s));
     QVERIFY(m_vault->deleteType(u"stray"_s));
 
+    // A vault opened through a link to its folder still reads its own templates.
+    const QString linked = m_dir->filePath(u"Linked vault"_s);
+    QVERIFY(QFile::link(m_root, linked));
+    QVERIFY(m_vault->openPath(linked));
+    QTRY_VERIFY(m_vault->types().find(u"place"_s));
+    QVERIFY(!m_vault->newNoteOfType(u"place"_s).isEmpty());
+    QVERIFY(m_vault->currentText().contains(u"## Where it is"_s));
+    QVERIFY(m_vault->openPath(m_root));
+
     // A new type is a file; one named again is the same file. Its file opens as YAML when asked.
     const QString type = m_vault->newType(u"Story Arc"_s);
     QCOMPARE(type, u".jot/types/story-arc.yaml"_s);

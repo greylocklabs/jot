@@ -3050,9 +3050,11 @@ std::optional<QString> typeTemplate(const Vault &vault, const NoteType &type, co
     if (type.templatePath.isEmpty())
         return std::nullopt;
     // Only a note in the vault, so a type file never reads text from elsewhere on the computer.
+    // Both resolved, so a vault reached through a link still holds its own templates.
     const QString path =
         QFileInfo(vault.absolute(QDir::cleanPath(type.templatePath))).canonicalFilePath();
-    if (path.isEmpty() || vault.relative(path).isEmpty())
+    const QString root = QFileInfo(vault.root()).canonicalFilePath();
+    if (path.isEmpty() || root.isEmpty() || !path.startsWith(root + u'/'))
         return std::nullopt;
     QString ignored;
     const std::optional<QString> pattern = notefile::read(path, &ignored);
