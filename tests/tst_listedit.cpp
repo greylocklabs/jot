@@ -66,6 +66,9 @@ void TestListEdit::sortsTheListHoldingTheCursor()
     QCOMPARE(moveTickedToEnd(u"- [x] a\r\n- [ ] b"_s), u"- [ ] b\r\n- [x] a"_s);
     QCOMPARE(removeTicked(u"- [ ] a\r\n- [x] b"_s), u"- [ ] a"_s);
     QCOMPARE(sortList(u"- b\r\n- a\r\n"_s, 0), u"- a\r\n- b\r\n"_s);
+    // A note with both kinds keeps each line's own.
+    const QString mixed = u"a\nb\r\n- y\n- x\n"_s;
+    QCOMPARE(sortList(mixed, int(mixed.indexOf(u"- y"))), u"a\nb\r\n- x\n- y\n"_s);
     // Of two lists alike, the one holding the cursor.
     const QString twice = u"- b\n- a\n\nText.\n\n- b\n- c\n- a\n"_s;
     QCOMPARE(sortList(twice, int(twice.lastIndexOf(u"c"))),
