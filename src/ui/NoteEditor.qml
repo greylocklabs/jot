@@ -1589,6 +1589,7 @@ Rectangle {
                     target: body
                     viewport: flick
                     holding: root.loading
+                    floor: styler.hideFrontMatter ? styler.bodyStart : 0
                     router: root.router
                     enabled: Settings.viMode
                     busy: linkPopup.visible

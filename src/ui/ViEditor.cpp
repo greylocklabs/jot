@@ -342,7 +342,8 @@ bool ViEditor::find(QChar op, QChar kind, QChar target, bool repeat)
     const qsizetype found = forward           ? text.indexOf(target, from + skip)
                             : from - skip < 0 ? -1
                                               : text.lastIndexOf(target, from - skip);
-    if (found < 0)
+    // Not back into what is hidden above the floor, which no key should change unseen.
+    if (found < 0 || found < m_floor)
         return true;
     const int to = int(found) + (till ? (forward ? -1 : 1) : 0);
     if (op.isNull()) {
@@ -461,12 +462,15 @@ bool ViEditor::run(const QString &id)
         if (!writable())
             return true;
         keep(block.text() + u'\n', true);
-        // The line goes with one of the line breaks around it, so no empty line is left.
+        // The line goes with one of the line breaks around it, so no empty line is left; not the
+        // one before it when that ends what is hidden above the floor.
         if (block.next().isValid()) {
             edit.setPosition(block.position());
             edit.setPosition(block.next().position(), QTextCursor::KeepAnchor);
         } else {
-            edit.setPosition(block.previous().isValid() ? block.position() - 1 : block.position());
+            edit.setPosition(block.previous().isValid() && block.position() > m_floor
+                                 ? block.position() - 1
+                                 : block.position());
             edit.setPosition(blockEnd, QTextCursor::KeepAnchor);
         }
         edit.removeSelectedText();
@@ -712,7 +716,10 @@ QString ViEditor::runCommand(const QString &command)
         return tr("This note cannot be changed");
     const bool all = flags.contains(u'g');
     const QString after = parts.at(1);
-    const QTextBlock first = everywhere ? text->begin() : text->findBlock(cursor());
+    // Everywhere is everywhere shown: not what is hidden above the floor.
+    const QTextBlock first = everywhere
+                                 ? text->findBlock(std::min(m_floor, text->characterCount() - 1))
+                                 : text->findBlock(cursor());
     const QTextBlock last = everywhere ? text->lastBlock() : first;
     QTextCursor edit(text);
     edit.beginEditBlock();
