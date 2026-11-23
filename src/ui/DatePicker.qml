@@ -17,7 +17,12 @@ AbstractButton {
     implicitHeight: Theme.listRowHeight + Theme.space2
     implicitWidth: caption.implicitWidth + 2 * Theme.space4
     Accessible.name: caption.text
+    // A click while it is open closes it, as the button's own press leaves it open.
     onClicked: {
+        if (calendar.opened) {
+            calendar.close()
+            return
+        }
         month.today = new Date()
         month.month = isNaN(root.day.getTime()) ? new Date() : root.day
         calendar.open()
@@ -60,6 +65,7 @@ AbstractButton {
         id: calendar
         objectName: "calendar"
         y: root.height + Theme.space1
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
         padding: Theme.space3
 
         background: Rectangle {

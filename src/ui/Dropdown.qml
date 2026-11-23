@@ -32,12 +32,19 @@ PickerButton {
     text: root.current ? root.current[root.textRole] : ""
     open: menu.opened
     implicitWidth: Math.min(root.maximumWidth, Math.max(root.minimumWidth, root.fullWidth))
-    onClicked: menu.popup(root, 0, root.height + Theme.space1)
+    // A click while it is open closes it, as the button's own press leaves it open.
+    onClicked: {
+        if (menu.opened)
+            menu.close()
+        else
+            menu.popup(root, 0, root.height + Theme.space1)
+    }
 
     MenuCard {
         id: menu
         objectName: "dropdownMenu"
         minimumWidth: root.width
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
 
         Repeater {
             model: root.model
