@@ -38,6 +38,11 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 - Clicking a dropdown or a date while its list is open closes it, rather than opening it again.
 - In vi mode, text selected with the mouse is a visual selection, so `d`, `y` and `c` act on it.
+- Git sync works with an SSH key that has a passphrase and no agent holding it: Jot asks for
+  the passphrase in Settings, Sync, keeps it in the keyring, and gives it to SSH for each sync.
+  Settings can forget it again.
+- Hovering the sync stamp, the sync button or the trash button shows its tip again, so a failed
+  sync says why where it shows.
 
 ### Changed
 

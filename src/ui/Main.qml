@@ -272,6 +272,7 @@ ApplicationWindow {
                     width: syncStatus.height
                     height: syncStatus.height
                     enabled: !turning
+                    hoverEnabled: true
                     focusPolicy: Qt.NoFocus
                     Accessible.name: qsTr("Sync now")
                     onClicked: {
@@ -330,6 +331,7 @@ ApplicationWindow {
 
                         sourceComponent: Tip {
                             parent: syncButton
+                            visible: !syncButton.pressed
                             y: syncButton.height + Theme.space2
                             text: syncStatus.visible && !syncStatus.compact ? qsTr("Sync now") :
                                                                               qsTr("Sync now")
@@ -395,10 +397,12 @@ ApplicationWindow {
                         id: stampHover
                     }
                     Loader {
+                        objectName: "syncStampTip"
                         active: stampHover.hovered && Vault.sync.details !== ""
 
                         sourceComponent: Tip {
                             parent: syncStatus
+                            visible: true
                             y: syncStatus.height + Theme.space2
                             text: Vault.sync.details
                             delay: Theme.durSlow

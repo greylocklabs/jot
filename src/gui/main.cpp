@@ -6,6 +6,7 @@
 #include "ThemesController.h"
 #include "ToDoReminders.h"
 #include "VaultController.h"
+#include "jot/GitSync.h"
 
 #include "greylock/Autostart.h"
 #include "greylock/Desktop.h"
@@ -38,12 +39,22 @@ using namespace Qt::StringLiterals;
 
 int main(int argc, char *argv[])
 {
+    // Started by SSH to give a key's passphrase for a sync, it answers and is done.
+    {
+        QStringList arguments;
+        for (int i = 0; i < argc; ++i)
+            arguments.append(QString::fromLocal8Bit(argv[i]));
+        if (const std::optional<int> answered = jot::GitSync::answerAskpass(arguments))
+            return *answered;
+    }
     greylock::desktop::useDesktopFileDialogs();
 #if JOT_WEB_VIDEO
     // Before the application exists, as Qt WebEngine asks, for the player web videos play in.
     QtWebEngineQuick::initialize();
 #endif
     QGuiApplication app(argc, argv);
+    // SSH asks this program for a key's passphrase, which a sync gives it.
+    jot::GitSync::setAskpass(QCoreApplication::applicationFilePath());
     greylock::installTranslations(app);
     // The identity's folder name keeps Qt's own config and data folders apart for a
     // development build, and matches the CLI's.

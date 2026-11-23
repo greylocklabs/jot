@@ -28,6 +28,10 @@ class SyncController : public QObject
     QML_UNCREATABLE("Given by Vault")
     /// The vault syncs with somewhere.
     Q_PROPERTY(bool configured READ configured NOTIFY changed)
+    /// A Git sync was turned away for want of an SSH key's passphrase, which Settings asks for.
+    Q_PROPERTY(bool needsPassphrase READ needsPassphrase NOTIFY changed)
+    /// A passphrase for an SSH key is kept in the keyring for this vault's Git remote.
+    Q_PROPERTY(bool hasSshPassphrase READ hasSshPassphrase NOTIFY changed)
     /// Where it syncs to, in words: a folder's path.
     Q_PROPERTY(QString remote READ remote NOTIFY changed)
     /// Whether the vault syncs with a git repository, which has options of its own.
@@ -118,8 +122,21 @@ public:
     /// here and there.
     Q_INVOKABLE void stop();
     Q_INVOKABLE void syncNow();
+    /// Keeps `passphrase` for the SSH key in the keyring and syncs again with it. Whether it
+    /// could be kept.
+    Q_INVOKABLE bool setSshPassphrase(const QString &passphrase);
+    /// Takes the SSH key's passphrase out of the keyring.
+    Q_INVOKABLE bool forgetSshPassphrase();
+    /// Whether a sync of `remote` that failed with `failure` was SSH turning away the key, which
+    /// a passphrase may unlock.
+    [[nodiscard]] static bool wantsPassphrase(const QString &remote, const QString &failure);
 
     [[nodiscard]] bool configured() const { return !m_remote.isEmpty(); }
+    [[nodiscard]] bool needsPassphrase() const { return m_needsPassphrase; }
+    [[nodiscard]] bool hasSshPassphrase() const
+    {
+        return m_remote.startsWith(u"git:") && !m_secret.isEmpty();
+    }
     [[nodiscard]] QString remote() const { return remoteLabel(m_remote); }
     [[nodiscard]] bool git() const { return m_remote.startsWith(u"git:"); }
     [[nodiscard]] bool manualCommits() const;
@@ -182,6 +199,9 @@ private:
     QString m_remote;
     /// The remote's key, read from the keyring when first needed.
     QString m_secret;
+    bool m_needsPassphrase = false;
+    /// Whether the keyring was asked for a Git remote's passphrase, which it need only be once.
+    bool m_askedForPassphrase = false;
     /// The Dropbox sign-in under way, until its code comes back.
     QString m_dropboxVerifier;
     std::function<void()> m_save;

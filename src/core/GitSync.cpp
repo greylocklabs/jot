@@ -12,6 +12,7 @@
 #include <QRegularExpression>
 #include <QSaveFile>
 #include <QStringDecoder>
+#include <QTextStream>
 #include <QUrl>
 
 using namespace Qt::StringLiterals;
@@ -223,18 +224,81 @@ bool GitSync::sshChosen(const QStringList &gitArguments)
                 .isEmpty();
 }
 
-GitSync::Run GitSync::command(const QStringList &arguments, const QString &directory, int timeoutMs,
-                              bool batchSsh)
+namespace {
+
+QString &askpassProgram()
 {
-    QProcess process;
-    QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
+    static QString program;
+    return program;
+}
+
+} // namespace
+
+void GitSync::setAskpass(const QString &program)
+{
+    askpassProgram() = program;
+}
+
+std::optional<int> GitSync::answerAskpass(const QStringList &arguments)
+{
+    if (qEnvironmentVariable("JOT_SSH_ASKPASS") != u"1")
+        return std::nullopt;
+    const QString prompt = arguments.value(1);
+    if (!prompt.contains(u"passphrase"_s, Qt::CaseInsensitive))
+        return 1;
+    QTextStream(stdout) << qEnvironmentVariable("JOT_SSH_PASSPHRASE") << '\n';
+    return 0;
+}
+
+QProcessEnvironment GitSync::environment(QProcessEnvironment base, bool batchSsh,
+                                         const QString &passphrase)
+{
     // Never wait on a question nobody sees: a password prompt fails instead, and SSH uses the
     // agent and keys it has, unless the person chose how git runs SSH.
-    environment.insert(u"GIT_TERMINAL_PROMPT"_s, u"0"_s);
-    if (batchSsh)
-        environment.insert(u"GIT_SSH_COMMAND"_s, u"ssh -o BatchMode=yes"_s);
-    environment.insert(u"LC_ALL"_s, u"C"_s);
-    process.setProcessEnvironment(environment);
+    base.insert(u"GIT_TERMINAL_PROMPT"_s, u"0"_s);
+    if (!passphrase.isEmpty() && !askpassProgram().isEmpty()) {
+        // SSH asks Jot, which gives the passphrase for a key and declines anything else, such
+        // as a new host to trust, so that still fails as it would have.
+        base.insert(u"SSH_ASKPASS"_s, askpassProgram());
+        base.insert(u"SSH_ASKPASS_REQUIRE"_s, u"force"_s);
+        base.insert(u"JOT_SSH_ASKPASS"_s, u"1"_s);
+        base.insert(u"JOT_SSH_PASSPHRASE"_s, passphrase);
+        if (batchSsh)
+            base.insert(u"GIT_SSH_COMMAND"_s, u"ssh -o NumberOfPasswordPrompts=1"_s);
+    } else if (batchSsh) {
+        base.insert(u"GIT_SSH_COMMAND"_s, u"ssh -o BatchMode=yes"_s);
+    }
+    base.insert(u"LC_ALL"_s, u"C"_s);
+    return base;
+}
+
+bool GitSync::lockedSshKey()
+{
+    const QString folder = QDir::homePath() + u"/.ssh"_s;
+    for (const QString &name :
+         {u"id_ed25519"_s, u"id_ecdsa"_s, u"id_rsa"_s, u"id_ed25519_sk"_s, u"id_ecdsa_sk"_s}) {
+        const QString key = folder + u'/' + name;
+        if (!QFileInfo::exists(key))
+            continue;
+        // Read with an empty passphrase, a key with one turns it down.
+        QProcess check;
+        check.start(u"ssh-keygen"_s, {u"-y"_s, u"-P"_s, QString(), u"-f"_s, key});
+        if (!check.waitForFinished(5000)) {
+            check.kill();
+            continue;
+        }
+        if (check.exitCode() != 0 && check.readAllStandardError().contains("incorrect passphrase"))
+            return true;
+    }
+    return false;
+}
+
+GitSync::Run GitSync::command(const QStringList &arguments, const QString &directory, int timeoutMs,
+                              bool batchSsh, const QString &passphrase)
+{
+    QProcess process;
+    process.setProcessEnvironment(
+        environment(QProcessEnvironment::systemEnvironment(), batchSsh, passphrase));
     if (!directory.isEmpty())
         process.setWorkingDirectory(directory);
     process.start(u"git"_s, arguments);
@@ -268,7 +332,7 @@ GitSync::Run GitSync::git(const QStringList &arguments, int timeoutMs) const
     const Run run = command(
         at + QStringList{u"-c"_s, u"core.quotepath=off"_s, u"-c"_s, u"core.autocrlf=false"_s} +
             arguments,
-        m_root, timeoutMs, *m_batchSsh);
+        m_root, timeoutMs, *m_batchSsh, m_sshPassphrase);
     // A git stopped by force leaves its lock, which would refuse every later sync.
     if (run.code == -1 && run.err == "git took too long")
         QFile::remove(m_gitDir + u"/index.lock"_s);

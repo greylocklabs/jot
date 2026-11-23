@@ -4,6 +4,8 @@
 #include <QDirIterator>
 #include <QFile>
 #include <QProcess>
+#include <QProcessEnvironment>
+#include <QScopeGuard>
 #include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QTest>
@@ -46,6 +48,9 @@ private Q_SLOTS:
     void knowsOneRemoteWrittenTwoWays_data();
     void knowsOneRemoteWrittenTwoWays();
     void failsPlainlyWithoutTheRepository();
+    void keepsSshFromAskingUnlessGivenAPassphrase();
+    void givesSshTheKeysPassphraseOnly();
+    void findsAnSshKeyWithAPassphrase();
 
 private:
     struct Computer
@@ -786,6 +791,92 @@ void TestGitSync::failsPlainlyWithoutTheRepository()
     QVERIFY(!GitSync::reachable(m_dir->filePath(u"missing.git"_s), &error));
     QVERIFY(!error.isEmpty());
     QVERIFY(GitSync::reachable(m_remote, &error));
+}
+
+void TestGitSync::keepsSshFromAskingUnlessGivenAPassphrase()
+{
+    GitSync::setAskpass(u"/usr/bin/jot"_s);
+    const QProcessEnvironment batch = GitSync::environment({}, true, {});
+    QCOMPARE(batch.value(u"GIT_TERMINAL_PROMPT"_s), u"0"_s);
+    QCOMPARE(batch.value(u"GIT_SSH_COMMAND"_s), u"ssh -o BatchMode=yes"_s);
+    QVERIFY(!batch.contains(u"SSH_ASKPASS"_s));
+
+    const QProcessEnvironment given = GitSync::environment({}, true, u"open sesame"_s);
+    QCOMPARE(given.value(u"GIT_SSH_COMMAND"_s), u"ssh -o NumberOfPasswordPrompts=1"_s);
+    QCOMPARE(given.value(u"SSH_ASKPASS"_s), u"/usr/bin/jot"_s);
+    QCOMPARE(given.value(u"SSH_ASKPASS_REQUIRE"_s), u"force"_s);
+    QCOMPARE(given.value(u"JOT_SSH_PASSPHRASE"_s), u"open sesame"_s);
+
+    // An SSH command the person chose is left as it is.
+    const QProcessEnvironment chosen = GitSync::environment({}, false, u"open sesame"_s);
+    QVERIFY(!chosen.contains(u"GIT_SSH_COMMAND"_s));
+    QCOMPARE(chosen.value(u"SSH_ASKPASS"_s), u"/usr/bin/jot"_s);
+    GitSync::setAskpass({});
+}
+
+void TestGitSync::givesSshTheKeysPassphraseOnly()
+{
+    if (QStandardPaths::findExecutable(u"ssh-keygen"_s).isEmpty() ||
+        QStandardPaths::findExecutable(u"ssh-agent"_s).isEmpty() ||
+        QStandardPaths::findExecutable(u"ssh-add"_s).isEmpty())
+        QSKIP("OpenSSH is not installed");
+    GitSync::setAskpass(QStringLiteral(JOT_BINARY));
+    const QProcessEnvironment environment =
+        GitSync::environment(QProcessEnvironment::systemEnvironment(), true, u"open sesame"_s);
+    GitSync::setAskpass({});
+
+    // Asked anything but a passphrase, such as whether to trust a host, Jot says nothing.
+    QProcess asked;
+    asked.setProcessEnvironment(environment);
+    asked.start(QStringLiteral(JOT_BINARY),
+                {u"Are you sure you want to continue connecting (yes/no/[fingerprint])?"_s});
+    QVERIFY(asked.waitForFinished(10000));
+    QCOMPARE(asked.exitCode(), 1);
+    QVERIFY(asked.readAllStandardOutput().isEmpty());
+
+    // SSH, given a key with a passphrase, unlocks it with what Jot answers.
+    const QString key = m_dir->filePath(u"id_ed25519"_s);
+    QCOMPARE(QProcess::execute(u"ssh-keygen"_s, {u"-q"_s, u"-t"_s, u"ed25519"_s, u"-N"_s,
+                                                 u"open sesame"_s, u"-f"_s, key}),
+             0);
+    const QString socket = m_dir->filePath(u"agent"_s);
+    QProcess agent;
+    agent.start(u"ssh-agent"_s, {u"-D"_s, u"-a"_s, socket});
+    QVERIFY(agent.waitForStarted());
+    QTRY_VERIFY(QFileInfo::exists(socket));
+    QProcessEnvironment withAgent = environment;
+    withAgent.insert(u"SSH_AUTH_SOCK"_s, socket);
+    QProcess add;
+    add.setProcessEnvironment(withAgent);
+    add.start(u"ssh-add"_s, {key});
+    add.closeWriteChannel();
+    const bool finished = add.waitForFinished(10000);
+    if (!finished)
+        add.kill();
+    agent.kill();
+    agent.waitForFinished();
+    QVERIFY(finished);
+    QVERIFY2(add.exitCode() == 0, add.readAllStandardError().constData());
+}
+
+void TestGitSync::findsAnSshKeyWithAPassphrase()
+{
+    if (QStandardPaths::findExecutable(u"ssh-keygen"_s).isEmpty())
+        QSKIP("OpenSSH is not installed");
+    const QByteArray home = qgetenv("HOME");
+    const auto keepHome = qScopeGuard([&home] { qputenv("HOME", home); });
+    qputenv("HOME", m_dir->path().toUtf8());
+    QVERIFY(QDir(m_dir->path()).mkpath(u".ssh"_s));
+    QVERIFY(!GitSync::lockedSshKey());
+    const auto key = [this](const QString &name, const QString &passphrase) {
+        return QProcess::execute(u"ssh-keygen"_s,
+                                 {u"-q"_s, u"-t"_s, u"ed25519"_s, u"-N"_s, passphrase, u"-f"_s,
+                                  m_dir->filePath(u".ssh/"_s + name)});
+    };
+    QCOMPARE(key(u"id_ed25519"_s, QString()), 0);
+    QVERIFY(!GitSync::lockedSshKey());
+    QCOMPARE(key(u"id_rsa"_s, u"open sesame"_s), 0);
+    QVERIFY(GitSync::lockedSshKey());
 }
 
 QTEST_GUILESS_MAIN(TestGitSync)
