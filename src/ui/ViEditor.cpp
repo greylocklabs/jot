@@ -101,6 +101,20 @@ void ViEditor::keepCursorInView()
     setCursor(position);
 }
 
+void ViEditor::followMouseSelection()
+{
+    // As in vim: text selected with the mouse is visual mode's, so d, y and c act on it, and a
+    // click that leaves nothing selected goes back to normal mode.
+    if (!m_enabled || !m_target || !(QGuiApplication::mouseButtons() & Qt::LeftButton))
+        return;
+    const bool selected =
+        m_target->property("selectionStart").toInt() != m_target->property("selectionEnd").toInt();
+    if (selected && m_mode == kNormal)
+        setMode(kVisual);
+    else if (!selected && m_mode == kVisual)
+        setMode(kNormal);
+}
+
 void ViEditor::setTarget(QQuickItem *target)
 {
     if (m_target == target)
@@ -117,6 +131,8 @@ void ViEditor::setTarget(QQuickItem *target)
               SIGNAL(selectionEndChanged()), SIGNAL(textChanged())})
             connect(m_target, changed, this, SIGNAL(placeChanged()));
         connect(m_target, SIGNAL(cursorPositionChanged()), this, SLOT(dropMatches()));
+        connect(m_target, SIGNAL(selectionStartChanged()), this, SLOT(followMouseSelection()));
+        connect(m_target, SIGNAL(selectionEndChanged()), this, SLOT(followMouseSelection()));
     }
     Q_EMIT targetChanged();
     Q_EMIT placeChanged();

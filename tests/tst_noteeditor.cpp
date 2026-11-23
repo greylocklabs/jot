@@ -128,6 +128,7 @@ private Q_SLOTS:
     void readsDiagramsAsPictures();
     void tickingARepeatingToDoWritesTheNext();
     void editsInViModes();
+    void viActsOnWhatTheMouseSelects();
     void viKeepsTheCursorInViewOnScroll();
     void runsViCommands();
     void viStatusLineGivesWayAsItNarrows();
@@ -3321,6 +3322,44 @@ void TestNoteEditor::viKeepsTheCursorInViewOnScroll()
     QTRY_COMPARE(m_vault->current(), u"Long.md"_s);
     QTRY_COMPARE(body->property("cursorPosition").toInt(), saved);
     QTRY_VERIFY(inView());
+    m_settings->setViMode(false);
+}
+
+void TestNoteEditor::viActsOnWhatTheMouseSelects()
+{
+    m_settings->setViMode(true);
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    auto *vi = body->findChild<QObject *>(u"vi"_s);
+    body->forceActiveFocus();
+    body->setProperty("text", u"alpha beta gamma"_s);
+    body->setProperty("cursorPosition", 0);
+    const auto at = [body](int position) {
+        QRectF place;
+        QMetaObject::invokeMethod(body, "positionToRectangle", Q_RETURN_ARG(QRectF, place),
+                                  Q_ARG(int, position));
+        return body->mapToScene(place.center()).toPoint();
+    };
+    QTRY_COMPARE(vi->property("mode").toString(), u"normal"_s);
+
+    // Dragged over "beta ", it is visual mode's selection, which d deletes.
+    QTest::mousePress(m_window.get(), Qt::LeftButton, {}, at(6));
+    QTest::mouseMove(m_window.get(), at(8));
+    QTest::mouseMove(m_window.get(), at(11));
+    QTest::mouseRelease(m_window.get(), Qt::LeftButton, {}, at(11));
+    QTRY_VERIFY(body->property("selectedText").toString().contains(u"beta"_s));
+    QCOMPARE(vi->property("mode").toString(), u"visual"_s);
+    QTest::keyClick(m_window.get(), Qt::Key_D);
+    QCOMPARE(body->property("text").toString().count(u"beta"_s), 0);
+    QCOMPARE(vi->property("mode").toString(), u"normal"_s);
+
+    // A click that selects nothing leaves visual mode as it came.
+    QTest::mousePress(m_window.get(), Qt::LeftButton, {}, at(0));
+    QTest::mouseMove(m_window.get(), at(3));
+    QTest::mouseRelease(m_window.get(), Qt::LeftButton, {}, at(3));
+    QTRY_COMPARE(vi->property("mode").toString(), u"visual"_s);
+    QTest::mouseClick(m_window.get(), Qt::LeftButton, {}, at(1));
+    QTRY_COMPARE(vi->property("mode").toString(), u"normal"_s);
     m_settings->setViMode(false);
 }
 

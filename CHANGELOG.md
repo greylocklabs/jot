@@ -26,6 +26,7 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 ### Fixed
 
 - Clicking a dropdown or a date while its list is open closes it, rather than opening it again.
+- In vi mode, text selected with the mouse is a visual selection, so `d`, `y` and `c` act on it.
 
 ### Changed
 
