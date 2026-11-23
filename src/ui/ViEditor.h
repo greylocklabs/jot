@@ -106,6 +106,8 @@ private Q_SLOTS:
     void dropMatches();
     /// Moves the cursor onto the nearest line in view after a scroll left it out of view.
     void keepCursorInView();
+    /// Enters visual mode for text selected with the mouse, and leaves it when a click clears it.
+    void followMouseSelection();
 
 private:
     /// Handles a key in normal or visual mode; says whether it was used.
