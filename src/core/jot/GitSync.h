@@ -51,7 +51,8 @@ public:
     /// The passphrase for an SSH key that has one, from the keyring, so syncs need no agent.
     void setSshPassphrase(const QString &passphrase) { m_sshPassphrase = passphrase; }
     /// `base` as git runs in it: no prompt anyone would have to see, and SSH kept from asking,
-    /// or with `passphrase`, given it by Jot as SSH's askpass, which answers nothing else.
+    /// or with `passphrase`, given it by Jot as SSH's askpass, which answers nothing else. An
+    /// SSH command the person chose (`batchSsh` false) is never given the passphrase.
     [[nodiscard]] static QProcessEnvironment environment(QProcessEnvironment base, bool batchSsh,
                                                          const QString &passphrase);
     /// Whether one of the person's SSH keys in ~/.ssh has a passphrase, so SSH turned away

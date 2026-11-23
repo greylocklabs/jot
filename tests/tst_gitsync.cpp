@@ -809,10 +809,11 @@ void TestGitSync::keepsSshFromAskingUnlessGivenAPassphrase()
     QCOMPARE(given.value(u"SSH_ASKPASS_REQUIRE"_s), u"force"_s);
     QCOMPARE(given.value(u"JOT_SSH_PASSPHRASE"_s), u"open sesame"_s);
 
-    // An SSH command the person chose is left as it is.
+    // An SSH command the person chose is left as it is, and never given the passphrase.
     const QProcessEnvironment chosen = GitSync::environment({}, false, u"open sesame"_s);
     QVERIFY(!chosen.contains(u"GIT_SSH_COMMAND"_s));
-    QCOMPARE(chosen.value(u"SSH_ASKPASS"_s), u"/usr/bin/jot"_s);
+    QVERIFY(!chosen.contains(u"SSH_ASKPASS"_s));
+    QVERIFY(!chosen.contains(u"JOT_SSH_PASSPHRASE"_s));
     GitSync::setAskpass({});
 }
 

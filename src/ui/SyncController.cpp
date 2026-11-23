@@ -404,8 +404,9 @@ void SyncController::stop()
 {
     if (m_root.isEmpty())
         return;
-    // A bucket's key leaves the keyring with it, unless another vault syncs there too.
-    if (remoteNeedsSecret(m_remote) && m_settings.syncRemoteUses(m_remote) <= 1) {
+    // A bucket's key, or a Git remote's SSH passphrase, leaves the keyring with it, unless
+    // another vault syncs there too.
+    if ((remoteNeedsSecret(m_remote) || git()) && m_settings.syncRemoteUses(m_remote) <= 1) {
         QString error;
         if (!secrets::remove(remoteSecretKey(m_remote), &error))
             qCWarning(lcVault) << "could not take the sync key out of the keyring:" << error;
