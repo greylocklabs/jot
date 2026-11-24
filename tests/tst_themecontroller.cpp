@@ -6,7 +6,9 @@
 
 #include <QDir>
 #include <QFile>
+#include <QFont>
 #include <QFontDatabase>
+#include <QFontInfo>
 #include <QFontMetricsF>
 #include <QSet>
 #include <QSignalSpy>
@@ -142,9 +144,13 @@ void TestThemeController::everyBuiltInThemeReads()
 void TestThemeController::bundledFontsAreAvailable()
 {
     ThemeController::instance();
-    const QStringList families = QFontDatabase::families();
-    QVERIFY(families.contains(QStringLiteral("Nunito")));
-    QVERIFY(families.contains(QStringLiteral("Fraunces")));
+    // The bundled fonts, or the same typefaces installed on the system, which Qt then lists by
+    // foundry, as "Nunito [NeWT]", rather than a stand-in.
+    for (const QString &family : {QStringLiteral("Nunito"), QStringLiteral("Fraunces")}) {
+        const QString found = QFontInfo(QFont(family)).family();
+        QVERIFY2(found == family || found.startsWith(family + QStringLiteral(" [")),
+                 qPrintable(found));
+    }
 }
 
 void TestThemeController::noteFontsFallBackToGenericFamilies()
