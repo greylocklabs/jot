@@ -132,6 +132,7 @@ qt_add_qml_module(jotui
         QuickSwitcher.qml
         ResizeFrame.qml
         SettingsDialog.qml
+        SideTab.qml
         Scrim.qml
         Sidebar.qml
         SoftShadow.qml
