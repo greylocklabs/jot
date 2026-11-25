@@ -94,6 +94,7 @@ private Q_SLOTS:
     void foldingAllKeepsItsLineInPlace();
     void readsArrowKeepsItsLineInPlace();
     void foldsWhatIsUnderAListItem();
+    void readFindsAListItemBelowEmbeds();
     void outlinesTheNoteBesideIt();
     void aTagLinkOpensTheTagsView();
     void showsTabsOverTheNote();
@@ -1606,6 +1607,40 @@ void TestNoteEditor::readsArrowKeepsItsLineInPlace()
     QTRY_VERIFY(reader->property("text").toString().contains(u"under Beta"_s));
     QTest::qWait(300);
     QVERIFY(qAbs(screenY(readBeta) - readBefore) <= 1);
+}
+
+void TestNoteEditor::readFindsAListItemBelowEmbeds()
+{
+    // Videos above the item are drawn as cards of their own, which come after Read counts its
+    // list items, so the item's arrow is found by its line, not where it was before them.
+    const QString text = u"## Practice\n\n"
+                         u"- [ ] Warm up\n  [Scales](https://youtu.be/aaaaaaaaaaa)\n"
+                         u"- [ ] Long tones\n  [Tones](https://youtu.be/bbbbbbbbbbb)\n\n"
+                         u"## Reel\n\n"
+                         u"- [ ] Put together a reel\n"
+                         u"  [Doubling](https://youtu.be/ccccccccccc)\n\n"
+                         u"  First paragraph under it.\n\n"
+                         u"  Second paragraph under it.\n"_s;
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Reel.md"_s, text, &error));
+    m_vault->setCurrent(u"Reel.md"_s);
+    QTRY_COMPARE(find(u"body"_s)->property("text").toString(), text);
+    m_settings->setReadMode(true);
+    const auto off = qScopeGuard([this] { m_settings->setReadMode(false); });
+    QQuickItem *reader = find(u"reader"_s);
+    auto *reading = m_editor->findChild<QObject *>(u"reading"_s);
+    QTRY_VERIFY(reader->isVisible());
+    auto *document = reader->property("textDocument").value<QQuickTextDocument *>()->textDocument();
+    int position = -1;
+    QTRY_VERIFY([&] {
+        for (const QVariant &fold : reading->property("folds").toList()) {
+            if (fold.toMap().value(u"key"_s).toString() == u"- Put together a reel"_s)
+                position = fold.toMap().value(u"position"_s).toInt();
+        }
+        return position >= 0;
+    }());
+    QVERIFY2(document->findBlock(position).text().contains(u"Put together a reel"_s),
+             qPrintable(document->findBlock(position).text()));
 }
 
 void TestNoteEditor::foldsHeadingsAway()
