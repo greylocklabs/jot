@@ -1321,7 +1321,13 @@ Rectangle {
                     if (typing)
                         Qt.callLater(findSuggestions)
                 }
-                onCursorRectangleChanged: flick.follow(cursorRectangle)
+                // The find bar's match is shown though the find field has the keys.
+                onCursorRectangleChanged: {
+                    if (!findBar.visible)
+                        flick.follow(cursorRectangle)
+                    else if (!root.held)
+                        flick.reveal(cursorRectangle)
+                }
                 onActiveFocusChanged: {
                     // A note that is only front matter gets its line to type on as it is gone
                     // into, with the cursor already at its end.
