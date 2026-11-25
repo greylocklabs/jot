@@ -96,6 +96,9 @@ void TestQuickAdd::reads_data()
     QTest::newRow("a short span after every stays")
         << u"water plants every 3d"_s << u"water plants every 3d"_s;
     QTest::newRow("a short weekday after every stays") << u"gym every wed"_s << u"gym every wed"_s;
+    QTest::newRow("nor further on in a repeat")
+        << u"gym every other wed"_s << u"gym every other wed"_s;
+    QTest::newRow("nor after and") << u"gym every mon and wed"_s << u"gym every mon and wed"_s;
     QTest::newRow("a short weekday at the end")
         << u"call Mara wed"_s << u"call Mara @due 2026-11-04"_s;
     QTest::newRow("a short weekday and a time")
