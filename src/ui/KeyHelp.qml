@@ -271,7 +271,7 @@ Popup {
                             "label": qsTr("Clear the find highlights")
                         },
                         {
-                            "keys": [":move-ticked"],
+                            "keys": [":MoveTicked"],
                             "label": qsTr(
                                          "Any command of the palette, by its name in words joined by hyphens")
                         }

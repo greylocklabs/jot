@@ -77,15 +77,32 @@ Rectangle {
     ]
     /// The palette's actions by their names, as KeyRouter::viCommands() gives them.
     property var actionCommands: []
-    /// Vi's own commands, then the palette's actions.
-    readonly property var allCommands: commands.concat(actionCommands)
-    /// Those that start with what is typed, which is not one of them already.
+    /// Vi's own commands, then the palette's actions but for those vi has already, as help.
+    readonly property var allCommands: commands.concat(actionCommands.filter(action =>
+    !commands.some(own => root.loose(own.text) === root.loose(action.text))))
+    /// Commands vi runs that it does not offer, as its short and long forms.
+    readonly property var unlisted: ["x", "h", "nohlsearch"]
+    /// Those that start with what is typed, in any case and without hyphens, which is not one
+    /// of them already.
     // A few at a time, as the palette's actions are many.
-    readonly property var offered: commanding ? allCommands.filter(each => each.text.startsWith(
-                                                                               command.text)
-                                                                           && each.text
-                                                                           !== command.text).slice(0,
-                                                                                                   8) : []
+    readonly property var offered: commanding ? allCommands.filter(each => loose(
+                                                                               each.text).startsWith(
+                                                                               loose(command.text))
+                                                                           && loose(each.text)
+                                                                           !== loose(
+                                                                               command.text)).slice(
+                                                    0, 8) : []
+    /// `name` as typed commands are matched: in any case, hyphens left out.
+    function loose(name) {
+        return name.toLowerCase().replace(/-/g, "")
+    }
+
+    /// Whether `typed` runs as it is: a command's whole name, a line number or a replace.
+    function complete(typed) {
+        const name = loose(typed.trim())
+        return name === "" || /^\d+$/.test(name) || name.includes("/") || unlisted.includes(name)
+                || allCommands.some(each => loose(each.text) === name)
+    }
     /// The one the arrows chose, or -1.
     property int chosen: -1
 
@@ -209,9 +226,12 @@ Rectangle {
                     root.take()
                     event.accepted = true
                 } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                    // One chosen with the arrows is taken first; one that needs more typed,
-                    // as s/ does, waits for it.
-                    if (root.chosen >= 0 && root.take() && text.endsWith("/")) {
+                    // One chosen with the arrows is taken first, as is the only one offered
+                    // for what is not a command itself; one that needs more typed, as s/ does,
+                    // waits for it.
+                    const only = root.chosen < 0 && root.offered.length === 1 && !root.complete(
+                              text)
+                    if ((root.chosen >= 0 || only) && root.take() && text.endsWith("/")) {
                         event.accepted = true
                         return
                     }
@@ -332,7 +352,28 @@ Rectangle {
         visible: root.commanding && root.offered.length > 0
         x: Theme.space3
         y: -height - Theme.space1
-        width: 320
+        // Wide enough for its widest row, within the line.
+        width: Math.min(root.width - 2 * Theme.space3, Math.max(320, widest + 4 * Theme.space2))
+
+        /// The widest row's words.
+        readonly property real widest: root.offered.reduce((widest, each) => Math.max(widest,
+                                                                                      commandMetrics.advanceWidth(
+                                                                                          ":" + each.text)
+                                                                                      + Theme.space3
+                                                                                      + detailMetrics.advanceWidth(
+                                                                                          each.detail)),
+        0)
+
+        FontMetrics {
+            id: commandMetrics
+            font.family: Theme.monoFontFamily
+            font.pixelSize: Theme.textSm
+        }
+        FontMetrics {
+            id: detailMetrics
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.textSm
+        }
         height: list.implicitHeight + 2 * Theme.space2
         radius: Theme.radiusMd
         color: Theme.surface

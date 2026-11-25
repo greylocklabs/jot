@@ -883,7 +883,7 @@ void TestDialogs::runsNoteActionsFromVisCommandLine()
     // A palette action by its name runs as the palette would run it.
     QString said;
     QMetaObject::invokeMethod(vi, "runCommand", Q_RETURN_ARG(QString, said),
-                              Q_ARG(QString, u"move-ticked"_s));
+                              Q_ARG(QString, u"MoveTicked"_s));
     QVERIFY(said.isEmpty());
     QTRY_COMPARE(m_vault->currentText(), u"- [ ] bank\n- [x] post\n"_s);
     QVERIFY(QFile::remove(note.fileName()));

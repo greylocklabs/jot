@@ -1,5 +1,6 @@
 #include "DataStyler.h"
 #include "DataTableModel.h"
+#include "KeyRouter.h"
 #include "MarkdownStyler.h"
 #include "SettingsForeign.h"
 #include "ThemeController.h"
@@ -23,6 +24,7 @@
 #include <QQuickTextDocument>
 #include <QQuickWindow>
 #include <QRegularExpression>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QStyleHints>
 
@@ -530,6 +532,8 @@ void TestNoteEditor::viLeavesHiddenFrontMatterAlone()
 
 void TestNoteEditor::numbersANotesLinesWhenAsked()
 {
+    // The gutter's width follows the lines' numbers, not their wrapping, which it can change.
+    QTest::failOnWarning(QRegularExpression(u"Binding loop"_s));
     m_vault->setCurrent(u"Welcome.md"_s);
     QQuickItem *body = find(u"body"_s);
     QQuickItem *gutter = find(u"gutter"_s);
@@ -3695,6 +3699,45 @@ void TestNoteEditor::runsViCommands()
     QTRY_VERIFY(body->hasActiveFocus());
     QCOMPARE(vi->property("line").toInt(), 3);
     QCOMPARE(vi->property("mode").toString(), u"normal"_s);
+
+    // With the palette's actions too: named as vim's plugins name theirs, matched in any case,
+    // and help, which vi has, offered once.
+    auto *router = new KeyRouter(m_editor.get());
+    m_editor->setProperty("router", QVariant::fromValue(router));
+    const auto restore = qScopeGuard([this] { m_editor->setProperty("router", QVariant()); });
+    QSignalSpy triggered(router, &KeyRouter::triggered);
+    QObject *line = find(u"viStatusLine"_s);
+    const auto offeredNames = [line] {
+        QStringList names;
+        for (const QVariant &each : line->property("offered").toList())
+            names << each.toMap().value(u"text"_s).toString();
+        return names;
+    };
+    type(u":"_s);
+    QTRY_VERIFY(command->hasActiveFocus());
+    type(u"he"_s);
+    QCOMPARE(offeredNames().filter(u"help"_s, Qt::CaseInsensitive).size(), 1);
+    command->setProperty("text", QString());
+    type(u"moveti"_s);
+    QCOMPARE(offeredNames(), QStringList{u"MoveTicked"_s});
+    // The list is as wide as its words.
+    auto *list = find(u"viCommandList"_s);
+    for (auto *words : list->findChildren<QQuickItem *>()) {
+        if (words->inherits("QQuickText"))
+            QVERIFY2(words->mapToItem(list, QPointF(words->implicitWidth(), 0)).x() <=
+                         list->width(),
+                     qPrintable(words->property("text").toString()));
+    }
+    // Return with one offered for what is not a command itself runs that one.
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    QTRY_COMPARE(triggered.size(), 1);
+    QCOMPARE(triggered.takeFirst().first().toString(), u"moveTicked"_s);
+    // A command typed whole runs as it is, though another starts with it: w saves, not wq.
+    run(u"w"_s);
+    QCOMPARE(triggered.size(), 1);
+    QCOMPARE(triggered.takeFirst().first().toString(), u"save"_s);
+    run(u"Untick-All"_s);
+    QCOMPARE(triggered.takeFirst().first().toString(), u"untickAll"_s);
 }
 
 void TestNoteEditor::completesFrontMatter()
