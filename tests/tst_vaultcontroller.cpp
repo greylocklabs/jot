@@ -31,6 +31,7 @@ class TestVaultController : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void syncsTheStartersInTheVaultsOwnRepository();
     void init();
     void cleanup();
 
@@ -424,6 +425,45 @@ void writeFile(const QString &path, const QByteArray &text)
 }
 
 } // namespace
+
+void TestVaultController::syncsTheStartersInTheVaultsOwnRepository()
+{
+    if (QStandardPaths::findExecutable(u"git"_s).isEmpty())
+        QSKIP("git is not installed");
+    // A vault that is its own git repository keeps nothing of its sync in Jot's state folder.
+    const QString bare = m_dir->filePath(u"own.git"_s);
+    QCOMPARE(
+        QProcess::execute(u"git"_s, {u"init"_s, u"-q"_s, u"--bare"_s, u"-b"_s, u"main"_s, bare}),
+        0);
+    const QString root = m_dir->filePath(u"Own"_s);
+    QVERIFY(QDir().mkpath(root));
+    const auto run = [&root](const QStringList &arguments) {
+        QProcess git;
+        git.setWorkingDirectory(root);
+        git.start(u"git"_s, arguments);
+        git.waitForFinished();
+        return QString::fromUtf8(git.readAllStandardOutput());
+    };
+    run({u"init"_s, u"-q"_s, u"-b"_s, u"main"_s});
+    run({u"config"_s, u"user.name"_s, u"Mara"_s});
+    run({u"config"_s, u"user.email"_s, u"mara@example.org"_s});
+    run({u"remote"_s, u"add"_s, u"origin"_s, bare});
+    writeFile(root + u"/Note.md"_s, "A note.\n");
+    QVERIFY(m_vault->openPath(root));
+    QVERIFY(QFileInfo::exists(root + u"/.jot/types"_s));
+    SyncController *sync = m_vault->sync();
+    QSignalSpy finished(sync, &SyncController::finished);
+    sync->connectGit(bare, {});
+    QVERIFY(finished.wait(30000));
+    QVERIFY2(sync->problem().isEmpty(), qPrintable(sync->problem()));
+
+    // Only its first sync sets the starters aside; the next one sends them.
+    QTRY_VERIFY(QFileInfo::exists(root + u"/.jot/types/character.yaml"_s));
+    finished.clear();
+    sync->syncNow();
+    QVERIFY(finished.wait(30000));
+    QVERIFY(run({u"ls-files"_s, u".jot/types"_s}).contains(u".jot/types/character.yaml"_s));
+}
 
 void TestVaultController::setsANotesType()
 {

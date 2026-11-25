@@ -30,6 +30,8 @@ down` or `3d print` stay as written.
 
 ### Fixed
 
+- A vault that is its own git repository sends its types when it syncs. Every sync took itself
+  for the first, so the starter types were set aside each time and never committed.
 - In Read, a list item's fold arrow is beside the item again, rather than a line or two above,
   or missing, when a video or picture is shown above it.
 - Vi's `:` offers help once, not twice, and its list widens to fit a long description.
