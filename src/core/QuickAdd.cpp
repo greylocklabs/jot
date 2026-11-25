@@ -43,6 +43,18 @@ QDate next(const QDate &from, int day, bool orToday = false)
     return from.addDays(ahead);
 }
 
+/// The next `day` of a month on or after `from`, in the first month that has one.
+QDate nextDayOfMonth(const QDate &from, int day)
+{
+    for (int ahead = 0; ahead < 12; ++ahead) {
+        const QDate month = QDate(from.year(), from.month(), 1).addMonths(ahead);
+        const QDate found(month.year(), month.month(), day);
+        if (found.isValid() && found >= from)
+            return found;
+    }
+    return {};
+}
+
 /// Takes the first match of `pattern` out of `text`, leaving a space, and gives it.
 QRegularExpressionMatch take(QString &text, const QRegularExpression &pattern)
 {
@@ -129,8 +141,21 @@ QuickTask readQuickTask(const QString &typed, const QDateTime &now)
     static const QRegularExpression numeric =
         words(lead + uR"((\d{1,2})[/-](\d{1,2})(?:[/-](\d{4}|\d{2}))?)"_s);
     static const QRegularExpression in =
-        words(uR"(in\s+(\d+|a|an|one|two|three)\s+(day|week|month)s?)"_s);
-    static const QRegularExpression nextOne = words(uR"(next\s+(week|month))"_s);
+        words(uR"(in\s+(\d+|a|an|one|two|three)\s+(day|week|month|year)s?)"_s);
+    static const QRegularExpression nextOne = words(uR"(next\s+(week|month|year))"_s);
+    // Words that could be a task's own, as "sat down" or "3d print", are a day only at the end,
+    // with nothing after but a time.
+    const QString atEnd =
+        uR"((?=\s*(?:(?:at\s+)?(?:\d{1,2}(?::\d{2})?\s*(?:am|pm)|[01]?\d:[0-5]\d|noon|midday))?\s*$))"_s;
+    static const QRegularExpression ordinal = words(lead + uR"(the\s+(\d{1,2})(?:st|nd|rd|th))"_s);
+    static const QRegularExpression bareOrdinal =
+        words(lead + uR"((\d{1,2})(?:st|nd|rd|th))"_s + atEnd);
+    static const QRegularExpression span = words(uR"(in\s+(\d+)\s*([dwmy]))"_s);
+    static const QRegularExpression bareSpan = words(uR"((\d+)([dwm]))"_s + atEnd);
+    static const QRegularExpression endOf =
+        words(lead + uR"((eow|eom|end\s+of\s+(?:the\s+)?(?:week|month)))"_s);
+    static const QRegularExpression bareShortNamed =
+        words(uR"((mon|tues?|wed|thu|thurs?|fri|sat|sun))"_s + atEnd);
     static const QRegularExpression weekend = words(lead + uR"((?:this\s+)?weekend)"_s);
     static const QRegularExpression relative = words(lead + uR"((today|tod|tomorrow|tmrw?))"_s);
     static const QRegularExpression named = words(
@@ -161,13 +186,15 @@ QuickTask readQuickTask(const QString &typed, const QDateTime &now)
         const QString amount = m.captured(1).toLower();
         const int n = spelled.value(amount, amount.toInt());
         const QString unit = m.captured(2).toLower();
-        day = unit == u"day"    ? today.addDays(n)
-              : unit == u"week" ? today.addDays(7 * n)
-                                : today.addMonths(n);
+        day = unit == u"day"     ? today.addDays(n)
+              : unit == u"week"  ? today.addDays(7 * n)
+              : unit == u"month" ? today.addMonths(n)
+                                 : today.addYears(n);
     } else if (m = take(text, nextOne); m.hasMatch()) {
-        day = m.captured(1).toLower() == u"week"
-                  ? next(today, 1)
-                  : QDate(today.year(), today.month(), 1).addMonths(1);
+        const QString unit = m.captured(1).toLower();
+        day = unit == u"week"    ? next(today, 1)
+              : unit == u"month" ? QDate(today.year(), today.month(), 1).addMonths(1)
+                                 : QDate(today.year() + 1, 1, 1);
     } else if (m = take(text, weekend); m.hasMatch()) {
         day = next(today, 6, true);
     } else if (m = take(text, relative); m.hasMatch()) {
@@ -186,6 +213,25 @@ QuickTask readQuickTask(const QString &typed, const QDateTime &now)
         day = QDate(year, month(m.captured(2)), m.captured(1).toInt());
         if (m.captured(3).isEmpty() && day.isValid() && day < today)
             day = day.addYears(1);
+    } else if ((m = take(text, ordinal)).hasMatch() || (m = take(text, bareOrdinal)).hasMatch()) {
+        // The 12th is the next one: this month's unless it has gone by.
+        day = nextDayOfMonth(today, m.captured(1).toInt());
+    } else if ((m = take(text, span)).hasMatch() || (m = take(text, bareSpan)).hasMatch()) {
+        const int n = m.captured(1).toInt();
+        const QString unit = m.captured(2).toLower();
+        day = unit == u"d"   ? today.addDays(n)
+              : unit == u"w" ? today.addDays(7 * n)
+              : unit == u"m" ? today.addMonths(n)
+                             : today.addYears(n);
+    } else if (m = take(text, endOf); m.hasMatch()) {
+        const QString said = m.captured(1).toLower();
+        // The week ends on its last working day, Friday; the month on its last day.
+        if (said == u"eow" || said.endsWith(u"week"))
+            day = next(today, 5, true);
+        else
+            day = QDate(today.year(), today.month(), today.daysInMonth());
+    } else if (m = take(text, bareShortNamed); m.hasMatch()) {
+        day = next(today, weekday(m.captured(1)));
     }
 
     if (!day.isValid())

@@ -46,6 +46,7 @@ private Q_SLOTS:
     void everyModalHasAClose();
     void settingsTabsFitWithoutScrolling();
     void anEmptyDateReadsAsSomethingToPress();
+    void typesADayIntoTheCalendar();
     void gitSyncStartsFromTheVaultsOwnRepository();
     void stopSyncingSitsApartFromTheSyncButtons();
     void syncButtonsWaitWhileBusy();
@@ -259,6 +260,44 @@ void TestDialogs::anEmptyDateReadsAsSomethingToPress()
     QCOMPARE(caption->property("color").value<QColor>(), theme->text());
     picker->setProperty("enabled", false);
     QCOMPARE(caption->property("color").value<QColor>(), theme->textFaint());
+}
+
+void TestDialogs::typesADayIntoTheCalendar()
+{
+    QQuickWindow window;
+    window.resize(500, 500);
+    window.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&window));
+    QQmlEngine engine;
+    QQmlComponent component(&engine);
+    component.loadFromModule("Jot.Ui", "DatePicker");
+    std::unique_ptr<QObject> object(component.create());
+    QVERIFY2(object, qPrintable(component.errorString()));
+    auto *picker = qobject_cast<QQuickItem *>(object.get());
+    picker->setParentItem(window.contentItem());
+    QSignalSpy picked(picker, SIGNAL(picked(QDateTime)));
+    QVERIFY(picked.isValid());
+    QTest::mouseClick(&window, Qt::LeftButton, {},
+                      picker->mapToScene({picker->width() / 2, picker->height() / 2}).toPoint());
+    auto *calendar = picker->findChild<QObject *>(u"calendar"_s);
+    QTRY_VERIFY(calendar->property("opened").toBool());
+
+    // Opened, it takes a day in words, as @due does, and Return picks it.
+    auto *field = calendar->property("contentItem")
+                      .value<QQuickItem *>()
+                      ->findChild<QQuickItem *>(u"typedDay"_s);
+    QVERIFY(field);
+    QTRY_VERIFY(field->hasActiveFocus());
+    for (const QChar c : u"the 12th"_s)
+        QTest::keyClick(&window, c.toLatin1());
+    QTest::keyClick(&window, Qt::Key_Return);
+    QTRY_COMPARE(picked.size(), 1);
+    const QDate today = QDate::currentDate();
+    QDate twelfth(today.year(), today.month(), 12);
+    if (twelfth < today)
+        twelfth = twelfth.addMonths(1);
+    QCOMPARE(picked.first().first().toDateTime().date(), twelfth);
+    QTRY_VERIFY(!calendar->property("visible").toBool());
 }
 
 void TestDialogs::gitSyncStartsFromTheVaultsOwnRepository()

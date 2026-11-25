@@ -67,6 +67,10 @@ AbstractButton {
         y: root.height + Theme.space1
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
         padding: Theme.space3
+        onOpened: {
+            typedDay.text = ""
+            typedDay.forceActiveFocus()
+        }
 
         background: Rectangle {
             radius: Theme.radiusLg
@@ -81,6 +85,36 @@ AbstractButton {
 
         contentItem: Column {
             spacing: Theme.space2
+
+            // A day in words, as @due takes them: the calendar goes to it, and Return picks it.
+            Field {
+                id: typedDay
+
+                /// The day the words name, when they name one and nothing else.
+                readonly property date found: {
+                    if (text.trim() === "")
+                        return new Date(NaN)
+                    const read = Vault.readQuickTask(text)
+                    return read.due !== "" && read.title === "" ? new Date(read.due.slice(0, 10)
+                                                                           + "T00:00:00") : new Date(
+                                                                      NaN)
+                }
+
+                objectName: "typedDay"
+                width: 7 * Theme.space7
+                placeholderText: qsTr("A day: fri, the 12th, 2w")
+                Accessible.name: qsTr("A day in words")
+                onFoundChanged: {
+                    if (!isNaN(found.getTime()))
+                        month.month = found
+                }
+                onAccepted: {
+                    if (isNaN(found.getTime()))
+                        return
+                    calendar.close()
+                    root.picked(found)
+                }
+            }
 
             Row {
                 spacing: Theme.space2
@@ -121,6 +155,7 @@ AbstractButton {
                         required property bool inMonth
                         required property bool isToday
                         readonly property bool chosen: date.getTime() === root.day.getTime()
+                        readonly property bool typed: date.getTime() === typedDay.found.getTime()
 
                         width: Theme.space7
                         height: Theme.space7
@@ -137,7 +172,9 @@ AbstractButton {
 
                         background: Rectangle {
                             radius: Theme.radiusSm
-                            color: cell.chosen ? Theme.accent : cell.hovered ? Theme.surfaceAlt :
+                            color: cell.chosen ? Theme.accent : cell.typed ? Theme.tint(Theme.accent,
+                                                                                        0.3) : cell.hovered
+                                                                             ? Theme.surfaceAlt :
                                                                                "transparent"
 
                             border.width: cell.isToday && !cell.chosen ? 1 : 0
