@@ -89,6 +89,7 @@ private Q_SLOTS:
     void readingTakesViKeys();
     void foldsHeadingsAway();
     void foldingKeepsItsLineInPlace();
+    void readsArrowKeepsItsLineInPlace();
     void foldsWhatIsUnderAListItem();
     void outlinesTheNoteBesideIt();
     void aTagLinkOpensTheTagsView();
@@ -1368,7 +1369,70 @@ void TestNoteEditor::foldingKeepsItsLineInPlace()
     fold(u"Beta"_s, false);
     QTRY_VERIFY(m_editor->property("held").isNull());
     QTRY_COMPARE(screenY(reader, readBeta), readBefore);
+
     m_settings->setReadMode(false);
+}
+
+void TestNoteEditor::readsArrowKeepsItsLineInPlace()
+{
+    QString text;
+    for (const QString &heading : {u"Alpha"_s, u"Beta"_s, u"Gamma"_s}) {
+        text += u"# "_s + heading + u"\n"_s;
+        for (int i = 0; i < 40; ++i)
+            text += u"A paragraph under "_s + heading + u".\n\n"_s;
+    }
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Arrows.md"_s, text, &error));
+    m_vault->setCurrent(u"Arrows.md"_s);
+    QTRY_COMPARE(find(u"body"_s)->property("text").toString(), text);
+    QQuickItem *scroll = find(u"scroll"_s);
+    m_settings->setReadMode(true);
+    const auto off = qScopeGuard([this] { m_settings->setReadMode(false); });
+    QQuickItem *reader = find(u"reader"_s);
+    auto *reading = m_editor->findChild<QObject *>(u"reading"_s);
+    QTRY_VERIFY(reader->isVisible() && reading->property("folds").toList().size() == 3);
+    const int readBeta =
+        reading->property("folds").toList().at(1).toMap().value(u"position"_s).toInt();
+    const auto screenY = [&](int position) {
+        QRectF place;
+        QMetaObject::invokeMethod(reader, "positionToRectangle", Q_RETURN_ARG(QRectF, place),
+                                  Q_ARG(int, position));
+        return reader->mapToItem(scroll, place.topLeft()).y();
+    };
+    scroll->setProperty("contentY", screenY(readBeta) + scroll->property("contentY").toReal() -
+                                        scroll->height() / 2);
+    const qreal readBefore = screenY(readBeta);
+    QVERIFY(scroll->property("contentY").toReal() > 0);
+
+    // Clicked, as the arrow is in Read, which is how the issue was seen.
+    const auto arrowOf = [&]() -> QQuickItem * {
+        QQuickItem *found = nullptr;
+        const std::function<void(QQuickItem *)> look = [&](QQuickItem *at) {
+            for (QQuickItem *child : at->childItems()) {
+                if (child->objectName() == u"foldLine"_s && child->isVisible() &&
+                    child->property("fold").toMap().value(u"key"_s).toString() == u"Beta"_s)
+                    found = child->findChild<QQuickItem *>(u"foldArrow"_s);
+                look(child);
+            }
+        };
+        look(reader->parentItem());
+        return found;
+    };
+    const auto click = [&] {
+        QQuickItem *arrow = nullptr;
+        QTRY_VERIFY((arrow = arrowOf()) != nullptr);
+        const QPoint at = arrow->mapToScene({arrow->width() / 2, arrow->height() / 2}).toPoint();
+        QTest::mouseMove(m_window.get(), at);
+        QTest::mouseClick(m_window.get(), Qt::LeftButton, {}, at);
+    };
+    click();
+    QTRY_VERIFY(!reader->property("text").toString().contains(u"under Beta"_s));
+    QTest::qWait(300);
+    QCOMPARE(screenY(readBeta), readBefore);
+    click();
+    QTRY_VERIFY(reader->property("text").toString().contains(u"under Beta"_s));
+    QTest::qWait(300);
+    QCOMPARE(screenY(readBeta), readBefore);
 }
 
 void TestNoteEditor::foldsHeadingsAway()
