@@ -2510,7 +2510,7 @@ void TestNoteEditor::drawsMath()
         QVariantList found;
         for (const QVariant &each : styler->property("images").toList()) {
             if (each.toMap().value(u"inline"_s).toBool() == inLine &&
-                each.toMap().value(u"source"_s).toUrl().path().endsWith(u"@2x.png"_s))
+                each.toMap().value(u"math"_s).toBool())
                 found.append(each);
         }
         return found;
@@ -2526,6 +2526,15 @@ void TestNoteEditor::drawsMath()
     QTRY_COMPARE(drawn(false).size(), 1);
     QCOMPARE(drawn(false).first().toMap().value(u"position"_s).toInt(), int(text.indexOf(u"$$"_s)));
     QVERIFY(drawn(false).first().toMap().value(u"height"_s).toInt() > 20);
+    // Each drawn at the screen's ratio and a whole size at it, so shown pixel for pixel.
+    for (const QVariant &each : drawn(true) + drawn(false)) {
+        const QVariantMap math = each.toMap();
+        const qreal ratio = math.value(u"ratio"_s).toReal();
+        QCOMPARE(ratio, m_window->effectiveDevicePixelRatio());
+        const QImage image(math.value(u"source"_s).toUrl().toLocalFile());
+        QCOMPARE(image.width(), qRound(math.value(u"width"_s).toInt() * ratio));
+        QCOMPARE(image.height(), qRound(math.value(u"height"_s).toInt() * ratio));
+    }
 
     // Where the cursor is, the TeX shows to edit.
     body->setProperty("cursorPosition", int(text.indexOf(u"int_0"_s)));

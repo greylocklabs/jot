@@ -35,6 +35,8 @@ down` or `3d print` stay as written.
 
 ### Fixed
 
+- Math is drawn at the screen's own pixel ratio and shown pixel for pixel, rather than at twice
+  its size and scaled, which blurred it at ratios such as 125%, in Styled and Read.
 - In Read, math with a backslash in it, such as `$\$3,000$` or `$\pi r^2$`, is drawn once rather
   than twice.
 - A vault that is its own git repository sends its types when it syncs. Every sync took itself

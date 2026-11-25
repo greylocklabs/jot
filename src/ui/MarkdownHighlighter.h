@@ -56,6 +56,8 @@ public:
         QString monoFamily;
         QString displayFamily;
         int pixelSize = 15;
+        /// The screen's pixels to each one of the note's, which math is drawn at.
+        qreal pixelRatio = 2;
         int strongWeight = 600;
         int boldWeight = 700;
         /// The widest and tallest an image is shown inline.

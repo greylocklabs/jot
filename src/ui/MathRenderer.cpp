@@ -7,11 +7,17 @@
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
+#include <QGuiApplication>
 #include <QImage>
+#include <QQuickItem>
+#include <QQuickWindow>
+
 #include <QPainter>
 #include <QPainterPath>
 #include <QRegularExpression>
 #include <QStandardPaths>
+#include <algorithm>
+#include <cmath>
 
 #include <latex.h>
 #include <platform/qt/graphic_qt.h>
@@ -110,11 +116,24 @@ QString MathRenderer::folder()
     return QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + u"/math"_s;
 }
 
-MathRenderer::Drawn MathRenderer::draw(const QString &latex, bool display, int pixelSize,
-                                       const QColor &color)
+qreal MathRenderer::pixelRatioOf(const QObject *document)
 {
-    const QString key =
-        u"%1|%2|%3|%4"_s.arg(display).arg(pixelSize).arg(color.name(QColor::HexArgb), latex);
+    // A QQuickTextDocument belongs to the TextEdit it is the text of.
+    const auto *item = document ? qobject_cast<const QQuickItem *>(document->parent()) : nullptr;
+    if (item && item->window())
+        return item->window()->effectiveDevicePixelRatio();
+    return qApp ? qGuiApp->devicePixelRatio() : 1.0;
+}
+
+MathRenderer::Drawn MathRenderer::draw(const QString &latex, bool display, int pixelSize,
+                                       const QColor &color, qreal ratio)
+{
+    ratio = std::clamp(ratio, 1.0, 4.0);
+    const QString key = u"%1|%2|%3|%4|%5"_s.arg(display)
+                            .arg(pixelSize)
+                            .arg(color.name(QColor::HexArgb))
+                            .arg(ratio)
+                            .arg(latex);
     if (const auto found = m_drawn.constFind(key); found != m_drawn.cend())
         return *found;
     Drawn drawn;
@@ -134,9 +153,9 @@ MathRenderer::Drawn MathRenderer::draw(const QString &latex, bool display, int p
         folder() + u'/' +
         QString::fromLatin1(
             QCryptographicHash::hash(key.toUtf8(), QCryptographicHash::Sha1).toHex()) +
-        u"@2x.png"_s;
+        u".png"_s;
     try {
-        const float size = float(pixelSize) * (display ? 1.25f : 1.f) * 2.f;
+        const float size = float(pixelSize) * (display ? 1.25f : 1.f) * float(ratio);
         std::unique_ptr<tex::TeXRender> render(tex::LaTeX::parse(
             (display ? u"\\displaystyle "_s + latex : latex).toStdWString(), 4000, size, size / 3.f,
             tex::argb(color.alpha(), color.red(), color.green(), color.blue())));
@@ -164,13 +183,31 @@ MathRenderer::Drawn MathRenderer::draw(const QString &latex, bool display, int p
                     inked |= QRect(x, y, 1, 1);
             }
         }
-        const QImage image = canvas.copy(inked);
+        // Widened to a whole size at the ratio, so it is shown at exactly one screen pixel to
+        // each it has rather than resampled.
+        const auto whole = [ratio](int pixels) {
+            for (int shown = int(std::ceil(pixels / ratio));; ++shown) {
+                const qreal needed = shown * ratio;
+                if (std::abs(needed - std::round(needed)) < 1e-6)
+                    return std::pair{int(std::round(needed)), shown};
+            }
+        };
+        const auto [wide, shownWide] = whole(inked.width());
+        const auto [tall, shownTall] = whole(inked.height());
+        QImage image(wide, tall, QImage::Format_ARGB32_Premultiplied);
+        image.fill(Qt::transparent);
+        {
+            QPainter painter(&image);
+            painter.drawImage(0, 0, canvas.copy(inked));
+        }
         QDir().mkpath(folder());
         if (!QFileInfo::exists(path) && !image.save(path))
             throw std::runtime_error("could not save the drawing");
         drawn.path = path;
-        drawn.size = QSize((image.width() + 1) / 2, (image.height() + 1) / 2);
-        drawn.baseline = (pad + height - render->getDepth() - inked.top()) / 2;
+        drawn.size = QSize(shownWide, shownTall);
+        drawn.baseline =
+            int(std::lround((pad + height - render->getDepth() - inked.top()) / ratio));
+        m_ratios.insert(path, ratio);
     } catch (const std::exception &e) {
         drawn.error = QString::fromUtf8(e.what());
     }

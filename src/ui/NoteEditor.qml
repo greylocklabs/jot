@@ -2031,17 +2031,26 @@ Rectangle {
                                                                      body.length))
                         }
 
+                        /// `at` on a whole pixel of the screen, so drawn math is not resampled.
+                        function onPixel(at) {
+                            const ratio = Screen.devicePixelRatio || 1
+                            return Math.round(at * ratio) / ratio
+                        }
+
                         // Math within a line sits where its room is, in the middle of the line.
-                        x: modelData.inline ? line.x : body.leftPadding
-                        y: modelData.inline ? line.y + (line.height - height) / 2 : line.y
+                        x: onPixel(modelData.inline ? line.x : body.leftPadding)
+                        y: onPixel(modelData.inline ? line.y + (line.height - height) / 2 : line.y)
                         width: modelData.width
                         height: modelData.height
                         source: modelData.source
-                        sourceSize: Qt.size(modelData.width * 2, modelData.height * 2)
+                        // Math is drawn at the screen's ratio, one of its pixels to each there;
+                        // a picture is read at twice its size, and mipmapped to scale down well.
+                        sourceSize: Qt.size(modelData.width * (modelData.ratio ?? 2), modelData.height
+                                            * (modelData.ratio ?? 2))
                         fillMode: Image.PreserveAspectFit
                         asynchronous: true
                         smooth: true
-                        mipmap: true
+                        mipmap: !(modelData.math ?? false)
                     }
                 }
 

@@ -1002,7 +1002,8 @@ QList<std::pair<int, int>> MarkdownHighlighter::inlineMathStyles(const QString &
         const MathRenderer::Drawn drawn =
             m_cursorHere || m_source
                 ? MathRenderer::Drawn()
-                : MathRenderer::instance().draw(latex, false, m_look.pixelSize, m_look.text);
+                : MathRenderer::instance().draw(latex, false, m_look.pixelSize, m_look.text,
+                                                m_look.pixelRatio);
         Inlines *data = drawn.ok() ? inlines() : nullptr;
         if (!data) {
             // Being written, or not drawn: the TeX as written, in the code font.
@@ -1078,8 +1079,8 @@ bool MarkdownHighlighter::mathLine(const QString &text, int state)
                 lines.append(line.text());
             latex = lines.join(u'\n');
         }
-        const MathRenderer::Drawn drawn =
-            MathRenderer::instance().draw(latex, true, m_look.pixelSize, m_look.text);
+        const MathRenderer::Drawn drawn = MathRenderer::instance().draw(
+            latex, true, m_look.pixelSize, m_look.text, m_look.pixelRatio);
         if (drawn.ok()) {
             QSize shown = drawn.size;
             if (shown.width() > m_look.imageWidth)
