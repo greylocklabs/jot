@@ -18,6 +18,9 @@ down` or `3d print` stay as written.
 
 ### Changed
 
+- A note's properties sit in a compact card above its text, set apart by its own fill and edge:
+  the type heads it, with small Add and Text buttons in its corner, rows are shorter, and the
+  type's empty properties are named in a faint line at its foot that shows them.
 - Keyboard shortcuts has its tabs down the left, as Settings does, and vi mode's keys in tabs of
   their own: normal mode, text objects, visual mode, commands, Read mode and the leader.
   Commands lists every command of the palette that vi's `:` runs.

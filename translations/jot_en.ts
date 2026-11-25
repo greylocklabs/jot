@@ -1524,6 +1524,10 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Text</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Type</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1555,13 +1559,6 @@ Press %1 to make one.</source>
         <source>Hide empty</source>
         <translation type="unfinished"></translation>
     </message>
-    <message numerus="yes">
-        <source>Show %n empty</source>
-        <translation type="unfinished">
-            <numerusform></numerusform>
-            <numerusform></numerusform>
-        </translation>
-    </message>
     <message>
         <source>Add a property</source>
         <translation type="unfinished"></translation>
@@ -1569,6 +1566,13 @@ Press %1 to make one.</source>
     <message>
         <source>Edit as text</source>
         <translation type="unfinished"></translation>
+    </message>
+    <message numerus="yes">
+        <source>%n empty: %1</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
     </message>
     <message>
         <source>New property</source>
