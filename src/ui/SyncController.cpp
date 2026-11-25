@@ -10,6 +10,7 @@
 
 #include <QDesktopServices>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QLocale>
 #include <QSysInfo>
@@ -532,6 +533,14 @@ void SyncController::done(const SyncReport &report, bool needsPassphrase)
                                  "Settings, Sync.");
     } else {
         m_needsPassphrase = false;
+        // A vault that is its own git repository keeps nothing in the state folder, which would
+        // make every sync look like its first; this says one has been.
+        const QString state = syncStateDir(m_root, m_remote);
+        if (QDir().mkpath(state)) {
+            QFile synced(state + u"/synced"_s);
+            if (synced.open(QIODevice::WriteOnly))
+                synced.write(QDateTime::currentDateTimeUtc().toString(Qt::ISODate).toUtf8());
+        }
         m_lastReport = report;
         m_syncedFrom = m_startedAt;
         m_failedAt = {};
