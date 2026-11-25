@@ -273,7 +273,7 @@ Popup {
                         {
                             "keys": [":MoveTicked"],
                             "label": qsTr(
-                                         "Any command of the palette, by its name in words joined by hyphens")
+                                         "Any command of the palette, by its name in any case, as :moveticked or :move-ticked")
                         }
                     ]
                 }
