@@ -91,14 +91,8 @@ AbstractButton {
                 id: typedDay
 
                 /// The day the words name, when they name one and nothing else.
-                readonly property date found: {
-                    if (text.trim() === "")
-                        return new Date(NaN)
-                    const read = Vault.readQuickTask(text)
-                    return read.due !== "" && read.title === "" ? new Date(read.due.slice(0, 10)
-                                                                           + "T00:00:00") : new Date(
-                                                                      NaN)
-                }
+                readonly property date found: text.trim() === "" ? new Date(NaN) : Vault.dayNamed(
+                                                                       text)
 
                 objectName: "typedDay"
                 width: 7 * Theme.space7

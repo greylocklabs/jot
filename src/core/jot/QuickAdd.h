@@ -33,6 +33,9 @@ struct QuickTask
 /// alone starts on its first day. `p1` to `p4` is its priority. Markers typed as written, such as
 /// `@weekly` or `@due 2026-11-02`, are taken as they say.
 [[nodiscard]] QuickTask readQuickTask(const QString &typed, const QDateTime &now);
+/// The day `words` name and nothing else, as quick add reads it, `2026-11-02` with ` 15:00`
+/// after it for a time; empty when they say more, such as a title, a repeat or a priority.
+[[nodiscard]] QString dueNamedAlone(const QString &words, const QDateTime &now);
 
 /// `text`, a checkbox's words after `- [ ] `, due on `due` and repeating as `repeat`, either
 /// empty to take it away, in Jot's markers, `@weekly @due 2026-11-02`. Its priority and done day

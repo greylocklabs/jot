@@ -288,6 +288,13 @@ void TestDialogs::typesADayIntoTheCalendar()
                       ->findChild<QQuickItem *>(u"typedDay"_s);
     QVERIFY(field);
     QTRY_VERIFY(field->hasActiveFocus());
+    // A repeat is no day to pick.
+    for (const QChar c : u"daily"_s)
+        QTest::keyClick(&window, c.toLatin1());
+    QTest::keyClick(&window, Qt::Key_Return);
+    QCOMPARE(picked.size(), 0);
+    QVERIFY(calendar->property("visible").toBool());
+    field->setProperty("text", QString());
     for (const QChar c : u"the 12th"_s)
         QTest::keyClick(&window, c.toLatin1());
     QTest::keyClick(&window, Qt::Key_Return);

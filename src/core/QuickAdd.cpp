@@ -72,6 +72,13 @@ QRegularExpression words(const QString &pattern)
 
 } // namespace
 
+QString dueNamedAlone(const QString &words, const QDateTime &now)
+{
+    const QuickTask read = readQuickTask(words, now);
+    return read.title.isEmpty() && read.repeat.isEmpty() && read.priority == 0 ? read.due
+                                                                               : QString();
+}
+
 QuickTask readQuickTask(const QString &typed, const QDateTime &now)
 {
     // Markers typed as they are written, such as @weekly or @due 2026-11-02, say it outright.
@@ -147,15 +154,17 @@ QuickTask readQuickTask(const QString &typed, const QDateTime &now)
     // with nothing after but a time.
     const QString atEnd =
         uR"((?=\s*(?:(?:at\s+)?(?:\d{1,2}(?::\d{2})?\s*(?:am|pm)|[01]?\d:[0-5]\d|noon|midday))?\s*$))"_s;
-    static const QRegularExpression ordinal = words(lead + uR"(the\s+(\d{1,2})(?:st|nd|rd|th))"_s);
+    static const QRegularExpression ordinal =
+        words(lead + uR"(the\s+(\d{1,2})(?:st|nd|rd|th))"_s + atEnd);
     static const QRegularExpression bareOrdinal =
         words(lead + uR"((\d{1,2})(?:st|nd|rd|th))"_s + atEnd);
     static const QRegularExpression span = words(uR"(in\s+(\d+)\s*([dwmy]))"_s);
-    static const QRegularExpression bareSpan = words(uR"((\d+)([dwm]))"_s + atEnd);
+    // Not after "every", which says how something repeats rather than when it is due.
+    static const QRegularExpression bareSpan = words(uR"((?<!every )(\d+)([dwm]))"_s + atEnd);
     static const QRegularExpression endOf =
         words(lead + uR"((eow|eom|end\s+of\s+(?:the\s+)?(?:week|month)))"_s);
     static const QRegularExpression bareShortNamed =
-        words(uR"((mon|tues?|wed|thu|thurs?|fri|sat|sun))"_s + atEnd);
+        words(uR"((?<!every )(mon|tues?|wed|thu|thurs?|fri|sat|sun))"_s + atEnd);
     static const QRegularExpression weekend = words(lead + uR"((?:this\s+)?weekend)"_s);
     static const QRegularExpression relative = words(lead + uR"((today|tod|tomorrow|tmrw?))"_s);
     static const QRegularExpression named = words(

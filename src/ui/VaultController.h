@@ -356,6 +356,10 @@ public:
     /// How quick add reads `typed`: `{title, due, when, repeat, priority, line}`, where `when` says
     /// the day and time for people, and `line` is the checkbox it would add.
     Q_INVOKABLE QVariantMap readQuickTask(const QString &typed) const;
+    /// The day `words` name and nothing else, as a local midnight, or an invalid date when they
+    /// say more or none, as the date picker's field reads them. A QDateTime, as QML would take a
+    /// QDate as a midnight in UTC.
+    Q_INVOKABLE QDateTime dayNamed(const QString &words) const;
     /// A checkbox's words, `text`, with the day and repeat they say written as markers, as
     /// quick add does; empty when they say neither.
     Q_INVOKABLE QString scheduledFromWords(const QString &text) const;
