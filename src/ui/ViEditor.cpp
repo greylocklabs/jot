@@ -92,11 +92,18 @@ void ViEditor::keepCursorInView()
     const QRectF view = m_viewport->mapRectToItem(
         m_target, QRectF(0, 0, m_viewport->width(), m_viewport->height()));
     const QRectF at = m_target->property("cursorRectangle").toRectF();
-    if (view.isEmpty() || (at.top() >= view.top() && at.bottom() <= view.bottom()))
+    // The margin's lines inside the view, but at the note's start or end, as vim's scrolloff.
+    // Up to half the view, less a line, so the cursor has room for a whole one between.
+    const qreal margin =
+        std::max(0.0, std::min(m_scrollMargin * at.height(), view.height() / 2 - at.height()));
+    const qreal top = view.top() > 0 ? view.top() + margin : view.top();
+    const qreal bottom =
+        view.bottom() < m_target->height() ? view.bottom() - margin : view.bottom();
+    if (view.isEmpty() || (at.top() >= top && at.bottom() <= bottom))
         return;
-    // The first whole line in view when scrolled down past the cursor, the last when up.
-    const qreal y = at.top() < view.top() ? view.top() + at.height() / 2 + 1
-                                          : view.bottom() - at.height() / 2 - 1;
+    // The first whole line past the margin when scrolled down past the cursor, the last when up:
+    // a line's height in, so the line found starts, or ends, within it.
+    const qreal y = at.top() < top ? top + at.height() + 1 : bottom - at.height() - 1;
     int position = cursor();
     QMetaObject::invokeMethod(m_target, "positionAt", Q_RETURN_ARG(int, position),
                               Q_ARG(qreal, at.x()), Q_ARG(qreal, y));

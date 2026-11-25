@@ -3008,6 +3008,10 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Glide as the note scrolls to follow the cursor</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Keep the line being written in the middle</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3519,6 +3523,18 @@ Press %1 to make one.</source>
     </message>
     <message>
         <source>Wait half a second more</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Lines kept around the cursor</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Keep fewer lines around the cursor</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Keep more lines around the cursor</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

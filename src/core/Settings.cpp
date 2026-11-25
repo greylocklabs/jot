@@ -41,6 +41,8 @@ const QString kOutlineShown = u"editor/outline"_s;
 const QString kColumnsHidden = u"layout/columnsHidden"_s;
 const QString kFocusMode = u"editor/focusMode"_s;
 const QString kTypewriter = u"editor/typewriter"_s;
+const QString kSmoothScroll = u"editor/smoothScroll"_s;
+const QString kViScrollMargin = u"keyboard/viScrollMargin"_s;
 const QString kLineNumbers = u"editor/lineNumbers"_s;
 const QString kNoteFont = u"editor/font"_s;
 const QString kIndent = u"editor/indent"_s;
@@ -125,6 +127,8 @@ Settings::Settings(const QString &path, QObject *parent)
     m_columnsHidden = get(kColumnsHidden, false).toBool();
     m_focusMode = get(kFocusMode, false).toBool();
     m_typewriter = get(kTypewriter, false).toBool();
+    m_smoothScroll = get(kSmoothScroll, true).toBool();
+    m_viScrollMargin = std::clamp(get(kViScrollMargin, 20).toInt(), 0, 99);
     m_lineNumbers = get(kLineNumbers, false).toBool();
     m_noteFont = get(kNoteFont).toString();
     m_sidebarWidth = bounded(get(kSidebarWidth, 0).toInt(), kMinSidebarWidth, kMaxSidebarWidth);
@@ -502,6 +506,25 @@ void Settings::setFocusMode(bool on)
     m_focusMode = on;
     put(kFocusMode, on);
     Q_EMIT focusChanged();
+}
+
+void Settings::setSmoothScroll(bool on)
+{
+    if (m_smoothScroll == on)
+        return;
+    m_smoothScroll = on;
+    put(kSmoothScroll, on);
+    Q_EMIT focusChanged();
+}
+
+void Settings::setViScrollMargin(int lines)
+{
+    lines = std::clamp(lines, 0, 99);
+    if (m_viScrollMargin == lines)
+        return;
+    m_viScrollMargin = lines;
+    put(kViScrollMargin, lines);
+    Q_EMIT keyboardChanged();
 }
 
 void Settings::setTypewriter(bool on)
