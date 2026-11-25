@@ -12,6 +12,7 @@ class TestQuickAdd : public QObject
 private Q_SLOTS:
     void reads_data();
     void reads();
+    void skipsAMonthWithoutTheDay();
     void schedulesACheckboxFromItsWords();
     void setsAndClearsTheDayAndRepeat();
     void keepsWordsAfterARuleWhenRescheduled();
@@ -83,6 +84,31 @@ void TestQuickAdd::reads_data()
         << u"1:1 every other monday"_s << u"1:1 @every 2 weeks on monday @due 2026-11-02"_s;
     QTest::newRow("every weekday")
         << u"stand-up every weekday at 9am"_s << u"stand-up @weekdays @due 2026-10-28 09:00"_s;
+    QTest::newRow("the 12th gone by is next month's")
+        << u"pay rent the 12th"_s << u"pay rent @due 2026-11-12"_s;
+    QTest::newRow("on the 30th is this month's")
+        << u"pay rent on the 30th"_s << u"pay rent @due 2026-10-30"_s;
+    QTest::newRow("an ordinal at the end") << u"pay rent 31st"_s << u"pay rent @due 2026-10-31"_s;
+    QTest::newRow("an ordinal in the words stays")
+        << u"sweep 12th street"_s << u"sweep 12th street"_s;
+    QTest::newRow("a short weekday at the end")
+        << u"call Mara wed"_s << u"call Mara @due 2026-11-04"_s;
+    QTest::newRow("a short weekday and a time")
+        << u"call Mara fri 3pm"_s << u"call Mara @due 2026-10-30 15:00"_s;
+    QTest::newRow("a short weekday in the words stays")
+        << u"sat down with Mara"_s << u"sat down with Mara"_s;
+    QTest::newRow("days, short") << u"follow up 3d"_s << u"follow up @due 2026-10-31"_s;
+    QTest::newRow("weeks, short") << u"review 2w"_s << u"review @due 2026-11-11"_s;
+    QTest::newRow("a month, short") << u"renew 1m"_s << u"renew @due 2026-11-28"_s;
+    QTest::newRow("in, short") << u"follow up in 2w"_s << u"follow up @due 2026-11-11"_s;
+    QTest::newRow("a short span in the words stays")
+        << u"3d print a bracket"_s << u"3d print a bracket"_s;
+    QTest::newRow("end of week is Friday") << u"ship it eow"_s << u"ship it @due 2026-10-30"_s;
+    QTest::newRow("end of the week")
+        << u"ship it by end of the week"_s << u"ship it @due 2026-10-30"_s;
+    QTest::newRow("end of month") << u"invoice eom"_s << u"invoice @due 2026-10-31"_s;
+    QTest::newRow("next year") << u"renew next year"_s << u"renew @due 2027-01-01"_s;
+    QTest::newRow("in a year") << u"renew in a year"_s << u"renew @due 2027-10-28"_s;
 }
 
 void TestQuickAdd::reads()
@@ -91,6 +117,17 @@ void TestQuickAdd::reads()
     QFETCH(QString, line);
     const QuickTask task = readQuickTask(typed, QDateTime(QDate(2026, 10, 28), QTime(10, 0)));
     QCOMPARE(task.line, line);
+}
+
+void TestQuickAdd::skipsAMonthWithoutTheDay()
+{
+    // From November 5, the next 31st is in December; from Friday, the end of the week is today.
+    QCOMPARE(readQuickTask(u"pay the 31st"_s, QDateTime(QDate(2026, 11, 5), QTime(10, 0))).line,
+             u"pay @due 2026-12-31"_s);
+    QCOMPARE(readQuickTask(u"ship eow"_s, QDateTime(QDate(2026, 10, 30), QTime(10, 0))).line,
+             u"ship @due 2026-10-30"_s);
+    QCOMPARE(readQuickTask(u"ship eow"_s, QDateTime(QDate(2026, 10, 31), QTime(10, 0))).line,
+             u"ship @due 2026-11-06"_s);
 }
 
 void TestQuickAdd::schedulesACheckboxFromItsWords()

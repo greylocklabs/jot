@@ -128,6 +128,11 @@ void TestTaskLine::writesDaysSaidInWordsAsDates()
     QCOMPARE(tidied(u"- [ ] Call @due nov 14 3pm @p1"_s),
              u"- [ ] Call @due 2026-11-14 15:00 @p1"_s);
     QCOMPARE(tidied(u"- [ ] Call @due in 3 days"_s), u"- [ ] Call @due 2026-10-31"_s);
+    // Short words that quick add takes only at its end are days after @due wherever it is.
+    QCOMPARE(tidied(u"- [ ] Call @due wed #calls"_s), u"- [ ] Call @due 2026-11-04 #calls"_s);
+    QCOMPARE(tidied(u"- [ ] Call @due the 12th"_s), u"- [ ] Call @due 2026-11-12"_s);
+    QCOMPARE(tidied(u"- [ ] Call @due 2w @p2"_s), u"- [ ] Call @due 2026-11-11 @p2"_s);
+    QCOMPARE(tidied(u"- [ ] Call @due eom"_s), u"- [ ] Call @due 2026-10-31"_s);
     QCOMPARE(tidied(u"- [ ] Pay @done 10/27/26"_s), u"- [x] Pay @done 2026-10-27"_s);
     // Said done, with a day or none, it is ticked; a weekday is the last one gone.
     QCOMPARE(tidied(u"- [ ] Pay @done yesterday"_s), u"- [x] Pay @done 2026-10-27"_s);

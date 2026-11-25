@@ -7,6 +7,12 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ### Added
 
+- More ways to say a day, in quick add and after `@due`: `the 12th` for the next 12th, `wed`
+  alone, `3d`, `2w` and `1m`, `eow` or `end of week` for Friday, `eom` or `end of month`, `next
+year` and `in a year`. In quick add, a short weekday or span counts only at the end, so `sat
+down` or `3d print` stay as written.
+- The calendar picker takes a day in words too: it goes to the day as it is typed, and Return
+  picks it.
 - In vi's normal mode, `/` finds in the note, as in vim: Return goes back to the note on the
   match, and `n` and `N` go to the next and previous one.
 

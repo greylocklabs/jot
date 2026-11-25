@@ -261,6 +261,14 @@
 <context>
     <name>DatePicker</name>
     <message>
+        <source>A day: fri, the 12th, 2w</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>A day in words</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Previous month</source>
         <translation type="unfinished"></translation>
     </message>
