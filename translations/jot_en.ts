@@ -848,6 +848,30 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Normal</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Text objects</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Visual</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Commands</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Read</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Leader</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Commands, after :</source>
         <translation type="unfinished"></translation>
     </message>
@@ -880,7 +904,11 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Any command of the palette, by its name in any case, as :moveticked or :move-ticked</source>
+        <source>Vi&apos;s keys and commands</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The palette&apos;s commands, by name in any case</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

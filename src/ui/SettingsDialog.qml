@@ -157,43 +157,14 @@ Popup {
                     }
                 ]
 
-                AbstractButton {
-                    id: tabButton
-
+                SideTab {
                     required property var modelData
-                    readonly property bool selected: root.tab === modelData.id
 
                     objectName: "settingsTab"
-                    // Its label's width, which sizes the list; a bare AbstractButton has none
-                    // of its own on older Qt.
-                    implicitWidth: implicitContentWidth + leftPadding + rightPadding
                     width: tabs.width
-                    height: Theme.listRowHeight + Theme.space2
-                    hoverEnabled: true
-                    focusPolicy: Qt.StrongFocus
-                    Accessible.name: modelData.label
-                    Accessible.role: Accessible.PageTab
+                    label: modelData.label
+                    selected: root.tab === modelData.id
                     onClicked: root.tab = modelData.id
-
-                    background: Rectangle {
-                        radius: Theme.radiusMd
-                        color: tabButton.selected ? Theme.tint(Theme.accent, 0.18) :
-                                                    tabButton.hovered ? Theme.surfaceAlt :
-                                                                        "transparent"
-                        // Ringed while the keyboard is on it, as the pill buttons are.
-                        border.width: tabButton.visualFocus ? 2 : 0
-                        border.color: Theme.text
-                    }
-                    contentItem: Text {
-                        leftPadding: Theme.space3
-                        rightPadding: Theme.space6
-                        verticalAlignment: Text.AlignVCenter
-                        text: tabButton.modelData.label
-                        color: tabButton.selected ? Theme.text : Theme.textMuted
-                        font.family: Theme.fontFamily
-                        font.pixelSize: Theme.textMd
-                        font.weight: tabButton.selected ? Theme.weightBold : Theme.weightStrong
-                    }
                 }
             }
         }

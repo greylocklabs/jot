@@ -7,6 +7,9 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ### Changed
 
+- Keyboard shortcuts has its tabs down the left, as Settings does, and vi mode's keys in tabs of
+  their own: normal mode, text objects, visual mode, commands, Read mode and the leader.
+  Commands lists every command of the palette that vi's `:` runs.
 - Vi's `:` names the palette's commands as vim's plugins do, as `:MoveTicked`, and takes them
   in any case, with or without hyphens, so `:moveticked` and `:move-ticked` work too. Return
   runs the one command offered for what was typed, unless what was typed is a command itself.

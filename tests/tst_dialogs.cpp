@@ -66,7 +66,7 @@ private Q_SLOTS:
     void offersToRemoveATargetOnlyWhenThereIsOne();
     void holdingBackListsTheNotesBefore();
     void changesAShortcutByPressingIt();
-    void keyHelpWrapsRatherThanCuts();
+    void keyHelpWrapsRatherThanCutsAndListsEveryCommand();
     void aChosenShortcutWorksInTheWindow();
     void givesANoteATypeFromTheWindow();
     void runsNoteActionsFromVisCommandLine();
@@ -145,13 +145,15 @@ void TestDialogs::opensCleanly()
     auto *popup = lazy->property("popup").value<QObject *>();
     QVERIFY(popup->property("height").toReal() > 100);
     QVERIFY(popup->property("width").toReal() > 100);
-    // Settings' tabs are as wide as their longest label.
+    // Tabs down the left, as Settings and Keyboard shortcuts have, are as wide as their longest
+    // label.
     if (popup->property("tabsWidth").isValid()) {
         QVERIFY(popup->property("tabsWidth").toReal() > 40);
         // And each takes the keyboard, ringed while it has it.
         const std::function<QQuickItem *(QQuickItem *)> tab = [&tab](QQuickItem *at) {
             for (QQuickItem *child : at->childItems()) {
-                if (child->objectName() == u"settingsTab"_s)
+                if (child->objectName() == u"settingsTab"_s ||
+                    child->objectName().startsWith(u"keyHelpTab_"_s))
                     return child;
                 if (QQuickItem *found = tab(child))
                     return found;
@@ -656,7 +658,7 @@ void TestDialogs::holdingBackListsTheNotesBefore()
     QVERIFY(m_vault->canGoForward());
 }
 
-void TestDialogs::keyHelpWrapsRatherThanCuts()
+void TestDialogs::keyHelpWrapsRatherThanCutsAndListsEveryCommand()
 {
     // Large text, as a desktop set to it gives, makes long descriptions longer than their room.
     ThemeController::instance()->setDesktopTextScale(1.5);
@@ -686,7 +688,8 @@ void TestDialogs::keyHelpWrapsRatherThanCuts()
                 texts(child, found);
             }
         };
-    for (const QString &tab : {u"general"_s, u"editor"_s, u"vi"_s}) {
+    for (const QString &tab : {u"general"_s, u"editor"_s, u"vi"_s, u"viObjects"_s, u"viVisual"_s,
+                               u"viCommands"_s, u"viRead"_s, u"viLeader"_s}) {
         help->setProperty("tab", tab);
         QList<QQuickItem *> found;
         QTRY_VERIFY((found.clear(), texts(content, found), found.size() > 10));
@@ -694,6 +697,32 @@ void TestDialogs::keyHelpWrapsRatherThanCuts()
             QVERIFY2(!item->property("truncated").toBool(),
                      qPrintable(tab + u": "_s + item->property("text").toString()));
     }
+
+    // Commands lists every one of the palette's that vi's : runs, by the name it takes.
+    help->setProperty("tab", u"viCommands"_s);
+    const std::function<QQuickItem *(QQuickItem *, const QString &)> named =
+        [&named](QQuickItem *at, const QString &name) -> QQuickItem * {
+        for (QQuickItem *child : at->childItems()) {
+            if (child->objectName() == name)
+                return child;
+            if (QQuickItem *found = named(child, name))
+                return found;
+        }
+        return nullptr;
+    };
+    QQuickItem *palette = named(content, u"viPaletteCommands"_s);
+    QVERIFY(palette);
+    QTRY_VERIFY(palette->isVisible());
+    const QVariantList rows = palette->property("rows").toList();
+    QStringList listed;
+    for (const QVariant &row : rows)
+        listed << row.toMap().value(u"keys"_s).toList().first().toString();
+    for (const QVariant &each : KeyRouter::viCommands()) {
+        const QString name = each.toMap().value(u"text"_s).toString();
+        if (name != u"Help"_s)
+            QVERIFY2(listed.contains(u":"_s + name), qPrintable(name));
+    }
+    QVERIFY(listed.contains(u":MoveTicked"_s));
 }
 
 void TestDialogs::changesAShortcutByPressingIt()
@@ -725,6 +754,10 @@ void TestDialogs::changesAShortcutByPressingIt()
     const auto click = [&](const QString &name) {
         QQuickItem *item = nullptr;
         QTRY_VERIFY(item = find(content, name));
+        // Where it settles once wrapped descriptions above it have their heights.
+        QPointF last(-1, -1);
+        QTRY_VERIFY(std::exchange(last, item->mapToScene(QPointF())) ==
+                    item->mapToScene(QPointF()));
         QTest::mouseClick(&window, Qt::LeftButton, {},
                           item->mapToScene({item->width() / 2, item->height() / 2}).toPoint());
     };

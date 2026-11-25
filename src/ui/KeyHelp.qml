@@ -12,7 +12,8 @@ Popup {
     objectName: "keyHelp"
     /// KeyRouter's actions: {id, label, scope, keys, vi, leader, editable, custom} for each.
     required property var actions
-    /// "general", "editor" or "vi".
+    /// "general" or "editor", or one of vi mode's: "vi" for normal mode, "viObjects",
+    /// "viVisual", "viCommands", "viRead" or "viLeader".
     property string tab: "general"
     /// The action whose new shortcut is being pressed, or "".
     property string recording: ""
@@ -68,6 +69,20 @@ Popup {
         message = ""
     }
 
+    /// The palette's commands as vi's `:` runs them, but for those vi has of its own.
+    function paletteCommands() {
+        // A plain loop: qmlformat cannot lay out an arrow function giving an object.
+        const found = []
+        for (const each of router.viCommands()) {
+            if (!["help", "w", "q", "wq", "noh"].includes(each.text.toLowerCase()))
+                found.push({
+                               "keys": [":" + each.text],
+                               "label": each.detail
+                           })
+        }
+        return found
+    }
+
     /// The actions of `scope` that have keys of `kind` ("keys", "vi" or "leader"), as
     /// {id, keys, label, editable, custom, defaultKeys} rows. With `kind` "keys", those that
     /// can be given keys are listed too.
@@ -88,12 +103,22 @@ Popup {
         return found
     }
 
+    /// The widest tab's label, which the tabs are as wide as.
+    readonly property real tabsWidth: {
+        let widest = 0
+        for (const tabs of [generalTabs, viTabs]) {
+            for (let i = 0; i < tabs.count; ++i)
+                widest = Math.max(widest, tabs.itemAt(i) ? tabs.itemAt(i).implicitWidth : 0)
+        }
+        return widest
+    }
+
     anchors.centerIn: Overlay.overlay
-    width: 620
+    width: Math.min(Overlay.overlay ? Overlay.overlay.width - 2 * Theme.space6 : 820, 820)
     // Steady across tabs. The overlay, not the parent: in a LazyPopup the parent is a
     // loader with no size.
     height: Math.min(640, (Overlay.overlay ? Overlay.overlay.height : 800) - 2 * Theme.space6)
-    padding: Theme.space6
+    padding: 0
     modal: true
     focus: true
     // Escape stops a recording rather than closing.
@@ -121,9 +146,7 @@ Popup {
         id: router
     }
 
-    contentItem: Column {
-        spacing: Theme.space4
-
+    contentItem: Item {
         // Takes the keys while a shortcut is recorded, before the window's shortcuts do.
         Item {
             id: recorder
@@ -139,7 +162,11 @@ Popup {
         }
 
         Item {
-            width: parent.width
+            id: header
+
+            x: Theme.space6
+            y: Theme.space6
+            width: parent.width - 2 * Theme.space6
             height: title.implicitHeight
 
             Text {
@@ -159,10 +186,22 @@ Popup {
             }
         }
 
-        Row {
+        // The tabs down the left, as Settings has them, vi mode's under a heading of their own.
+        Column {
+            id: tabs
+
+            anchors {
+                left: parent.left
+                leftMargin: Theme.space6 - Theme.space3
+                top: header.bottom
+                topMargin: Theme.space6
+            }
+            width: root.tabsWidth
             spacing: Theme.space2
 
             Repeater {
+                id: generalTabs
+
                 model: [
                     {
                         "id": "general",
@@ -171,30 +210,95 @@ Popup {
                     {
                         "id": "editor",
                         "label": qsTr("Editor")
-                    },
-                    {
-                        "id": "vi",
-                        "label": qsTr("Vi mode")
                     }
                 ]
 
-                PillButton {
-                    id: tabButton
+                SideTab {
                     required property var modelData
-                    label: tabButton.modelData.label
-                    selected: root.tab === tabButton.modelData.id
-                    onClicked: root.tab = tabButton.modelData.id
+
+                    objectName: "keyHelpTab_" + modelData.id
+                    width: tabs.width
+                    label: modelData.label
+                    selected: root.tab === modelData.id
+                    onClicked: root.tab = modelData.id
+                }
+            }
+            Text {
+                leftPadding: Theme.space3
+                topPadding: Theme.space3
+                text: qsTr("Vi mode")
+                color: Theme.textFaint
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.textSm
+                font.weight: Theme.weightHeavy
+            }
+            Repeater {
+                id: viTabs
+
+                model: [
+                    {
+                        "id": "vi",
+                        "label": qsTr("Normal")
+                    },
+                    {
+                        "id": "viObjects",
+                        "label": qsTr("Text objects")
+                    },
+                    {
+                        "id": "viVisual",
+                        "label": qsTr("Visual")
+                    },
+                    {
+                        "id": "viCommands",
+                        "label": qsTr("Commands")
+                    },
+                    {
+                        "id": "viRead",
+                        "label": qsTr("Read")
+                    },
+                    {
+                        "id": "viLeader",
+                        "label": qsTr("Leader")
+                    }
+                ]
+
+                SideTab {
+                    required property var modelData
+
+                    objectName: "keyHelpTab_" + modelData.id
+                    width: tabs.width
+                    label: modelData.label
+                    selected: root.tab === modelData.id
+                    onClicked: root.tab = modelData.id
                 }
             }
         }
 
         Flickable {
-            width: parent.width
-            height: root.availableHeight - y
+            id: pane
+
+            anchors {
+                left: tabs.right
+                leftMargin: Theme.space6
+                right: parent.right
+                rightMargin: Theme.space6
+                top: header.bottom
+                topMargin: Theme.space6
+                bottom: parent.bottom
+                bottomMargin: Theme.space6
+            }
             contentHeight: content.implicitHeight
             clip: true
             boundsBehavior: Flickable.StopAtBounds
             ScrollBar.vertical: ScrollBar {}
+
+            // Each tab opens at its top.
+            Connections {
+                target: root
+                function onTabChanged() {
+                    pane.contentY = 0
+                }
+            }
 
             Column {
                 id: content
@@ -203,7 +307,7 @@ Popup {
 
                 Text {
                     objectName: "keyMessage"
-                    visible: root.tab !== "vi"
+                    visible: !root.tab.startsWith("vi")
                     width: parent.width
                     wrapMode: Text.Wrap
                     text: root.message !== "" ? root.message : root.recording !== "" ? qsTr(
@@ -238,7 +342,7 @@ Popup {
                 }
                 Table {
                     objectName: "viCommands"
-                    visible: root.tab === "vi"
+                    visible: root.tab === "viCommands"
                     title: Settings.leaderKey === ":" ? qsTr("Commands, after Space") : qsTr(
                                                             "Commands, after :")
                     rows: [
@@ -271,11 +375,17 @@ Popup {
                             "label": qsTr("Clear the find highlights")
                         },
                         {
-                            "keys": [":MoveTicked"],
-                            "label": qsTr(
-                                         "Any command of the palette, by its name in any case, as :moveticked or :move-ticked")
+                            "keys": [":help"],
+                            "label": qsTr("Vi's keys and commands")
                         }
                     ]
+                }
+                // Every command the palette has, as the command line offers it.
+                Table {
+                    objectName: "viPaletteCommands"
+                    visible: root.tab === "viCommands"
+                    title: qsTr("The palette's commands, by name in any case")
+                    rows: root.paletteCommands()
                 }
                 Table {
                     visible: root.tab === "vi"
@@ -289,7 +399,7 @@ Popup {
                 }
                 Table {
                     objectName: "viTextObjects"
-                    visible: root.tab === "vi"
+                    visible: root.tab === "viObjects"
                     title: qsTr("Text objects, after d, c, y or v")
                     rows: [
                         {
@@ -314,7 +424,7 @@ Popup {
                     ]
                 }
                 Table {
-                    visible: root.tab === "vi"
+                    visible: root.tab === "viVisual"
                     title: qsTr("In the note, visual mode")
                     rows: root.rows("visual", "vi").concat([
                                                                {
@@ -325,12 +435,12 @@ Popup {
                                                            ])
                 }
                 Table {
-                    visible: root.tab === "vi"
+                    visible: root.tab === "viRead"
                     title: qsTr("In Read mode")
                     rows: root.rows("read", "vi")
                 }
                 Table {
-                    visible: root.tab === "vi"
+                    visible: root.tab === "viLeader"
                     title: qsTr("After the leader (%1)").arg(Settings.leaderKey === " " ? qsTr(
                                                                                               "Space") :
                                                                                           Settings.leaderKey)
