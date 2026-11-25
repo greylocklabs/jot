@@ -76,6 +76,7 @@ private Q_SLOTS:
     void goesBackToWhereTheCursorWas();
     void typingIsDrawnAndSaved();
     void findsAndReplacesInTheNote();
+    void findScrollsToEachMatch();
     void typingAfterAMoveIsSaved();
     void typingKeepsWindowsLineEndings();
     void anOutsideEditKeepsTheCursorWhereItWas();
@@ -1088,6 +1089,41 @@ void TestNoteEditor::readingIndentsQuotesAStepWithABar()
     QTRY_VERIFY(doc->toPlainText().contains(u"plain code"_s));
     QTRY_COMPARE(left(u"quoted code"_s) - left(u"plain code"_s), step);
     m_settings->setReadMode(false);
+}
+
+void TestNoteEditor::findScrollsToEachMatch()
+{
+    QString text = u"A needle at the top.\n\n"_s;
+    for (int i = 0; i < 120; ++i)
+        text += u"Hay, line %1.\n\n"_s.arg(i);
+    text += u"A needle at the bottom.\n"_s;
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Haystack.md"_s, text, &error));
+    m_vault->setCurrent(u"Haystack.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    QTRY_COMPARE(body->property("text").toString(), text);
+    QQuickItem *scroll = find(u"scroll"_s);
+    scroll->setProperty("contentY", 0);
+    QMetaObject::invokeMethod(m_editor.get(), "find", Q_ARG(QVariant, false));
+    QQuickItem *field = find(u"findField"_s);
+    QTRY_VERIFY(field->hasActiveFocus());
+    for (const char c : "needle")
+        if (c != 0)
+            QTest::keyClick(m_window.get(), c);
+    QQuickItem *bar = find(u"findBar"_s);
+    QTRY_COMPARE(bar->property("starts").toList().size(), 2);
+    // The next match, far below, is brought into view though the find field has the keys.
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    QCOMPARE(bar->property("current").toInt(), 1);
+    const auto shown = [&] {
+        const QRectF at = body->property("cursorRectangle").toRectF();
+        const qreal y = body->mapToItem(scroll, at.topLeft()).y();
+        return y >= 0 && y + at.height() <= scroll->height();
+    };
+    QTRY_VERIFY(shown());
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    QTRY_VERIFY(shown());
+    QTest::keyClick(m_window.get(), Qt::Key_Escape);
 }
 
 void TestNoteEditor::readingFindsSelectsAndCopies()
