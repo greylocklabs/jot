@@ -808,10 +808,6 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Any command of the palette, by its name in words joined by hyphens</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Out of the note</source>
         <translation type="unfinished"></translation>
     </message>
@@ -881,6 +877,10 @@
     </message>
     <message>
         <source>Clear the find highlights</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Any command of the palette, by its name in any case, as :moveticked or :move-ticked</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

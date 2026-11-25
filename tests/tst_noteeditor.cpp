@@ -3738,6 +3738,9 @@ void TestNoteEditor::runsViCommands()
     QCOMPARE(triggered.takeFirst().first().toString(), u"save"_s);
     run(u"Untick-All"_s);
     QCOMPARE(triggered.takeFirst().first().toString(), u"untickAll"_s);
+    // Vi's own help, whatever the case, not the palette's of the same name.
+    run(u"Help"_s);
+    QCOMPARE(triggered.takeFirst().first().toString(), u"viHelp"_s);
 }
 
 void TestNoteEditor::completesFrontMatter()

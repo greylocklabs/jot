@@ -719,6 +719,8 @@ QString expanded(const QString &after, const QRegularExpressionMatch &match)
 QString ViEditor::runCommand(const QString &command)
 {
     const QString typed = command.trimmed();
+    // Vi's own commands come before the palette's, in any case as those are.
+    const QString own = typed.toLower();
     QTextDocument *text = document();
     if (typed.isEmpty() || !text)
         return {};
@@ -732,26 +734,26 @@ QString ViEditor::runCommand(const QString &command)
     const int line = typed.toInt(&number);
     if (number)
         return toLine(line);
-    if (typed == u"$")
+    if (own == u"$")
         return toLine(text->blockCount());
     const auto trigger = [this](const QString &id) {
         if (m_router)
             Q_EMIT m_router->triggered(id);
     };
-    if (typed == u"w") {
+    if (own == u"w") {
         trigger(u"save"_s);
         return {};
     }
-    if (typed == u"q") {
+    if (own == u"q") {
         trigger(u"closeTab"_s);
         return {};
     }
-    if (typed == u"wq" || typed == u"x") {
+    if (own == u"wq" || own == u"x") {
         trigger(u"save"_s);
         trigger(u"closeTab"_s);
         return {};
     }
-    if (typed == u"h" || typed == u"help") {
+    if (own == u"h" || own == u"help") {
         trigger(u"viHelp"_s);
         return {};
     }
@@ -760,7 +762,7 @@ QString ViEditor::runCommand(const QString &command)
         trigger(id);
         return {};
     }
-    if (typed == u"noh" || typed == u"nohlsearch") {
+    if (own == u"noh" || own == u"nohlsearch") {
         endSteps();
         Q_EMIT highlightsCleared();
         return {};
