@@ -455,12 +455,14 @@ QString mathForReading(QStringView body,
 {
     static const QRegularExpression fence(uR"(^\s{0,3}(```+|~~~+))"_s);
     // The TeX is the picture's words, which Qt needs to place it at all, and a screen reader
-    // reads.
+    // reads. Only plain ones: Qt draws the picture again for each piece its Markdown splits the
+    // words into, as it does at a backslash or an emphasis mark.
     const auto picture = [&](const QString &tex, bool display) {
         const QString url = mathUrl(tex, display);
-        QString words = tex.simplified();
-        words.replace(u'\\', u"\\\\"_s).replace(u'[', u"\\["_s).replace(u']', u"\\]"_s);
-        return url.isEmpty() ? QString() : u"![%1](<%2>)"_s.arg(words, url);
+        QString words;
+        for (const QChar c : tex)
+            words += c.isLetterOrNumber() || u" +-=^().,;:'/|$%"_s.contains(c) ? c : u' ';
+        return url.isEmpty() ? QString() : u"![%1](<%2>)"_s.arg(words.simplified(), url);
     };
     const QStringList lines = body.toString().split(u'\n');
     QStringList out;

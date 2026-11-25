@@ -113,6 +113,7 @@ private Q_SLOTS:
     void showsWebVideosAsCardsToPlay();
     void drawsMath();
     void readsMathAtHalfItsDrawnSize();
+    void readsEachMathOnce();
     void switchingAwayFromAPictureLeavesNoStalePlace();
     void formatsAndUndoesInOneStep();
     void formatsFromTheKeyboard();
@@ -2562,6 +2563,31 @@ void TestNoteEditor::readsMathAtHalfItsDrawnSize()
     QCOMPARE(widths().first(), 40);
     QVERIFY(widths().last() > 0 && widths().last() < 20);
     m_settings->setReadMode(false);
+}
+
+void TestNoteEditor::readsEachMathOnce()
+{
+    // TeX with a backslash, or marks Markdown reads as emphasis, is drawn once, not once for
+    // each piece of its words.
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Prices.md"_s,
+                            u"It cost $\\$3,000$, or $\\pi r^2$, or $a_1 * b_2$.\n"_s, &error));
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Prices.md"_s), 3000);
+    m_vault->setCurrent(u"Prices.md"_s);
+    m_settings->setReadMode(true);
+    const auto off = qScopeGuard([this] { m_settings->setReadMode(false); });
+    QQuickItem *reader = find(u"reader"_s);
+    QTRY_VERIFY(reader->isVisible());
+    auto *doc = reader->property("textDocument").value<QQuickTextDocument *>()->textDocument();
+    const auto pictures = [doc] {
+        int found = 0;
+        for (QTextBlock block = doc->begin(); block.isValid(); block = block.next()) {
+            for (auto it = block.begin(); !it.atEnd(); ++it)
+                found += it.fragment().charFormat().isImageFormat() ? it.fragment().length() : 0;
+        }
+        return found;
+    };
+    QTRY_COMPARE(pictures(), 3);
 }
 
 void TestNoteEditor::drawsDiagramsInPlaceOfTheirText()
