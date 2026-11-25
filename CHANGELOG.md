@@ -35,6 +35,8 @@ down` or `3d print` stay as written.
 
 ### Fixed
 
+- In Read, math with a backslash in it, such as `$\$3,000$` or `$\pi r^2$`, is drawn once rather
+  than twice.
 - A vault that is its own git repository sends its types when it syncs. Every sync took itself
   for the first, so the starter types were set aside each time and never committed.
 - In Read, a list item's fold arrow is beside the item again, rather than a line or two above,
