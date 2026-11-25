@@ -29,6 +29,9 @@ class ViEditor : public QObject
     /// The Flickable the TextEdit scrolls in. As in vi, scrolling it keeps the cursor on a line in
     /// view, so a key after a scroll acts where the note is shown.
     Q_PROPERTY(QQuickItem *viewport READ viewport WRITE setViewport NOTIFY viewportChanged)
+    /// The lines kept between the cursor and the view's edges, as vim's scrolloff, up to half
+    /// the view; where a scroll leaves the cursor.
+    Q_PROPERTY(int scrollMargin MEMBER m_scrollMargin NOTIFY scrollMarginChanged)
     /// Off, every key goes to the TextEdit as usual.
     Q_PROPERTY(bool enabled READ enabled WRITE setEnabled NOTIFY enabledChanged)
     /// While true, as when notes are offered for a wikilink, insert mode leaves every key,
@@ -80,6 +83,7 @@ Q_SIGNALS:
     void commandLineRequested();
     /// za, zM or zR: fold `id` as KeyRouter names it, which the view does.
     void foldRequested(const QString &id);
+    void scrollMarginChanged();
     /// `/`, `n` or `N`: find in the note, or go to the next or previous match.
     void findRequested(const QString &id);
     /// >>, <<, > or <: the lines from `start` to `end` should take an indent, or lose one with
@@ -145,6 +149,7 @@ private:
 
     QPointer<QQuickItem> m_target;
     QPointer<QQuickItem> m_viewport;
+    int m_scrollMargin = 0;
     bool m_holding = false;
     int m_floor = 0;
     KeyRouter *m_router = nullptr;

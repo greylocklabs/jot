@@ -68,6 +68,8 @@ class Settings : public QObject
     Q_PROPERTY(bool focusMode READ focusMode WRITE setFocusMode NOTIFY focusChanged)
     /// The line being written kept in the middle of the window.
     Q_PROPERTY(bool typewriter READ typewriter WRITE setTypewriter NOTIFY focusChanged)
+    /// Whether the note glides, rather than jumps, as it scrolls to follow the cursor.
+    Q_PROPERTY(bool smoothScroll READ smoothScroll WRITE setSmoothScroll NOTIFY focusChanged)
     /// Line numbers beside a note while it is edited; data files always have them.
     Q_PROPERTY(bool lineNumbers READ lineNumbers WRITE setLineNumbers NOTIFY lineNumbersChanged)
     /// Shows what is behind a note for debugging: its file's path in the vault, to copy.
@@ -80,6 +82,10 @@ class Settings : public QObject
     Q_PROPERTY(QString leaderKey READ leaderKey WRITE setLeaderKey NOTIFY keyboardChanged)
     /// Milliseconds the leader waits for the next key; 0 waits until Escape.
     Q_PROPERTY(int leaderTimeout READ leaderTimeout WRITE setLeaderTimeout NOTIFY keyboardChanged)
+    /// In vi mode, the lines kept between the cursor and the top and bottom of the view, as vim's
+    /// scrolloff; the editor keeps no more than half the view.
+    Q_PROPERTY(
+        int viScrollMargin READ viScrollMargin WRITE setViScrollMargin NOTIFY keyboardChanged)
     /// Closing the window leaves Jot running in the tray, so reminders still come.
     Q_PROPERTY(bool keepRunning READ keepRunning WRITE setKeepRunning NOTIFY remindersChanged)
     /// Notify when a to-do comes due.
@@ -175,6 +181,8 @@ public:
     void setFocusMode(bool on);
     [[nodiscard]] bool typewriter() const { return m_typewriter; }
     void setTypewriter(bool on);
+    [[nodiscard]] bool smoothScroll() const { return m_smoothScroll; }
+    void setSmoothScroll(bool on);
     [[nodiscard]] bool lineNumbers() const { return m_lineNumbers; }
     void setLineNumbers(bool on);
     [[nodiscard]] bool developerMode() const { return m_developerMode; }
@@ -187,6 +195,8 @@ public:
     /// One of kLeaderKeys; anything else is ignored.
     void setLeaderKey(const QString &key);
     [[nodiscard]] int leaderTimeout() const { return m_leaderTimeout; }
+    [[nodiscard]] int viScrollMargin() const { return m_viScrollMargin; }
+    void setViScrollMargin(int lines);
     void setLeaderTimeout(int ms);
     [[nodiscard]] int trashDays() const { return m_trashDays; }
     void setTrashDays(int days);
@@ -301,6 +311,8 @@ private:
     bool m_columnsHidden = false;
     bool m_focusMode = false;
     bool m_typewriter = false;
+    bool m_smoothScroll = true;
+    int m_viScrollMargin = 20;
     bool m_developerMode = false;
     bool m_verboseLogging = false;
     bool m_viMode = false;

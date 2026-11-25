@@ -77,6 +77,7 @@ private Q_SLOTS:
     void typingIsDrawnAndSaved();
     void findsAndReplacesInTheNote();
     void findScrollsToEachMatch();
+    void viGlidesAndKeepsLinesAroundTheCursor();
     void viFindsWithSlash();
     void typingAfterAMoveIsSaved();
     void typingKeepsWindowsLineEndings();
@@ -196,6 +197,8 @@ void TestNoteEditor::init()
     QVERIFY(QDir().mkpath(m_root + u"/.jot"_s));
     QVERIFY(QFile::copy(sample + u"/.jot/vault.yaml"_s, m_root + u"/.jot/vault.yaml"_s));
     m_settings = std::make_unique<Settings>(m_dir->filePath(u"settings.ini"_s));
+    // Where the view goes is checked at once; gliding there has a test of its own.
+    m_settings->setSmoothScroll(false);
     // The editor reads the Settings singleton, which would otherwise be the user's own file.
     SettingsForeign::s_instance = m_settings.get();
     m_vault = std::make_unique<VaultController>(*m_settings);
@@ -1196,6 +1199,49 @@ void TestNoteEditor::viFindsWithSlash()
     QTest::keyClick(m_window.get(), Qt::Key_Return);
     QCOMPARE(bar->property("current").toInt(), (at + 1) % 2);
     QVERIFY(field->hasActiveFocus());
+}
+
+void TestNoteEditor::viGlidesAndKeepsLinesAroundTheCursor()
+{
+    m_settings->setViMode(true);
+    m_settings->setViScrollMargin(5);
+    const auto restore = qScopeGuard([this] {
+        m_settings->setViMode(false);
+        m_settings->setViScrollMargin(20);
+        m_settings->setSmoothScroll(false);
+    });
+    QString text;
+    for (int i = 0; i < 200; ++i)
+        text += u"Line %1.\n"_s.arg(i);
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Lines.md"_s, text, &error));
+    m_vault->setCurrent(u"Lines.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    QTRY_COMPARE(body->property("text").toString(), text);
+    QQuickItem *scroll = find(u"scroll"_s);
+    body->forceActiveFocus();
+    body->setProperty("cursorPosition", 0);
+    auto *vi = body->findChild<QObject *>(u"vi"_s);
+    QTRY_COMPARE(vi->property("mode").toString(), u"normal"_s);
+    const auto below = [&] {
+        const QRectF at = body->property("cursorRectangle").toRectF();
+        return scroll->height() - (body->mapToItem(scroll, at.topLeft()).y() + at.height());
+    };
+    const qreal line = body->property("cursorRectangle").toRectF().height();
+
+    // Going down with j, the view moves before the cursor reaches its foot, keeping five lines.
+    for (int i = 0; i < 60; ++i)
+        QTest::keyClick(m_window.get(), Qt::Key_J);
+    QTRY_VERIFY(scroll->property("contentY").toReal() > 0);
+    QTRY_VERIFY2(below() >= 5 * line - 2, qPrintable(QString::number(below() / line)));
+
+    // Gliding, the view is on its way to the line rather than there at once.
+    m_settings->setSmoothScroll(true);
+    const qreal from = scroll->property("contentY").toReal();
+    QTest::keyClick(m_window.get(), 'G');
+    const qreal soon = scroll->property("contentY").toReal();
+    QTRY_VERIFY(scroll->property("contentY").toReal() > from + 1000);
+    QVERIFY(soon < scroll->property("contentY").toReal());
 }
 
 void TestNoteEditor::readingFindsSelectsAndCopies()

@@ -7,6 +7,11 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ### Added
 
+- The note glides, rather than jumps, as it scrolls to follow the cursor, and as vi's keys scroll
+  Read; Settings, Writing can turn it off.
+- In vi mode, lines are kept between the cursor and the top and bottom of the view, as vim's
+  `scrolloff` does, so `j` and `k` scroll before the cursor reaches the edge, and a scroll puts
+  the cursor that far in. Settings, Keyboard sets how many, 20 at first, at most half the view.
 - More ways to say a day, in quick add and after `@due`: `the 12th` for the next 12th, `wed`
   alone, `3d`, `2w` and `1m`, `eow` or `end of week` for Friday, `eom` or `end of month`, `next
 year` and `in a year`. In quick add, a short weekday or span counts only at the end, so `sat

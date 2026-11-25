@@ -821,6 +821,13 @@ Popup {
                         onToggled: Settings.focusMode = checked
                     }
                     Toggle {
+                        objectName: "smoothScroll"
+                        width: parent.width
+                        text: qsTr("Glide as the note scrolls to follow the cursor")
+                        checked: Settings.smoothScroll
+                        onToggled: Settings.smoothScroll = checked
+                    }
+                    Toggle {
                         objectName: "typewriter"
                         width: parent.width
                         text: qsTr("Keep the line being written in the middle")
@@ -2019,6 +2026,59 @@ Popup {
                             glyph: "plus"
                             Accessible.name: qsTr("Wait half a second more")
                             onClicked: Settings.leaderTimeout += 500
+                        }
+                    }
+                    // Lines kept between the cursor and the edges of the view, as vim's scrolloff.
+                    Row {
+                        enabled: Settings.viMode
+                        opacity: enabled ? 1 : Theme.fadedOpacity
+                        spacing: Theme.space2
+
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: qsTr("Lines kept around the cursor")
+                            color: Theme.textFaint
+                            font.family: Theme.fontFamily
+                            font.pixelSize: Theme.textSm
+                            font.weight: Theme.weightHeavy
+                        }
+                        StickerButton {
+                            objectName: "viScrollMarginLess"
+                            anchors.verticalCenter: parent.verticalCenter
+                            glyph: "minimize"
+                            Accessible.name: qsTr("Keep fewer lines around the cursor")
+                            enabled: Settings.viScrollMargin > 0
+                            onClicked: Settings.viScrollMargin = Math.max(0,
+                                                                          Settings.viScrollMargin
+                                                                          - 1)
+                        }
+                        Text {
+                            objectName: "viScrollMargin"
+                            anchors.verticalCenter: parent.verticalCenter
+                            // As wide as two digits, so the buttons beside it stay put.
+                            width: Math.max(implicitWidth, twoDigits.advanceWidth)
+                            horizontalAlignment: Text.AlignHCenter
+
+                            TextMetrics {
+                                id: twoDigits
+                                text: "88"
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.textMd
+                                font.weight: Theme.weightBold
+                            }
+
+                            text: Settings.viScrollMargin
+                            color: Theme.text
+                            font.family: Theme.fontFamily
+                            font.pixelSize: Theme.textMd
+                            font.weight: Theme.weightBold
+                        }
+                        StickerButton {
+                            objectName: "viScrollMarginMore"
+                            anchors.verticalCenter: parent.verticalCenter
+                            glyph: "plus"
+                            Accessible.name: qsTr("Keep more lines around the cursor")
+                            onClicked: Settings.viScrollMargin += 1
                         }
                     }
                 }

@@ -104,17 +104,16 @@ Rectangle {
         const step = reader.font.pixelSize * 3
         switch (found.id) {
         case "readDown":
-            flick.contentY = Math.min(flick.contentY + step, Math.max(0, flick.contentHeight
-                                                                      - flick.height))
+            flick.glideTo(Math.min(flick.settledY + step, flick.contentHeight - flick.height))
             break
         case "readUp":
-            flick.contentY = Math.max(0, flick.contentY - step)
+            flick.glideTo(flick.settledY - step)
             break
         case "readTop":
-            flick.contentY = 0
+            flick.glideTo(0)
             break
         case "readEnd":
-            flick.contentY = Math.max(0, flick.contentHeight - flick.height)
+            flick.glideTo(flick.contentHeight - flick.height)
             break
         case "readFind":
             root.find(false)
@@ -310,6 +309,7 @@ Rectangle {
             return
         const y = page.y + held.view.y + held.view.positionToRectangle(Math.min(heldPosition(),
                                                                                 held.view.length)).y
+        flick.stopGliding()
         flick.contentY = Math.max(0, Math.min(y - held.screenY, flick.contentHeight - flick.height))
     }
 
@@ -484,8 +484,7 @@ Rectangle {
 
     /// Scrolls so `y`, in the page, is near the top.
     function scrollTo(y) {
-        flick.contentY = Math.max(0, Math.min(page.y + y - Theme.space6, flick.contentHeight
-                                              - flick.height))
+        flick.glideTo(Math.min(page.y + y - Theme.space6, flick.contentHeight - flick.height))
     }
 
     /// Opens what a link in the reading view leads to: a note, a tag's view, or anything
@@ -758,8 +757,8 @@ Rectangle {
                 return
             // Typewriter scrolling keeps the line being written in the middle.
             if (Settings.typewriter && !root.dataFile && height > 0)
-                contentY = Math.max(0, Math.min(page.y + body.y + rect.y + rect.height / 2 - height
-                                                / 2, contentHeight - height))
+                glideTo(Math.min(page.y + body.y + rect.y + rect.height / 2 - height / 2,
+                                 contentHeight - height))
             else
                 reveal(rect)
         }
@@ -769,10 +768,43 @@ Rectangle {
                 return
             const top = page.y + (item ?? body).y + rect.y
             const bottom = top + rect.height
-            if (top < contentY)
-                contentY = Math.max(0, top - Theme.space6)
-            else if (bottom > contentY + height)
-                contentY = bottom - height + Theme.space6
+            // In vi mode, lines are kept between the cursor and the edges, as vim's scrolloff,
+            // up to half the view; otherwise the view moves once the cursor leaves it.
+            const margin = Settings.viMode ? Math.max(0, Math.min(Settings.viScrollMargin * rect.height,
+                                                                  height / 2 - rect.height)) : 0
+            const edge = Settings.viMode ? 0 : Theme.space6
+            if (top - margin < settledY)
+                glideTo(top - margin - edge)
+            else if (bottom + margin > settledY + height)
+                glideTo(bottom + margin + edge - height)
+        }
+        /// Where the view is going, or is.
+        readonly property real settledY: glide.running ? glide.to : contentY
+
+        /// Scrolls to `y`, no higher than the top, gliding there unless Settings says not to.
+        /// Callers that must stop at the end say so, as the height may not be laid out yet.
+        function glideTo(y) {
+            const to = Math.max(0, y)
+            glide.stop()
+            if (!Settings.smoothScroll || Math.abs(to - contentY) < 1) {
+                contentY = to
+                return
+            }
+            glide.from = contentY
+            glide.to = to
+            glide.start()
+        }
+        function stopGliding() {
+            glide.stop()
+        }
+
+        NumberAnimation {
+            id: glide
+
+            target: flick
+            property: "contentY"
+            duration: Theme.durFast
+            easing.type: Easing.OutCubic
         }
 
         Column {
@@ -1680,6 +1712,7 @@ Rectangle {
                     objectName: "vi"
                     target: body
                     viewport: flick
+                    scrollMargin: Settings.viScrollMargin
                     holding: root.loading
                     floor: styler.hideFrontMatter ? styler.bodyStart : 0
                     router: root.router
