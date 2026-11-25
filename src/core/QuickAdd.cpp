@@ -159,12 +159,15 @@ QuickTask readQuickTask(const QString &typed, const QDateTime &now)
     static const QRegularExpression bareOrdinal =
         words(lead + uR"((\d{1,2})(?:st|nd|rd|th))"_s + atEnd);
     static const QRegularExpression span = words(uR"(in\s+(\d+)\s*([dwmy]))"_s);
-    // Not after "every", which says how something repeats rather than when it is due.
-    static const QRegularExpression bareSpan = words(uR"((?<!every )(\d+)([dwm]))"_s + atEnd);
+    static const QRegularExpression bareSpan = words(uR"((\d+)([dwm]))"_s + atEnd);
     static const QRegularExpression endOf =
         words(lead + uR"((eow|eom|end\s+of\s+(?:the\s+)?(?:week|month)))"_s);
     static const QRegularExpression bareShortNamed =
-        words(uR"((?<!every )(mon|tues?|wed|thu|thurs?|fri|sat|sun))"_s + atEnd);
+        words(uR"((mon|tues?|wed|thu|thurs?|fri|sat|sun))"_s + atEnd);
+    // An "every" left unread is a repeat said some other way, as "every other wed", whose last
+    // word is part of it, not a day it is due.
+    static const QRegularExpression everyWord = words(uR"(every)"_s);
+    const bool unreadRepeat = everyWord.match(text).hasMatch();
     static const QRegularExpression weekend = words(lead + uR"((?:this\s+)?weekend)"_s);
     static const QRegularExpression relative = words(lead + uR"((today|tod|tomorrow|tmrw?))"_s);
     static const QRegularExpression named = words(
@@ -225,7 +228,8 @@ QuickTask readQuickTask(const QString &typed, const QDateTime &now)
     } else if ((m = take(text, ordinal)).hasMatch() || (m = take(text, bareOrdinal)).hasMatch()) {
         // The 12th is the next one: this month's unless it has gone by.
         day = nextDayOfMonth(today, m.captured(1).toInt());
-    } else if ((m = take(text, span)).hasMatch() || (m = take(text, bareSpan)).hasMatch()) {
+    } else if ((m = take(text, span)).hasMatch() ||
+               (!unreadRepeat && (m = take(text, bareSpan)).hasMatch())) {
         const int n = m.captured(1).toInt();
         const QString unit = m.captured(2).toLower();
         day = unit == u"d"   ? today.addDays(n)
@@ -239,7 +243,7 @@ QuickTask readQuickTask(const QString &typed, const QDateTime &now)
             day = next(today, 5, true);
         else
             day = QDate(today.year(), today.month(), today.daysInMonth());
-    } else if (m = take(text, bareShortNamed); m.hasMatch()) {
+    } else if (!unreadRepeat && (m = take(text, bareShortNamed)).hasMatch()) {
         day = next(today, weekday(m.captured(1)));
     }
 
