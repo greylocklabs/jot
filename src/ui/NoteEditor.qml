@@ -1323,7 +1323,7 @@ Rectangle {
                 }
                 // The find bar's match is shown though the find field has the keys.
                 onCursorRectangleChanged: {
-                    if (!findBar.visible)
+                    if (activeFocus || !findBar.visible)
                         flick.follow(cursorRectangle)
                     else if (!root.held)
                         flick.reveal(cursorRectangle)
