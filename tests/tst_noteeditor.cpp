@@ -1184,6 +1184,17 @@ void TestNoteEditor::viFindsWithSlash()
     type(u"N"_s);
     QCOMPARE(bar->property("current").toInt(), 0);
     QCOMPARE(body->property("text").toString(), text);
+
+    // Opened as Ctrl+F opens it, Return goes on to the next match, as without vi.
+    QTest::keyClick(m_window.get(), Qt::Key_Escape);
+    QTRY_VERIFY(!bar->isVisible());
+    QMetaObject::invokeMethod(m_editor.get(), "find", Q_ARG(QVariant, false));
+    QTRY_VERIFY(field->hasActiveFocus());
+    QTRY_COMPARE(bar->property("starts").toList().size(), 2);
+    const int at = bar->property("current").toInt();
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    QCOMPARE(bar->property("current").toInt(), (at + 1) % 2);
+    QVERIFY(field->hasActiveFocus());
 }
 
 void TestNoteEditor::readingFindsSelectsAndCopies()

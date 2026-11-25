@@ -62,7 +62,11 @@ Rectangle {
 
     /// Shows the find bar over the note, with the replace row when `replace`. A table is shown as
     /// its text, which is what is searched.
+    /// The find bar was opened by vi's /, so Return goes back to the note rather than on.
+    property bool findFromVi: false
+
     function find(replace) {
+        findFromVi = false
         // Read mode finds in the note as drawn, and replaces nothing.
         if (!root.readShown) {
             Settings.readMode = false
@@ -1692,10 +1696,12 @@ Rectangle {
                         }
                     }
                     onFindRequested: id => {
-                        if (id === "noteFind")
+                        if (id === "noteFind") {
                             root.find(false)
-                        else if (findBar.visible)
+                            root.findFromVi = true
+                        } else if (findBar.visible) {
                             findBar.step(id === "notePrevious")
+                        }
                     }
                     onShiftRequested: (left, start, end) => {
                         const visual = vi.mode === "visual"
@@ -2648,8 +2654,8 @@ Rectangle {
         styler: root.readShown ? reading : styler
         body: root.readShown ? reader : body
         writable: Vault.writable && !root.readShown
-        // In vi, as after its /, Return goes back to the note, where n and N step.
-        backOnReturn: Settings.viMode
+        // After vi's /, as in vim, Return goes back to the note, where n and N step.
+        backOnReturn: (root.readShown || root.findFromVi) && Settings.viMode
 
         // Another note, or none, ends the search.
         Connections {
