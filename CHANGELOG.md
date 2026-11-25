@@ -30,6 +30,8 @@ down` or `3d print` stay as written.
 
 ### Fixed
 
+- In Read, a list item's fold arrow is beside the item again, rather than a line or two above,
+  or missing, when a video or picture is shown above it.
 - Vi's `:` offers help once, not twice, and its list widens to fit a long description.
 - Keyboard shortcuts wraps a long description onto more lines rather than cutting it short.
 - Saving a note in a vault with thousands of to-dos no longer stalls typing for most of a

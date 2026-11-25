@@ -261,10 +261,11 @@ void NoteReader::render()
     doc->setMarkdown(markdown, QTextDocument::MarkdownDialectGitHub);
     // Each list item drawn, in order, to find where a list fold's item is; before styling, which
     // draws lists its own way.
-    QList<int> listBlocks;
+    // Kept as blocks, not positions: styling and the embeds placed after shift what follows.
+    QList<QTextBlock> listBlocks;
     for (QTextBlock block = doc->begin(); block.isValid(); block = block.next()) {
         if (block.textList())
-            listBlocks.append(block.position());
+            listBlocks.append(block);
     }
 
     m_tasks.clear();
@@ -303,8 +304,8 @@ void NoteReader::render()
                     at -= end - start;
             }
             const qsizetype item = listStarts.indexOf(at);
-            if (item >= 0)
-                position = listBlocks.at(item);
+            if (item >= 0 && listBlocks.at(item).isValid())
+                position = listBlocks.at(item).position();
         }
         const QTextBlock line = doc->findBlock(std::max(position, 0));
         map.insert(u"position"_s, position);
