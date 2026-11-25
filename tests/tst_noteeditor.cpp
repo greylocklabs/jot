@@ -88,6 +88,7 @@ private Q_SLOTS:
     void readingFindsSelectsAndCopies();
     void readingTakesViKeys();
     void foldsHeadingsAway();
+    void foldingKeepsItsLineInPlace();
     void foldsWhatIsUnderAListItem();
     void outlinesTheNoteBesideIt();
     void aTagLinkOpensTheTagsView();
@@ -1297,6 +1298,76 @@ void TestNoteEditor::foldsWhatIsUnderAListItem()
     // shown unfolded rather than hidden with no arrow.
     QVERIFY(readFolded(u"Coded.md"_s, u"- a\n  under a\n\nText.\n\n    - code\n"_s));
     QTRY_VERIFY(reading->property("text").toString().contains(u"under a"_s));
+    m_settings->setReadMode(false);
+}
+
+void TestNoteEditor::foldingKeepsItsLineInPlace()
+{
+    QString text;
+    for (const QString &heading : {u"Alpha"_s, u"Beta"_s, u"Gamma"_s}) {
+        text += u"# "_s + heading + u"\n"_s;
+        for (int i = 0; i < 40; ++i)
+            text += u"A paragraph under "_s + heading + u".\n\n"_s;
+    }
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Long.md"_s, text, &error));
+    m_vault->setCurrent(u"Long.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    QTRY_COMPARE(body->property("text").toString(), text);
+    QQuickItem *scroll = find(u"scroll"_s);
+    body->forceActiveFocus();
+    QTRY_VERIFY(body->hasActiveFocus());
+    // The cursor far below, out of view, where folding above it moves it.
+    body->setProperty("cursorPosition", int(text.size()));
+    const int beta = int(text.indexOf(u"# Beta"_s));
+
+    // The heading's height on screen, in the view drawn now.
+    const auto screenY = [&](QQuickItem *view, int position) {
+        QRectF place;
+        QMetaObject::invokeMethod(view, "positionToRectangle", Q_RETURN_ARG(QRectF, place),
+                                  Q_ARG(int, position));
+        return view->mapToItem(scroll, place.topLeft()).y();
+    };
+    const auto fold = [this](const QString &key, bool folded) {
+        QMetaObject::invokeMethod(m_editor.get(), "setFold", Q_ARG(QVariant, key),
+                                  Q_ARG(QVariant, folded));
+    };
+    // Scrolled so Beta is halfway down, far above the cursor.
+    QTRY_VERIFY(scroll->property("contentHeight").toReal() > 3 * scroll->height());
+    scroll->setProperty("contentY", screenY(body, beta) + scroll->property("contentY").toReal() -
+                                        scroll->height() / 2);
+    const qreal before = screenY(body, beta);
+    QVERIFY(scroll->property("contentY").toReal() > 0);
+    QVERIFY(before > 0 && before < scroll->height());
+
+    // Folding Alpha, above it, or Beta itself, keeps Beta where it is.
+    fold(u"Beta"_s, true);
+    QTRY_VERIFY(!m_editor->property("held").isValid() || m_editor->property("held").isNull());
+    QCOMPARE(screenY(body, beta), before);
+    fold(u"Beta"_s, false);
+    QTRY_VERIFY(m_editor->property("held").isNull());
+    QCOMPARE(screenY(body, beta), before);
+
+    // In Read too.
+    m_settings->setReadMode(true);
+    QQuickItem *reader = find(u"reader"_s);
+    auto *reading = m_editor->findChild<QObject *>(u"reading"_s);
+    QTRY_VERIFY(reader->isVisible() && reading->property("folds").toList().size() == 3);
+    const int readBeta =
+        reading->property("folds").toList().at(1).toMap().value(u"position"_s).toInt();
+    // Read's own cursor where a click left it, below Beta.
+    reader->setProperty("cursorPosition", reader->property("length").toInt() - 1);
+    scroll->setProperty("contentY", screenY(reader, readBeta) +
+                                        scroll->property("contentY").toReal() -
+                                        scroll->height() / 2);
+    const qreal readBefore = screenY(reader, readBeta);
+    QVERIFY(scroll->property("contentY").toReal() > 0);
+    fold(u"Beta"_s, true);
+    QTRY_VERIFY(m_editor->property("held").isNull());
+    QTRY_COMPARE(screenY(reader, readBeta), readBefore);
+    fold(u"Beta"_s, false);
+    QTRY_VERIFY(m_editor->property("held").isNull());
+    QTRY_COMPARE(screenY(reader, readBeta), readBefore);
     m_settings->setReadMode(false);
 }
 

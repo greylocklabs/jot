@@ -225,20 +225,70 @@ Rectangle {
         return items.filter(each => !styler.isFolded(each.position))
     }
 
-    /// Folds the heading named `key` away, or shows what is under it again, and keeps that.
+    /// Folds the heading or list item named `key` away, or shows what is under it again, and
+    /// keeps that. Its line stays where it is on screen.
     function setFold(key, fold) {
+        changeFold(key, fold, false)
+    }
+
+    /// As setFold(), but with `scroll` the view may follow the cursor rather than hold the line.
+    function changeFold(key, fold, scroll) {
         if (folded.includes(key) === fold)
             return
+        const view = readShown ? reader : body
+        const at = (readShown ? reading.folds : styler.folds).find(each => each.key === key)
+        if (!scroll && at)
+            holdLine(view, at.position)
         folded = fold ? folded.concat([key]) : folded.filter(each => each !== key)
         Vault.setFolds(Vault.current, folded)
         keepCursorShown()
     }
 
-    /// Folds every heading with something under it, or none.
+    /// Folds every heading with something under it, or none, keeping the cursor's line where it
+    /// is on screen when it is in view, and the top line otherwise.
     function foldAll(fold) {
+        const view = readShown ? reader : body
+        const top = flick.contentY - page.y - view.y
+        const cursorTop = view.cursorRectangle.y
+        const cursorShown = !readShown && cursorTop >= top && cursorTop < top + flick.height
+        holdLine(view, cursorShown ? view.cursorPosition : view.positionAt(0, top + 1))
         folded = fold ? styler.folds.map(each => each.key) : []
         Vault.setFolds(Vault.current, folded)
         keepCursorShown()
+    }
+
+    /// While a fold opens or closes: the line kept in place, and where on screen it is.
+    property var held: null
+
+    /// Keeps the line at `position` in `view` where it is on screen while the folds change, and
+    /// the view from following the cursor meanwhile.
+    function holdLine(view, position) {
+        held = {
+            "view": view,
+            "position": position,
+            "screenY": page.y + view.y + view.positionToRectangle(Math.min(position, view.length)).y
+                       - flick.contentY
+        }
+        holdTimer.restart()
+    }
+
+    function placeHeld() {
+        if (!held)
+            return
+        const y = page.y + held.view.y + held.view.positionToRectangle(Math.min(held.position,
+                                                                                held.view.length)).y
+        flick.contentY = Math.max(0, Math.min(y - held.screenY, flick.contentHeight - flick.height))
+    }
+
+    // Read draws its folds a moment later, so the line is placed again as the height changes,
+    // until this goes off.
+    Timer {
+        id: holdTimer
+        interval: 120
+        onTriggered: {
+            root.placeHeld()
+            root.held = null
+        }
     }
 
     /// Moves the cursor out of a fold that just hid it, to the folded heading's line, as vi does,
@@ -267,7 +317,7 @@ Rectangle {
         // Outermost first: a section folded inside another shows up once that one opens.
         for (let key = styler.foldAt(position); key !== "" && folded.includes(key); key = styler.foldAt(
                  position))
-            setFold(key, false)
+            changeFold(key, false, true)
     }
 
     /// The note drawn to read, rather than its text to write in.
@@ -663,13 +713,15 @@ Rectangle {
         // A note that grows under the cursor, as with Return on its last line, is centered
         // again once its new height is known.
         onContentHeightChanged: {
-            if (Settings.typewriter)
+            if (root.held)
+                root.placeHeld()
+            else if (Settings.typewriter)
                 follow(body.cursorRectangle)
         }
         /// Scrolls so the cursor stays in view while typing. Not before the editor has a
         /// height, when every line would count as out of view.
         function follow(rect) {
-            if (!body.activeFocus)
+            if (!body.activeFocus || root.held)
                 return
             // Typewriter scrolling keeps the line being written in the middle.
             if (Settings.typewriter && !root.dataFile && height > 0)
@@ -1022,7 +1074,7 @@ Rectangle {
                 onLinkActivated: link => root.openLink(link)
                 // A match found, or a selection moved by the keys, is scrolled to.
                 onCursorRectangleChanged: {
-                    if (visible)
+                    if (visible && !root.held)
                         flick.reveal(cursorRectangle, reader)
                 }
                 // Ctrl+/ goes back to writing, in the mode it switches to, as it does there.
