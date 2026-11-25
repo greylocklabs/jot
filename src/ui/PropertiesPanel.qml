@@ -21,7 +21,7 @@ Item {
     /// The type's row, which heads the card, when the note has one.
     readonly property var typeRow: rows.find(row => row.kind === "type") ?? null
     /// A row's height, kept small so the note's text starts soon.
-    readonly property int rowHeight: Theme.listRowHeight - 4
+    readonly property int rowHeight: Theme.compactRowHeight
 
     /// Whether the note has `key` already, which Add would write over.
     function taken(key) {
@@ -58,8 +58,8 @@ Item {
 
                 Glyph {
                     anchors.verticalCenter: parent.verticalCenter
-                    implicitWidth: 11
-                    implicitHeight: 11
+                    implicitWidth: Theme.smallGlyphSize
+                    implicitHeight: Theme.smallGlyphSize
                     name: action.glyph
                     color: Theme.accent
                     stroke: Theme.fineGlyphStroke
@@ -117,7 +117,7 @@ Item {
                         verticalCenter: parent.verticalCenter
                     }
                     visible: !root.readOnly
-                    spacing: 2
+                    spacing: Theme.space1
 
                     CardAction {
                         objectName: "addPropertyShown"
@@ -147,7 +147,7 @@ Item {
                         readonly property string written: root.typeRow ? root.typeRow.value : ""
 
                         objectName: "propertyType"
-                        minimumWidth: 140
+                        minimumWidth: Theme.formPickerWidth
                         implicitHeight: root.rowHeight
                         model: [
                             {
@@ -208,7 +208,8 @@ Item {
 
                     objectName: "propertyRow"
                     width: column.width
-                    height: lineHeight + (problemText.visible ? problemText.implicitHeight : 0) + 2
+                    height: lineHeight + (problemText.visible ? problemText.implicitHeight : 0)
+                            + Theme.space1
 
                     HoverHandler {
                         id: rowHover
@@ -217,7 +218,7 @@ Item {
                         id: label
 
                         y: (row.lineHeight - height) / 2
-                        width: Math.min(92, row.width / 3)
+                        width: Math.min(Theme.formLabelWidth, row.width / 3)
                         text: row.key
                         textFormat: Text.PlainText
                         elide: Text.ElideRight
@@ -314,7 +315,7 @@ Item {
                                                                                              ))
 
                             objectName: "propertyChoice"
-                            minimumWidth: 160
+                            minimumWidth: Theme.formPickerWidth
                             implicitHeight: root.rowHeight
                             model: [
                                 {
@@ -494,7 +495,7 @@ Item {
                     id: newKey
 
                     objectName: "newPropertyKey"
-                    width: Math.min(120, column.width / 3)
+                    width: Math.min(Theme.formLabelWidth, column.width / 3)
                     placeholderText: qsTr("New property")
                     onAccepted: newValue.forceActiveFocus()
                     Keys.onEscapePressed: root.adding = false

@@ -144,6 +144,11 @@ class ThemeController : public QObject
     Q_PROPERTY(int treeIndent READ treeIndent CONSTANT)
     /// A row in a list such as the sidebar's notebooks.
     Q_PROPERTY(int listRowHeight READ listRowHeight CONSTANT)
+    /// A row of a compact form, such as a note's properties.
+    Q_PROPERTY(int compactRowHeight READ compactRowHeight CONSTANT)
+    /// A compact form's labels, and the narrowest of its pickers.
+    Q_PROPERTY(int formLabelWidth READ formLabelWidth CONSTANT)
+    Q_PROPERTY(int formPickerWidth READ formPickerWidth CONSTANT)
     /// A two-way switch such as the format row's Formatted and Source.
     Q_PROPERTY(int switchHeight READ switchHeight CONSTANT)
     /// The dot on a button that says something is waiting, such as an update.
@@ -296,6 +301,9 @@ public:
         return style;
     }
     int listRowHeight() const { return 28; }
+    int compactRowHeight() const { return 24; }
+    int formLabelWidth() const { return 92; }
+    int formPickerWidth() const { return 140; }
     int switchHeight() const { return 26; }
     int badgeSize() const { return 10; }
     int smallGlyphSize() const { return 10; }
