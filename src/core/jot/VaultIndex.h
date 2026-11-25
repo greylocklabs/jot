@@ -148,6 +148,8 @@ public:
     [[nodiscard]] QStringList tagged(const QString &tag) const;
     /// Unticked checkboxes across the vault, note by note.
     [[nodiscard]] QList<NoteTask> openTasks() const;
+    /// The unticked checkboxes of the note at `path`, none when it is hidden.
+    [[nodiscard]] QList<NoteTask> openTasksIn(const QString &path) const;
     /// Ticked checkboxes across the vault, note by note.
     [[nodiscard]] QList<NoteTask> doneTasks() const;
 

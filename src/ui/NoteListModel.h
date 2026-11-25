@@ -42,6 +42,9 @@ public:
     /// Reads the notes again from `index`, or empties the list without one. `favorites` are the
     /// favorite notes, in their order.
     void reload(const VaultIndex *index, const QStringList &favorites = {});
+    /// Takes the note at `path` from `index` again after a save, moving its row as the order
+    /// says; reloads all when the list is one its change could reshape, as a search's.
+    void reloadNote(const VaultIndex *source, const QString &path);
 
     [[nodiscard]] QString notebook() const { return m_notebook; }
     void setNotebook(const QString &notebook);

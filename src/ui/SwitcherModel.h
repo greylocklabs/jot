@@ -33,6 +33,9 @@ public:
 
     /// Takes the notes from `index`, or none without one.
     void reload(const VaultIndex *index);
+    /// Takes the notes from `index` the next time it is asked for some, rather than now, as it
+    /// is rarely open while notes are saved.
+    void reloadLater(const VaultIndex *index);
 
     [[nodiscard]] QString query() const { return m_query; }
     void setQuery(const QString &query);
@@ -60,6 +63,9 @@ private:
 
     QList<NoteInfo> m_notes;
     QString m_query;
+    /// Where to take the notes from when next asked, after reloadLater().
+    const VaultIndex *m_staleIndex = nullptr;
+    bool m_stale = false;
     QList<Row> m_rows;
 };
 

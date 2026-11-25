@@ -53,6 +53,9 @@ public:
     explicit TaskModel(QObject *parent = nullptr);
 
     void reload(const VaultIndex *index);
+    /// Takes the note at `path`'s to-dos from `index` again, the others as they were, for a
+    /// change to one note that needs no gathering of them all.
+    void reloadNote(const VaultIndex *index, const QString &path);
 
     [[nodiscard]] QString view() const { return m_view; }
     void setView(const QString &view);
@@ -76,7 +79,10 @@ Q_SIGNALS:
     void filterChanged();
 
 private:
+    /// Gathers the open to-dos again, then lists them.
     void refill();
+    /// Lists the open to-dos gathered last, as the view, tag and priority pick them.
+    void relist();
 
     const VaultIndex *m_index = nullptr;
     QString m_view = QStringLiteral("today");
@@ -87,6 +93,8 @@ private:
     bool m_descending = false;
     QDate m_today;
     QList<ToDo> m_rows;
+    /// Every open to-do, as gathered last.
+    QList<ToDo> m_open;
     int m_todayCount = 0;
     /// Fills the list again just after midnight, when Today becomes another day.
     QTimer m_midnight;

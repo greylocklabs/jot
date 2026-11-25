@@ -11,8 +11,15 @@ namespace jot {
 
 SwitcherModel::SwitcherModel(QObject *parent) : QAbstractListModel(parent) {}
 
+void SwitcherModel::reloadLater(const VaultIndex *index)
+{
+    m_staleIndex = index;
+    m_stale = true;
+}
+
 void SwitcherModel::reload(const VaultIndex *index)
 {
+    m_stale = false;
     m_notes = index ? index->shownIn({}) : QList<NoteInfo>();
     // Recently changed notes first while nothing is typed.
     std::ranges::sort(m_notes,
@@ -22,6 +29,15 @@ void SwitcherModel::reload(const VaultIndex *index)
 
 void SwitcherModel::setQuery(const QString &query)
 {
+    // Asked again, as it is each time it opens, it takes the notes it was told of.
+    if (m_stale) {
+        const bool changed = m_query != query;
+        m_query = query;
+        reload(m_staleIndex);
+        if (changed)
+            Q_EMIT queryChanged();
+        return;
+    }
     if (m_query == query)
         return;
     m_query = query;

@@ -837,6 +837,25 @@ QList<NoteTask> VaultIndex::openTasks() const
     return tasks;
 }
 
+QList<NoteTask> VaultIndex::openTasksIn(const QString &path) const
+{
+    QList<NoteTask> tasks;
+    if (isHidden(path))
+        return tasks;
+    QSqlQuery query(QSqlDatabase::database(m_connection));
+    query.prepare(
+        u"SELECT path, line, done, text FROM tasks WHERE done = 0 AND path = ? ORDER BY line"_s);
+    query.addBindValue(path);
+    if (!query.exec())
+        return tasks;
+    while (query.next()) {
+        const QString text = query.value(3).toString();
+        tasks.append({query.value(0).toString(), query.value(1).toInt(), query.value(2).toBool(),
+                      text, readTaskLine(text)});
+    }
+    return tasks;
+}
+
 QList<NoteTask> VaultIndex::doneTasks() const
 {
     QSqlQuery query(

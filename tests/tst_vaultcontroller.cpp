@@ -10,6 +10,7 @@
 #include <QClipboard>
 #include <QDir>
 #include <QDirIterator>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QGuiApplication>
 #include <QImage>
@@ -20,6 +21,7 @@
 #include <QSysInfo>
 #include <QTemporaryDir>
 #include <QTest>
+#include <QTimer>
 
 #include <unistd.h>
 
@@ -31,6 +33,8 @@ class TestVaultController : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void aSaveUpdatesTheListsRowByRow();
+    void savesWithoutStallingTyping();
     void syncsTheStartersInTheVaultsOwnRepository();
     void init();
     void cleanup();
@@ -463,6 +467,68 @@ void TestVaultController::syncsTheStartersInTheVaultsOwnRepository()
     sync->syncNow();
     QVERIFY(finished.wait(30000));
     QVERIFY(run({u"ls-files"_s, u".jot/types"_s}).contains(u".jot/types/character.yaml"_s));
+}
+
+void TestVaultController::savesWithoutStallingTyping()
+{
+    // A timing, so only when asked for: JOT_BENCHMARK=1. The UI thread's longest gap, ticking
+    // every millisecond, from saving one note in a vault of 3,000 notes with a to-do each.
+    if (!qEnvironmentVariableIsSet("JOT_BENCHMARK"))
+        QSKIP("a benchmark; set JOT_BENCHMARK=1 to run it");
+    const QString root = m_dir->filePath(u"Big"_s);
+    QVERIFY(QDir().mkpath(root + u"/Notebook"_s));
+    for (int i = 0; i < 3000; ++i) {
+        QFile note(root + u"/Notebook/Note %1.md"_s.arg(i));
+        QVERIFY(note.open(QIODevice::WriteOnly));
+        note.write("# Note " + QByteArray::number(i) + "\n\nSome words #tag" +
+                   QByteArray::number(i % 40) + ".\n\n- [ ] a to-do @due 2026-12-01\n");
+    }
+    QVERIFY(m_vault->openPath(root));
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->notesIn({}).size() >= 3000, 60000);
+    m_vault->setCurrent(u"Notebook/Note 1.md"_s);
+    QTest::qWait(1500);
+    qint64 worst = 0;
+    for (int round = 0; round < 3; ++round) {
+        m_vault->edit(m_vault->currentText() + u"More.\n"_s);
+        QElapsedTimer clock;
+        qint64 last = 0;
+        QTimer tick;
+        tick.setInterval(1);
+        clock.start();
+        connect(&tick, &QTimer::timeout, [&] {
+            const qint64 now = clock.elapsed();
+            worst = std::max(worst, now - last);
+            last = now;
+        });
+        tick.start();
+        m_vault->saveNow();
+        QTest::qWait(2500);
+        tick.stop();
+    }
+    qInfo() << "longest stall from a save, ms:" << worst;
+    QVERIFY2(worst <= 30, qPrintable(u"a save stalled the UI for %1 ms"_s.arg(worst)));
+}
+
+void TestVaultController::aSaveUpdatesTheListsRowByRow()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    m_vault->setShowingTasks(true);
+    m_vault->tasks()->setView(u"all"_s);
+    const QString path = m_vault->notes()->pathAt(m_vault->notes()->rowCount() - 1);
+    QVERIFY(!path.isEmpty());
+    m_vault->setCurrent(path);
+    const int before = m_vault->tasks()->rowCount();
+    // Saved, the note goes to the top of the list by last change, and its to-do joins the
+    // to-dos, though nothing else is gathered again.
+    m_vault->edit(u"---\naliases: [Harbor ledger]\n---\n- [ ] a to-do from the save\n"_s);
+    m_vault->saveNow();
+    QTRY_COMPARE(m_vault->notes()->pathAt(0), path);
+    QTRY_VERIFY(column(*m_vault->tasks(), "title").contains(u"a to-do from the save"_s));
+    // The note's own to-dos are replaced, not added to: those it had before are gone.
+    QVERIFY(m_vault->tasks()->rowCount() <= before + 1);
+    // And the switcher knows its new alias when next asked.
+    m_vault->switcher()->setQuery(u"harbor ledger"_s);
+    QCOMPARE(m_vault->switcher()->pathAt(0), path);
 }
 
 void TestVaultController::setsANotesType()
