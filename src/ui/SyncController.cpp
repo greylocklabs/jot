@@ -502,6 +502,13 @@ void SyncController::start()
     m_startedAt = QDateTime::currentDateTime();
     m_thread = QThread::create([this, root, remote, secret, state, device, request] {
         const SyncReport report = syncVault(root, remote, secret, state, device, request);
+        // A vault that is its own git repository keeps nothing in the state folder, which would
+        // make every sync look like its first; this says one has been, for this vault and remote.
+        if (report.failure.isEmpty() && QDir().mkpath(state)) {
+            QFile synced(state + u"/synced"_s);
+            if (synced.open(QIODevice::WriteOnly))
+                synced.write(QDateTime::currentDateTimeUtc().toString(Qt::ISODate).toUtf8());
+        }
         // SSH turned away with no agent holding the key: its passphrase is asked for when it
         // has one. Looking runs ssh-keygen, so it is done here rather than on the UI's thread.
         const bool locked = wantsPassphrase(remote, report.failure) && GitSync::lockedSshKey();
@@ -533,14 +540,6 @@ void SyncController::done(const SyncReport &report, bool needsPassphrase)
                                  "Settings, Sync.");
     } else {
         m_needsPassphrase = false;
-        // A vault that is its own git repository keeps nothing in the state folder, which would
-        // make every sync look like its first; this says one has been.
-        const QString state = syncStateDir(m_root, m_remote);
-        if (QDir().mkpath(state)) {
-            QFile synced(state + u"/synced"_s);
-            if (synced.open(QIODevice::WriteOnly))
-                synced.write(QDateTime::currentDateTimeUtc().toString(Qt::ISODate).toUtf8());
-        }
         m_lastReport = report;
         m_syncedFrom = m_startedAt;
         m_failedAt = {};
