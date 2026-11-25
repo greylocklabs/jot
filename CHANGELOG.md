@@ -18,6 +18,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 - Vi's `:` offers help once, not twice, and its list widens to fit a long description.
 - Keyboard shortcuts wraps a long description onto more lines rather than cutting it short.
+- Folding or unfolding a heading or list item keeps its line where it is on screen, rather than
+  following the cursor, which the fold moved.
 
 ## 0.8.0 - 2026-11-22
 
