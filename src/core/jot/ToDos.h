@@ -98,6 +98,9 @@ void sortToDos(QList<ToDo> &list, ToDoSort sort, bool descending);
 /// Every open to-do in the index, or every done one, in no order, for pickToDos() to filter
 /// more than once.
 [[nodiscard]] QList<ToDo> gatherToDos(const VaultIndex &index, bool done);
+/// The open to-dos of the note at `path`, as gatherToDos() gives them, for a list to take the
+/// note's place in what it gathered before.
+[[nodiscard]] QList<ToDo> gatherNoteToDos(const VaultIndex &index, const QString &path);
 /// Those of `all` that toDos() would give for the rest.
 [[nodiscard]] QList<ToDo> pickToDos(const QList<ToDo> &all, ToDoView view, const QDate &today,
                                     const QString &tag = {},

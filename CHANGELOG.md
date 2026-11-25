@@ -36,9 +36,10 @@ down` or `3d print` stay as written.
   or missing, when a video or picture is shown above it.
 - Vi's `:` offers help once, not twice, and its list widens to fit a long description.
 - Keyboard shortcuts wraps a long description onto more lines rather than cutting it short.
-- Saving a note in a vault with thousands of to-dos no longer stalls typing for most of a
-  second: the to-do lists read every note's title at once, gather the to-dos once rather than
-  twice, and a tag's list does nothing until a tag is shown.
+- Saving a note no longer stalls typing, however large the vault: the lists take in the one
+  note saved rather than all of them again, the tags only when its tags changed, and the quick
+  switcher and link suggestions when next asked. In a vault of 3,000 notes with a to-do each,
+  a save took the editor away for about 685 ms, and now for under 10.
 - Going to the next or previous match of find in a note scrolls it into view.
 - Folding or unfolding a heading or list item keeps its line where it is on screen, rather than
   following the cursor, which the fold moved.

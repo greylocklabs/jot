@@ -42,6 +42,49 @@ void NoteListModel::reload(const VaultIndex *index, const QStringList &favorites
     refill();
 }
 
+void NoteListModel::reloadNote(const VaultIndex *source, const QString &path)
+{
+    // A search, a tag or the favorites can take a note in or out as its words change, and an
+    // order by when notes were made can move it; only a notebook by last change or title is
+    // reshaped by nothing but the note's own row.
+    if (source != m_index || !m_query.trimmed().isEmpty() || !m_tag.isEmpty() || m_showFavorites ||
+        m_order == u"created") {
+        reload(source, m_favorites);
+        return;
+    }
+    const qsizetype at = std::ranges::find(m_rows, path, &Row::path) - m_rows.begin();
+    if (at == m_rows.size())
+        return;
+    const std::optional<NoteInfo> note = m_index ? m_index->note(path) : std::nullopt;
+    if (!note) {
+        reload(source, m_favorites);
+        return;
+    }
+    Row row = m_rows.at(at);
+    row.title = note->title;
+    row.modified = note->modified;
+    row.type = note->type;
+    // Where it goes now, among the others as they are.
+    const auto before = [this, &row](const Row &other) {
+        if (m_order == u"title")
+            return naturalCompare(other.title, row.title) < 0;
+        return other.modified != row.modified ? other.modified > row.modified
+                                              : other.path < row.path;
+    };
+    qsizetype to = 0;
+    for (qsizetype i = 0; i < m_rows.size(); ++i) {
+        if (i != at && before(m_rows.at(i)))
+            ++to;
+    }
+    if (to != at) {
+        beginMoveRows({}, int(at), int(at), {}, int(to > at ? to + 1 : to));
+        m_rows.move(at, to);
+        endMoveRows();
+    }
+    m_rows[to] = row;
+    Q_EMIT dataChanged(index(int(to), 0), index(int(to), 0));
+}
+
 void NoteListModel::setNotebook(const QString &notebook)
 {
     if (m_notebook == notebook && m_tag.isEmpty() && !m_showFavorites)

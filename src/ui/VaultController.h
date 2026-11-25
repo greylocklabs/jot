@@ -690,6 +690,11 @@ private:
     void close();
     void notesChangedOnDisk(const QStringList &paths);
     void reloadModels();
+    /// Takes in the notes saved since the last reload, each already in the vault, without
+    /// reloading what they cannot have changed.
+    void reloadSavedNotes();
+    /// Reloads what is due: all, or only what the notes saved since can have changed.
+    void reloadDue();
     /// Says whether notes wait for the next sync: changed since the last began, not by it, or
     /// made, moved or gone since it ended.
     void updateSyncPending();
@@ -753,6 +758,9 @@ private:
     /// edits are about to replace it.
     void keepConflict(const QString &theirs);
     void scheduleModelReload();
+    /// Schedules taking in a save of the note at `path`, already in the vault, whose tags
+    /// changed when `tagsChanged`.
+    void scheduleNoteReload(const QString &path, bool tagsChanged);
 
     Settings &m_settings;
     std::unique_ptr<Vault> m_vault;
@@ -887,6 +895,11 @@ private:
     int m_openingCursor = 0;
     QTimer m_saveTimer;
     QTimer m_reloadTimer;
+    /// What the next reload takes in: everything, or the notes saved since, and whether any of
+    /// their tags changed.
+    bool m_reloadAll = false;
+    QSet<QString> m_savedNotes;
+    bool m_savedTags = false;
 };
 
 } // namespace jot

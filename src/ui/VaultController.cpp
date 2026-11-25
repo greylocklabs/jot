@@ -94,7 +94,7 @@ VaultController::VaultController(Settings &settings, QObject *parent)
     // Saving changes the list's order and titles; a burst of saves reloads it once.
     m_reloadTimer.setSingleShot(true);
     m_reloadTimer.setInterval(800);
-    connect(&m_reloadTimer, &QTimer::timeout, this, &VaultController::reloadModels);
+    connect(&m_reloadTimer, &QTimer::timeout, this, &VaultController::reloadDue);
     m_notes.setOrder(settings.noteSort());
     connect(&m_notes, &NoteListModel::scopeChanged, this, &VaultController::applyNoteSort);
     connect(&settings, &Settings::noteSortChanged, this, [this] {
@@ -575,10 +575,16 @@ void VaultController::saveNow()
     setUnsaved(false);
     setProblem({});
     const QString title = currentTitle();
+    const std::optional<NoteInfo> before = m_index->note(m_current);
     m_index->update({m_current});
     if (currentTitle() != title)
         Q_EMIT currentTitleChanged();
-    scheduleModelReload();
+    // A note already listed changes only its own rows, and the tags when its own changed.
+    const std::optional<NoteInfo> after = m_index->note(m_current);
+    if (before && after)
+        scheduleNoteReload(m_current, before->tags != after->tags);
+    else
+        scheduleModelReload();
 }
 
 void VaultController::keepHistory(const QString &path, const QString &before, bool now)
@@ -807,7 +813,56 @@ bool VaultController::useOtherVersion(const QString &copy)
 
 void VaultController::scheduleModelReload()
 {
+    m_reloadAll = true;
     m_reloadTimer.start();
+}
+
+void VaultController::scheduleNoteReload(const QString &path, bool tagsChanged)
+{
+    m_savedNotes.insert(path);
+    m_savedTags = m_savedTags || tagsChanged;
+    m_reloadTimer.start();
+}
+
+void VaultController::reloadDue()
+{
+    const bool all = m_reloadAll || !m_index;
+    m_reloadAll = false;
+    if (all) {
+        m_savedNotes.clear();
+        m_savedTags = false;
+        reloadModels();
+    } else {
+        reloadSavedNotes();
+    }
+}
+
+void VaultController::reloadSavedNotes()
+{
+    const QSet<QString> saved = std::exchange(m_savedNotes, {});
+    const bool tags = std::exchange(m_savedTags, false);
+    // A save is a change for the next sync, as any is.
+    m_sync.localChanged();
+    updateSyncPending();
+    if (tags) {
+        m_tagTree.reload(m_index->tagCounts());
+        if (!m_shownTag.isEmpty())
+            m_tagNotes.reload(m_index.get());
+    }
+    // Titles and the order by last change, row by row.
+    for (const QString &path : saved)
+        m_notes.reloadNote(m_index.get(), path);
+    if (!m_shownTag.isEmpty() && !tags)
+        m_tagNotes.reload(m_index.get());
+    // Rarely open while typing, so taken in when next asked for.
+    m_switcher.reloadLater(m_index.get());
+    m_linkSuggestions.reloadLater(m_index.get());
+    for (const QString &path : saved) {
+        m_tasks.reloadNote(m_index.get(), path);
+        m_tagTasks.reloadNote(m_index.get(), path);
+    }
+    refreshTarget();
+    Q_EMIT notesChanged();
 }
 
 QString VaultController::newNote(const QString &title)

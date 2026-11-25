@@ -27,7 +27,7 @@ void TaskModel::setView(const QString &view)
         return;
     m_view = view;
     Q_EMIT filterChanged();
-    refill();
+    relist();
 }
 
 void TaskModel::setTag(const QString &tag)
@@ -36,7 +36,11 @@ void TaskModel::setTag(const QString &tag)
         return;
     m_tag = tag;
     Q_EMIT filterChanged();
-    refill();
+    // A tag's own page gathers nothing until it has a tag.
+    if (m_tagOnly)
+        refill();
+    else
+        relist();
 }
 
 void TaskModel::setPriority(int priority)
@@ -45,7 +49,7 @@ void TaskModel::setPriority(int priority)
         return;
     m_priority = priority;
     Q_EMIT filterChanged();
-    refill();
+    relist();
 }
 
 void TaskModel::setSort(const QString &sort, bool descending)
@@ -55,17 +59,37 @@ void TaskModel::setSort(const QString &sort, bool descending)
         return;
     m_sort = wanted;
     m_descending = descending;
-    refill();
+    relist();
+}
+
+void TaskModel::reloadNote(const VaultIndex *index, const QString &path)
+{
+    if (index != m_index) {
+        reload(index);
+        return;
+    }
+    if (!m_index || (m_tagOnly && m_tag.isEmpty()))
+        return;
+    m_open.removeIf([&path](const ToDo &each) { return each.path == path; });
+    m_open.append(gatherNoteToDos(*m_index, path));
+    relist();
 }
 
 void TaskModel::refill()
+{
+    const bool none = !m_index || (m_tagOnly && m_tag.isEmpty());
+    // The open ones gathered once, for the view and for today's count.
+    m_open = none ? QList<ToDo>() : gatherToDos(*m_index, false);
+    relist();
+}
+
+void TaskModel::relist()
 {
     beginResetModel();
     m_today = QDate::currentDate();
     const ToDoView view = toDoView(m_view).value_or(ToDoView::Today);
     const bool none = !m_index || (m_tagOnly && m_tag.isEmpty());
-    // The open ones gathered once, for the view and for today's count.
-    const QList<ToDo> open = none ? QList<ToDo>() : gatherToDos(*m_index, false);
+    const QList<ToDo> &open = m_open;
     m_rows = none ? QList<ToDo>()
              : view == ToDoView::Done
                  ? toDos(*m_index, view, m_today, m_tag,

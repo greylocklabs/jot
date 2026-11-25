@@ -119,14 +119,36 @@ std::optional<ToDoView> toDoView(const QString &name)
     return std::nullopt;
 }
 
+namespace {
+
+/// When a note was made: its own word for it, or else when its file last changed.
+QDateTime createdOf(const NoteInfo &note)
+{
+    const QDateTime written = QDateTime::fromString(note.created.trimmed(), Qt::ISODate);
+    return written.isValid() ? written : QDateTime::fromMSecsSinceEpoch(note.modified / 1'000'000);
+}
+
+ToDo toDoOf(const NoteTask &task, const QString &title, const QDateTime &created)
+{
+    return {task.path,      task.line,         task.parts.title,    title,
+            task.parts.due, task.parts.repeat, task.parts.priority, scanNote(task.parts.title).tags,
+            task.text,      created,           task.parts.done};
+}
+
+} // namespace
+
+QList<ToDo> gatherNoteToDos(const VaultIndex &index, const QString &path)
+{
+    QList<ToDo> found;
+    const std::optional<NoteInfo> info = index.note(path);
+    for (const NoteTask &task : index.openTasksIn(path))
+        found.append(
+            toDoOf(task, info ? info->title : path, info ? createdOf(*info) : QDateTime()));
+    return found;
+}
+
 QList<ToDo> gatherToDos(const VaultIndex &index, bool done)
 {
-    // When a note was made: its own word for it, or else when its file last changed.
-    const auto createdOf = [](const NoteInfo &note) {
-        const QDateTime written = QDateTime::fromString(note.created.trimmed(), Qt::ISODate);
-        return written.isValid() ? written
-                                 : QDateTime::fromMSecsSinceEpoch(note.modified / 1'000'000);
-    };
     QList<ToDo> all;
     // Every note's title and day at once, as asking for each in turn is slow in a large vault.
     QHash<QString, std::pair<QString, QDateTime>> notes;
@@ -139,9 +161,7 @@ QList<ToDo> gatherToDos(const VaultIndex &index, bool done)
                                          : std::pair{task.path, QDateTime()});
         }
         const auto &[title, created] = notes.value(task.path);
-        all.append({task.path, task.line, task.parts.title, title, task.parts.due,
-                    task.parts.repeat, task.parts.priority, scanNote(task.parts.title).tags,
-                    task.text, created, task.parts.done});
+        all.append(toDoOf(task, title, created));
     }
     return all;
 }
