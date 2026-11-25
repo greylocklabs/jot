@@ -119,10 +119,8 @@ std::optional<ToDoView> toDoView(const QString &name)
     return std::nullopt;
 }
 
-QList<ToDo> toDos(const VaultIndex &index, ToDoView view, const QDate &today, const QString &tag,
-                  std::optional<int> priority)
+QList<ToDo> gatherToDos(const VaultIndex &index, bool done)
 {
-    const bool done = view == ToDoView::Done;
     // When a note was made: its own word for it, or else when its file last changed.
     const auto createdOf = [](const NoteInfo &note) {
         const QDateTime written = QDateTime::fromString(note.created.trimmed(), Qt::ISODate);
@@ -130,7 +128,10 @@ QList<ToDo> toDos(const VaultIndex &index, ToDoView view, const QDate &today, co
                                  : QDateTime::fromMSecsSinceEpoch(note.modified / 1'000'000);
     };
     QList<ToDo> all;
+    // Every note's title and day at once, as asking for each in turn is slow in a large vault.
     QHash<QString, std::pair<QString, QDateTime>> notes;
+    for (const NoteInfo &info : index.notesIn({}))
+        notes.insert(info.path, {info.title, createdOf(info)});
     for (const NoteTask &task : done ? index.doneTasks() : index.openTasks()) {
         if (!notes.contains(task.path)) {
             const std::optional<NoteInfo> info = index.note(task.path);
@@ -142,9 +143,15 @@ QList<ToDo> toDos(const VaultIndex &index, ToDoView view, const QDate &today, co
                     task.parts.repeat, task.parts.priority, scanNote(task.parts.title).tags,
                     task.text, created, task.parts.done});
     }
+    return all;
+}
 
+QList<ToDo> pickToDos(const QList<ToDo> &all, ToDoView view, const QDate &today, const QString &tag,
+                      std::optional<int> priority)
+{
+    const bool done = view == ToDoView::Done;
     QList<ToDo> shown;
-    for (const ToDo &each : std::as_const(all)) {
+    for (const ToDo &each : all) {
         const QDate due = each.dueDate();
         const bool wanted = view == ToDoView::All || done ||
                             (view == ToDoView::Today && due.isValid() && due <= today) ||
@@ -170,6 +177,12 @@ QList<ToDo> toDos(const VaultIndex &index, ToDoView view, const QDate &today, co
     }
     sortToDos(shown, ToDoSort::Due, false);
     return shown;
+}
+
+QList<ToDo> toDos(const VaultIndex &index, ToDoView view, const QDate &today, const QString &tag,
+                  std::optional<int> priority)
+{
+    return pickToDos(gatherToDos(index, view == ToDoView::Done), view, today, tag, priority);
 }
 
 } // namespace jot

@@ -58,6 +58,8 @@ public:
     void setView(const QString &view);
     [[nodiscard]] QString tag() const { return m_tag; }
     void setTag(const QString &tag);
+    /// Lists nothing while it has no tag, as a tag's own page, which shows only with one, needs.
+    void setTagOnly(bool only) { m_tagOnly = only; }
     [[nodiscard]] int priority() const { return m_priority; }
     void setPriority(int priority);
     /// Orders open to-dos by `sort`, "due", "created", "title" or "priority", the other way
@@ -79,6 +81,7 @@ private:
     const VaultIndex *m_index = nullptr;
     QString m_view = QStringLiteral("today");
     QString m_tag;
+    bool m_tagOnly = false;
     int m_priority = -1;
     ToDoSort m_sort = ToDoSort::Due;
     bool m_descending = false;

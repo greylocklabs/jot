@@ -104,6 +104,7 @@ VaultController::VaultController(Settings &settings, QObject *parent)
     m_tasks.setView(settings.tasksView());
     // A tag's view lists all its open to-dos, whatever Tasks is set to show.
     m_tagTasks.setView(u"all"_s);
+    m_tagTasks.setTagOnly(true);
     m_tagNotes.setOrder(settings.noteSort());
     connect(&m_tasks, &TaskModel::filterChanged, this,
             [this] { m_settings.setTasksView(m_tasks.view()); });
