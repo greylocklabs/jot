@@ -350,8 +350,11 @@ void TestKeyRouter::recordsAKeyAsSettingsKeepIt()
 
 void TestKeyRouter::namesActionsForViCommands()
 {
-    QCOMPARE(KeyRouter::commandName(u"copyLink"_s), u"copy-link"_s);
-    QCOMPARE(KeyRouter::commandName(u"rename"_s), u"rename"_s);
+    QCOMPARE(KeyRouter::commandName(u"copyLink"_s), u"CopyLink"_s);
+    QCOMPARE(KeyRouter::commandName(u"rename"_s), u"Rename"_s);
+    // In any case, with or without hyphens.
+    QCOMPARE(KeyRouter::viCommandAction(u"MoveTicked"_s), u"moveTicked"_s);
+    QCOMPARE(KeyRouter::viCommandAction(u"moveticked"_s), u"moveTicked"_s);
     QCOMPARE(KeyRouter::viCommandAction(u"move-ticked"_s), u"moveTicked"_s);
     QCOMPARE(KeyRouter::viCommandAction(u" sort-list "_s), u"sortList"_s);
     QVERIFY(KeyRouter::viCommandAction(u"no-such-thing"_s).isEmpty());
@@ -359,7 +362,7 @@ void TestKeyRouter::namesActionsForViCommands()
     QVERIFY(KeyRouter::viCommandAction(u"commands"_s).isEmpty());
     bool listed = false;
     for (const QVariant &each : KeyRouter::viCommands())
-        listed |= each.toMap().value(u"text"_s) == u"untick-all"_s;
+        listed |= each.toMap().value(u"text"_s) == u"UntickAll"_s;
     QVERIFY(listed);
 }
 

@@ -3,6 +3,18 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## Unreleased
+
+### Changed
+
+- Vi's `:` names the palette's commands as vim's plugins do, as `:MoveTicked`, and takes them
+  in any case, with or without hyphens, so `:moveticked` and `:move-ticked` work too. Return
+  runs the one command offered for what was typed, unless what was typed is a command itself.
+
+### Fixed
+
+- Vi's `:` offers help once, not twice, and its list widens to fit a long description.
+
 ## 0.8.0 - 2026-11-22
 
 ### Added

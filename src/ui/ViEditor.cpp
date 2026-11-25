@@ -755,7 +755,7 @@ QString ViEditor::runCommand(const QString &command)
         trigger(u"viHelp"_s);
         return {};
     }
-    // Every action the palette has, by its name, as :copy-link or :move-ticked.
+    // Every action the palette has, by its name, as :CopyLink or :MoveTicked.
     if (const QString id = KeyRouter::viCommandAction(typed); !id.isEmpty()) {
         trigger(id);
         return {};

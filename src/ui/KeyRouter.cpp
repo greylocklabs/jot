@@ -386,14 +386,11 @@ QVariantList KeyRouter::commands(const QString &query, const QStringList &unavai
 
 QString KeyRouter::commandName(const QString &id)
 {
-    // Its id's words, joined by hyphens: copyLink is copy-link.
-    QString name;
-    for (const QChar c : id) {
-        if (c.isUpper() && !name.isEmpty())
-            name += u'-';
-        name += c.toLower();
-    }
-    return name;
+    // Its id's words, each capitalized, as vim names its plugins' commands: copyLink is
+    // CopyLink.
+    if (id.isEmpty())
+        return id;
+    return id.front().toUpper() + id.mid(1);
 }
 
 QVariantList KeyRouter::viCommands()
@@ -409,9 +406,10 @@ QVariantList KeyRouter::viCommands()
 
 QString KeyRouter::viCommandAction(const QString &typed)
 {
-    const QString name = typed.trimmed();
+    const QString name = typed.trimmed().remove(u'-');
     for (const KeyAction &action : chosenActions()) {
-        if (action.scope == u"window" && action.id != u"commands" && commandName(action.id) == name)
+        if (action.scope == u"window" && action.id != u"commands" &&
+            action.id.compare(name, Qt::CaseInsensitive) == 0)
             return action.id;
     }
     return {};

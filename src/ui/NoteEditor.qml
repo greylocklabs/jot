@@ -1676,7 +1676,12 @@ Rectangle {
                     z: -1
                     visible: root.dataFile || Settings.lineNumbers
                     x: -width - Theme.space4
-                    width: digits.advanceWidth(String(Math.max(body.lineCount, 99)))
+                    // As wide as the last line's number, which wrapping, and so this width,
+                    // cannot change.
+                    width: digits.advanceWidth(String(Math.max(body.textDocument
+                                                               ? dataStyler.lineNumberAt(
+                                                                     body.textDocument,
+                                                                     body.length) : 0, 99)))
                     height: body.height
 
                     FontMetrics {
