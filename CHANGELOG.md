@@ -14,6 +14,7 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 ### Fixed
 
 - Vi's `:` offers help once, not twice, and its list widens to fit a long description.
+- Keyboard shortcuts wraps a long description onto more lines rather than cutting it short.
 
 ## 0.8.0 - 2026-11-22
 

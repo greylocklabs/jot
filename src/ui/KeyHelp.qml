@@ -350,6 +350,11 @@ Popup {
         width: parent.width
         spacing: Theme.space2
 
+        FontMetrics {
+            id: labelMetrics
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.textSm
+        }
         Text {
             text: table.title
             color: Theme.textFaint
@@ -400,12 +405,13 @@ Popup {
                                                                       ""
 
                     }
+                    // Wrapped rather than cut short, its first line level with the keys.
                     Text {
-                        anchors.verticalCenter: parent.verticalCenter
+                        y: Math.max(0, (caps.height - labelMetrics.height) / 2)
                         width: row.width - caps.width - row.spacing - (reset.visible ? reset.width
                                                                                        + row.spacing :
                                                                                        0)
-                        elide: Text.ElideRight
+                        wrapMode: Text.Wrap
                         text: row.modelData.label
                         color: Theme.text
                         font.family: Theme.fontFamily
@@ -415,7 +421,7 @@ Popup {
                         id: reset
 
                         objectName: "reset_" + row.modelData.id
-                        anchors.verticalCenter: parent.verticalCenter
+                        y: Math.max(0, (caps.height - height) / 2)
                         visible: row.modelData.custom === true
                         label: qsTr("Reset")
                         tip: (row.modelData.defaultKeys || []).length > 0 ? qsTr("Back to %1").arg(
