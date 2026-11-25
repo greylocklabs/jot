@@ -80,6 +80,8 @@ Q_SIGNALS:
     void commandLineRequested();
     /// za, zM or zR: fold `id` as KeyRouter names it, which the view does.
     void foldRequested(const QString &id);
+    /// `/`, `n` or `N`: find in the note, or go to the next or previous match.
+    void findRequested(const QString &id);
     /// >>, <<, > or <: the lines from `start` to `end` should take an indent, or lose one with
     /// `left`, which the view does. In visual mode the range takes in the character under the
     /// cursor, and so its line, as vi's selection does.

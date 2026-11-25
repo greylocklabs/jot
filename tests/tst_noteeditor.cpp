@@ -77,6 +77,7 @@ private Q_SLOTS:
     void typingIsDrawnAndSaved();
     void findsAndReplacesInTheNote();
     void findScrollsToEachMatch();
+    void viFindsWithSlash();
     void typingAfterAMoveIsSaved();
     void typingKeepsWindowsLineEndings();
     void anOutsideEditKeepsTheCursorWhereItWas();
@@ -1138,6 +1139,51 @@ void TestNoteEditor::findScrollsToEachMatch()
         qAbs(body->mapToItem(scroll, body->property("cursorRectangle").toRectF().center()).y() -
              scroll->height() / 2) < 40);
     QTest::keyClick(m_window.get(), Qt::Key_Escape);
+}
+
+void TestNoteEditor::viFindsWithSlash()
+{
+    m_settings->setViMode(true);
+    const auto off = qScopeGuard([this] { m_settings->setViMode(false); });
+    QString text = u"A needle at the top.\n\n"_s;
+    for (int i = 0; i < 120; ++i)
+        text += u"Hay, line %1.\n\n"_s.arg(i);
+    text += u"A needle at the bottom.\n"_s;
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Pins.md"_s, text, &error));
+    m_vault->setCurrent(u"Pins.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    QTRY_COMPARE(body->property("text").toString(), text);
+    auto *vi = body->findChild<QObject *>(u"vi"_s);
+    body->forceActiveFocus();
+    body->setProperty("cursorPosition", 0);
+    QTRY_COMPARE(vi->property("mode").toString(), u"normal"_s);
+    const auto type = [this](const QString &keys) {
+        for (const QChar c : keys)
+            QTest::keyClick(m_window.get(), c.toLatin1());
+    };
+
+    // / opens find, and Return goes back to the note on the match, as in vim.
+    type(u"/"_s);
+    QQuickItem *field = find(u"findField"_s);
+    QTRY_VERIFY(field->hasActiveFocus());
+    type(u"needle"_s);
+    QQuickItem *bar = find(u"findBar"_s);
+    QTRY_COMPARE(bar->property("starts").toList().size(), 2);
+    QTest::keyClick(m_window.get(), Qt::Key_Return);
+    QTRY_VERIFY(body->hasActiveFocus());
+    QVERIFY(bar->isVisible());
+    QCOMPARE(vi->property("mode").toString(), u"normal"_s);
+
+    // n and N go on and back through the matches, each brought into view.
+    QQuickItem *scroll = find(u"scroll"_s);
+    type(u"n"_s);
+    QCOMPARE(bar->property("current").toInt(), 1);
+    QTRY_VERIFY(body->mapToItem(scroll, body->property("cursorRectangle").toRectF().topLeft()).y() <
+                scroll->height());
+    type(u"N"_s);
+    QCOMPARE(bar->property("current").toInt(), 0);
+    QCOMPARE(body->property("text").toString(), text);
 }
 
 void TestNoteEditor::readingFindsSelectsAndCopies()
