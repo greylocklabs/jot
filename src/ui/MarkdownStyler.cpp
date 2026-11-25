@@ -1,4 +1,5 @@
 #include "MarkdownStyler.h"
+#include "MathRenderer.h"
 
 #include "jot/TaskLine.h"
 
@@ -895,12 +896,15 @@ QVariantList MarkdownStyler::images() const
                                       {u"link"_s, image->web->link},
                                       {u"embed"_s, image->web->embed}});
         else if (image)
-            images.append(QVariantMap{{u"position"_s, block.position()},
-                                      {u"source"_s, QUrl::fromLocalFile(image->path)},
-                                      {u"width"_s, image->size.width()},
-                                      {u"height"_s, image->size.height()},
-                                      {u"audio"_s, image->audio},
-                                      {u"video"_s, image->video}});
+            images.append(
+                QVariantMap{{u"position"_s, block.position()},
+                            {u"source"_s, QUrl::fromLocalFile(image->path)},
+                            {u"ratio"_s, MathRenderer::instance().ratioOf(image->path)},
+                            {u"math"_s, image->path.startsWith(MathRenderer::folder() + u'/')},
+                            {u"width"_s, image->size.width()},
+                            {u"height"_s, image->size.height()},
+                            {u"audio"_s, image->audio},
+                            {u"video"_s, image->video}});
         if (const auto *line =
                 dynamic_cast<const MarkdownHighlighter::Inlines *>(block.userData())) {
             for (const MarkdownHighlighter::Math &math : line->math)
@@ -908,6 +912,8 @@ QVariantList MarkdownStyler::images() const
                                           {u"source"_s, QUrl::fromLocalFile(math.path)},
                                           {u"width"_s, math.size.width()},
                                           {u"height"_s, math.size.height()},
+                                          {u"ratio"_s, MathRenderer::instance().ratioOf(math.path)},
+                                          {u"math"_s, true},
                                           {u"inline"_s, true}});
         }
     }
@@ -931,6 +937,7 @@ void MarkdownStyler::applyLook()
     look.monoFamily = theme.monoFontFamily();
     look.displayFamily = theme.displayFontFamily();
     look.pixelSize = m_pixelSize;
+    look.pixelRatio = MathRenderer::pixelRatioOf(m_document);
     look.strongWeight = theme.weightStrong();
     look.boldWeight = theme.weightBold();
     look.imageWidth = m_width;

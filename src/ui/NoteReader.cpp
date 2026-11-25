@@ -248,8 +248,8 @@ void NoteReader::render()
     }
     m_shown += parts.body.sliced(from);
     QString markdown = readingMarkdown(m_shown, [this, &theme](const QString &tex, bool display) {
-        const MathRenderer::Drawn drawn =
-            MathRenderer::instance().draw(tex, display, m_pixelSize, theme.text());
+        const MathRenderer::Drawn drawn = MathRenderer::instance().draw(
+            tex, display, m_pixelSize, theme.text(), MathRenderer::pixelRatioOf(m_document));
         return drawn.ok() ? QUrl::fromLocalFile(drawn.path).toString() : QString();
     });
     markdown = drawDiagrams(markdown, theme.diagramStyle(m_fontFamily, m_pixelSize));
@@ -639,9 +639,12 @@ void NoteReader::placeImages()
                 reader.setScaledSize(shown * 2);
                 image = reader.read();
             } else if (path.startsWith(MathRenderer::folder() + u'/')) {
-                // Drawn at twice its size, as math is, and shown at half, in the line's middle.
+                // Drawn at the screen's ratio, and shown at one screen pixel to each it has, in
+                // the line's middle.
                 image = QImage(path);
-                shown = image.size() / 2;
+                const qreal ratio = MathRenderer::instance().ratioOf(path);
+                image.setDevicePixelRatio(ratio);
+                shown = QSize(qRound(image.width() / ratio), qRound(image.height() / ratio));
                 if (shown.width() > m_width)
                     shown = QSize(m_width, shown.height() * m_width / shown.width());
                 format.setVerticalAlignment(QTextCharFormat::AlignMiddle);
