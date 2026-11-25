@@ -66,6 +66,7 @@ private Q_SLOTS:
     void offersToRemoveATargetOnlyWhenThereIsOne();
     void holdingBackListsTheNotesBefore();
     void changesAShortcutByPressingIt();
+    void keyHelpWrapsRatherThanCuts();
     void aChosenShortcutWorksInTheWindow();
     void givesANoteATypeFromTheWindow();
     void runsNoteActionsFromVisCommandLine();
@@ -653,6 +654,46 @@ void TestDialogs::holdingBackListsTheNotesBefore()
                       second->mapToScene({second->width() / 2, second->height() / 2}).toPoint());
     QTRY_COMPARE(m_vault->current(), u"Trail one.md"_s);
     QVERIFY(m_vault->canGoForward());
+}
+
+void TestDialogs::keyHelpWrapsRatherThanCuts()
+{
+    // Large text, as a desktop set to it gives, makes long descriptions longer than their room.
+    ThemeController::instance()->setDesktopTextScale(1.5);
+    const auto restore = qScopeGuard([] { ThemeController::instance()->setDesktopTextScale(1); });
+    QQuickWindow window;
+    window.resize(900, 760);
+    window.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&window));
+    QQmlEngine engine;
+    QQmlComponent component(&engine);
+    component.setData("import Jot.Ui\nKeyHelp { KeyRouter { id: keys } actions: keys.actions }\n",
+                      QUrl(u"qrc:/test.qml"_s));
+    std::unique_ptr<QObject> help(component.create());
+    QVERIFY2(help, qPrintable(component.errorString()));
+    help->setProperty("parent", QVariant::fromValue(window.contentItem()));
+    QMetaObject::invokeMethod(help.get(), "open");
+    QTRY_VERIFY(help->property("opened").toBool());
+    auto *content = help->property("contentItem").value<QQuickItem *>();
+    // On every tab, no description is cut short.
+    const std::function<void(QQuickItem *, QList<QQuickItem *> &)> texts =
+        [&texts](QQuickItem *at, QList<QQuickItem *> &found) {
+            for (QQuickItem *child : at->childItems()) {
+                if (!child->isVisible())
+                    continue;
+                if (child->inherits("QQuickText"))
+                    found.append(child);
+                texts(child, found);
+            }
+        };
+    for (const QString &tab : {u"general"_s, u"editor"_s, u"vi"_s}) {
+        help->setProperty("tab", tab);
+        QList<QQuickItem *> found;
+        QTRY_VERIFY((found.clear(), texts(content, found), found.size() > 10));
+        for (QQuickItem *item : std::as_const(found))
+            QVERIFY2(!item->property("truncated").toBool(),
+                     qPrintable(tab + u": "_s + item->property("text").toString()));
+    }
 }
 
 void TestDialogs::changesAShortcutByPressingIt()
