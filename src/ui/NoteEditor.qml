@@ -1691,6 +1691,12 @@ Rectangle {
                             root.foldAll(id === "noteFoldAll")
                         }
                     }
+                    onFindRequested: id => {
+                        if (id === "noteFind")
+                            root.find(false)
+                        else if (findBar.visible)
+                            findBar.step(id === "notePrevious")
+                    }
                     onShiftRequested: (left, start, end) => {
                         const visual = vi.mode === "visual"
                         body.select(start, end)
@@ -2642,7 +2648,8 @@ Rectangle {
         styler: root.readShown ? reading : styler
         body: root.readShown ? reader : body
         writable: Vault.writable && !root.readShown
-        backOnReturn: root.readShown && Settings.viMode
+        // In vi, as after its /, Return goes back to the note, where n and N step.
+        backOnReturn: Settings.viMode
 
         // Another note, or none, ends the search.
         Connections {

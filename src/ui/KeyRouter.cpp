@@ -240,6 +240,9 @@ QList<KeyAction> KeyRouter::actions()
 
         act(u"toggleFold"_s, tr("Fold or show what is under the cursor's heading"), note, {},
             u"za"_s),
+        act(u"noteFind"_s, tr("Find in the note"), note, {}, u"/"_s),
+        act(u"noteNext"_s, tr("Next match"), note, {}, u"n"_s),
+        act(u"notePrevious"_s, tr("Previous match"), note, {}, u"N"_s),
         act(u"noteFoldAll"_s, tr("Fold away what is under every heading"), note, {}, u"zM"_s),
         act(u"noteUnfoldAll"_s, tr("Show what is under every heading"), note, {}, u"zR"_s),
         act(u"shiftRight"_s, tr("Indent the line, or nest a list item"), note, {}, u">>"_s),

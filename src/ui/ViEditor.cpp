@@ -585,6 +585,8 @@ bool ViEditor::run(const QString &id)
         setMode(kNormal);
     } else if (id == u"toggleFold" || id == u"noteFoldAll" || id == u"noteUnfoldAll") {
         Q_EMIT foldRequested(id);
+    } else if (id == u"noteFind" || id == u"noteNext" || id == u"notePrevious") {
+        Q_EMIT findRequested(id);
     } else if (id == u"shiftRight" || id == u"shiftLeft" || id == u"shiftSelectionRight" ||
                id == u"shiftSelectionLeft") {
         int start = cursor();

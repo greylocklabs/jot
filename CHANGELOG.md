@@ -5,6 +5,11 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ## Unreleased
 
+### Added
+
+- In vi's normal mode, `/` finds in the note, as in vim: Return goes back to the note on the
+  match, and `n` and `N` go to the next and previous one.
+
 ### Changed
 
 - Keyboard shortcuts has its tabs down the left, as Settings does, and vi mode's keys in tabs of
