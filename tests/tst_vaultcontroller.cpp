@@ -278,6 +278,9 @@ void TestVaultController::showsATagsNotesAndToDosTogether()
     m_vault->setShownTag({});
     QVERIFY(m_vault->showingTasks());
     QVERIFY(m_vault->tagNotes()->tag().isEmpty());
+    // With no tag shown, its to-dos are none, rather than all of them gathered for nothing.
+    QCOMPARE(m_vault->tagTasks()->rowCount({}), 0);
+    QVERIFY(m_vault->tasks()->rowCount({}) > 0);
 
     // Another view chosen leaves it without going back.
     m_vault->setShownTag(u"harbor"_s);

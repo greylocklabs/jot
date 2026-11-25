@@ -95,5 +95,12 @@ void sortToDos(QList<ToDo> &list, ToDoSort sort, bool descending);
 [[nodiscard]] QList<ToDo> toDos(const VaultIndex &index, ToDoView view, const QDate &today,
                                 const QString &tag = {},
                                 std::optional<int> priority = std::nullopt);
+/// Every open to-do in the index, or every done one, in no order, for pickToDos() to filter
+/// more than once.
+[[nodiscard]] QList<ToDo> gatherToDos(const VaultIndex &index, bool done);
+/// Those of `all` that toDos() would give for the rest.
+[[nodiscard]] QList<ToDo> pickToDos(const QList<ToDo> &all, ToDoView view, const QDate &today,
+                                    const QString &tag = {},
+                                    std::optional<int> priority = std::nullopt);
 
 } // namespace jot

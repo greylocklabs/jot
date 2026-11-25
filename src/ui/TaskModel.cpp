@@ -62,12 +62,19 @@ void TaskModel::refill()
 {
     beginResetModel();
     m_today = QDate::currentDate();
-    m_rows = m_index ? toDos(*m_index, toDoView(m_view).value_or(ToDoView::Today), m_today, m_tag,
-                             m_priority < 0 ? std::nullopt : std::optional(m_priority))
-                     : QList<ToDo>();
+    const ToDoView view = toDoView(m_view).value_or(ToDoView::Today);
+    const bool none = !m_index || (m_tagOnly && m_tag.isEmpty());
+    // The open ones gathered once, for the view and for today's count.
+    const QList<ToDo> open = none ? QList<ToDo>() : gatherToDos(*m_index, false);
+    m_rows = none ? QList<ToDo>()
+             : view == ToDoView::Done
+                 ? toDos(*m_index, view, m_today, m_tag,
+                         m_priority < 0 ? std::nullopt : std::optional(m_priority))
+                 : pickToDos(open, view, m_today, m_tag,
+                             m_priority < 0 ? std::nullopt : std::optional(m_priority));
     if (m_view != u"done")
         sortToDos(m_rows, m_sort, m_descending);
-    m_todayCount = m_index ? int(toDos(*m_index, ToDoView::Today, m_today).size()) : 0;
+    m_todayCount = int(pickToDos(open, ToDoView::Today, m_today).size());
     endResetModel();
     m_midnight.start(int(std::max<qint64>(1000, QDateTime::currentDateTime().msecsTo(QDateTime(
                                                     m_today.addDays(1), QTime(0, 0, 1))))));
