@@ -7,6 +7,8 @@
 #include <QRegularExpression>
 #include <QStringList>
 
+#include <algorithm>
+
 using namespace Qt::StringLiterals;
 
 namespace jot {
@@ -198,18 +200,26 @@ std::optional<QString> tidiedTaskLine(const QString &line, const QDate &today)
             const QString first = words.first().toLower();
             if (first == u"yesterday")
                 return {today.addDays(-1).toString(Qt::ISODate), 1};
-            if (const qsizetype weekday = weekdays.indexOf(first); !due && weekday >= 0) {
+            // A weekday in full or short, as wed or thurs.
+            const qsizetype weekday =
+                first.size() < 3
+                    ? -1
+                    : std::ranges::find_if(
+                          weekdays,
+                          [&first](const QString &day) { return day.startsWith(first); }) -
+                          weekdays.begin();
+            if (!due && weekday >= 0 && weekday < weekdays.size()) {
                 const int back = (today.dayOfWeek() - int(weekday) - 1 + 7) % 7;
                 return {today.addDays(back == 0 ? -7 : -back).toString(Qt::ISODate), 1};
             }
         }
         // The most words that read as a day, and a time, and nothing else.
         for (qsizetype count = words.size(); count > 0; --count) {
-            const QuickTask read =
-                readQuickTask(words.first(count).join(u' '), QDateTime(today, QTime(12, 0)));
-            if (!read.due.isEmpty() && read.title.isEmpty() && read.repeat.isEmpty() &&
-                read.priority == 0)
-                return {due ? read.due : read.due.left(10), count};
+            const QString day =
+                dueNamedAlone(words.first(count).join(u' '), QDateTime(today, QTime(12, 0)));
+            // A day done is one gone by, never one still to come.
+            if (!day.isEmpty() && (due || QDate::fromString(day.left(10), Qt::ISODate) <= today))
+                return {due ? day : day.left(10), count};
         }
         return {{}, 0};
     };

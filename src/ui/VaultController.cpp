@@ -1723,6 +1723,13 @@ QString VaultController::scheduleWords(const QString &text) const
         .join(u' ');
 }
 
+QDateTime VaultController::dayNamed(const QString &words) const
+{
+    const QDate day = QDate::fromString(
+        jot::dueNamedAlone(words, QDateTime::currentDateTime()).left(10), Qt::ISODate);
+    return day.isValid() ? QDateTime(day, QTime(0, 0)) : QDateTime();
+}
+
 QVariantMap VaultController::readQuickTask(const QString &typed) const
 {
     const QuickTask task = jot::readQuickTask(typed, QDateTime::currentDateTime());
