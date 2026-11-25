@@ -1910,6 +1910,9 @@ void VaultController::setShownTag(const QString &tag)
     }
     m_shownTag = tag;
     m_tagNotes.setTag(tag);
+    // Not kept up while no tag is shown, so taken in now.
+    if (!tag.isEmpty())
+        m_tagNotes.reload(m_index.get());
     m_tagTasks.setTag(tag);
     Q_EMIT shownTagChanged();
     if (leaving) {
@@ -3594,10 +3597,12 @@ void VaultController::reloadModels()
                            [this](const QString &path) { return m_index->isHidden(path); });
         m_tagTree.reload(m_index->tagCounts());
         m_notes.reload(m_index.get(), m_favorites);
-        m_switcher.reload(m_index.get());
-        m_linkSuggestions.reload(m_index.get());
+        // Those not on screen are taken in when next asked for, or when a tag is shown.
+        m_switcher.reloadLater(m_index.get());
+        m_linkSuggestions.reloadLater(m_index.get());
         m_tasks.reload(m_index.get());
-        m_tagNotes.reload(m_index.get());
+        if (!m_shownTag.isEmpty())
+            m_tagNotes.reload(m_index.get());
         m_tagTasks.reload(m_index.get());
     } else {
         m_notebooks.reload(nullptr, {}, 0);

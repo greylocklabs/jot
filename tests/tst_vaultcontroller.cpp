@@ -1480,6 +1480,8 @@ void TestVaultController::switcherFindsByTitleAliasAndPath()
 {
     QVERIFY(m_vault->openPath(m_root));
     SwitcherModel &switcher = *m_vault->switcher();
+    // Opened, as the quick switcher opens with nothing typed, it takes in the notes.
+    switcher.setQuery({});
     QCOMPARE(switcher.rowCount(), 15);
 
     switcher.setQuery(u"sour"_s);
