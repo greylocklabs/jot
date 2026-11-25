@@ -1123,6 +1123,20 @@ void TestNoteEditor::findScrollsToEachMatch()
     QTRY_VERIFY(shown());
     QTest::keyClick(m_window.get(), Qt::Key_Return);
     QTRY_VERIFY(shown());
+
+    // Back in the note with the bar still open, typing keeps typewriter scrolling's middle line.
+    m_settings->setTypewriter(true);
+    const auto typewriterOff = qScopeGuard([this] { m_settings->setTypewriter(false); });
+    body->forceActiveFocus();
+    QTRY_VERIFY(body->hasActiveFocus());
+    QVERIFY(bar->isVisible());
+    body->setProperty("cursorPosition", int(text.indexOf(u"line 60"_s)));
+    QTest::qWait(50);
+    scroll->setProperty("contentY", 0);
+    QTest::keyClick(m_window.get(), Qt::Key_X);
+    QTRY_VERIFY(
+        qAbs(body->mapToItem(scroll, body->property("cursorRectangle").toRectF().center()).y() -
+             scroll->height() / 2) < 40);
     QTest::keyClick(m_window.get(), Qt::Key_Escape);
 }
 
