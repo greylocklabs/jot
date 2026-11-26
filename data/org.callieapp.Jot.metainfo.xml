@@ -36,6 +36,31 @@
   </categories>
 
   <releases>
+    <release version="0.8.1" date="2026-11-25">
+      <description>
+        <ul>
+          <li>The note glides, rather than jumps, as it scrolls to follow the cursor, and as vi's keys scroll Read; Settings, Writing can turn it off.</li>
+          <li>In vi mode, lines are kept between the cursor and the top and bottom of the view, as vim's scrolloff does, so j and k scroll before the cursor reaches the edge, and a scroll puts the cursor that far in. Settings, Keyboard sets how many, 20 at first, at most half the view.</li>
+          <li>More ways to say a day, in quick add and after @due: the 12th for the next 12th, wed alone, 3d, 2w and 1m, eow or end of week for Friday, eom or end of month, next</li>
+          <li>The calendar picker takes a day in words too: it goes to the day as it is typed, and Return picks it.</li>
+          <li>In vi's normal mode, / finds in the note, as in vim: Return goes back to the note on the match, and n and N go to the next and previous one.</li>
+          <li>In vi's insert mode, Ctrl+U deletes back to the line's first word, then to its start, as in vim.</li>
+          <li>A note's properties sit in a compact card above its text, set apart by its own fill and edge: the type heads it, with small Add and Text buttons in its corner, rows are shorter, and the type's empty properties are named in a faint line at its foot that shows them.</li>
+          <li>Keyboard shortcuts has its tabs down the left, as Settings does, and vi mode's keys in tabs of their own: normal mode, text objects, visual mode, commands, Read mode and the leader. Commands lists every command of the palette that vi's : runs.</li>
+          <li>Vi's : names the palette's commands as vim's plugins do, as :MoveTicked, and takes them in any case, with or without hyphens, so :moveticked and :move-ticked work too. Return runs the one command offered for what was typed, unless what was typed is a command itself.</li>
+          <li>Switching between Source, Styled and Read keeps the line at the top of the view at the top, rather than jumping elsewhere or back to where that mode was last.</li>
+          <li>Math is drawn at the screen's own pixel ratio and shown pixel for pixel, rather than at twice its size and scaled, which blurred it at ratios such as 125%, in Styled and Read.</li>
+          <li>In Read, math with a backslash in it, such as $$3,000$ or $pi r^2$, is drawn once rather than twice.</li>
+          <li>A vault that is its own git repository sends its types when it syncs. Every sync took itself for the first, so the starter types were set aside each time and never committed.</li>
+          <li>In Read, a list item's fold arrow is beside the item again, rather than a line or two above, or missing, when a video or picture is shown above it.</li>
+          <li>Vi's : offers help once, not twice, and its list widens to fit a long description.</li>
+          <li>Keyboard shortcuts wraps a long description onto more lines rather than cutting it short.</li>
+          <li>Saving a note no longer stalls typing, however large the vault: the lists take in the one note saved rather than all of them again, the tags only when its tags changed, and the quick switcher and link suggestions when next asked. In a vault of 3,000 notes with a to-do each, a save took the editor away for about 685 ms, and now for under 10.</li>
+          <li>Going to the next or previous match of find in a note scrolls it into view.</li>
+          <li>Folding or unfolding a heading or list item keeps its line where it is on screen, rather than following the cursor, which the fold moved.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.8.0" date="2026-11-22">
       <description>
         <ul>
