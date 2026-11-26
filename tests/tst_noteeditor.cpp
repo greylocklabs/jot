@@ -140,6 +140,7 @@ private Q_SLOTS:
     void readsDiagramsAsPictures();
     void tickingARepeatingToDoWritesTheNext();
     void editsInViModes();
+    void viClearsTheLineWhileInserting();
     void viActsOnWhatTheMouseSelects();
     void viActsOnTextObjects();
     void viKeepsTheCursorInViewOnScroll();
@@ -4063,6 +4064,38 @@ void TestNoteEditor::viActsOnTextObjects()
     QCOMPARE(text(), u"one two"_s);
     QCOMPARE(QGuiApplication::clipboard()->text(), u"kept"_s);
     m_settings->setViMode(false);
+}
+
+void TestNoteEditor::viClearsTheLineWhileInserting()
+{
+    m_settings->setViMode(true);
+    const auto off = qScopeGuard([this] { m_settings->setViMode(false); });
+    m_vault->setCurrent(u"Welcome.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    auto *vi = body->findChild<QObject *>(u"vi"_s);
+    body->forceActiveFocus();
+    body->setProperty("text", u"first\n    indented words\nlast"_s);
+    const auto text = [body] { return body->property("text").toString(); };
+    const auto clear = [this] { QTest::keyClick(m_window.get(), Qt::Key_U, Qt::ControlModifier); };
+
+    // In normal mode it changes nothing.
+    body->setProperty("cursorPosition", 16);
+    QCOMPARE(vi->property("mode").toString(), u"normal"_s);
+    clear();
+    QCOMPARE(text(), u"first\n    indented words\nlast"_s);
+
+    // Inserting, it deletes back to the line's first word, then to its start, and undoes.
+    QTest::keyClick(m_window.get(), 'A');
+    QCOMPARE(vi->property("mode").toString(), u"insert"_s);
+    clear();
+    QCOMPARE(text(), u"first\n    \nlast"_s);
+    QCOMPARE(body->property("cursorPosition").toInt(), 10);
+    clear();
+    QCOMPARE(text(), u"first\n\nlast"_s);
+    QCOMPARE(vi->property("mode").toString(), u"insert"_s);
+    QTest::keyClick(m_window.get(), Qt::Key_Escape);
+    QTest::keyClick(m_window.get(), 'u');
+    QTRY_COMPARE(text(), u"first\n    \nlast"_s);
 }
 
 void TestNoteEditor::editsInViModes()

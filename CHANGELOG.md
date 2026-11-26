@@ -20,6 +20,8 @@ down` or `3d print` stay as written.
   picks it.
 - In vi's normal mode, `/` finds in the note, as in vim: Return goes back to the note on the
   match, and `n` and `N` go to the next and previous one.
+- In vi's insert mode, Ctrl+U deletes back to the line's first word, then to its start, as in
+  vim.
 
 ### Changed
 
