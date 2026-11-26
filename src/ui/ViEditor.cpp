@@ -213,6 +213,9 @@ bool ViEditor::eventFilter(QObject *watched, QEvent *event)
     const auto *press = static_cast<QKeyEvent *>(event);
     if (m_mode != kInsert)
         return key(press);
+    if (keyName(press) == u"Ctrl+U" && !m_busy &&
+        !m_target->property("inputMethodComposing").toBool())
+        return run(u"clearToLineStart"_s);
     if (press->key() != Qt::Key_Escape || m_busy ||
         m_target->property("inputMethodComposing").toBool())
         return QObject::eventFilter(watched, event);
@@ -558,6 +561,19 @@ bool ViEditor::run(const QString &id)
         }
         edit.removeSelectedText();
         edit.movePosition(QTextCursor::StartOfBlock);
+        setCursor(edit.position());
+    } else if (id == u"clearToLineStart") {
+        // Only while inserting, as in vi.
+        if (m_mode != kInsert || !writable())
+            return true;
+        const QString text = block.text();
+        int first = 0;
+        while (first < text.size() && text.at(first).isSpace())
+            ++first;
+        const int start = block.position() + first;
+        edit.setPosition(edit.position() > start ? start : block.position(),
+                         QTextCursor::KeepAnchor);
+        edit.removeSelectedText();
         setCursor(edit.position());
     } else if (id == u"deleteToEnd") {
         if (!writable())

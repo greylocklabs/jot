@@ -5369,6 +5369,10 @@ Press %1 to make one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>While inserting, delete back to the line&apos;s first word, then to its start</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Cut to a character, with f, F, t or T after d</source>
         <translation type="unfinished"></translation>
     </message>
