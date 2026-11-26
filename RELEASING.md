@@ -19,6 +19,12 @@ pushes both. When `make check` fails, it puts the version back and leaves the no
 The push goes straight to `main`, which repository admins may do.
 
 Pushing the tag runs the release workflow. It checks the versions again, builds the source tarball
-and the `.deb` and `.rpm` packages, installs each on a clean Fedora, Debian and Ubuntu and runs it,
-and publishes a GitHub release with the notes from `CHANGELOG.md`. Pull requests that touch the
-packaging run the same builds without publishing.
+and the `.deb`, `.rpm` and Arch packages, installs each on a clean Fedora, Debian, Ubuntu and Arch
+and runs it, and publishes a GitHub release with the notes from `CHANGELOG.md`. The Arch package
+does not hold the release back: when it fails, the release goes out without it. Pull requests that
+touch the packaging run the same builds without publishing.
+
+After the release, the `aur` job pushes `packaging/arch/jot` and `packaging/arch/jot-notes-git`,
+with the release's version and checksum filled in, to the AUR. It needs an AUR account's SSH key in
+the `AUR_SSH_PRIVATE_KEY` secret; without it, it warns and skips. See
+[greylocklabs/packages#11](https://github.com/greylocklabs/packages/issues/11).

@@ -8,7 +8,7 @@ and other story entities.
 Jot is the second app in a small suite with Callie (and later a task app). The code lives at
 `github.com/greylocklabs/jot`, the app id is `org.callieapp.Jot`, and the website is
 <https://jotwriter.org>. The first packages are .deb and .rpm for Fedora,
-Debian and Ubuntu.
+Debian and Ubuntu; Arch packages came with 0.8.2.
 
 Background research lives in [docs/research/](research/):
 
@@ -71,8 +71,8 @@ These follow Callie's GUIDELINES.md and DESIGN.md unless noted.
   `Conflicts: athena-jot`.
 - **Platforms:** Fedora 44+, Debian 13+ and Ubuntu 26.04+ on x86_64. All three ship Qt 6.8 or
   newer. Ubuntu 24.04 (Qt 6.4) waits for Flatpak.
-- **Packaging:** hand-written rpm spec and debian/ directory, built and smoke-tested in containers
-  in CI, plus an installer at `jotwriter.org/install.sh`.
+- **Packaging:** hand-written rpm spec, debian/ directory and Arch PKGBUILDs, built and
+  smoke-tested in containers in CI, plus an installer at `jotwriter.org/install.sh`.
 - **Website:** jotwriter.org, from `www/` in this repo, with its landing page, privacy and terms
   pages adapted from Callie's, and the installer. Its stylesheet, scripts and fonts are copies of
   Callie's site files, kept identical.
