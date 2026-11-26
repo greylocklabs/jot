@@ -2641,13 +2641,15 @@ void TestNoteEditor::keepsTheTopLineAcrossModes()
         auto *doc = view->property("textDocument").value<QQuickTextDocument *>()->textDocument();
         return doc->findBlock(position).text().left(13);
     };
-    // Paragraph 60 at the top, in Styled.
-    const int at = int(text.indexOf(u"Paragraph 60 "_s));
-    QRectF place;
-    QMetaObject::invokeMethod(body, "positionToRectangle", Q_RETURN_ARG(QRectF, place),
-                              Q_ARG(int, at));
-    scroll->setProperty("contentY", scroll->property("contentY").toReal() +
-                                        body->mapToItem(scroll, place.topLeft()).y());
+    // A paragraph put at the top, in Styled.
+    const auto scrollTo = [&](const QString &words) {
+        QRectF place;
+        QMetaObject::invokeMethod(body, "positionToRectangle", Q_RETURN_ARG(QRectF, place),
+                                  Q_ARG(int, int(text.indexOf(words))));
+        scroll->setProperty("contentY", scroll->property("contentY").toReal() +
+                                            body->mapToItem(scroll, place.topLeft()).y());
+    };
+    scrollTo(u"Paragraph 60 "_s);
     QTRY_COMPARE(topWords(), u"Paragraph 60 "_s);
 
     // Source, then Read, then back to Styled, each keeps it at the top.
@@ -2660,6 +2662,24 @@ void TestNoteEditor::keepsTheTopLineAcrossModes()
     QTRY_COMPARE(topWords(), u"Paragraph 60 "_s);
     m_settings->setReadMode(false);
     QTRY_COMPARE(topWords(), u"Paragraph 60 "_s);
+
+    // Leaving Read from a data file, then switching in the note, keeps the note's own line,
+    // not the one Read last had.
+    m_settings->setReadMode(true);
+    QTRY_COMPARE(topWords(), u"Paragraph 60 "_s);
+    QFile data(m_root + u"/modes.json"_s);
+    QVERIFY(data.open(QIODevice::WriteOnly));
+    data.write("[{\"name\": \"Mara\"}]\n");
+    data.close();
+    m_vault->setCurrent(u"modes.json"_s);
+    m_settings->setReadMode(false);
+    m_vault->setCurrent(u"Modes.md"_s);
+    QTRY_COMPARE(body->property("text").toString(), text);
+    QTRY_VERIFY(body->isVisible());
+    scrollTo(u"Paragraph 30 "_s);
+    QTRY_COMPARE(topWords(), u"Paragraph 30 "_s);
+    m_settings->setSourceMode(true);
+    QTRY_COMPARE(topWords(), u"Paragraph 30 "_s);
 }
 
 void TestNoteEditor::drawsDiagramsInPlaceOfTheirText()
