@@ -1168,6 +1168,7 @@ Rectangle {
                     text: Settings.readMode && !root.dataFile ? Vault.currentText : ""
                     fontFamily: root.noteFamily
                     pixelSize: reader.font.pixelSize
+                    pixelRatio: Screen.devicePixelRatio
                     width: reader.width
                 }
                 /// Whether `point`, in the reader, is on a to-do's checkbox, left of its text.
@@ -1964,6 +1965,7 @@ Rectangle {
                     id: styler
                     objectName: "styler"
                     folded: root.folded
+                    pixelRatio: Screen.devicePixelRatio
                     indentUnit: Settings.indentText
 
                     sourceMode: Settings.sourceMode
@@ -2031,26 +2033,22 @@ Rectangle {
                                                                      body.length))
                         }
 
-                        /// `at` on a whole pixel of the screen, so drawn math is not resampled.
-                        function onPixel(at) {
-                            const ratio = Screen.devicePixelRatio || 1
-                            return Math.round(at * ratio) / ratio
-                        }
-
-                        // Math within a line sits where its room is, in the middle of the line.
-                        x: onPixel(modelData.inline ? line.x : body.leftPadding)
-                        y: onPixel(modelData.inline ? line.y + (line.height - height) / 2 : line.y)
+                        // Math within a line sits where its room is, in the middle of the line,
+                        // on a whole pixel of the screen so it is not resampled.
+                        x: styler.onPixel(modelData.inline ? line.x : body.leftPadding)
+                        y: styler.onPixel(modelData.inline ? line.y + (line.height - height) / 2 :
+                                                             line.y)
                         width: modelData.width
                         height: modelData.height
                         source: modelData.source
                         // Math is drawn at the screen's ratio, one of its pixels to each there;
                         // a picture is read at twice its size, and mipmapped to scale down well.
-                        sourceSize: Qt.size(modelData.width * (modelData.ratio ?? 2), modelData.height
-                                            * (modelData.ratio ?? 2))
+                        sourceSize: Qt.size(modelData.width * modelData.ratio, modelData.height
+                                            * modelData.ratio)
                         fillMode: Image.PreserveAspectFit
                         asynchronous: true
                         smooth: true
-                        mipmap: !(modelData.math ?? false)
+                        mipmap: !modelData.math
                     }
                 }
 

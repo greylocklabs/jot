@@ -38,6 +38,9 @@ class MarkdownStyler : public QObject
     Q_PROPERTY(QString fontFamily READ fontFamily WRITE setFontFamily NOTIFY fontFamilyChanged)
     /// The editor's body text size, which headings are scaled from.
     Q_PROPERTY(int pixelSize READ pixelSize WRITE setPixelSize NOTIFY pixelSizeChanged)
+    /// The screen's pixels to each one of the note's, which math is drawn at; the window's own
+    /// until it is given.
+    Q_PROPERTY(qreal pixelRatio READ pixelRatio WRITE setPixelRatio NOTIFY pixelRatioChanged)
     /// The width of the text, which images shown inline fit within.
     Q_PROPERTY(int width READ width WRITE setWidth NOTIFY widthChanged)
     /// The images shown in place of their links, as `{position, source, width, height, audio,
@@ -105,6 +108,11 @@ public:
     void setFontFamily(const QString &family);
     [[nodiscard]] int pixelSize() const { return m_pixelSize; }
     void setPixelSize(int size);
+    [[nodiscard]] qreal pixelRatio() const;
+    void setPixelRatio(qreal ratio);
+    /// `at` on a whole pixel of the screen at pixelRatio(), so a picture drawn at it is shown
+    /// pixel for pixel.
+    Q_INVOKABLE qreal onPixel(qreal at) const;
     [[nodiscard]] int width() const { return m_width; }
     void setWidth(int width);
     [[nodiscard]] QVariantList images() const;
@@ -212,6 +220,7 @@ Q_SIGNALS:
     void cursorPositionChanged();
     void fontFamilyChanged();
     void pixelSizeChanged();
+    void pixelRatioChanged();
     void widthChanged();
     void imagesChanged();
     void frontMatterChanged();
@@ -238,6 +247,7 @@ private:
     int m_cursorPosition = 0;
     QString m_fontFamily;
     int m_pixelSize = 16;
+    qreal m_pixelRatio = 0;
     int m_width = 600;
     bool m_imagesPending = false;
     QVariantMap m_frontMatter;

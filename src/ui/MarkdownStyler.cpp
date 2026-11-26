@@ -24,6 +24,7 @@
 #include <QUrl>
 
 #include <algorithm>
+#include <cmath>
 
 using namespace Qt::StringLiterals;
 
@@ -678,6 +679,27 @@ void MarkdownStyler::setFontFamily(const QString &family)
     Q_EMIT fontFamilyChanged();
 }
 
+qreal MarkdownStyler::pixelRatio() const
+{
+    return m_pixelRatio > 0 ? m_pixelRatio : MathRenderer::pixelRatioOf(m_document);
+}
+
+void MarkdownStyler::setPixelRatio(qreal ratio)
+{
+    if (qFuzzyCompare(m_pixelRatio, ratio))
+        return;
+    m_pixelRatio = ratio;
+    // Math drawn for another screen's ratio is drawn again for this one.
+    applyLook();
+    Q_EMIT pixelRatioChanged();
+}
+
+qreal MarkdownStyler::onPixel(qreal at) const
+{
+    const qreal ratio = pixelRatio();
+    return ratio > 0 ? std::round(at * ratio) / ratio : at;
+}
+
 void MarkdownStyler::setPixelSize(int size)
 {
     if (m_pixelSize == size)
@@ -892,6 +914,8 @@ QVariantList MarkdownStyler::images() const
                                       {u"width"_s, image->size.width()},
                                       {u"height"_s, image->size.height()},
                                       {u"web"_s, true},
+                                      {u"ratio"_s, pixelRatio()},
+                                      {u"math"_s, false},
                                       {u"site"_s, image->web->site},
                                       {u"link"_s, image->web->link},
                                       {u"embed"_s, image->web->embed}});
@@ -937,7 +961,7 @@ void MarkdownStyler::applyLook()
     look.monoFamily = theme.monoFontFamily();
     look.displayFamily = theme.displayFontFamily();
     look.pixelSize = m_pixelSize;
-    look.pixelRatio = MathRenderer::pixelRatioOf(m_document);
+    look.pixelRatio = pixelRatio();
     look.strongWeight = theme.weightStrong();
     look.boldWeight = theme.weightBold();
     look.imageWidth = m_width;

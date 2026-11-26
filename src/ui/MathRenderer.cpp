@@ -128,7 +128,9 @@ qreal MathRenderer::pixelRatioOf(const QObject *document)
 MathRenderer::Drawn MathRenderer::draw(const QString &latex, bool display, int pixelSize,
                                        const QColor &color, qreal ratio)
 {
-    ratio = std::clamp(ratio, 1.0, 4.0);
+    // To the nearest quarter, as screens' ratios are, so a whole size at it is at most a few
+    // pixels wider than what is drawn.
+    ratio = std::clamp(std::round(ratio * 4) / 4, 1.0, 4.0);
     const QString key = u"%1|%2|%3|%4|%5"_s.arg(display)
                             .arg(pixelSize)
                             .arg(color.name(QColor::HexArgb))
@@ -186,11 +188,14 @@ MathRenderer::Drawn MathRenderer::draw(const QString &latex, bool display, int p
         // Widened to a whole size at the ratio, so it is shown at exactly one screen pixel to
         // each it has rather than resampled.
         const auto whole = [ratio](int pixels) {
-            for (int shown = int(std::ceil(pixels / ratio));; ++shown) {
+            // A quarter's ratio comes to a whole number within four steps.
+            int shown = int(std::ceil(pixels / ratio));
+            for (int step = 0; step < 4; ++step, ++shown) {
                 const qreal needed = shown * ratio;
                 if (std::abs(needed - std::round(needed)) < 1e-6)
-                    return std::pair{int(std::round(needed)), shown};
+                    break;
             }
+            return std::pair{int(std::round(shown * ratio)), shown};
         };
         const auto [wide, shownWide] = whole(inked.width());
         const auto [tall, shownTall] = whole(inked.height());
