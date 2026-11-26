@@ -34,6 +34,7 @@ class TestVaultController : public QObject
 
 private Q_SLOTS:
     void aSaveUpdatesTheListsRowByRow();
+    void aSaveMovesARowAsAFullReloadWould();
     void savesWithoutStallingTyping();
     void syncsTheStartersInTheVaultsOwnRepository();
     void init();
@@ -522,6 +523,9 @@ void TestVaultController::aSaveUpdatesTheListsRowByRow()
     }
     QVERIFY(!path.isEmpty());
     m_vault->setCurrent(path);
+    m_vault->edit(u"- [ ] a to-do from before\n"_s);
+    m_vault->saveNow();
+    QTRY_VERIFY(column(*m_vault->tasks(), "title").contains(u"a to-do from before"_s));
     const int before = m_vault->tasks()->rowCount();
     // Saved, the note goes to the top of the list by last change, and its to-do joins the
     // to-dos, though nothing else is gathered again.
@@ -529,11 +533,54 @@ void TestVaultController::aSaveUpdatesTheListsRowByRow()
     m_vault->saveNow();
     QTRY_COMPARE(m_vault->notes()->pathAt(0), path);
     QTRY_VERIFY(column(*m_vault->tasks(), "title").contains(u"a to-do from the save"_s));
-    // The note's own to-dos are replaced, not added to: those it had before are gone.
-    QVERIFY(m_vault->tasks()->rowCount() <= before + 1);
+    // The note's own to-dos are replaced, not added to: the one it had before is gone.
+    QVERIFY(!column(*m_vault->tasks(), "title").contains(u"a to-do from before"_s));
+    QCOMPARE(m_vault->tasks()->rowCount(), before);
     // And the switcher knows its new alias when next asked.
     m_vault->switcher()->setQuery(u"harbor ledger"_s);
     QCOMPARE(m_vault->switcher()->pathAt(0), path);
+}
+
+void TestVaultController::aSaveMovesARowAsAFullReloadWould()
+{
+    QVERIFY(m_vault->openPath(m_root));
+    m_vault->chooseSort(u"title"_s);
+    NoteListModel &notes = *m_vault->notes();
+    QCOMPARE(notes.order(), u"title"_s);
+    QVERIFY(notes.rowCount() > 3);
+    const auto paths = [](const NoteListModel &model) {
+        QStringList found;
+        for (int row = 0; row < model.rowCount(); ++row)
+            found << model.pathAt(row);
+        return found;
+    };
+    const auto reloaded = [&] {
+        NoteListModel fresh;
+        fresh.setOrder(u"title"_s);
+        fresh.reload(m_vault->index());
+        return paths(fresh);
+    };
+    // The notes, not data files, which take no title.
+    const auto markdown = [&] {
+        QStringList found = paths(notes);
+        found.removeIf([](const QString &path) { return !path.endsWith(u".md"_s); });
+        return found;
+    };
+    // A note retitled to sort last moves down, and one retitled to sort first moves up, each
+    // to where a list made again would put it.
+    const QString first = markdown().first();
+    m_vault->setCurrent(first);
+    m_vault->edit(u"---\ntitle: Zz last of all\n---\n"_s);
+    m_vault->saveNow();
+    QTRY_COMPARE(notes.pathAt(notes.rowCount() - 1), first);
+    QCOMPARE(paths(notes), reloaded());
+
+    const QString middle = markdown().at(markdown().size() / 2);
+    m_vault->setCurrent(middle);
+    m_vault->edit(u"---\ntitle: Aa first of all\n---\n"_s);
+    m_vault->saveNow();
+    QTRY_COMPARE(notes.pathAt(0), middle);
+    QCOMPARE(paths(notes), reloaded());
 }
 
 void TestVaultController::setsANotesType()
