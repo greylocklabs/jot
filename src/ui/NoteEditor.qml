@@ -692,9 +692,13 @@ Rectangle {
                 return
             styler.replace(start, start + length, text)
         }
+        // As a to-do opened from a list, in the middle of the view.
         function onRevealPosition(position) {
             body.forceActiveFocus()
             body.cursorPosition = Math.min(position, body.length)
+            flick.centering = true
+            centerTimer.restart()
+            Qt.callLater(() => flick.center(body.cursorRectangle))
         }
     }
     Component.onCompleted: load()
@@ -825,6 +829,8 @@ Rectangle {
                 root.placeTopLine()
             else if (root.held)
                 root.placeHeld()
+            else if (centering)
+                center(body.cursorRectangle)
             else if (Settings.typewriter)
                 follow(body.cursorRectangle)
         }
@@ -859,6 +865,20 @@ Rectangle {
                 // end, which they give way to, as in vim.
                 glideTo(Math.max(bottom + edge - height, Math.min(bottom + margin + edge - height,
                                                                   contentHeight - height)))
+        }
+        /// Whether a line just put in the middle is kept there a moment, while a note opened
+        /// for it is laid out.
+        property bool centering: false
+        Timer {
+            id: centerTimer
+            interval: Theme.durMed
+            onTriggered: flick.centering = false
+        }
+        /// Scrolls so `rect`, in the body, is in the middle of the view.
+        function center(rect) {
+            if (height > 0)
+                glideTo(Math.min(page.y + body.y + rect.y + rect.height / 2 - height / 2,
+                                 contentHeight - height))
         }
         /// Where the view is going, or is.
         readonly property real settledY: glide.running ? glide.to : contentY
