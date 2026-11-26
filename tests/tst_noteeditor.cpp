@@ -144,6 +144,7 @@ private Q_SLOTS:
     void viActsOnWhatTheMouseSelects();
     void viActsOnTextObjects();
     void viKeepsTheCursorInViewOnScroll();
+    void viKeysAndClicksKeepUpWithTheGlide();
     void runsViCommands();
     void viStatusLineGivesWayAsItNarrows();
     void completesFrontMatter();
@@ -3956,6 +3957,61 @@ void TestNoteEditor::viKeepsTheCursorInViewOnScroll()
     QTRY_COMPARE(body->property("cursorPosition").toInt(), saved);
     QTRY_VERIFY(inView());
     m_settings->setViMode(false);
+}
+
+void TestNoteEditor::viKeysAndClicksKeepUpWithTheGlide()
+{
+    QString lines;
+    for (int i = 0; i < 120; ++i)
+        lines += u"Line %1 of a long note.\n\n"_s.arg(i);
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Glide.md"_s, lines, &error));
+    m_settings->setViMode(true);
+    m_settings->setSmoothScroll(true);
+    const auto restore = qScopeGuard([this] {
+        m_settings->setSmoothScroll(false);
+        m_settings->setViMode(false);
+    });
+    m_vault->setCurrent(u"Glide.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    QTRY_VERIFY(body->property("text").toString().contains(u"Line 119"_s));
+    QQuickItem *scroll = find(u"scroll"_s);
+    body->forceActiveFocus();
+    body->setProperty("cursorPosition", 0);
+    const QString text = body->property("text").toString();
+    const auto lineOf = [&] {
+        const int at = body->property("cursorPosition").toInt();
+        return text.left(at).count(u'\n');
+    };
+
+    // j held down, as a key repeats, lands on the line it counted to, with the view following
+    // it rather than pulling it back.
+    for (int i = 0; i < 80; ++i) {
+        QTest::keyClick(m_window.get(), Qt::Key_J);
+        QTest::qWait(30);
+    }
+    QTRY_VERIFY(!scroll->property("moving").toBool());
+    QTest::qWait(300);
+    QCOMPARE(lineOf(), 80);
+    for (int i = 0; i < 30; ++i) {
+        QTest::keyClick(m_window.get(), Qt::Key_K);
+        QTest::qWait(30);
+    }
+    QTest::qWait(300);
+    QCOMPARE(lineOf(), 50);
+
+    // A click near the bottom of the view, inside the margin vi keeps, puts the cursor where it
+    // points and leaves the view where it was.
+    const qreal before = scroll->property("contentY").toReal();
+    const QPointF near(body->width() / 2,
+                       scroll->mapToItem(body, QPointF(0, scroll->height() * 0.8)).y());
+    int pointed = 0;
+    QMetaObject::invokeMethod(body, "positionAt", Q_RETURN_ARG(int, pointed),
+                              Q_ARG(qreal, near.x()), Q_ARG(qreal, near.y()));
+    QTest::mouseClick(m_window.get(), Qt::LeftButton, {}, body->mapToScene(near).toPoint());
+    QTest::qWait(300);
+    QCOMPARE(body->property("cursorPosition").toInt(), pointed);
+    QCOMPARE(scroll->property("contentY").toReal(), before);
 }
 
 void TestNoteEditor::viActsOnWhatTheMouseSelects()
