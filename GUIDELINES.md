@@ -17,7 +17,7 @@ Plain-file Markdown notes for Linux. Qt6 + QML for the UI, C++ for the core. MIT
 | `core/`        | Submodule from greylocklabs/core: the built-in themes, release and format scripts, and lint configs. |
 | `data/`        | Desktop entry, AppStream metainfo and bundled fonts.                                                 |
 | `assets/`      | Logo, also installed as the application icon, with hand-drawn 16 and 32 px sizes.                    |
-| `packaging/`   | Hand-written `rpm/jot.spec` and `debian/`, at distro-review quality.                                 |
+| `packaging/`   | Hand-written `rpm/jot.spec`, `debian/` and `arch/` PKGBUILDs, at distro-review quality.              |
 | `docs/`        | The roadmap, the suite rules and background research.                                                |
 
 ## Conventions

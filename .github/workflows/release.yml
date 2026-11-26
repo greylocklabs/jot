@@ -1,9 +1,10 @@
 name: Release
 
 # A pushed vX.Y.Z tag publishes a release: the source tarball, .deb, .rpm and
-# Arch packages, and the notes from CHANGELOG.md, and updates the AUR. Pull requests that touch packaging,
-# and runs started by hand, build the same files without publishing; other pull
-# requests skip the builds, and the packages job passes for them.
+# Arch packages, and the notes from CHANGELOG.md, and updates the AUR. Pull
+# requests that touch packaging, and runs started by hand, build the same files
+# without publishing; other pull requests skip the builds, and the packages job
+# passes for them.
 
 on:
   push:
@@ -189,6 +190,11 @@ jobs:
           for dir in aur/jot aur/jot-notes-git; do
             (cd "$dir" && sudo -u builder makepkg --printsrcinfo | tee .SRCINFO >/dev/null)
           done
+          # The build from main is not built here, but its sources are fetched and its
+          # prepare() and pkgver() run, so a mistake in them does not reach the AUR.
+          cp -r aur/jot-notes-git /build-git
+          chown -R builder /build-git
+          (cd /build-git && sudo -u builder makepkg --nobuild --nodeps --noconfirm)
           # As for the rpm, link-time optimization only for a release.
           [ "$GITHUB_REF_TYPE" = tag ] || echo 'options=(!lto)' >> /build/PKGBUILD
           cd /build
