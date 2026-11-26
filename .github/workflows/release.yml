@@ -1,7 +1,7 @@
 name: Release
 
-# A pushed vX.Y.Z tag publishes a release: the source tarball, .deb and .rpm
-# packages, and the notes from CHANGELOG.md. Pull requests that touch packaging,
+# A pushed vX.Y.Z tag publishes a release: the source tarball, .deb, .rpm and
+# Arch packages, and the notes from CHANGELOG.md, and updates the AUR. Pull requests that touch packaging,
 # and runs started by hand, build the same files without publishing; other pull
 # requests skip the builds, and the packages job passes for them.
 
@@ -150,6 +150,77 @@ jobs:
           path: "*.deb"
           if-no-files-found: error
 
+  # The Arch package, from the AUR's PKGBUILD built against this source and run
+  # once installed, and the PKGBUILDs the AUR gets. Arch moves quickly, so a
+  # failure here does not hold back the release; it goes out without one.
+  arch:
+    needs: source
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: source
+
+      - name: Build the package
+        # The same sync clients as the rpm and deb, from the environment; the
+        # AUR's PKGBUILD leaves them out.
+        env:
+          JOT_DROPBOX_APP_KEY: ${{ secrets.JOT_DROPBOX_APP_KEY }}
+          JOT_GOOGLE_CLIENT_ID: ${{ secrets.JOT_GOOGLE_CLIENT_ID }}
+          JOT_GOOGLE_CLIENT_SECRET: ${{ secrets.JOT_GOOGLE_CLIENT_SECRET }}
+        run: |
+          version="${{ needs.source.outputs.version }}"
+          pacman -Syu --noconfirm --needed base-devel git
+          useradd -m builder
+          echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
+          sum="$(sha256sum "jot-$version.tar.xz" | cut -d' ' -f1)"
+          # The AUR's copies: the release's version and tarball checksum filled in.
+          mkdir -p aur
+          cp -r packaging/arch/jot packaging/arch/jot-notes-git aur/
+          sed -i -e "s/^pkgver=.*/pkgver=$version/" \
+            -e "0,/^sha256sums=('[^']*'/s//sha256sums=('$sum'/" aur/jot/PKGBUILD
+          sed -i "s/^pkgver=.*/pkgver=$version.r0.g0000000/" aur/jot-notes-git/PKGBUILD
+          mkdir /build
+          cp aur/jot/PKGBUILD "jot-$version.tar.xz" /build/
+          chown -R builder /build aur
+          for dir in aur/jot aur/jot-notes-git; do
+            (cd "$dir" && sudo -u builder makepkg --printsrcinfo | tee .SRCINFO >/dev/null)
+          done
+          # As for the rpm, link-time optimization only for a release.
+          [ "$GITHUB_REF_TYPE" = tag ] || echo 'options=(!lto)' >> /build/PKGBUILD
+          cd /build
+          sudo -u builder --preserve-env=JOT_DROPBOX_APP_KEY,JOT_GOOGLE_CLIENT_ID,JOT_GOOGLE_CLIENT_SECRET \
+            makepkg --syncdeps --noconfirm
+          mkdir "$GITHUB_WORKSPACE/pkg"
+          cp "jot-$version"-*-x86_64.pkg.tar.zst "$GITHUB_WORKSPACE/pkg/"
+
+      - name: Run what was installed
+        run: |
+          pacman -U --noconfirm pkg/*.pkg.tar.zst
+          tests/package_smoke.sh shots
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: arch
+          path: pkg/*.pkg.tar.zst
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: aur
+          path: aur
+          include-hidden-files: true
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: installed-arch
+          path: shots/
+          if-no-files-found: error
+
   # Each package installed on a clean system, and run, before it is published.
   installed:
     needs: [rpm, deb]
@@ -206,7 +277,7 @@ jobs:
   # required themselves.
   packages:
     if: always()
-    needs: [changes, source, rpm, deb, installed]
+    needs: [changes, source, rpm, deb, arch, installed]
     runs-on: ubuntu-latest
     steps:
       - name: Check the builds
@@ -222,8 +293,12 @@ jobs:
           echo "builds: $RESULTS"
 
   publish:
-    if: github.ref_type == 'tag'
-    needs: [source, rpm, deb, installed]
+    # With the Arch package when it built, and without it when it did not.
+    if: >-
+      always() && github.ref_type == 'tag' && needs.source.result == 'success' &&
+      needs.rpm.result == 'success' && needs.deb.result == 'success' &&
+      needs.installed.result == 'success'
+    needs: [source, rpm, deb, arch, installed]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -240,4 +315,44 @@ jobs:
           gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
             --title "Jot ${{ needs.source.outputs.version }}" \
             --notes-file dist/notes.md \
-            dist/jot-*.tar.xz $(find dist -name '*.deb' -o -name '*.rpm')
+            dist/jot-*.tar.xz $(find dist -name '*.deb' -o -name '*.rpm' -o -name '*.pkg.tar.zst')
+
+  # The AUR's jot and jot-notes-git, once the release is out. It needs an AUR
+  # account's SSH key in AUR_SSH_PRIVATE_KEY; without one it says so and stops.
+  aur:
+    if: github.ref_type == 'tag'
+    needs: [source, arch, publish]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: aur
+          path: aur
+
+      - name: Push the PKGBUILDs
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        run: |
+          if [ -z "$AUR_SSH_PRIVATE_KEY" ]; then
+            echo "::warning::AUR_SSH_PRIVATE_KEY is not set, so the AUR was not updated."
+            exit 0
+          fi
+          version="${{ needs.source.outputs.version }}"
+          mkdir -p ~/.ssh
+          printf '%s\n' "$AUR_SSH_PRIVATE_KEY" > ~/.ssh/aur
+          chmod 600 ~/.ssh/aur
+          ssh-keyscan -t ed25519 aur.archlinux.org >> ~/.ssh/known_hosts 2>/dev/null
+          export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/aur -o IdentitiesOnly=yes"
+          git config --global user.name "Greylock Labs"
+          git config --global user.email hello@greylocklabs.org
+          for package in jot jot-notes-git; do
+            git clone -q "ssh://aur@aur.archlinux.org/$package.git" "repo-$package"
+            cp "aur/$package/PKGBUILD" "aur/$package/.SRCINFO" "repo-$package/"
+            (
+              cd "repo-$package"
+              git add PKGBUILD .SRCINFO
+              # The same files again, as when a release is run twice, change nothing.
+              git diff --cached --quiet || git commit -q -m "Update to $version"
+              git push -q origin HEAD:master
+            )
+          done
