@@ -8,6 +8,7 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 ### Added
 
 - Jot has Arch Linux packages, in each release and in the Greylock Labs repository.
+- The installer sets Jot up on Arch and the systems built on it, other than Manjaro.
 
 ### Fixed
 

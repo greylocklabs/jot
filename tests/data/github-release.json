@@ -3,6 +3,20 @@
   "name": "Jot 0.2.1",
   "assets": [
     {
+      "name": "jot-debug-0.2.1-1-x86_64.pkg.tar.zst",
+      "label": "",
+      "uploader": {
+        "login": "github-actions[bot]",
+        "type": "Bot",
+        "site_admin": false
+      },
+      "content_type": "application/x-rpm",
+      "state": "uploaded",
+      "size": 2353357,
+      "digest": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+      "browser_download_url": "https://github.com/greylocklabs/jot/releases/download/v0.2.1/jot-debug-0.2.1-1-x86_64.pkg.tar.zst"
+    },
+    {
       "name": "jot-0.2.1-1.fc44.src.rpm",
       "label": "",
       "uploader": {
@@ -99,6 +113,20 @@
       "size": 1924720,
       "digest": "sha256:58dee2ab936ceae4a928be581963e227b06fe91619cc75d207fd1dc3a4bdb46b",
       "browser_download_url": "https://github.com/greylocklabs/jot/releases/download/v0.2.1/jot_0.2.1-1_amd64.deb"
+    },
+    {
+      "name": "jot-0.2.1-1-x86_64.pkg.tar.zst",
+      "label": "",
+      "uploader": {
+        "login": "github-actions[bot]",
+        "type": "Bot",
+        "site_admin": false
+      },
+      "content_type": "application/x-rpm",
+      "state": "uploaded",
+      "size": 2353357,
+      "digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+      "browser_download_url": "https://github.com/greylocklabs/jot/releases/download/v0.2.1/jot-0.2.1-1-x86_64.pkg.tar.zst"
     }
   ]
 }
