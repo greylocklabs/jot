@@ -1519,6 +1519,8 @@ void TestNoteEditor::foldingKeepsItsLineInPlace()
     QQuickItem *reader = find(u"reader"_s);
     auto *reading = m_editor->findChild<QObject *>(u"reading"_s);
     QTRY_VERIFY(reader->isVisible() && reading->property("folds").toList().size() == 3);
+    // Once the line kept from writing is back at the top, as it is a moment after Read opens.
+    QTRY_COMPARE(m_editor->property("lineToKeep").toInt(), 0);
     const int readBeta =
         reading->property("folds").toList().at(1).toMap().value(u"position"_s).toInt();
     // Read's own cursor where a click left it, below Beta.
