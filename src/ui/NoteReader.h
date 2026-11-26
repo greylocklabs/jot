@@ -23,6 +23,9 @@ class NoteReader : public QObject
     /// The body text's font and size, which headings are scaled from.
     Q_PROPERTY(QString fontFamily READ fontFamily WRITE setFontFamily NOTIFY changed)
     Q_PROPERTY(int pixelSize READ pixelSize WRITE setPixelSize NOTIFY changed)
+    /// The screen's pixels to each one of the note's, which math is drawn at; the window's own
+    /// until it is given.
+    Q_PROPERTY(qreal pixelRatio READ pixelRatio WRITE setPixelRatio NOTIFY changed)
     /// The width of the text, which images fit within.
     Q_PROPERTY(int width READ width WRITE setWidth NOTIFY changed)
     /// The sounds and videos embedded on lines of their own, each `{position, source, width,
@@ -55,6 +58,8 @@ public:
     [[nodiscard]] QString fontFamily() const { return m_fontFamily; }
     void setFontFamily(const QString &family);
     [[nodiscard]] int pixelSize() const { return m_pixelSize; }
+    [[nodiscard]] qreal pixelRatio() const;
+    void setPixelRatio(qreal ratio);
     void setPixelSize(int size);
     [[nodiscard]] int width() const { return m_width; }
     void setWidth(int width);
@@ -103,6 +108,7 @@ private:
     QString m_text;
     QString m_fontFamily;
     int m_pixelSize = 15;
+    qreal m_pixelRatio = 0;
     int m_width = 600;
     bool m_pending = false;
     /// The note's checkbox tasks as the scanner reads them, and the blocks they were drawn in,

@@ -45,6 +45,12 @@ void TestMath::drawsFormulas()
     QCOMPARE(QImage(finer.path).size(),
              QSize(qRound(finer.size.width() * 1.25), qRound(finer.size.height() * 1.25)));
     QCOMPARE(math.ratioOf(finer.path), 1.25);
+    // A ratio between quarters is drawn at the nearest, so its whole size is never far off.
+    const MathRenderer::Drawn odd =
+        math.draw(u"\\frac{a}{b} + \\sqrt{x^2}"_s, false, 16, Qt::black, 1.3);
+    QVERIFY2(odd.ok(), qPrintable(odd.error));
+    QCOMPARE(math.ratioOf(odd.path), 1.25);
+    QVERIFY(odd.size.width() - finer.size.width() <= 3);
     QVERIFY(fraction.size.width() > 30);
     QVERIFY(fraction.size.height() > 16);
     QVERIFY(fraction.baseline > 0 && fraction.baseline < fraction.size.height());

@@ -165,6 +165,19 @@ void NoteReader::setPixelSize(int size)
     Q_EMIT changed();
 }
 
+qreal NoteReader::pixelRatio() const
+{
+    return m_pixelRatio > 0 ? m_pixelRatio : MathRenderer::pixelRatioOf(m_document);
+}
+
+void NoteReader::setPixelRatio(qreal ratio)
+{
+    if (qFuzzyCompare(m_pixelRatio, ratio))
+        return;
+    m_pixelRatio = ratio;
+    Q_EMIT changed();
+}
+
 void NoteReader::setWidth(int width)
 {
     if (m_width == width)
@@ -248,8 +261,8 @@ void NoteReader::render()
     }
     m_shown += parts.body.sliced(from);
     QString markdown = readingMarkdown(m_shown, [this, &theme](const QString &tex, bool display) {
-        const MathRenderer::Drawn drawn = MathRenderer::instance().draw(
-            tex, display, m_pixelSize, theme.text(), MathRenderer::pixelRatioOf(m_document));
+        const MathRenderer::Drawn drawn =
+            MathRenderer::instance().draw(tex, display, m_pixelSize, theme.text(), pixelRatio());
         return drawn.ok() ? QUrl::fromLocalFile(drawn.path).toString() : QString();
     });
     markdown = drawDiagrams(markdown, theme.diagramStyle(m_fontFamily, m_pixelSize));

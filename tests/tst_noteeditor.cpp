@@ -2535,6 +2535,17 @@ void TestNoteEditor::drawsMath()
         QCOMPARE(image.width(), qRound(math.value(u"width"_s).toInt() * ratio));
         QCOMPARE(image.height(), qRound(math.value(u"height"_s).toInt() * ratio));
     }
+    // Moved to a screen of another ratio, the math is drawn again for it and placed on its
+    // pixels.
+    const qreal screen = styler->property("pixelRatio").toReal();
+    QVERIFY(styler->setProperty("pixelRatio", 1.5));
+    const auto restore =
+        qScopeGuard([styler, screen] { styler->setProperty("pixelRatio", screen); });
+    QTRY_COMPARE(drawn(true).first().toMap().value(u"ratio"_s).toReal(), 1.5);
+    qreal placed = 0;
+    QVERIFY(QMetaObject::invokeMethod(styler, "onPixel", Q_RETURN_ARG(qreal, placed),
+                                      Q_ARG(qreal, 10.4)));
+    QCOMPARE(placed, 32 / 3.0);
 
     // Where the cursor is, the TeX shows to edit.
     body->setProperty("cursorPosition", int(text.indexOf(u"int_0"_s)));
