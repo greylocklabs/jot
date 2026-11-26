@@ -89,6 +89,7 @@ private Q_SLOTS:
     void readingTakesViKeys();
     void foldsHeadingsAway();
     void foldingKeepsItsLineInPlace();
+    void foldingAllKeepsItsLineInPlace();
     void readsArrowKeepsItsLineInPlace();
     void foldsWhatIsUnderAListItem();
     void outlinesTheNoteBesideIt();
@@ -1365,12 +1366,77 @@ void TestNoteEditor::foldingKeepsItsLineInPlace()
     QVERIFY(scroll->property("contentY").toReal() > 0);
     fold(u"Beta"_s, true);
     QTRY_VERIFY(m_editor->property("held").isNull());
-    QTRY_COMPARE(screenY(reader, readBeta), readBefore);
+    // Within a pixel: Read lays its text out to half pixels on some platforms.
+    QTRY_VERIFY(qAbs(screenY(reader, readBeta) - readBefore) <= 1);
     fold(u"Beta"_s, false);
     QTRY_VERIFY(m_editor->property("held").isNull());
-    QTRY_COMPARE(screenY(reader, readBeta), readBefore);
+    QTRY_VERIFY(qAbs(screenY(reader, readBeta) - readBefore) <= 1);
 
     m_settings->setReadMode(false);
+}
+
+void TestNoteEditor::foldingAllKeepsItsLineInPlace()
+{
+    // Enough sections that, folded, the note is still taller than the view.
+    QString text;
+    for (int i = 1; i <= 80; ++i) {
+        text += u"# Section %1\n"_s.arg(i);
+        for (int j = 0; j < 6; ++j)
+            text += u"A paragraph under section %1.\n\n"_s.arg(i);
+    }
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Sections.md"_s, text, &error));
+    m_vault->setCurrent(u"Sections.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    QTRY_COMPARE(body->property("text").toString(), text);
+    QQuickItem *scroll = find(u"scroll"_s);
+    const auto screenY = [&](QQuickItem *view, int position) {
+        QRectF place;
+        QMetaObject::invokeMethod(view, "positionToRectangle", Q_RETURN_ARG(QRectF, place),
+                                  Q_ARG(int, position));
+        return view->mapToItem(scroll, place.topLeft()).y();
+    };
+    const auto foldAll = [this](bool fold) {
+        QMetaObject::invokeMethod(m_editor.get(), "foldAll", Q_ARG(QVariant, fold));
+        QTRY_VERIFY(m_editor->property("held").isNull());
+    };
+    body->forceActiveFocus();
+    QTRY_VERIFY(body->hasActiveFocus());
+
+    // In Styled, the cursor's line, in view, stays where it is.
+    const int forty = int(text.indexOf(u"# Section 40\n"_s));
+    body->setProperty("cursorPosition", forty);
+    scroll->setProperty("contentY", scroll->property("contentY").toReal() + screenY(body, forty) -
+                                        scroll->height() / 2);
+    const qreal before = screenY(body, forty);
+    QVERIFY(before > 0 && before < scroll->height());
+    foldAll(true);
+    QCOMPARE(screenY(body, forty), before);
+    foldAll(false);
+    QCOMPARE(screenY(body, forty), before);
+
+    // In Read, the heading at the top stays there, though Read draws the note again without what
+    // was folded above it.
+    m_settings->setReadMode(true);
+    const auto off = qScopeGuard([this] { m_settings->setReadMode(false); });
+    QQuickItem *reader = find(u"reader"_s);
+    auto *reading = m_editor->findChild<QObject *>(u"reading"_s);
+    QTRY_VERIFY(reader->isVisible() && reading->property("folds").toList().size() == 80);
+    QTRY_COMPARE(m_editor->property("lineToKeep").toInt(), 0);
+    const auto fortyInRead = [&] {
+        for (const QVariant &fold : reading->property("folds").toList()) {
+            if (fold.toMap().value(u"key"_s).toString() == u"Section 40"_s)
+                return fold.toMap().value(u"position"_s).toInt();
+        }
+        return -1;
+    };
+    scroll->setProperty("contentY",
+                        scroll->property("contentY").toReal() + screenY(reader, fortyInRead()));
+    QVERIFY(qAbs(screenY(reader, fortyInRead())) <= 1);
+    foldAll(true);
+    QTRY_VERIFY(qAbs(screenY(reader, fortyInRead())) <= 1);
+    foldAll(false);
+    QTRY_VERIFY(qAbs(screenY(reader, fortyInRead())) <= 1);
 }
 
 void TestNoteEditor::readsArrowKeepsItsLineInPlace()
@@ -1428,11 +1494,11 @@ void TestNoteEditor::readsArrowKeepsItsLineInPlace()
     click();
     QTRY_VERIFY(!reader->property("text").toString().contains(u"under Beta"_s));
     QTest::qWait(300);
-    QCOMPARE(screenY(readBeta), readBefore);
+    QVERIFY(qAbs(screenY(readBeta) - readBefore) <= 1);
     click();
     QTRY_VERIFY(reader->property("text").toString().contains(u"under Beta"_s));
     QTest::qWait(300);
-    QCOMPARE(screenY(readBeta), readBefore);
+    QVERIFY(qAbs(screenY(readBeta) - readBefore) <= 1);
 }
 
 void TestNoteEditor::foldsHeadingsAway()
