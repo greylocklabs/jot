@@ -104,6 +104,8 @@ void TestQuickAdd::reads_data()
         << u"call Mara wed"_s << u"call Mara @due 2026-11-04"_s;
     QTest::newRow("a short weekday and a time")
         << u"call Mara fri 3pm"_s << u"call Mara @due 2026-10-30 15:00"_s;
+    QTest::newRow("a short weekday with an evening time")
+        << u"call Mara fri 20:00"_s << u"call Mara @due 2026-10-30 20:00"_s;
     QTest::newRow("a short weekday in the words stays")
         << u"sat down with Mara"_s << u"sat down with Mara"_s;
     QTest::newRow("days, short") << u"follow up 3d"_s << u"follow up @due 2026-10-31"_s;
