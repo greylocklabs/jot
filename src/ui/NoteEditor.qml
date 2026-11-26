@@ -776,7 +776,10 @@ Rectangle {
             if (top - margin < settledY)
                 glideTo(top - margin - edge)
             else if (bottom + margin > settledY + height)
-                glideTo(bottom + margin + edge - height)
+                // The cursor's line always, the margin's lines no further than the note's
+                // end, which they give way to, as in vim.
+                glideTo(Math.max(bottom + edge - height, Math.min(bottom + margin + edge - height,
+                                                                  contentHeight - height)))
         }
         /// Where the view is going, or is.
         readonly property real settledY: glide.running ? glide.to : contentY
