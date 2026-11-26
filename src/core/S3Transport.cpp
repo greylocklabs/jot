@@ -185,7 +185,7 @@ std::optional<QList<RemoteFile>> S3Transport::list(QString *error)
                 const QString path = key.mid(prefix.size());
                 // What a sync deleted, and folder markers, are not the vault's files.
                 if (!path.isEmpty() && !path.endsWith(u'/') && !path.startsWith(u".jot/trash/"_s))
-                    files.append({path, etag, {}});
+                    files.append(RemoteFile{path, etag, {}});
             }
         }
         if (xml.hasError()) {
