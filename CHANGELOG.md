@@ -5,6 +5,10 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 ## Unreleased
 
+### Added
+
+- Jot has Arch Linux packages, in each release and in the Greylock Labs repository.
+
 ### Fixed
 
 - With smooth scrolling in vi mode, j and k keep up with the keys again, rather than crawling as

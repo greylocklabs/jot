@@ -299,9 +299,9 @@ jobs:
           echo "builds: $RESULTS"
 
   publish:
-    # With the Arch package when it built, and without it when it did not.
+    # With the Arch package when it built, and without it when it failed; not once cancelled.
     if: >-
-      always() && github.ref_type == 'tag' && needs.source.result == 'success' &&
+      !cancelled() && github.ref_type == 'tag' && needs.source.result == 'success' &&
       needs.rpm.result == 'success' && needs.deb.result == 'success' &&
       needs.installed.result == 'success'
     needs: [source, rpm, deb, arch, installed]
