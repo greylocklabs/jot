@@ -87,8 +87,16 @@ public:
     /// Where the heading numbered `index`, from 0, as headingsOf() numbers them, starts in the
     /// drawn document, or -1.
     Q_INVOKABLE int headingPosition(int index) const;
+    /// Where the note's line `line`, from 1, is drawn, or the nearest line before it that is;
+    /// for going from writing to reading on the same line.
+    Q_INVOKABLE int positionOfLine(int line) const;
+    /// The note's line, from 1, drawn at `position`, or the nearest before it; for going from
+    /// reading back to writing on the same line.
+    Q_INVOKABLE int lineAtPosition(int position) const;
 
 Q_SIGNALS:
+    /// The note was drawn again, so places in it are where they will stay.
+    void rendered();
     void changed();
     void soundsChanged();
     void codeRunsChanged();
@@ -125,6 +133,10 @@ private:
     QVariantList m_quoteRuns;
     QVariantList m_found;
     QStringList m_folded;
+    /// The note's lines found in what is drawn, as {line, position}, in order of both.
+    QList<std::pair<int, int>> m_lines;
+    /// Finds the note's lines in what is drawn, by their words.
+    void findLines(QStringView body, int firstLine, const QList<std::pair<int, int>> &cutLines);
     /// Folded list items Read found no drawn item for, so shows unfolded.
     QStringList m_unplaced;
     QVariantList m_folds;

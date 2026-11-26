@@ -18,6 +18,7 @@
 #include <QImageReader>
 #include <QPainter>
 #include <QRegularExpression>
+
 #include <QTextBlock>
 #include <QTextCursor>
 #include <QTextDocument>
@@ -28,6 +29,7 @@
 #include <QTimer>
 #include <QUrl>
 #include <QtMath>
+#include <algorithm>
 
 #include <array>
 #include <cmath>
@@ -301,6 +303,7 @@ void NoteReader::render()
     style();
     placeImages();
     placeSounds();
+    findLines(parts.body, firstLine, cutLines);
 
     const QList<qsizetype> listStarts = listItemStarts(m_shown);
     for (QVariant &fold : foldable) {
@@ -345,6 +348,68 @@ void NoteReader::render()
         m_folds = foldable;
         Q_EMIT foldsChanged();
     }
+    Q_EMIT rendered();
+}
+
+void NoteReader::findLines(QStringView body, int firstLine,
+                           const QList<std::pair<int, int>> &cutLines)
+{
+    m_lines.clear();
+    QTextDocument *doc = m_document ? m_document->textDocument() : nullptr;
+    if (!doc)
+        return;
+    // A line's words as drawn: without its quote, heading, list and checkbox marks, emphasis,
+    // brackets and links' addresses.
+    static const QRegularExpression lead(
+        uR"(^\s*(?:>\s*)*(?:#{1,6}\s+|(?:[-*+]|\d+[.)])\s+(?:\[[ xX]\]\s+)?)?)"_s);
+    static const QRegularExpression address(uR"(\]\([^)]*\))"_s);
+    static const QRegularExpression marks(uR"([*_~`\[\]<>|#]|\$+)"_s);
+    const auto plain = [](QString text) { return text.remove(marks).simplified().toLower(); };
+    QTextBlock block = doc->begin();
+    const QStringList lines = body.toString().split(u'\n');
+    for (qsizetype i = 0; i < lines.size() && block.isValid(); ++i) {
+        const int line = firstLine + int(i);
+        if (std::ranges::any_of(cutLines, [line](const auto &cut) {
+                return line >= cut.first && line < cut.second;
+            }))
+            continue;
+        QString words = lines.at(i);
+        words.remove(lead).replace(address, u"]"_s);
+        const QString key = plain(words).left(24);
+        if (key.size() < 3)
+            continue;
+        // The next few blocks, for one drawn from several lines or a line drawn as none.
+        QTextBlock look = block;
+        for (int step = 0; look.isValid() && step < 40; ++step, look = look.next()) {
+            if (plain(look.text()).contains(key)) {
+                m_lines.append({line, look.position()});
+                block = look;
+                break;
+            }
+        }
+    }
+}
+
+int NoteReader::positionOfLine(int line) const
+{
+    int position = 0;
+    for (const auto &[found, at] : m_lines) {
+        if (found > line)
+            break;
+        position = at;
+    }
+    return position;
+}
+
+int NoteReader::lineAtPosition(int position) const
+{
+    int line = 1;
+    for (const auto &[found, at] : m_lines) {
+        if (at > position)
+            break;
+        line = found;
+    }
+    return line;
 }
 
 void NoteReader::setFolded(const QStringList &folded)
