@@ -217,7 +217,7 @@ std::optional<QList<RemoteFile>> DropboxTransport::list(QString *error)
                 continue;
             const QString path = entry.value(u"path_display"_s).toString().mid(m_folder.size() + 1);
             if (!path.startsWith(u".jot/trash/"_s))
-                files.append({path, entry.value(u"rev"_s).toString(), {}});
+                files.append(RemoteFile{path, entry.value(u"rev"_s).toString(), {}});
         }
         if (!page.value(u"has_more"_s).toBool())
             return files;

@@ -44,7 +44,7 @@ std::optional<QList<RemoteFile>> FolderTransport::list(QString *error)
         const QString path = it.next().mid(m_root.size() + 1);
         // What a sync deleted stays out of the listing, as it is no longer the remote's.
         if (!path.startsWith(u".jot/trash/"_s))
-            files.append({path, revOf(path), {}});
+            files.append(RemoteFile{path, revOf(path), {}});
     }
     return files;
 }

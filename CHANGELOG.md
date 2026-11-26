@@ -13,6 +13,7 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   margin or moves the cursor away from the click.
 - A to-do opened from the to-do list or a tag's view is put in the middle of the editor, rather
   than at its top or bottom edge.
+- Jot builds with Qt 6.12, as Arch Linux ships it.
 
 ## 0.8.1 - 2026-11-25
 

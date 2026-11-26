@@ -41,7 +41,7 @@ public:
         }
         QList<jot::RemoteFile> files;
         for (auto it = m_remote->files.cbegin(); it != m_remote->files.cend(); ++it)
-            files.append({it.key(), it->rev, {}});
+            files.append(jot::RemoteFile{it.key(), it->rev, {}});
         return files;
     }
 

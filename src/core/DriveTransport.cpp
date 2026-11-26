@@ -286,7 +286,7 @@ std::optional<QList<RemoteFile>> DriveTransport::list(QString *error)
     m_listed = true;
     QList<RemoteFile> files;
     for (auto it = m_files.cbegin(); it != m_files.cend(); ++it)
-        files.append({it.key(), it->version, {}});
+        files.append(RemoteFile{it.key(), it->version, {}});
     return files;
 }
 
