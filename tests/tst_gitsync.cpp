@@ -1,4 +1,5 @@
 #include "jot/GitSync.h"
+#include "jot/Sync.h"
 
 #include <QDir>
 #include <QDirIterator>
@@ -48,6 +49,7 @@ private Q_SLOTS:
     void knowsOneRemoteWrittenTwoWays_data();
     void knowsOneRemoteWrittenTwoWays();
     void failsPlainlyWithoutTheRepository();
+    void marksTheStateOfAVaultsOwnRepositorySynced();
     void keepsSshFromAskingUnlessGivenAPassphrase();
     void givesSshTheKeysPassphraseOnly();
     void findsAnSshKeyWithAPassphrase();
@@ -884,6 +886,28 @@ void TestGitSync::findsAnSshKeyWithAPassphrase()
     QVERIFY(!GitSync::lockedSshKey());
     QCOMPARE(key(u"id_rsa"_s, u"open sesame"_s), 0);
     QVERIFY(GitSync::lockedSshKey());
+}
+
+void TestGitSync::marksTheStateOfAVaultsOwnRepositorySynced()
+{
+    // A vault that is its own repository keeps nothing of Jot's in the state folder, so the sync
+    // itself, as the app and jot sync both run it, says one has been.
+    const Computer laptop = computer(u"laptop"_s);
+    run(laptop.root, {u"init"_s, u"-q"_s, u"-b"_s, u"main"_s});
+    run(laptop.root, {u"remote"_s, u"add"_s, u"origin"_s, m_remote});
+    write(laptop, u"Mara.md"_s, "# Mara\n");
+    const QString state = m_dir->filePath(u"state"_s);
+    const SyncReport report =
+        jot::syncVault(laptop.root, u"git:"_s + m_remote + u"#main"_s, {}, state, laptop.name, {});
+    QVERIFY2(report.failure.isEmpty(), qPrintable(report.failure));
+    QVERIFY(QFileInfo::exists(state + u"/synced"_s));
+    // One that failed leaves no word of it.
+    const QString elsewhere = m_dir->filePath(u"elsewhere"_s);
+    const SyncReport failed =
+        jot::syncVault(laptop.root, u"git:"_s + m_dir->filePath(u"missing.git"_s) + u"#main"_s, {},
+                       elsewhere, laptop.name, {});
+    QVERIFY(!failed.failure.isEmpty());
+    QVERIFY(!QFileInfo::exists(elsewhere + u"/synced"_s));
 }
 
 QTEST_GUILESS_MAIN(TestGitSync)
