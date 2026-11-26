@@ -36,6 +36,18 @@
   </categories>
 
   <releases>
+    <release version="0.8.2" date="2026-11-26">
+      <description>
+        <ul>
+          <li>Jot has Arch Linux packages, in each release and in the Greylock Labs repository.</li>
+          <li>The installer sets Jot up on Arch and the systems built on it, other than Manjaro.</li>
+          <li>With smooth scrolling in vi mode, j and k keep up with the keys again, rather than crawling as the view and the cursor pulled against each other at the scroll margin.</li>
+          <li>A click in vi mode puts the cursor where it lands, and no longer scrolls the note by the scroll margin or moves the cursor away from the click.</li>
+          <li>A to-do opened from the to-do list or a tag's view is put in the middle of the editor, rather than at its top or bottom edge.</li>
+          <li>Jot builds with Qt 6.12, as Arch Linux ships it.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.8.1" date="2026-11-25">
       <description>
         <ul>
