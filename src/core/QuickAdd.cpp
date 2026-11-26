@@ -225,7 +225,8 @@ QuickTask readQuickTask(const QString &typed, const QDateTime &now)
         day = QDate(year, month(m.captured(2)), m.captured(1).toInt());
         if (m.captured(3).isEmpty() && day.isValid() && day < today)
             day = day.addYears(1);
-    } else if ((m = take(text, ordinal)).hasMatch() || (m = take(text, bareOrdinal)).hasMatch()) {
+    } else if ((m = take(text, ordinal)).hasMatch() ||
+               (!unreadRepeat && (m = take(text, bareOrdinal)).hasMatch())) {
         // The 12th is the next one: this month's unless it has gone by.
         day = nextDayOfMonth(today, m.captured(1).toInt());
     } else if ((m = take(text, span)).hasMatch() ||

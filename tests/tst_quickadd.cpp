@@ -99,6 +99,7 @@ void TestQuickAdd::reads_data()
     QTest::newRow("nor further on in a repeat")
         << u"gym every other wed"_s << u"gym every other wed"_s;
     QTest::newRow("nor after and") << u"gym every mon and wed"_s << u"gym every mon and wed"_s;
+    QTest::newRow("nor an ordinal") << u"pay rent every 15th"_s << u"pay rent every 15th"_s;
     QTest::newRow("a short weekday at the end")
         << u"call Mara wed"_s << u"call Mara @due 2026-11-04"_s;
     QTest::newRow("a short weekday and a time")
