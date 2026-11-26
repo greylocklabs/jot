@@ -153,7 +153,7 @@ QuickTask readQuickTask(const QString &typed, const QDateTime &now)
     // Words that could be a task's own, as "sat down" or "3d print", are a day only at the end,
     // with nothing after but a time.
     const QString atEnd =
-        uR"((?=\s*(?:(?:at\s+)?(?:\d{1,2}(?::\d{2})?\s*(?:am|pm)|[01]?\d:[0-5]\d|noon|midday))?\s*$))"_s;
+        uR"((?=\s*(?:(?:at\s+)?(?:\d{1,2}(?::\d{2})?\s*(?:am|pm)|(?:[01]?\d|2[0-3]):[0-5]\d|noon|midday))?\s*$))"_s;
     static const QRegularExpression ordinal =
         words(lead + uR"(the\s+(\d{1,2})(?:st|nd|rd|th))"_s + atEnd);
     static const QRegularExpression bareOrdinal =
