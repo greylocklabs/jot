@@ -145,6 +145,7 @@ private Q_SLOTS:
     void viActsOnTextObjects();
     void viKeepsTheCursorInViewOnScroll();
     void viKeysAndClicksKeepUpWithTheGlide();
+    void opensAToDoInTheMiddleOfTheView();
     void runsViCommands();
     void viStatusLineGivesWayAsItNarrows();
     void completesFrontMatter();
@@ -4012,6 +4013,28 @@ void TestNoteEditor::viKeysAndClicksKeepUpWithTheGlide()
     QTest::qWait(300);
     QCOMPARE(body->property("cursorPosition").toInt(), pointed);
     QCOMPARE(scroll->property("contentY").toReal(), before);
+}
+
+void TestNoteEditor::opensAToDoInTheMiddleOfTheView()
+{
+    QString lines;
+    for (int i = 0; i < 120; ++i)
+        lines +=
+            i == 90 ? u"- [ ] water the plants\n\n"_s : u"Line %1 of a long note.\n\n"_s.arg(i);
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Chores.md"_s, lines, &error));
+    QTRY_VERIFY_WITH_TIMEOUT(m_vault->index()->note(u"Chores.md"_s), 3000);
+    QQuickItem *body = find(u"body"_s);
+    QQuickItem *scroll = find(u"scroll"_s);
+    // Line 181 of the file, from 1, as the to-do lists give it.
+    m_vault->openAt(u"Chores.md"_s, 181);
+    QTRY_COMPARE(body->property("cursorPosition").toInt(),
+                 int(body->property("text").toString().indexOf(u"- [ ] water"_s)));
+    const auto middle = [&] {
+        const QRectF at = body->mapRectToItem(scroll, body->property("cursorRectangle").toRectF());
+        return qAbs(at.center().y() - scroll->height() / 2) <= at.height();
+    };
+    QTRY_VERIFY(middle());
 }
 
 void TestNoteEditor::viActsOnWhatTheMouseSelects()

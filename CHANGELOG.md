@@ -11,6 +11,8 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
   the view and the cursor pulled against each other at the scroll margin.
 - A click in vi mode puts the cursor where it lands, and no longer scrolls the note by the scroll
   margin or moves the cursor away from the click.
+- A to-do opened from the to-do list or a tag's view is put in the middle of the editor, rather
+  than at its top or bottom edge.
 
 ## 0.8.1 - 2026-11-25
 
