@@ -1342,7 +1342,7 @@ void TestNoteEditor::foldingKeepsItsLineInPlace()
     QVERIFY(scroll->property("contentY").toReal() > 0);
     QVERIFY(before > 0 && before < scroll->height());
 
-    // Folding Alpha, above it, or Beta itself, keeps Beta where it is.
+    // Folding Beta, and opening it again, keeps it where it is.
     fold(u"Beta"_s, true);
     QTRY_VERIFY(!m_editor->property("held").isValid() || m_editor->property("held").isNull());
     QCOMPARE(screenY(body, beta), before);
@@ -1422,7 +1422,7 @@ void TestNoteEditor::foldingAllKeepsItsLineInPlace()
     QQuickItem *reader = find(u"reader"_s);
     auto *reading = m_editor->findChild<QObject *>(u"reading"_s);
     QTRY_VERIFY(reader->isVisible() && reading->property("folds").toList().size() == 80);
-    QTRY_COMPARE(m_editor->property("lineToKeep").toInt(), 0);
+    QTRY_VERIFY(m_editor->property("held").isNull());
     const auto fortyInRead = [&] {
         for (const QVariant &fold : reading->property("folds").toList()) {
             if (fold.toMap().value(u"key"_s).toString() == u"Section 40"_s)
