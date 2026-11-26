@@ -4,6 +4,7 @@
 
 #include <QDateTime>
 #include <QLocale>
+#include <algorithm>
 
 using namespace Qt::StringLiterals;
 
@@ -71,7 +72,14 @@ void TaskModel::reloadNote(const VaultIndex *index, const QString &path)
     if (!m_index || (m_tagOnly && m_tag.isEmpty()))
         return;
     m_open.removeIf([&path](const ToDo &each) { return each.path == path; });
-    m_open.append(gatherNoteToDos(*m_index, path));
+    // Back where a full gather puts them, ordered by path as SQLite compares it, so equal sort
+    // keys keep the same order either way.
+    const QByteArray key = path.toUtf8();
+    qsizetype at = std::ranges::find_if(
+                       m_open, [&key](const ToDo &each) { return each.path.toUtf8() > key; }) -
+                   m_open.begin();
+    for (const ToDo &each : gatherNoteToDos(*m_index, path))
+        m_open.insert(at++, each);
     relist();
 }
 

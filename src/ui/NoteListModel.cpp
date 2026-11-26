@@ -64,16 +64,19 @@ void NoteListModel::reloadNote(const VaultIndex *source, const QString &path)
     row.title = note->title;
     row.modified = note->modified;
     row.type = note->type;
-    // Where it goes now, among the others as they are.
-    const auto before = [this, &row](const Row &other) {
-        if (m_order == u"title")
-            return naturalCompare(other.title, row.title) < 0;
+    // Where it goes now, among the others as they are; by title, it stays in its place among
+    // those titled the same, as a stable sort keeps them.
+    const auto before = [this, &row, at](const Row &other, qsizetype i) {
+        if (m_order == u"title") {
+            const int order = naturalCompare(other.title, row.title);
+            return order < 0 || (order == 0 && i < at);
+        }
         return other.modified != row.modified ? other.modified > row.modified
                                               : other.path < row.path;
     };
     qsizetype to = 0;
     for (qsizetype i = 0; i < m_rows.size(); ++i) {
-        if (i != at && before(m_rows.at(i)))
+        if (i != at && before(m_rows.at(i), i))
             ++to;
     }
     if (to != at) {

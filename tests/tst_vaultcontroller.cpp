@@ -1,6 +1,7 @@
 #include "VaultController.h"
 
 #include "JexBuilder.h"
+#include "TaskModel.h"
 
 #include "jot/DataTable.h"
 #include "jot/GitSync.h"
@@ -536,6 +537,11 @@ void TestVaultController::aSaveUpdatesTheListsRowByRow()
     // The note's own to-dos are replaced, not added to: the one it had before is gone.
     QVERIFY(!column(*m_vault->tasks(), "title").contains(u"a to-do from before"_s));
     QCOMPARE(m_vault->tasks()->rowCount(), before);
+    // In the order a full gather gives, not last.
+    TaskModel fresh;
+    fresh.setView(u"all"_s);
+    fresh.reload(m_vault->index());
+    QCOMPARE(column(*m_vault->tasks(), "title"), column(fresh, "title"));
     // And the switcher knows its new alias when next asked.
     m_vault->switcher()->setQuery(u"harbor ledger"_s);
     QCOMPARE(m_vault->switcher()->pathAt(0), path);
@@ -581,6 +587,30 @@ void TestVaultController::aSaveMovesARowAsAFullReloadWould()
     m_vault->saveNow();
     QTRY_COMPARE(notes.pathAt(0), middle);
     QCOMPARE(paths(notes), reloaded());
+
+    // Two notes titled the same keep their places when one is saved.
+    for (const QString &twin : {markdown().at(1), markdown().at(2)}) {
+        m_vault->setCurrent(twin);
+        m_vault->edit(u"---\ntitle: Twin\n---\n"_s);
+        m_vault->saveNow();
+        QTRY_COMPARE(
+            notes.data(notes.index(int(paths(notes).indexOf(twin)), 0), NoteListModel::TitleRole)
+                .toString(),
+            u"Twin"_s);
+    }
+    const QStringList twins = paths(notes);
+    QString later;
+    for (const QString &path : twins) {
+        if (notes.data(notes.index(int(twins.indexOf(path)), 0), NoteListModel::TitleRole)
+                .toString() == u"Twin"_s)
+            later = path;
+    }
+    QSignalSpy changed(&notes, &QAbstractItemModel::dataChanged);
+    m_vault->setCurrent(later);
+    m_vault->edit(u"---\ntitle: Twin\n---\nmore words\n"_s);
+    m_vault->saveNow();
+    QTRY_VERIFY(changed.count() > 0);
+    QCOMPARE(paths(notes), twins);
 }
 
 void TestVaultController::setsANotesType()
