@@ -114,6 +114,7 @@ private Q_SLOTS:
     void drawsMath();
     void readsMathAtHalfItsDrawnSize();
     void readsEachMathOnce();
+    void keepsTheTopLineAcrossModes();
     void switchingAwayFromAPictureLeavesNoStalePlace();
     void formatsAndUndoesInOneStep();
     void formatsFromTheKeyboard();
@@ -1620,6 +1621,8 @@ void TestNoteEditor::readsArrowKeepsItsLineInPlace()
     QQuickItem *reader = find(u"reader"_s);
     auto *reading = m_editor->findChild<QObject *>(u"reading"_s);
     QTRY_VERIFY(reader->isVisible() && reading->property("folds").toList().size() == 3);
+    // Once the line kept from writing is back at the top, as it is a moment after Read opens.
+    QTRY_COMPARE(m_editor->property("lineToKeep").toInt(), 0);
     const int readBeta =
         reading->property("folds").toList().at(1).toMap().value(u"position"_s).toInt();
     const auto screenY = [&](int position) {
@@ -2608,6 +2611,55 @@ void TestNoteEditor::readsEachMathOnce()
         return found;
     };
     QTRY_COMPARE(pictures(), 3);
+}
+
+void TestNoteEditor::keepsTheTopLineAcrossModes()
+{
+    QString text = u"---\ntype: Character\n---\n# Lines\n\n"_s;
+    for (int i = 1; i <= 120; ++i)
+        text += u"Paragraph %1 has a few words in it.\n\n"_s.arg(i);
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Modes.md"_s, text, &error));
+    m_vault->setCurrent(u"Modes.md"_s);
+    QQuickItem *body = find(u"body"_s);
+    QTRY_COMPARE(body->property("text").toString(), text);
+    QQuickItem *scroll = find(u"scroll"_s);
+    QQuickItem *reader = find(u"reader"_s);
+    const auto modes = qScopeGuard([this] {
+        m_settings->setReadMode(false);
+        m_settings->setSourceMode(false);
+    });
+    // The words of the line at the top of the view, in whichever is shown.
+    const auto topWords = [&]() -> QString {
+        const bool reading = m_settings->readMode();
+        QQuickItem *view = reading ? reader : body;
+        const QPointF top = scroll->mapToItem(view, QPointF(0, 1));
+        int position = 0;
+        QMetaObject::invokeMethod(view, "positionAt", Q_RETURN_ARG(int, position),
+                                  Q_ARG(qreal, view->property("leftPadding").toReal() + 1),
+                                  Q_ARG(qreal, std::max<qreal>(top.y(), 0) + 1));
+        auto *doc = view->property("textDocument").value<QQuickTextDocument *>()->textDocument();
+        return doc->findBlock(position).text().left(13);
+    };
+    // Paragraph 60 at the top, in Styled.
+    const int at = int(text.indexOf(u"Paragraph 60 "_s));
+    QRectF place;
+    QMetaObject::invokeMethod(body, "positionToRectangle", Q_RETURN_ARG(QRectF, place),
+                              Q_ARG(int, at));
+    scroll->setProperty("contentY", scroll->property("contentY").toReal() +
+                                        body->mapToItem(scroll, place.topLeft()).y());
+    QTRY_COMPARE(topWords(), u"Paragraph 60 "_s);
+
+    // Source, then Read, then back to Styled, each keeps it at the top.
+    m_settings->setSourceMode(true);
+    QTRY_COMPARE(topWords(), u"Paragraph 60 "_s);
+    m_settings->setSourceMode(false);
+    QTRY_COMPARE(topWords(), u"Paragraph 60 "_s);
+    m_settings->setReadMode(true);
+    QTRY_VERIFY(reader->isVisible());
+    QTRY_COMPARE(topWords(), u"Paragraph 60 "_s);
+    m_settings->setReadMode(false);
+    QTRY_COMPARE(topWords(), u"Paragraph 60 "_s);
 }
 
 void TestNoteEditor::drawsDiagramsInPlaceOfTheirText()

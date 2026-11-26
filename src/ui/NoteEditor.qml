@@ -35,14 +35,96 @@ Rectangle {
     }
 
     // Leaving Source for a mode that shows a table, by the switch or its keys, reads the text
-    // as it is now.
+    // as it is now. Any change of mode keeps the line that was at the top of the view there.
     Connections {
         target: Settings
         function onSourceModeChanged() {
+            root.keepTopLine()
             root.readTable()
         }
         function onReadModeChanged() {
+            root.keepTopLine()
             root.readTable()
+        }
+    }
+
+    /// What is at the top of the view as it scrolls, each noted only while it is shown, as
+    /// switching can scroll the other: a place in the note's text, as turning it into a line costs
+    /// more, and a line of Read's, as its places change each time it draws the note again.
+    property int topInText: 0
+    property int topLineInRead: 1
+    /// The note's line, from 1, to put back at the top once the mode just chosen is laid out.
+    property int lineToKeep: 0
+    /// Whether the view last showed Read, to tell which the top line comes from.
+    property bool lastReadShown: readShown
+
+    function noteTopPlace() {
+        if (lineToKeep > 0)
+            return
+        const view = readShown ? reader : body
+        const top = flick.contentY - page.y - view.y
+        const position = top <= 0 ? 0 : view.positionAt(view.leftPadding + 1, top + 1)
+        if (readShown)
+            topLineInRead = position <= 0 ? 1 : reading.lineAtPosition(position)
+        else
+            topInText = position
+    }
+    /// The line at the top, as the mode before had it, kept to put back.
+    function keepTopLine() {
+        if (dataFile || !Vault.isOpen)
+            return
+        // From the mode before: Read's drawing when going to the text, the text otherwise.
+        const fromRead = lastReadShown && !readShown
+        lastReadShown = readShown
+        const position = topInText
+        // A line still being put back, as the mode changed again so soon, is the one at the top.
+        lineToKeep = lineToKeep > 0 ? lineToKeep : fromRead ? topLineInRead : position <= 0 ? 1 :
+                                                                                              body.text.slice(
+                                                                                                  0, position).split(
+                                                                                                  "\n").length
+        // Read is given the note as it is shown, so draws it, and puts the line back then; the
+        // text is placed at once, and kept a moment while its layout settles.
+        topLineTimer.stop()
+        readDrawn = false
+        if (!readShown) {
+            Qt.callLater(placeTopLine)
+            topLineTimer.restart()
+        }
+    }
+    /// Whether Read has drawn the note since the mode changed, so its places can be trusted.
+    property bool readDrawn: false
+    Timer {
+        id: topLineTimer
+        interval: Theme.durMed
+        onTriggered: root.putTopLine()
+    }
+    /// Puts the line kept back at the top, and stops keeping it.
+    function putTopLine() {
+        placeTopLine()
+        lineToKeep = 0
+        noteTopPlace()
+    }
+    /// Puts the line kept at the top of the view, as the mode shown lays it out now.
+    function placeTopLine() {
+        const line = lineToKeep
+        if (line <= 0)
+            return
+        if (line === 1) {
+            flick.contentY = 0
+        } else if (readShown) {
+            const rect = reader.positionToRectangle(reading.positionOfLine(line))
+            flick.contentY = Math.max(0, page.y + reader.y + rect.y)
+        } else {
+            // The line's start: after its line - 1 line breaks.
+            let at = 0
+            for (let n = 1; n < line; ++n) {
+                const next = body.text.indexOf("\n", at)
+                if (next < 0)
+                    break
+                at = next + 1
+            }
+            const rect = body.positionToRectangle(Math.max(0, Math.min(at, body.length)))
+            flick.contentY = Math.max(0, page.y + body.y + rect.y)
         }
     }
     function readTable() {
@@ -744,8 +826,11 @@ Rectangle {
 
         // A note that grows under the cursor, as with Return on its last line, is centered
         // again once its new height is known.
+        onContentYChanged: root.noteTopPlace()
         onContentHeightChanged: {
-            if (root.held)
+            if (root.lineToKeep > 0 && (!root.readShown || root.readDrawn))
+                root.placeTopLine()
+            else if (root.held)
                 root.placeHeld()
             else if (Settings.typewriter)
                 follow(body.cursorRectangle)
@@ -1163,6 +1248,14 @@ Rectangle {
                     id: reading
                     objectName: "reading"
                     folded: root.folded
+                    // Drawn, the line kept from writing goes back at the top.
+                    onRendered: {
+                        if (root.lineToKeep > 0 && root.readShown) {
+                            root.readDrawn = true
+                            root.placeTopLine()
+                            topLineTimer.restart()
+                        }
+                    }
 
                     document: reader.textDocument
                     text: Settings.readMode && !root.dataFile ? Vault.currentText : ""

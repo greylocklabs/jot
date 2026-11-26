@@ -35,6 +35,8 @@ down` or `3d print` stay as written.
 
 ### Fixed
 
+- Switching between Source, Styled and Read keeps the line at the top of the view at the top,
+  rather than jumping elsewhere or back to where that mode was last.
 - Math is drawn at the screen's own pixel ratio and shown pixel for pixel, rather than at twice
   its size and scaled, which blurred it at ratios such as 125%, in Styled and Read.
 - In Read, math with a backslash in it, such as `$\$3,000$` or `$\pi r^2$`, is drawn once rather
