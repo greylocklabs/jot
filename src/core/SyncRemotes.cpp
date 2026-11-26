@@ -12,6 +12,8 @@
 #include <QStandardPaths>
 #include <QUrl>
 
+#include <QFile>
+
 using namespace Qt::StringLiterals;
 
 namespace jot {
@@ -67,8 +69,10 @@ std::pair<QString, QString> gitRemote(const QString &remote)
     return {rest.left(hash), rest.mid(hash + 1)};
 }
 
-SyncReport syncVault(const QString &root, const QString &remote, const QString &secret,
-                     const QString &stateDir, const QString &device, const SyncRequest &request)
+namespace {
+
+SyncReport syncOnce(const QString &root, const QString &remote, const QString &secret,
+                    const QString &stateDir, const QString &device, const SyncRequest &request)
 {
     if (remote.startsWith(u"git:"_s)) {
         const auto [url, branch] = gitRemote(remote);
@@ -85,6 +89,22 @@ SyncReport syncVault(const QString &root, const QString &remote, const QString &
         return report;
     }
     return SyncEngine(root, std::move(transport), stateDir, device).sync();
+}
+
+} // namespace
+
+SyncReport syncVault(const QString &root, const QString &remote, const QString &secret,
+                     const QString &stateDir, const QString &device, const SyncRequest &request)
+{
+    const SyncReport report = syncOnce(root, remote, secret, stateDir, device, request);
+    // A vault that is its own git repository keeps nothing in the state folder, which would make
+    // every sync look like its first; this says one has been, whichever app synced.
+    if (report.failure.isEmpty() && QDir().mkpath(stateDir)) {
+        QFile synced(stateDir + u"/synced"_s);
+        if (synced.open(QIODevice::WriteOnly))
+            synced.write(QDateTime::currentDateTimeUtc().toString(Qt::ISODate).toUtf8());
+    }
+    return report;
 }
 
 QStringList uncommittedChanges(const QString &root, const QString &remote, const QString &stateDir)

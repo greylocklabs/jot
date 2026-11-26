@@ -134,7 +134,8 @@ private:
 [[nodiscard]] std::unique_ptr<Transport> transportFor(const QString &remote, const QString &secret,
                                                       QString *error);
 /// Syncs the vault at `root` once with `remote`, whichever kind it is: a git repository through
-/// GitSync, the rest through SyncEngine. `stateDir` is syncStateDir()'s for the pair.
+/// GitSync, the rest through SyncEngine. `stateDir` is syncStateDir()'s for the pair, which a
+/// sync that worked leaves a `synced` file in, so it is never empty after one, whoever synced.
 [[nodiscard]] SyncReport syncVault(const QString &root, const QString &remote,
                                    const QString &secret, const QString &stateDir,
                                    const QString &device, const SyncRequest &request = {});
