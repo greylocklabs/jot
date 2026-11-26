@@ -3,6 +3,15 @@
 What changed in each version of Jot, for the people using it. Notes collect under Unreleased
 as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md).
 
+## Unreleased
+
+### Fixed
+
+- With smooth scrolling in vi mode, j and k keep up with the keys again, rather than crawling as
+  the view and the cursor pulled against each other at the scroll margin.
+- A click in vi mode puts the cursor where it lands, and no longer scrolls the note by the scroll
+  margin or moves the cursor away from the click.
+
 ## 0.8.1 - 2026-11-25
 
 ### Added

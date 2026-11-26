@@ -847,9 +847,10 @@ Rectangle {
             const top = page.y + (item ?? body).y + rect.y
             const bottom = top + rect.height
             // In vi mode, lines are kept between the cursor and the edges, as vim's scrolloff,
-            // up to half the view; otherwise the view moves once the cursor leaves it.
-            const margin = Settings.viMode ? Math.max(0, Math.min(Settings.viScrollMargin * rect.height,
-                                                                  height / 2 - rect.height)) : 0
+            // up to half the view; otherwise the view moves once the cursor leaves it. Not for a
+            // click, which would move the text from under the pointer.
+            const lines = Settings.viMode && !bodyPointer.active ? Settings.viScrollMargin : 0
+            const margin = Math.max(0, Math.min(lines * rect.height, height / 2 - rect.height))
             const edge = Settings.viMode ? 0 : Theme.space6
             if (top - margin < settledY)
                 glideTo(top - margin - edge)
@@ -861,6 +862,8 @@ Rectangle {
         }
         /// Where the view is going, or is.
         readonly property real settledY: glide.running ? glide.to : contentY
+        /// Whether the view is gliding to where it was sent, rather than scrolled by hand.
+        readonly property bool gliding: glide.running
 
         /// Scrolls to `y`, no higher than the top, gliding there unless Settings says not to.
         /// Callers that must stop at the end say so, as the height may not be laid out yet.
@@ -1426,6 +1429,12 @@ Rectangle {
 
                 selectByMouse: true
                 persistentSelection: true
+                // While the mouse is down on the text, the cursor goes where it points.
+                PointHandler {
+                    id: bodyPointer
+
+                    acceptedButtons: Qt.LeftButton
+                }
                 // As wide as the indent Settings chooses, in the note's own spaces.
                 tabStopDistance: noteSpaces.advanceWidth(" ") * Settings.indentWidth
                 Accessible.name: qsTr("Note")
@@ -1803,7 +1812,8 @@ Rectangle {
                     target: body
                     viewport: flick
                     scrollMargin: Settings.viScrollMargin
-                    holding: root.loading
+                    // The view's own glides follow the cursor, so they leave it where it is.
+                    holding: root.loading || flick.gliding
                     floor: styler.hideFrontMatter ? styler.bodyStart : 0
                     router: root.router
                     enabled: Settings.viMode
