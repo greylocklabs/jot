@@ -34,9 +34,17 @@ void TestMath::drawsFormulas()
     const MathRenderer::Drawn fraction =
         math.draw(u"\\frac{a}{b} + \\sqrt{x^2}"_s, false, 16, Qt::black);
     QVERIFY2(fraction.ok(), qPrintable(fraction.error));
-    QVERIFY(fraction.path.endsWith(u"@2x.png"_s));
+    QVERIFY(fraction.path.endsWith(u".png"_s));
+    // Drawn at the ratio asked for, twice by default, and a whole size at it, to be shown pixel
+    // for pixel.
     const QImage image(fraction.path);
-    QVERIFY(std::abs(image.width() - fraction.size.width() * 2) <= 1);
+    QCOMPARE(image.size(), fraction.size * 2);
+    const MathRenderer::Drawn finer =
+        math.draw(u"\\frac{a}{b} + \\sqrt{x^2}"_s, false, 16, Qt::black, 1.25);
+    QVERIFY2(finer.ok(), qPrintable(finer.error));
+    QCOMPARE(QImage(finer.path).size(),
+             QSize(qRound(finer.size.width() * 1.25), qRound(finer.size.height() * 1.25)));
+    QCOMPARE(math.ratioOf(finer.path), 1.25);
     QVERIFY(fraction.size.width() > 30);
     QVERIFY(fraction.size.height() > 16);
     QVERIFY(fraction.baseline > 0 && fraction.baseline < fraction.size.height());
