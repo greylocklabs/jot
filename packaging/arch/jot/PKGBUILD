@@ -1,0 +1,43 @@
+# Maintainer: Lara Kelley <hello@greylocklabs.org>
+pkgname=jot
+pkgver=0.8.1
+pkgrel=1
+pkgdesc='Plain-file notes for Linux'
+arch=(x86_64)
+url='https://jotwriter.org'
+# The bundled Nunito and Fraunces fonts are OFL-1.1; the bundled Pele and MicroTeX are MIT, and
+# MicroTeX's math fonts are under Knuth's license, OFL-1.1 and dsrom's own.
+license=(MIT OFL-1.1 Knuth-CTAN LicenseRef-dsrom)
+depends=(gcc-libs glibc git git-lfs hicolor-icon-theme libyaml qt6-base qt6-declarative
+         qt6-multimedia qt6-svg qt6-webengine qtkeychain-qt6 sonnet syntax-highlighting
+         tinyxml2 tomlplusplus)
+optdepends=('pandoc-cli: exporting notes'
+            'hunspell-en_us: an English dictionary for spellcheck')
+makedepends=(cmake ninja qt6-tools)
+source=("https://github.com/greylocklabs/jot/releases/download/v$pkgver/$pkgname-$pkgver.tar.xz")
+# The release workflow fills in the tarball's checksum.
+sha256sums=('SKIP')
+
+build() {
+  cmake -B build -S "$pkgname-$pkgver" -G Ninja \
+    -DCMAKE_BUILD_TYPE=None \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DJOT_WEB_VIDEO=ON
+  cmake --build build
+}
+
+check() {
+  TZ=UTC QT_QPA_PLATFORM=offscreen ctest --test-dir build --output-on-failure
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+  cd "$pkgname-$pkgver"
+  install -Dm644 LICENSE core/fonts/Nunito-OFL.txt core/fonts/Fraunces-OFL.txt \
+    -t "$pkgdir/usr/share/licenses/$pkgname/"
+  install -Dm644 third_party/pele/LICENSE "$pkgdir/usr/share/licenses/$pkgname/pele-LICENSE"
+  install -Dm644 third_party/microtex/LICENSE \
+    "$pkgdir/usr/share/licenses/$pkgname/microtex-LICENSE"
+  install -Dm644 third_party/microtex/res/fonts/licences/* \
+    -t "$pkgdir/usr/share/licenses/$pkgname/microtex-fonts/"
+}

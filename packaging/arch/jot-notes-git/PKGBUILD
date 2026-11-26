@@ -1,0 +1,59 @@
+# Maintainer: Lara Kelley <hello@greylocklabs.org>
+pkgname=jot-notes-git
+pkgver=0.8.1.r0.g0000000
+pkgrel=1
+pkgdesc='Plain-file notes for Linux (from main)'
+arch=(x86_64)
+url='https://jotwriter.org'
+# The bundled Nunito and Fraunces fonts are OFL-1.1; the bundled Pele and MicroTeX are MIT, and
+# MicroTeX's math fonts are under Knuth's license, OFL-1.1 and dsrom's own.
+license=(MIT OFL-1.1 Knuth-CTAN LicenseRef-dsrom)
+depends=(gcc-libs glibc git git-lfs hicolor-icon-theme libyaml qt6-base qt6-declarative
+         qt6-multimedia qt6-svg qt6-webengine qtkeychain-qt6 sonnet syntax-highlighting
+         tinyxml2 tomlplusplus)
+optdepends=('pandoc-cli: exporting notes'
+            'hunspell-en_us: an English dictionary for spellcheck')
+makedepends=(cmake ninja qt6-tools)
+provides=(jot)
+conflicts=(jot)
+source=("git+https://github.com/greylocklabs/jot.git"
+        "git+https://github.com/greylocklabs/core.git")
+sha256sums=('SKIP'
+            'SKIP')
+
+pkgver() {
+  cd jot
+  git describe --long --tags --abbrev=7 | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+# Shared code and the built-in themes come from the core submodule, fetched above.
+prepare() {
+  cd jot
+  git submodule init
+  git config submodule.core.url "$srcdir/core"
+  git -c protocol.file.allow=always submodule update
+}
+
+build() {
+  cmake -B build -S jot -G Ninja \
+    -DCMAKE_BUILD_TYPE=None \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DJOT_WEB_VIDEO=ON
+  cmake --build build
+}
+
+check() {
+  TZ=UTC QT_QPA_PLATFORM=offscreen ctest --test-dir build --output-on-failure
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+  cd jot
+  install -Dm644 LICENSE core/fonts/Nunito-OFL.txt core/fonts/Fraunces-OFL.txt \
+    -t "$pkgdir/usr/share/licenses/$pkgname/"
+  install -Dm644 third_party/pele/LICENSE "$pkgdir/usr/share/licenses/$pkgname/pele-LICENSE"
+  install -Dm644 third_party/microtex/LICENSE \
+    "$pkgdir/usr/share/licenses/$pkgname/microtex-LICENSE"
+  install -Dm644 third_party/microtex/res/fonts/licences/* \
+    -t "$pkgdir/usr/share/licenses/$pkgname/microtex-fonts/"
+}
