@@ -514,7 +514,12 @@ void TestVaultController::aSaveUpdatesTheListsRowByRow()
     QVERIFY(m_vault->openPath(m_root));
     m_vault->setShowingTasks(true);
     m_vault->tasks()->setView(u"all"_s);
-    const QString path = m_vault->notes()->pathAt(m_vault->notes()->rowCount() - 1);
+    // The last note in the list, not a data file, which has no to-dos.
+    QString path;
+    for (int row = 0; row < m_vault->notes()->rowCount(); ++row) {
+        if (m_vault->notes()->pathAt(row).endsWith(u".md"_s))
+            path = m_vault->notes()->pathAt(row);
+    }
     QVERIFY(!path.isEmpty());
     m_vault->setCurrent(path);
     const int before = m_vault->tasks()->rowCount();
