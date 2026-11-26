@@ -1587,6 +1587,8 @@ void TestNoteEditor::foldingAllKeepsItsLineInPlace()
     auto *reading = m_editor->findChild<QObject *>(u"reading"_s);
     QTRY_VERIFY(reader->isVisible() && reading->property("folds").toList().size() == 80);
     QTRY_VERIFY(m_editor->property("held").isNull());
+    // The line kept from the switch to Read is put back before this scrolls.
+    QTRY_COMPARE(m_editor->property("lineToKeep").toInt(), 0);
     const auto fortyInRead = [&] {
         for (const QVariant &fold : reading->property("folds").toList()) {
             if (fold.toMap().value(u"key"_s).toString() == u"Section 40"_s)
