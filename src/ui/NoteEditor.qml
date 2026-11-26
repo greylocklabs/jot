@@ -251,7 +251,10 @@ Rectangle {
         const top = flick.contentY - page.y - view.y
         const cursorTop = view.cursorRectangle.y
         const cursorShown = !readShown && cursorTop >= top && cursorTop < top + flick.height
-        holdLine(view, cursorShown ? view.cursorPosition : view.positionAt(0, top + 1))
+        if (cursorShown)
+            holdLine(view, view.cursorPosition)
+        else
+            holdHeading(view, view.positionAt(0, top + 1))
         folded = fold ? styler.folds.map(each => each.key) : []
         Vault.setFolds(Vault.current, folded)
         keepCursorShown()
@@ -272,10 +275,36 @@ Rectangle {
         holdTimer.restart()
     }
 
+    /// As holdLine(), for the heading or list item nearest at or above `position`, known by its
+    /// key, as folding all can hide what is at the top, and Read draws folded text anew; text
+    /// before any of them stays as it is.
+    function holdHeading(view, position) {
+        const folds = readShown ? reading.folds : styler.folds
+        const above = folds.filter(each => each.position <= position).map(each => each.key)
+        if (above.length === 0) {
+            holdLine(view, position)
+            return
+        }
+        holdLine(view, folds.find(each => each.key === above[above.length - 1]).position)
+        held.keys = above.reverse()
+    }
+    /// Where the line held is now: a heading's, the nearest still shown, as it is drawn now.
+    function heldPosition() {
+        if (!held.keys)
+            return held.position
+        const folds = held.view === reader ? reading.folds : styler.folds
+        for (const key of held.keys) {
+            const found = folds.find(each => each.key === key)
+            if (found)
+                return found.position
+        }
+        return 0
+    }
+
     function placeHeld() {
         if (!held)
             return
-        const y = page.y + held.view.y + held.view.positionToRectangle(Math.min(held.position,
+        const y = page.y + held.view.y + held.view.positionToRectangle(Math.min(heldPosition(),
                                                                                 held.view.length)).y
         flick.contentY = Math.max(0, Math.min(y - held.screenY, flick.contentHeight - flick.height))
     }
@@ -284,7 +313,7 @@ Rectangle {
     // until this goes off.
     Timer {
         id: holdTimer
-        interval: 120
+        interval: Theme.durMed
         onTriggered: {
             root.placeHeld()
             root.held = null
