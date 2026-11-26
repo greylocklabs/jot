@@ -130,6 +130,10 @@ public:
     [[nodiscard]] QVariantList folds() const { return m_folds; }
     /// The heading whose folded section `position` is in, by its key, or empty.
     Q_INVOKABLE QString foldAt(int position) const;
+    /// The line of the text, from 1, that `position` is on.
+    Q_INVOKABLE int lineAtPosition(int position) const;
+    /// Where the text's `line`, from 1, starts, or its end past its last line.
+    Q_INVOKABLE int positionOfLine(int line) const;
     /// Whether `position` is folded away, for what is drawn over the note there.
     Q_INVOKABLE bool isFolded(int position) const { return !foldAt(position).isEmpty(); }
     [[nodiscard]] QVariantMap count() const;

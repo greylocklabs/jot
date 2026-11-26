@@ -71,17 +71,15 @@ Rectangle {
     }
     /// The line at the top, as the mode before had it, kept to put back.
     function keepTopLine() {
-        if (dataFile || !Vault.isOpen)
-            return
         // From the mode before: Read's drawing when going to the text, the text otherwise.
         const fromRead = lastReadShown && !readShown
         lastReadShown = readShown
-        const position = topInText
+        if (dataFile || !Vault.isOpen)
+            return
         // A line still being put back, as the mode changed again so soon, is the one at the top.
-        lineToKeep = lineToKeep > 0 ? lineToKeep : fromRead ? topLineInRead : position <= 0 ? 1 :
-                                                                                              body.text.slice(
-                                                                                                  0, position).split(
-                                                                                                  "\n").length
+        lineToKeep = lineToKeep > 0 ? lineToKeep : fromRead ? topLineInRead : topInText <= 0 ? 1 :
+                                                                                               styler.lineAtPosition(
+                                                                                                   topInText)
         // Read is given the note as it is shown, so draws it, and puts the line back then; the
         // text is placed at once, and kept a moment while its layout settles.
         topLineTimer.stop()
@@ -115,15 +113,7 @@ Rectangle {
             const rect = reader.positionToRectangle(reading.positionOfLine(line))
             flick.contentY = Math.max(0, page.y + reader.y + rect.y)
         } else {
-            // The line's start: after its line - 1 line breaks.
-            let at = 0
-            for (let n = 1; n < line; ++n) {
-                const next = body.text.indexOf("\n", at)
-                if (next < 0)
-                    break
-                at = next + 1
-            }
-            const rect = body.positionToRectangle(Math.max(0, Math.min(at, body.length)))
+            const rect = body.positionToRectangle(styler.positionOfLine(line))
             flick.contentY = Math.max(0, page.y + body.y + rect.y)
         }
     }
@@ -656,6 +646,9 @@ Rectangle {
         body.cursorPosition = Math.min(Math.max(cursor, top), body.length)
         title.show(Vault.currentTitle)
         if (another) {
+            // Nothing is kept from the note before, though it switched mode a moment ago.
+            topLineTimer.stop()
+            lineToKeep = 0
             flick.contentY = 0
             vi.mode = "normal"
             if (body.cursorPosition > 0)

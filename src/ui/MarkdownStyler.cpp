@@ -901,6 +901,23 @@ QVariantList MarkdownStyler::contents() const
     return contents;
 }
 
+int MarkdownStyler::lineAtPosition(int position) const
+{
+    if (!m_document || !m_document->textDocument())
+        return 1;
+    const QTextDocument *doc = m_document->textDocument();
+    return doc->findBlock(std::clamp(position, 0, doc->characterCount() - 1)).blockNumber() + 1;
+}
+
+int MarkdownStyler::positionOfLine(int line) const
+{
+    if (!m_document || !m_document->textDocument())
+        return 0;
+    const QTextDocument *doc = m_document->textDocument();
+    const QTextBlock block = doc->findBlockByNumber(line - 1);
+    return block.isValid() ? block.position() : doc->characterCount() - 1;
+}
+
 QVariantList MarkdownStyler::images() const
 {
     QVariantList images;
