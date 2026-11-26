@@ -67,12 +67,13 @@
 <h2>Package updates</h2>
 <p>
   If you install Jot with its installer, it adds the Greylock Labs package repository to
-  your system, so your package manager, dnf or apt, then checks
+  your system, so your package manager, dnf, apt or pacman, then checks
   <code>packages.greylocklabs.org</code> for updates on its own schedule, as it does every
   repository it knows. That site is static files on GitHub Pages: it receives your package
   manager's requests and, like any website, your IP address, and nothing from Jot itself.
   Removing the repository's file from <code>/etc/yum.repos.d</code> or
-  <code>/etc/apt/sources.list.d</code> stops it.
+  <code>/etc/apt/sources.list.d</code>, or on Arch its <code>[greylocklabs]</code> section
+  from <code>/etc/pacman.conf</code>, stops it.
 </p>
 
 <h2>Things you start</h2>
