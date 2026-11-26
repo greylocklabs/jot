@@ -18,20 +18,20 @@ far, and [docs/ROADMAP.md](docs/ROADMAP.md) has the plan.
 
 ## Installation
 
-On Fedora 44 or later, Debian 13 (trixie) or later, or Ubuntu 26.04 or later, on x86_64:
+On Fedora 44 or later, Debian 13 (trixie) or later, Ubuntu 26.04 or later, or Arch Linux, on x86_64:
 
 ```sh
 curl -fsSL https://jotwriter.org/install.sh | sh
 ```
 
 It finds the latest [GitHub release](https://github.com/greylocklabs/jot/releases), checks the
-package against the checksum GitHub records for it, and installs it with `dnf` or `apt`. On any
+package against the checksum GitHub records for it, and installs it with `dnf`, `apt` or `pacman`. On any
 other system it stops before changing anything. Run again, it updates Jot, or says it is up to
 date. `sh -s -- --dry-run` shows what it would do, `--version 0.0.1` installs that version, and
 `--force` installs it again. It also adds the
 [Greylock Labs repository](https://packages.greylocklabs.org), which carries Jot and Callie, so
-later updates come with `dnf upgrade` or `apt upgrade`; that page shows how to add it by hand. The
-packages can also be downloaded from the release and installed by hand.
+later updates come with `dnf upgrade`, `apt upgrade` or `pacman -Syu`; that page shows how to add it
+by hand. The packages can also be downloaded from the release and installed by hand.
 
 This installs the `Jot` desktop app and the `jot` command. `jot upgrade` installs the latest release,
 `jot downgrade` goes back one, `jot logs` and `jot doctor` help with bug reports, and `jot donate`
