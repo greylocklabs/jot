@@ -1242,6 +1242,14 @@ void TestNoteEditor::viGlidesAndKeepsLinesAroundTheCursor()
     const qreal soon = scroll->property("contentY").toReal();
     QTRY_VERIFY(scroll->property("contentY").toReal() > from + 1000);
     QVERIFY(soon < scroll->property("contentY").toReal());
+    // At the end, the margin gives way, even the default's 20 lines: the view goes no further
+    // than the note's last line.
+    m_settings->setViScrollMargin(20);
+    m_settings->setSmoothScroll(false);
+    body->setProperty("cursorPosition", body->property("length").toInt());
+    QTest::qWait(500);
+    QVERIFY(scroll->property("contentY").toReal() <=
+            scroll->property("contentHeight").toReal() - scroll->height() + 1);
 }
 
 void TestNoteEditor::readingFindsSelectsAndCopies()
