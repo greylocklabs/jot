@@ -145,6 +145,7 @@ private Q_SLOTS:
     void viActsOnTextObjects();
     void viKeepsTheCursorInViewOnScroll();
     void viKeysAndClicksKeepUpWithTheGlide();
+    void readingStaysPutOnAClick();
     void opensAToDoInTheMiddleOfTheView();
     void runsViCommands();
     void viStatusLineGivesWayAsItNarrows();
@@ -4035,6 +4036,64 @@ void TestNoteEditor::opensAToDoInTheMiddleOfTheView()
         return qAbs(at.center().y() - scroll->height() / 2) <= at.height();
     };
     QTRY_VERIFY(middle());
+}
+
+void TestNoteEditor::readingStaysPutOnAClick()
+{
+    QString lines;
+    for (int i = 0; i < 120; ++i)
+        lines += u"Line %1 of a long note.\n\n"_s.arg(i);
+    QString error;
+    QVERIFY(notefile::write(m_root + u"/Clicks.md"_s, lines, &error));
+    m_vault->setCurrent(u"Clicks.md"_s);
+    m_settings->setReadMode(true);
+    const auto restore = qScopeGuard([this] {
+        m_settings->setViMode(false);
+        m_settings->setReadMode(false);
+    });
+    QQuickItem *reader = find(u"reader"_s);
+    QTRY_VERIFY(reader->isVisible());
+    auto *doc = reader->property("textDocument").value<QQuickTextDocument *>()->textDocument();
+    QTRY_VERIFY(doc->toPlainText().contains(u"Line 119"_s));
+    QQuickItem *scroll = find(u"scroll"_s);
+    QTRY_VERIFY(scroll->property("contentHeight").toReal() > 3 * scroll->height());
+    // Read puts back the line that was at the top a moment after it draws the note.
+    QTest::qWait(500);
+
+    // Text to read has no cursor to keep in view, so a click anywhere leaves the view where it
+    // was: in the middle, inside the margin vi keeps, and on a line the edge cuts.
+    for (const bool vi : {false, true}) {
+        m_settings->setViMode(vi);
+        for (const qreal down : {0.5, 0.9, 0.995}) {
+            scroll->setProperty("contentY", scroll->property("contentHeight").toReal() / 3);
+            QTRY_VERIFY(!scroll->property("moving").toBool());
+            const qreal before = scroll->property("contentY").toReal();
+            const QPointF point(reader->width() / 2,
+                                scroll->mapToItem(reader, QPointF(0, scroll->height() * down)).y());
+            QTest::mouseClick(m_window.get(), Qt::LeftButton, {},
+                              reader->mapToScene(point).toPoint());
+            QTest::qWait(300);
+            QVERIFY2(qAbs(scroll->property("contentY").toReal() - before) < 1,
+                     qPrintable(u"vi %1, at %2: %3 to %4"_s.arg(vi).arg(down).arg(before).arg(
+                         scroll->property("contentY").toReal())));
+        }
+    }
+
+    // A selection dragged past the bottom edge still takes the view with it.
+    m_settings->setViMode(false);
+    const qreal before = scroll->property("contentY").toReal();
+    const auto in = [&](qreal down) {
+        return reader
+            ->mapToScene(
+                QPointF(reader->width() / 2,
+                        scroll->mapToItem(reader, QPointF(0, scroll->height() * down)).y()))
+            .toPoint();
+    };
+    QTest::mousePress(m_window.get(), Qt::LeftButton, {}, in(0.5));
+    QTest::mouseMove(m_window.get(), in(0.8));
+    QTest::mouseMove(m_window.get(), in(1.2));
+    QTest::mouseRelease(m_window.get(), Qt::LeftButton, {}, in(1.2));
+    QTRY_VERIFY(scroll->property("contentY").toReal() > before + 1);
 }
 
 void TestNoteEditor::viActsOnWhatTheMouseSelects()
