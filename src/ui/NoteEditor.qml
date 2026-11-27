@@ -1241,10 +1241,20 @@ Rectangle {
                 selectByKeyboard: true
                 Accessible.name: qsTr("Note, to read")
                 onLinkActivated: link => root.openLink(link)
-                // A match found, or a selection moved by the keys, is scrolled to.
+                // A match found, or a selection moved by the keys, is scrolled to. A click leaves
+                // the view where it is, as there is no cursor to show; a drag past its edge follows.
                 onCursorRectangleChanged: {
-                    if (visible && !root.held)
+                    if (visible && !root.held && !pointing)
                         flick.reveal(cursorRectangle, reader)
+                }
+                /// Whether the mouse is down on the text, within the view.
+                readonly property bool pointing: readPointer.active && flick.contains(
+                                                     flick.mapFromItem(reader,
+                                                                       readPointer.point.position))
+                PointHandler {
+                    id: readPointer
+
+                    acceptedButtons: Qt.LeftButton
                 }
                 // Ctrl+/ goes back to writing, in the mode it switches to, as it does there.
                 Keys.onPressed: event => {
