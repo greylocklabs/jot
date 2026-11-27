@@ -60,7 +60,8 @@ void SyncController::setVault(const QString &root, std::function<void()> save)
     m_needsPassphrase = false;
     m_askedForPassphrase = false;
     m_problem.clear();
-    m_lastSynced = {};
+    // Said from when it last worked, as Jot starts, rather than as if it never had.
+    m_lastSynced = m_remote.isEmpty() ? QDateTime() : lastSyncedAt(syncStateDir(root, m_remote));
     m_failedAt = {};
     m_lastReport = {};
     m_waiting.clear();
@@ -601,7 +602,8 @@ QString SyncController::details() const
                          .arg(last.commitFiles)
                          .arg(last.commitAdded)
                          .arg(last.commitRemoved);
-        } else {
+        } else if (m_syncedFrom.isValid()) {
+            // Counts are known only for a sync since Jot started.
             lines << tr("Notes sent: %1, received: %2")
                          .arg(last.pushed.size())
                          .arg(last.pulled.size() + last.merged.size());

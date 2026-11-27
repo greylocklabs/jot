@@ -2949,6 +2949,13 @@ void TestVaultController::syncsWithAFolder()
     QVERIFY(sync->syncWithFolder(QUrl::fromLocalFile(nas)));
     QVERIFY(finished.wait(10000));
 
+    // Opened again, as Jot starts, it says when it last synced rather than that it never has.
+    QVERIFY(m_vault->openPath(m_root));
+    QVERIFY(sync->stamp().startsWith(u"Updated "_s));
+    QVERIFY2(!sync->details().contains(u"Not synced yet"_s), qPrintable(sync->details()));
+    QVERIFY2(!sync->details().contains(u"Notes sent"_s), qPrintable(sync->details()));
+    QTRY_VERIFY(!sync->syncing());
+
     // Stopped, it forgets where and what it knew, and leaves both as they are.
     const QString state = jot::syncStateDir(m_root, u"folder:"_s + nas);
     QVERIFY(QFileInfo::exists(state));
