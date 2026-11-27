@@ -153,6 +153,15 @@ QString remoteLabel(const QString &remote)
     return remote.section(u':', 1);
 }
 
+QDateTime lastSyncedAt(const QString &stateDir)
+{
+    QFile synced(stateDir + u"/synced"_s);
+    if (!synced.open(QIODevice::ReadOnly))
+        return {};
+    return QDateTime::fromString(QString::fromUtf8(synced.readAll()).trimmed(), Qt::ISODate)
+        .toLocalTime();
+}
+
 QString syncStateDir(const QString &vaultRoot, const QString &remote)
 {
     const QByteArray pair = QDir(vaultRoot).absolutePath().toUtf8() + '\n' + remote.toUtf8();

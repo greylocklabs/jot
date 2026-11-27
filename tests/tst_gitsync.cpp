@@ -901,6 +901,7 @@ void TestGitSync::marksTheStateOfAVaultsOwnRepositorySynced()
         jot::syncVault(laptop.root, u"git:"_s + m_remote + u"#main"_s, {}, state, laptop.name, {});
     QVERIFY2(report.failure.isEmpty(), qPrintable(report.failure));
     QVERIFY(QFileInfo::exists(state + u"/synced"_s));
+    QVERIFY(qAbs(jot::lastSyncedAt(state).secsTo(QDateTime::currentDateTime())) < 60);
     // One that failed leaves no word of it.
     const QString elsewhere = m_dir->filePath(u"elsewhere"_s);
     const SyncReport failed =
@@ -908,6 +909,7 @@ void TestGitSync::marksTheStateOfAVaultsOwnRepositorySynced()
                        elsewhere, laptop.name, {});
     QVERIFY(!failed.failure.isEmpty());
     QVERIFY(!QFileInfo::exists(elsewhere + u"/synced"_s));
+    QVERIFY(!jot::lastSyncedAt(elsewhere).isValid());
 }
 
 QTEST_GUILESS_MAIN(TestGitSync)

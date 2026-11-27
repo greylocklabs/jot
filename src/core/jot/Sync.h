@@ -157,5 +157,8 @@ private:
 /// The folder that keeps the base of the vault at `vaultRoot` with `remote`: one for each pair,
 /// in this computer's state folder, never in the vault.
 [[nodiscard]] QString syncStateDir(const QString &vaultRoot, const QString &remote);
+/// When a sync with the pair whose state is in `stateDir` last worked, in this or another run or
+/// app; nothing before the first.
+[[nodiscard]] QDateTime lastSyncedAt(const QString &stateDir);
 
 } // namespace jot

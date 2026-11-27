@@ -9,6 +9,7 @@ as changes land, and `make release` dates them; see [RELEASING.md](RELEASING.md)
 
 - A click in Read leaves the note where it is, rather than scrolling it, as it could near the
   edges of the view or in vi mode.
+- As Jot starts, sync says when it last worked, rather than that the notes were never synced.
 
 ## 0.8.2 - 2026-11-26
 
