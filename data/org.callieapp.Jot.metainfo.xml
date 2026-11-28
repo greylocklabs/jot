@@ -36,6 +36,14 @@
   </categories>
 
   <releases>
+    <release version="0.8.3" date="2026-11-27">
+      <description>
+        <ul>
+          <li>A click in Read leaves the note where it is, rather than scrolling it, as it could near the edges of the view or in vi mode.</li>
+          <li>As Jot starts, sync says when it last worked, rather than that the notes were never synced.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.8.2" date="2026-11-26">
       <description>
         <ul>
